@@ -1324,37 +1324,80 @@ function RoomBox({
 }
 
 function SocialDock() {
+  const mensajeWhatsApp =
+    "Hola, quisiera solicitar información sobre Casa de Huéspedes Pimentel.";
+
   return (
     <div className="fixed left-5 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center gap-3 bg-[#fbf7ef]/95 border border-[#eadfce] rounded-full px-2 py-4 shadow-xl backdrop-blur-md">
       <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] font-black text-[#2d261f] tracking-[0.25em] uppercase">
-        Síguenos
+        Contáctanos
       </span>
 
+      {/* Casa de Huéspedes - página principal */}
+      <a
+        href="/"
+        aria-label="Ir a Casa de Huéspedes Pimentel"
+        title="Casa de Huéspedes Pimentel"
+        className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center text-xl hover:bg-[#a87545] transition"
+      >
+        🏠
+      </a>
+
+      {/* Correo */}
+      <a
+        href="mailto:casadehuespedespimentel2023@gmail.com?subject=Consulta%20sobre%20Casa%20de%20Huéspedes%20Pimentel&body=Hola%2C%20quisiera%20solicitar%20información%20sobre%20Casa%20de%20Huéspedes%20Pimentel."
+        aria-label="Enviar correo"
+        title="Enviar correo"
+        className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center text-xl hover:bg-[#a87545] transition"
+      >
+        ✉
+      </a>
+
+      {/* WhatsApp */}
+      <a
+        href={`https://wa.me/51901551287?text=${encodeURIComponent(
+          mensajeWhatsApp
+        )}`}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Contactar por WhatsApp"
+        title="Contactar por WhatsApp"
+        className="w-11 h-11 rounded-full bg-[#25D366] text-white grid place-items-center font-black text-lg hover:bg-[#1faf54] transition"
+      >
+        ☎
+      </a>
+
+      {/* Facebook */}
       <a
         href="https://www.facebook.com/casadehuespedespimentel/?locale=es_LA"
         target="_blank"
         rel="noreferrer"
         aria-label="Facebook"
+        title="Facebook"
         className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center font-black text-lg hover:bg-[#a87545] transition"
       >
         f
       </a>
 
+      {/* TikTok */}
       <a
         href="https://www.tiktok.com/@casahuespedespimentel"
         target="_blank"
         rel="noreferrer"
         aria-label="TikTok"
+        title="TikTok"
         className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center font-black text-lg hover:bg-[#a87545] transition"
       >
         ♪
       </a>
 
+      {/* Instagram */}
       <a
         href="https://www.instagram.com/casahuespedes.pimentel/"
         target="_blank"
         rel="noreferrer"
         aria-label="Instagram"
+        title="Instagram"
         className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center font-black text-lg hover:bg-[#a87545] transition"
       >
         ◎
@@ -1362,6 +1405,8 @@ function SocialDock() {
     </div>
   );
 }
+
+export default SocialDock;
 
 function FloatingSupportWidget({ isOpen, onOpen, onClose }) {
   return (
