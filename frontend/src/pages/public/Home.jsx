@@ -671,7 +671,7 @@ export default function Home() {
               <h1>Un refugio cerca al mar.</h1>
 
               <p>
-                Habitaciones cómodas, atención directa y una estadía tranquila
+                Habitaciones cómodas, atención familiar y una estadía tranquila
                 para disfrutar el balneario de Pimentel.
               </p>
 
