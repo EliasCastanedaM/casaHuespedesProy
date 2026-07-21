@@ -1,29 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  getRoomAvailability,
-  getRooms,
-} from "../../services/api";
+import { getRoomAvailability, getRooms } from "../../services/api";
 import "./Home.css";
 
 const includedServices = [
   {
-    icon: "â˜•",
-    title: "CafeterÃ­a",
-    description: "Espacio cÃ³modo para iniciar el dÃ­a durante la estadÃ­a.",
+    icon: "☕",
+    title: "Cafetería",
+    description: "Espacio cómodo para iniciar el día durante la estadía.",
   },
   {
-    icon: "ðŸš¿",
-    title: "BaÃ±o privado",
-    description: "Habitaciones con baÃ±o privado para mayor comodidad.",
+    icon: "🚿",
+    title: "Baño privado",
+    description: "Habitaciones con baño privado para mayor comodidad.",
   },
   {
-    icon: "ðŸ“¶",
+    icon: "📶",
     title: "WiFi",
-    description: "Conectividad disponible para huÃ©spedes.",
+    description: "Conectividad disponible para huéspedes.",
   },
   {
-    icon: "ðŸŒ…",
+    icon: "🌅",
     title: "Terraza",
     description: "Terraza con vista al mar para disfrutar Pimentel.",
   },
@@ -35,20 +32,20 @@ const extraServices = [
     image:
       "https://images.unsplash.com/photo-1556911220-bff31c812dba?q=80&w=1200&auto=format&fit=crop",
     description:
-      "Ambiente equipado para preparar alimentos durante la estadÃ­a.",
+      "Ambiente equipado para preparar alimentos durante la estadía.",
   },
   {
     title: "Lavado y planchado",
     image:
       "https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?q=80&w=1200&auto=format&fit=crop",
-    description: "Servicio de lavanderÃ­a previa coordinaciÃ³n con el hospedaje.",
+    description: "Servicio de lavandería previa coordinación con el hospedaje.",
   },
   {
     title: "Taxi y estacionamiento",
     image:
       "https://images.unsplash.com/photo-1494515843206-f3117d3f51b7?q=80&w=1200&auto=format&fit=crop",
     description:
-      "Apoyo en movilidad local y orientaciÃ³n sobre estacionamiento cercano.",
+      "Apoyo en movilidad local y orientación sobre estacionamiento cercano.",
   },
 ];
 
@@ -80,18 +77,18 @@ const fallbackRoomImage =
 
 const ROOM_DETAILS = {
   101: {
-    name: "HabitaciÃ³n Matrimonial #101",
+    name: "Habitación Matrimonial #101",
     roomType: "Matrimonial",
     floorLabel: "Primer piso",
     floorNumber: 1,
     bedType: "1 cama de dos plazas",
     capacity: 2,
     description:
-      "HabitaciÃ³n matrimonial ubicada en el primer piso, preparada para 2 personas y equipada con baÃ±o privado.",
+      "Habitación matrimonial ubicada en el primer piso, preparada para 2 personas y equipada con baño privado.",
     locationDetail: "Ubicada en el primer piso.",
     amenities: [
-      "BaÃ±o privado",
-      "Ducha con agua frÃ­a y caliente",
+      "Baño privado",
+      "Ducha con agua fría y caliente",
       "Smart TV",
       "Ventilador",
       "Veladores",
@@ -99,17 +96,17 @@ const ROOM_DETAILS = {
     ],
   },
   201: {
-    name: "HabitaciÃ³n Doble #201",
+    name: "Habitación Doble #201",
     roomType: "Doble",
     floorLabel: "Segundo piso",
     floorNumber: 2,
     bedType: "2 camas de plaza y media",
     capacity: 2,
     description:
-      "HabitaciÃ³n doble ubicada en el segundo piso, con dos camas de plaza y media y capacidad para 2 personas.",
+      "Habitación doble ubicada en el segundo piso, con dos camas de plaza y media y capacidad para 2 personas.",
     locationDetail: "Ubicada en el segundo piso.",
     amenities: [
-      "BaÃ±o privado",
+      "Baño privado",
       "Smart TV",
       "Ventilador",
       "Mesa de noche",
@@ -117,41 +114,41 @@ const ROOM_DETAILS = {
     ],
   },
   202: {
-    name: "HabitaciÃ³n Triple #202",
+    name: "Habitación Triple #202",
     roomType: "Triple",
     floorLabel: "Segundo piso",
     floorNumber: 2,
     bedType: "3 camas de plaza y media",
     capacity: 3,
     description:
-      "HabitaciÃ³n triple ubicada en el segundo piso, con tres camas de plaza y media y capacidad para 3 personas.",
+      "Habitación triple ubicada en el segundo piso, con tres camas de plaza y media y capacidad para 3 personas.",
     locationDetail: "Ubicada en el segundo piso.",
-    amenities: ["BaÃ±o privado", "Smart TV", "Ventilador", "Ropero"],
+    amenities: ["Baño privado", "Smart TV", "Ventilador", "Ropero"],
   },
   203: {
-    name: "HabitaciÃ³n Familiar #203",
+    name: "Habitación Familiar #203",
     roomType: "Familiar",
     floorLabel: "Segundo piso",
     floorNumber: 2,
     bedType: "2 camas de dos plazas y 3 camas de plaza y media",
     capacity: 7,
     description:
-      "HabitaciÃ³n familiar ubicada en el segundo piso. Cuenta con cinco camas y capacidad mÃ¡xima para 7 personas.",
+      "Habitación familiar ubicada en el segundo piso. Cuenta con cinco camas y capacidad máxima para 7 personas.",
     locationDetail: "Ubicada en el segundo piso.",
-    amenities: ["BaÃ±o privado", "Smart TV", "Ventiladores", "Ropero"],
+    amenities: ["Baño privado", "Smart TV", "Ventiladores", "Ropero"],
   },
   205: {
-    name: "HabitaciÃ³n Matrimonial #205",
+    name: "Habitación Matrimonial #205",
     roomType: "Matrimonial",
     floorLabel: "Segundo piso",
     floorNumber: 2,
     bedType: "1 cama de dos plazas",
     capacity: 2,
     description:
-      "HabitaciÃ³n matrimonial ubicada en el segundo piso, con una cama de dos plazas y capacidad para 2 personas.",
+      "Habitación matrimonial ubicada en el segundo piso, con una cama de dos plazas y capacidad para 2 personas.",
     locationDetail: "Ubicada en el segundo piso.",
     amenities: [
-      "BaÃ±o privado",
+      "Baño privado",
       "Smart TV",
       "Ventilador",
       "Mesa de noche",
@@ -159,17 +156,17 @@ const ROOM_DETAILS = {
     ],
   },
   301: {
-    name: "HabitaciÃ³n Doble #301",
+    name: "Habitación Doble #301",
     roomType: "Doble",
     floorLabel: "Tercer piso",
     floorNumber: 3,
     bedType: "2 camas de plaza y media",
     capacity: 2,
     description:
-      "HabitaciÃ³n doble ubicada en el tercer piso, con dos camas de plaza y media y capacidad para 2 personas.",
+      "Habitación doble ubicada en el tercer piso, con dos camas de plaza y media y capacidad para 2 personas.",
     locationDetail: "Ubicada en el tercer piso.",
     amenities: [
-      "BaÃ±o privado",
+      "Baño privado",
       "Smart TV",
       "Ventilador",
       "Mesa de noche",
@@ -177,101 +174,95 @@ const ROOM_DETAILS = {
     ],
   },
   302: {
-    name: "HabitaciÃ³n Triple #302",
+    name: "Habitación Triple #302",
     roomType: "Triple",
     floorLabel: "Tercer piso",
     floorNumber: 3,
     bedType: "3 camas de plaza y media",
     capacity: 3,
     description:
-      "HabitaciÃ³n triple ubicada en el tercer piso, con tres camas de plaza y media y capacidad para 3 personas.",
+      "Habitación triple ubicada en el tercer piso, con tres camas de plaza y media y capacidad para 3 personas.",
     locationDetail: "Ubicada en el tercer piso.",
-    amenities: ["BaÃ±o privado", "Smart TV", "Ropero", "Velador"],
+    amenities: ["Baño privado", "Smart TV", "Ropero", "Velador"],
   },
   303: {
-    name: "HabitaciÃ³n Triple #303",
+    name: "Habitación Triple #303",
     roomType: "Triple",
     floorLabel: "Tercer piso",
     floorNumber: 3,
     bedType: "3 camas de plaza y media",
     capacity: 3,
     description:
-      "HabitaciÃ³n triple ubicada en el tercer piso, con tres camas de plaza y media y capacidad para 3 personas.",
+      "Habitación triple ubicada en el tercer piso, con tres camas de plaza y media y capacidad para 3 personas.",
     locationDetail: "Ubicada en el tercer piso.",
-    amenities: ["BaÃ±o privado", "Smart TV", "Ventilador", "Ropero"],
+    amenities: ["Baño privado", "Smart TV", "Ventilador", "Ropero"],
   },
   304: {
-    name: "HabitaciÃ³n Matrimonial #304",
+    name: "Habitación Matrimonial #304",
     roomType: "Matrimonial",
     floorLabel: "Tercer piso",
     floorNumber: 3,
     bedType: "1 cama de dos plazas",
     capacity: 2,
     description:
-      "HabitaciÃ³n matrimonial ubicada en el tercer piso, con una cama de dos plazas y capacidad para 2 personas.",
+      "Habitación matrimonial ubicada en el tercer piso, con una cama de dos plazas y capacidad para 2 personas.",
     locationDetail: "Ubicada en el tercer piso.",
-    amenities: ["BaÃ±o privado", "Smart TV", "Ventilador"],
+    amenities: ["Baño privado", "Smart TV", "Ventilador"],
   },
   305: {
-    name: "HabitaciÃ³n Matrimonial #305",
+    name: "Habitación Matrimonial #305",
     roomType: "Matrimonial",
     floorLabel: "Tercer piso",
     floorNumber: 3,
     bedType: "1 cama de dos plazas",
     capacity: 2,
     description:
-      "HabitaciÃ³n matrimonial ubicada en el tercer piso, con una cama de dos plazas y capacidad para 2 personas.",
+      "Habitación matrimonial ubicada en el tercer piso, con una cama de dos plazas y capacidad para 2 personas.",
     locationDetail: "Ubicada en el tercer piso.",
-    amenities: [
-      "BaÃ±o privado",
-      "Smart TV",
-      "Ventilador",
-      "Velador",
-      "Ropero",
-    ],
+    amenities: ["Baño privado", "Smart TV", "Ventilador", "Velador", "Ropero"],
   },
   405: {
-    name: "HabitaciÃ³n Familiar #405",
+    name: "Habitación Familiar #405",
     roomType: "Familiar",
     floorLabel: "Terraza",
     floorNumber: 4,
     bedType: "1 cama de dos plazas y 3 camas de plaza y media",
     capacity: 5,
     description:
-      "HabitaciÃ³n familiar ubicada en la terraza, con cuatro camas y capacidad mÃ¡xima para 5 personas.",
+      "Habitación familiar ubicada en la terraza, con cuatro camas y capacidad máxima para 5 personas.",
     locationDetail: "Ubicada en la terraza.",
     hasTerrace: true,
     amenities: [
-      "BaÃ±o privado",
+      "Baño privado",
       "Smart TV",
       "Ropero",
       "Velador",
-      "UbicaciÃ³n en terraza",
+      "Ubicación en terraza",
     ],
   },
   407: {
-    name: "HabitaciÃ³n Triple #407",
+    name: "Habitación Triple #407",
     roomType: "Triple",
     floorLabel: "Segundo piso",
     floorNumber: 2,
     bedType: "3 camas de plaza y media",
     capacity: 3,
     description:
-      "HabitaciÃ³n triple ubicada en el segundo piso, con tres camas de plaza y media y capacidad para 3 personas.",
+      "Habitación triple ubicada en el segundo piso, con tres camas de plaza y media y capacidad para 3 personas.",
     locationDetail: "Ubicada en el segundo piso.",
-    amenities: ["BaÃ±o privado", "Smart TV", "Ventilador", "Ropero"],
+    amenities: ["Baño privado", "Smart TV", "Ventilador", "Ropero"],
   },
   505: {
-    name: "HabitaciÃ³n Matrimonial #505",
+    name: "Habitación Matrimonial #505",
     roomType: "Matrimonial",
     floorLabel: "Quinto piso",
     floorNumber: 5,
     bedType: "1 cama de dos plazas",
     capacity: 2,
     description:
-      "HabitaciÃ³n matrimonial ubicada en el quinto piso, con una cama de dos plazas y capacidad para 2 personas.",
+      "Habitación matrimonial ubicada en el quinto piso, con una cama de dos plazas y capacidad para 2 personas.",
     locationDetail: "Ubicada en el quinto piso.",
-    amenities: ["BaÃ±o privado", "Smart TV", "Ropero", "Mesas de noche"],
+    amenities: ["Baño privado", "Smart TV", "Ropero", "Mesas de noche"],
   },
 };
 
@@ -312,7 +303,9 @@ function buildCatalogRooms(databaseRooms) {
 
 function extractRoomNumber(room) {
   if (room?.room_number) return String(room.room_number);
-  const match = String(room?.name || "").match(/(?:#|hab(?:itaci[oÃ³]n)?\.?\s*)?(101|201|202|203|205|301|302|303|304|305|405|407|505)\b/i);
+  const match = String(room?.name || "").match(
+    /(?:#|hab(?:itaci[oó]n)?\.?\s*)?(101|201|202|203|205|301|302|303|304|305|405|407|505)\b/i,
+  );
   return match?.[1] || String(room?.id || "");
 }
 
@@ -341,16 +334,20 @@ function getRoomDetails(room) {
 
   return {
     roomNumber,
-    name: catalogDetails.name || room?.name || "HabitaciÃ³n",
+    name: catalogDetails.name || room?.name || "Habitación",
     description:
-      catalogDetails.description || room?.description || "InformaciÃ³n disponible prÃ³ximamente.",
-    roomType: catalogDetails.roomType || room?.room_type || "HabitaciÃ³n",
+      catalogDetails.description ||
+      room?.description ||
+      "Información disponible próximamente.",
+    roomType: catalogDetails.roomType || room?.room_type || "Habitación",
     floorLabel: catalogDetails.floorLabel || room?.floor_label || "Pimentel",
     floorNumber: Number(catalogDetails.floorNumber || room?.floor_number || 99),
-    bedType: catalogDetails.bedType || room?.bed_type || "DistribuciÃ³n por confirmar",
+    bedType:
+      catalogDetails.bedType || room?.bed_type || "Distribución por confirmar",
     capacity: Number(catalogDetails.capacity || room?.capacity || 1),
     locationDetail:
-      catalogDetails.locationDetail || `Ubicada en ${catalogDetails.floorLabel || "Pimentel"}.`,
+      catalogDetails.locationDetail ||
+      `Ubicada en ${catalogDetails.floorLabel || "Pimentel"}.`,
     hasTerrace: Boolean(catalogDetails.hasTerrace),
     amenities:
       catalogDetails.amenities?.length > 0
@@ -420,12 +417,12 @@ export default function Home() {
           catalogRooms.map((room) => ({
             ...room,
             availability_status: "idle",
-          }))
+          })),
         );
       } catch (error) {
         console.error(error);
         setBookingError(
-          "No se pudieron cargar las habitaciones desde la base de datos."
+          "No se pudieron cargar las habitaciones desde la base de datos.",
         );
       } finally {
         setIsLoadingRooms(false);
@@ -444,7 +441,7 @@ export default function Home() {
           availableRooms.map((room) => ({
             ...room,
             availability_status: "idle",
-          }))
+          })),
         );
 
         return;
@@ -462,7 +459,7 @@ export default function Home() {
 
         const roomsResult = Array.isArray(result) ? result : result.rooms || [];
         const availabilityById = new Map(
-          roomsResult.map((room) => [String(room.id), room])
+          roomsResult.map((room) => [String(room.id), room]),
         );
 
         setFloorRooms(
@@ -476,20 +473,20 @@ export default function Home() {
               availability_status:
                 availabilityRoom?.availability_status || "idle",
             };
-          })
+          }),
         );
       } catch (error) {
         console.error(error);
 
         setAvailabilityError(
-          "No se pudo validar la disponibilidad en tiempo real. Se muestran las habitaciones activas."
+          "No se pudo validar la disponibilidad en tiempo real. Se muestran las habitaciones activas.",
         );
 
         setFloorRooms(
           availableRooms.map((room) => ({
             ...room,
             availability_status: "available",
-          }))
+          })),
         );
       } finally {
         setIsCheckingAvailability(false);
@@ -506,19 +503,18 @@ export default function Home() {
   ]);
 
   const featuredRooms = useMemo(() => {
-    return [...availableRooms]
-      .sort((firstRoom, secondRoom) => {
-        const firstDetails = getRoomDetails(firstRoom);
-        const secondDetails = getRoomDetails(secondRoom);
-        const firstOrder = Number(firstRoom.display_order || 9999);
-        const secondOrder = Number(secondRoom.display_order || 9999);
+    return [...availableRooms].sort((firstRoom, secondRoom) => {
+      const firstDetails = getRoomDetails(firstRoom);
+      const secondDetails = getRoomDetails(secondRoom);
+      const firstOrder = Number(firstRoom.display_order || 9999);
+      const secondOrder = Number(secondRoom.display_order || 9999);
 
-        return (
-          firstOrder - secondOrder ||
-          firstDetails.floorNumber - secondDetails.floorNumber ||
-          Number(firstDetails.roomNumber) - Number(secondDetails.roomNumber)
-        );
-      });
+      return (
+        firstOrder - secondOrder ||
+        firstDetails.floorNumber - secondDetails.floorNumber ||
+        Number(firstDetails.roomNumber) - Number(secondDetails.roomNumber)
+      );
+    });
   }, [availableRooms]);
 
   function handleBookingChange(event) {
@@ -537,7 +533,7 @@ export default function Home() {
 
     if (!room.databaseId) {
       setBookingError(
-        `La habitaciÃ³n ${getRoomDetails(room).roomNumber} estÃ¡ visible en el catÃ¡logo, pero aÃºn debe habilitarse en Supabase para reservarla en lÃ­nea.`
+        `La habitación ${getRoomDetails(room).roomNumber} está visible en el catálogo, pero aún debe habilitarse en Supabase para reservarla en línea.`,
       );
       return;
     }
@@ -573,7 +569,9 @@ export default function Home() {
     setBookingError("");
 
     if (!bookingForm.room_id) {
-      setBookingError("Selecciona una habitaciÃ³n para continuar con la reserva.");
+      setBookingError(
+        "Selecciona una habitación para continuar con la reserva.",
+      );
       return;
     }
 
@@ -582,7 +580,7 @@ export default function Home() {
       !bookingForm.nights ||
       !bookingForm.guests_count
     ) {
-      setBookingError("Selecciona fecha, noches y cantidad de huÃ©spedes.");
+      setBookingError("Selecciona fecha, noches y cantidad de huéspedes.");
       return;
     }
 
@@ -592,17 +590,17 @@ export default function Home() {
     }
 
     if (Number(bookingForm.guests_count) <= 0) {
-      setBookingError("La cantidad de huÃ©spedes debe ser mayor a cero.");
+      setBookingError("La cantidad de huéspedes debe ser mayor a cero.");
       return;
     }
 
     const selectedRoom = floorRooms.find(
-      (room) => String(room.id) === String(bookingForm.room_id)
+      (room) => String(room.id) === String(bookingForm.room_id),
     );
 
     if (selectedRoom && !selectedRoom.databaseId) {
       setBookingError(
-        `La habitaciÃ³n ${getRoomDetails(selectedRoom).roomNumber} todavÃ­a debe habilitarse en Supabase para completar una reserva en lÃ­nea.`
+        `La habitación ${getRoomDetails(selectedRoom).roomNumber} todavía debe habilitarse en Supabase para completar una reserva en línea.`,
       );
       return;
     }
@@ -612,7 +610,7 @@ export default function Home() {
 
       if (roomStatus === "blocked") {
         setBookingError(
-          "La habitaciÃ³n seleccionada no estÃ¡ disponible para esa fecha."
+          "La habitación seleccionada no está disponible para esa fecha.",
         );
         return;
       }
@@ -621,7 +619,7 @@ export default function Home() {
         Number(bookingForm.guests_count) > Number(selectedRoom.capacity || 1)
       ) {
         setBookingError(
-          "La cantidad de huÃ©spedes supera la capacidad de la habitaciÃ³n."
+          "La cantidad de huéspedes supera la capacidad de la habitación.",
         );
         return;
       }
@@ -642,37 +640,32 @@ export default function Home() {
     <main className="home-page">
       {/* HERO */}
       <section id="inicio" className="hotel-hero scroll-mt-32">
-    <div className="hotel-hero-image">
-  <video
-    className="hotel-hero-video"
-    autoPlay
-    muted
-    loop
-    playsInline
-    preload="metadata"
-    poster="https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1800&auto=format&fit=crop"
-    aria-hidden="true"
-  >
-    <source
-      src="/videos/pimentel.mp4"
-      type="video/mp4"
-    />
-    Tu navegador no puede reproducir este video.
-  </video>
+        <div className="hotel-hero-image">
+          <video
+            className="hotel-hero-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster="https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1800&auto=format&fit=crop"
+            aria-hidden="true"
+          >
+            <source src="/videos/pimentel.mp4" type="video/mp4" />
+            Tu navegador no puede reproducir este video.
+          </video>
 
-  <div className="hotel-hero-overlay" />
+          <div className="hotel-hero-overlay" />
 
           <div className="home-section hotel-hero-content">
             <div className="hotel-hero-text">
-              <p className="hotel-hero-kicker">
-                Descanso Â· Playa Â· Pimentel
-              </p>
+              <p className="hotel-hero-kicker">Descanso · Playa · Pimentel</p>
 
               <h1>Un refugio cerca al mar.</h1>
 
               <p>
-                Habitaciones de acuerdo a tus necesidades, atenciÃ³n familiar y una estadÃ­a tranquila
-                para disfrutar el balneario de Pimentel.
+                Habitaciones de acuerdo a tus necesidades, atención familiar y
+                una estadía tranquila para disfrutar el balneario de Pimentel.
               </p>
 
               <div className="hotel-hero-actions">
@@ -721,7 +714,7 @@ export default function Home() {
               </div>
 
               <div className="hotel-booking-field">
-                <label>HuÃ©spedes</label>
+                <label>Huéspedes</label>
 
                 <input
                   type="number"
@@ -744,21 +737,21 @@ export default function Home() {
         </div>
       </section>
 
-      {/* POR QUÃ‰ VIAJAR A PIMENTEL */}
+      {/* POR QUÉ VIAJAR A PIMENTEL */}
       <StoryVideoSection
         id="por-que-pimentel"
         eyebrow="Destino"
-        title="Â¿Por quÃ© viajar a Pimentel?"
+        title="¿Por qué viajar a Pimentel?"
         description="Pimentel es un balneario tranquilo, ideal para caminar cerca al mar, visitar el muelle, disfrutar atardeceres y desconectarse en un ambiente costero sin complicaciones."
         videoSrc="/videos/pimentel.mp4"
       />
 
-      {/* POR QUÃ‰ HOSPEDARSE */}
+      {/* POR QUÉ HOSPEDARSE */}
       <StoryVideoSection
         id="nosotros"
         eyebrow="Hospedaje"
-        title="Â¿Por quÃ© hospedarse en Casa HuÃ©spedes?"
-        description="Porque tendrÃ¡s una estadÃ­a sencilla, cÃ³moda y cercana al mar. Casa HuÃ©spedes Pimentel ofrece habitaciones funcionales, atenciÃ³n directa y una ubicaciÃ³n pensada para descansar durante tu visita."
+        title="¿Por qué hospedarse en Casa Huéspedes?"
+        description="Porque tendrás una estadía sencilla, cómoda y cercana al mar. Casa Huéspedes Pimentel ofrece habitaciones funcionales, atención directa y una ubicación pensada para descansar durante tu visita."
         videoSrc="/videos/casa-huespedes.mp4"
         reverse
       />
@@ -776,7 +769,7 @@ export default function Home() {
           </div>
 
           <a href="#disponibilidad" className="hotel-small-link">
-            Ver disponibilidad â†’
+            Ver disponibilidad →
           </a>
         </div>
 
@@ -810,12 +803,12 @@ export default function Home() {
                       />
 
                       <div className="hotel-room-status-badge">
-                        HabitaciÃ³n {details.roomNumber}
+                        Habitación {details.roomNumber}
                       </div>
 
                       <div className="hotel-room-media-overlay">
-                        <span>ðŸ“ {details.floorLabel}</span>
-                        <span>ðŸ›ï¸ {details.roomType}</span>
+                        <span>📍 {details.floorLabel}</span>
+                        <span>🛏️ {details.roomType}</span>
                       </div>
                     </div>
                   </Link>
@@ -824,12 +817,12 @@ export default function Home() {
                     <h3>{details.name}</h3>
 
                     <div className="hotel-room-meta">
-                      <span>ðŸ‘¤ Hasta {details.capacity} persona(s)</span>
-                      <span>ðŸ›ï¸ {details.bedType}</span>
+                      <span>👤 Hasta {details.capacity} persona(s)</span>
+                      <span>🛏️ {details.bedType}</span>
                     </div>
 
                     <p className="hotel-room-short-description">
-{details.description}
+                      {details.description}
                     </p>
 
                     <div className="hotel-room-tags">
@@ -843,8 +836,8 @@ export default function Home() {
                         to={`/habitaciones/${details.roomNumber}`}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#8b5427] px-5 py-3 font-black text-white transition hover:bg-[#633817] focus:outline-none focus:ring-2 focus:ring-[#8b5427] focus:ring-offset-2"
                       >
-                        Ver habitaciÃ³n {details.roomNumber}
-                        <span aria-hidden="true">â†’</span>
+                        Ver habitación {details.roomNumber}
+                        <span aria-hidden="true">→</span>
                       </Link>
                     </div>
                   </div>
@@ -871,13 +864,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* GALERÃA Y TESTIMONIO */}
+      {/* GALERÍA Y TESTIMONIO */}
       <section
         id="galeria"
         className="home-section hotel-gallery-section scroll-mt-32"
       >
         <div>
-          <p className="hotel-eyebrow">GalerÃ­a</p>
+          <p className="hotel-eyebrow">Galería</p>
 
           <h2 className="hotel-title hotel-gallery-title">
             Espacios que invitan a quedarse
@@ -889,7 +882,7 @@ export default function Home() {
             <img
               key={image}
               src={image}
-              alt="GalerÃ­a Casa HuÃ©spedes Pimentel"
+              alt="Galería Casa Huéspedes Pimentel"
               className="hotel-gallery-img"
             />
           ))}
@@ -899,12 +892,12 @@ export default function Home() {
           <p className="hotel-eyebrow">Testimonio</p>
 
           <p className="hotel-testimonial-text">
-            â€œUn lugar tranquilo para descansar y disfrutar Pimentel. La atenciÃ³n
-            fue cercana y la estadÃ­a muy cÃ³moda.â€
+            “Un lugar tranquilo para descansar y disfrutar Pimentel. La atención
+            fue cercana y la estadía muy cómoda.”
           </p>
 
-          <p className="hotel-testimonial-name">HuÃ©sped visitante</p>
-          <p className="hotel-testimonial-place">Casa HuÃ©spedes Pimentel</p>
+          <p className="hotel-testimonial-name">Huésped visitante</p>
+          <p className="hotel-testimonial-place">Casa Huéspedes Pimentel</p>
         </div>
       </section>
 
@@ -923,7 +916,7 @@ export default function Home() {
 
             <p className="hotel-section-description">
               Servicios adicionales coordinados directamente con el hospedaje,
-              segÃºn disponibilidad.
+              según disponibilidad.
             </p>
           </div>
 
@@ -956,13 +949,13 @@ export default function Home() {
             </h2>
 
             <p className="hotel-form-description">
-              Elige fecha, habitaciÃ³n y nÃºmero de huÃ©spedes. Luego continuarÃ¡s
+              Elige fecha, habitación y número de huéspedes. Luego continuarás
               al formulario de reserva y pago simulado.
             </p>
 
             <div className="hotel-form-grid">
               <div className="hotel-field hotel-field-full">
-                <label className="hotel-label">HabitaciÃ³n</label>
+                <label className="hotel-label">Habitación</label>
 
                 <select
                   name="room_id"
@@ -974,7 +967,7 @@ export default function Home() {
                   <option value="">
                     {isLoadingRooms
                       ? "Cargando habitaciones..."
-                      : "Seleccionar habitaciÃ³n"}
+                      : "Seleccionar habitación"}
                   </option>
 
                   {availableRooms.map((room) => {
@@ -982,7 +975,9 @@ export default function Home() {
 
                     return (
                       <option key={room.id} value={room.id}>
-                        Hab. {details.roomNumber} â€” {details.roomType} â€” {details.floorLabel} â€” Hasta {details.capacity} persona(s)
+                        Hab. {details.roomNumber} — {details.roomType} —{" "}
+                        {details.floorLabel} — Hasta {details.capacity}{" "}
+                        persona(s)
                       </option>
                     );
                   })}
@@ -1044,7 +1039,7 @@ export default function Home() {
               </div>
 
               <div className="hotel-field">
-                <label className="hotel-label">HuÃ©spedes</label>
+                <label className="hotel-label">Huéspedes</label>
 
                 <input
                   type="number"
@@ -1076,7 +1071,8 @@ export default function Home() {
             </h3>
 
             <p className="hotel-side-description">
-              Revisa la ubicaciÃ³n, capacidad y disponibilidad de cada habitaciÃ³n.
+              Revisa la ubicación, capacidad y disponibilidad de cada
+              habitación.
             </p>
 
             <FloorPlan
@@ -1094,7 +1090,7 @@ export default function Home() {
             )}
 
             <a
-              href="https://wa.me/51901551287?text=Hola,%20quiero%20consultar%20disponibilidad%20en%20Casa%20HuÃ©spedes%20Pimentel"
+              href="https://wa.me/51901551287?text=Hola,%20quiero%20consultar%20disponibilidad%20en%20Casa%20Huéspedes%20Pimentel"
               target="_blank"
               rel="noreferrer"
               className="hotel-whatsapp-button"
@@ -1115,10 +1111,10 @@ export default function Home() {
         <div className="home-section hotel-cta-content">
           <div className="hotel-cta-card">
             <div>
-              <h2 className="hotel-title">Â¿Listo para visitar Pimentel?</h2>
+              <h2 className="hotel-title">¿Listo para visitar Pimentel?</h2>
 
               <p>
-                Consulta disponibilidad y continÃºa al formulario final de
+                Consulta disponibilidad y continúa al formulario final de
                 reserva.
               </p>
             </div>
@@ -1213,15 +1209,15 @@ function FloorPlan({
 
   const floors = Object.entries(roomsByFloor).sort(
     ([, firstFloor], [, secondFloor]) =>
-      firstFloor.floorNumber - secondFloor.floorNumber
+      firstFloor.floorNumber - secondFloor.floorNumber,
   );
 
   const availableCount = orderedRooms.filter(
-    (room) => normalizeRoomStatus(room, hasDateSelected) === "available"
+    (room) => normalizeRoomStatus(room, hasDateSelected) === "available",
   ).length;
 
   const blockedCount = orderedRooms.filter(
-    (room) => normalizeRoomStatus(room, hasDateSelected) === "blocked"
+    (room) => normalizeRoomStatus(room, hasDateSelected) === "blocked",
   ).length;
 
   return (
@@ -1248,7 +1244,7 @@ function FloorPlan({
           ? "Consultando disponibilidad..."
           : hasDateSelected
             ? `${availableCount} disponible(s) y ${blockedCount} bloqueada(s) para la fecha seleccionada.`
-            : `${orderedRooms.length} habitaciÃ³n(es). Selecciona una fecha para consultar disponibilidad.`}
+            : `${orderedRooms.length} habitación(es). Selecciona una fecha para consultar disponibilidad.`}
       </div>
 
       <div className="mt-4 space-y-4">
@@ -1258,9 +1254,9 @@ function FloorPlan({
             className="rounded-2xl border border-[#eadfce] bg-white p-3"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h4 className="font-black text-[#2b2118]">ðŸ“ {floorLabel}</h4>
+              <h4 className="font-black text-[#2b2118]">📍 {floorLabel}</h4>
               <span className="rounded-full bg-[#f4eadc] px-3 py-1 text-xs font-black text-[#7b4a1f]">
-                {floor.rooms.length} habitaciÃ³n(es)
+                {floor.rooms.length} habitación(es)
               </span>
             </div>
 
@@ -1280,19 +1276,14 @@ function FloorPlan({
       </div>
 
       <div className="floor-note">
-        Selecciona una habitaciÃ³n disponible para completar automÃ¡ticamente el
+        Selecciona una habitación disponible para completar automáticamente el
         formulario de reserva.
       </div>
     </div>
   );
 }
 
-function RoomBox({
-  room,
-  selectedRoomId,
-  hasDateSelected,
-  onSelectRoom,
-}) {
+function RoomBox({ room, selectedRoomId, hasDateSelected, onSelectRoom }) {
   const details = getRoomDetails(room);
   const roomStatus = normalizeRoomStatus(room, hasDateSelected);
   const isSelected = String(selectedRoomId) === String(room.id);
@@ -1303,12 +1294,14 @@ function RoomBox({
       type="button"
       onClick={() => onSelectRoom(room)}
       disabled={isBlocked}
-      title={`${room.name} â€” ${details.bedType}`}
+      title={`${room.name} — ${details.bedType}`}
       className={`floor-room floor-room-${roomStatus} min-h-[118px] ${
         isSelected ? "floor-room-selected" : ""
       }`}
     >
-      <strong>Hab. {details.roomNumber} Â· {details.roomType}</strong>
+      <strong>
+        Hab. {details.roomNumber} · {details.roomType}
+      </strong>
       <span>{details.capacity} persona(s)</span>
       <span>{details.bedType}</span>
 
@@ -1323,40 +1316,113 @@ function RoomBox({
   );
 }
 
+function DockIcon({ type }) {
+  const iconProps = {
+    width: 22,
+    height: 22,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+
+  if (type === "home") {
+    return (
+      <svg {...iconProps}>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v11h14V10" />
+        <path d="M9 21v-7h6v7" />
+      </svg>
+    );
+  }
+
+  if (type === "mail") {
+    return (
+      <svg {...iconProps}>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3 7 9 6 9-6" />
+      </svg>
+    );
+  }
+
+  if (type === "whatsapp") {
+    return (
+      <svg {...iconProps}>
+        <path d="M20.5 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-4.6A8.5 8.5 0 1 1 20.5 11.5Z" />
+        <path d="M8.2 7.8c.5 3.7 2.3 5.5 6 6l1.4-1.4c.3-.3.7-.4 1.1-.2l2 .9" />
+      </svg>
+    );
+  }
+
+  if (type === "facebook") {
+    return (
+      <svg {...iconProps} fill="currentColor" stroke="none">
+        <path d="M14 8h3V4.5c-.5-.1-1.9-.3-3.6-.3-3.5 0-5.9 2.1-5.9 6.1V13H4v4h3.5v7H12v-7h3.5l.6-4H12v-2.3C12 9.5 12.3 8 14 8Z" />
+      </svg>
+    );
+  }
+
+  if (type === "tiktok") {
+    return (
+      <svg {...iconProps}>
+        <path d="M14 4v10.5a4.5 4.5 0 1 1-4.5-4.5" />
+        <path d="M14 4c.8 2.6 2.4 4 5 4" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...iconProps}>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 function SocialDock() {
   const mensajeWhatsApp =
-    "Hola, quisiera solicitar informaciÃ³n sobre Casa de HuÃ©spedes Pimentel.";
+    "Hola, quisiera solicitar información sobre Casa de Huéspedes Pimentel.";
+  const asuntoCorreo = encodeURIComponent(
+    "Consulta sobre Casa de Huéspedes Pimentel",
+  );
+  const cuerpoCorreo = encodeURIComponent(
+    "Hola, quisiera solicitar información sobre Casa de Huéspedes Pimentel.",
+  );
 
   return (
     <div className="fixed left-1/2 bottom-4 -translate-x-1/2 z-40 flex flex-row items-center gap-2 bg-[#fbf7ef]/95 border border-[#eadfce] rounded-full px-3 py-2 shadow-xl backdrop-blur-md lg:left-5 lg:top-1/2 lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2 lg:flex-col lg:gap-3 lg:px-2 lg:py-4">
       <span className="hidden lg:block [writing-mode:vertical-rl] rotate-180 text-[10px] font-black text-[#2d261f] tracking-[0.25em] uppercase">
-        ContÃ¡ctanos
+        Contáctanos
       </span>
 
-      {/* Casa de HuÃ©spedes - pÃ¡gina principal */}
-      <a
-        href="/"
-        aria-label="Ir a Casa de HuÃ©spedes Pimentel"
-        title="Casa de HuÃ©spedes Pimentel"
+      {/* Casa de Huéspedes - página principal */}
+      <Link
+        to="/"
+        aria-label="Ir a Casa de Huéspedes Pimentel"
+        title="Casa de Huéspedes Pimentel"
         className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center text-xl hover:bg-[#a87545] transition"
       >
-        ðŸ 
-      </a>
+        <DockIcon type="home" />
+      </Link>
 
       {/* Correo */}
       <a
-        href="mailto:casadehuespedespimentel2023@gmail.com?subject=Consulta%20sobre%20Casa%20de%20HuÃ©spedes%20Pimentel&body=Hola%2C%20quisiera%20solicitar%20informaciÃ³n%20sobre%20Casa%20de%20HuÃ©spedes%20Pimentel."
+        href={`mailto:casadehuespedespimentel2023@gmail.com?subject=${asuntoCorreo}&body=${cuerpoCorreo}`}
         aria-label="Enviar correo"
         title="Enviar correo"
         className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center text-xl hover:bg-[#a87545] transition"
       >
-        âœ‰
+        <DockIcon type="mail" />
       </a>
 
       {/* WhatsApp */}
       <a
         href={`https://wa.me/51901551287?text=${encodeURIComponent(
-          mensajeWhatsApp
+          mensajeWhatsApp,
         )}`}
         target="_blank"
         rel="noreferrer"
@@ -1364,7 +1430,7 @@ function SocialDock() {
         title="Contactar por WhatsApp"
         className="w-11 h-11 rounded-full bg-[#25D366] text-white grid place-items-center font-black text-lg hover:bg-[#1faf54] transition"
       >
-        â˜Ž
+        <DockIcon type="whatsapp" />
       </a>
 
       {/* Facebook */}
@@ -1376,7 +1442,7 @@ function SocialDock() {
         title="Facebook"
         className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center font-black text-lg hover:bg-[#a87545] transition"
       >
-        f
+        <DockIcon type="facebook" />
       </a>
 
       {/* TikTok */}
@@ -1388,7 +1454,7 @@ function SocialDock() {
         title="TikTok"
         className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center font-black text-lg hover:bg-[#a87545] transition"
       >
-        â™ª
+        <DockIcon type="tiktok" />
       </a>
 
       {/* Instagram */}
@@ -1400,7 +1466,7 @@ function SocialDock() {
         title="Instagram"
         className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center font-black text-lg hover:bg-[#a87545] transition"
       >
-        â—Ž
+        <DockIcon type="instagram" />
       </a>
     </div>
   );
@@ -1414,9 +1480,9 @@ function FloatingSupportWidget({ isOpen, onOpen, onClose }) {
           type="button"
           onClick={onOpen}
           className="hotel-floating-btn"
-          aria-label="Abrir atenciÃ³n al cliente"
+          aria-label="Abrir atención al cliente"
         >
-          ðŸ’¬
+          💬
         </button>
       )}
 
@@ -1426,19 +1492,19 @@ function FloatingSupportWidget({ isOpen, onOpen, onClose }) {
             type="button"
             onClick={onClose}
             className="hotel-support-close"
-            aria-label="Cerrar atenciÃ³n al cliente"
+            aria-label="Cerrar atención al cliente"
           >
-            Ã—
+            ×
           </button>
 
           <div className="hotel-support-header">
-            <h3>Â¿Necesitas ayuda?</h3>
-            <p>EscrÃ­benos por WhatsApp para consultar disponibilidad.</p>
+            <h3>¿Necesitas ayuda?</h3>
+            <p>Escríbenos por WhatsApp para consultar disponibilidad.</p>
           </div>
 
           <div className="hotel-support-body">
             <a
-              href="https://wa.me/51901551287?text=Hola,%20quiero%20consultar%20disponibilidad%20en%20Casa%20HuÃ©spedes%20Pimentel"
+              href="https://wa.me/51901551287?text=Hola,%20quiero%20consultar%20disponibilidad%20en%20Casa%20Huéspedes%20Pimentel"
               target="_blank"
               rel="noreferrer"
               className="hotel-whatsapp-button"
