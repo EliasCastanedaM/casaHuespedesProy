@@ -31,6 +31,58 @@ function getStatusClass(status) {
   return "bg-[#f8fafc] text-[#475569] border-[#e2e8f0]";
 }
 
+function getMediaUrl(media) {
+  if (typeof media === "string") return media;
+
+  return (
+    media?.url ||
+    media?.media_url ||
+    media?.secure_url ||
+    media?.image_url ||
+    media?.video_url ||
+    ""
+  );
+}
+
+function getMediaType(media) {
+  const declaredType = String(
+    media?.media_type || media?.type || media?.resource_type || ""
+  ).toLowerCase();
+
+  if (declaredType.includes("video")) return "video";
+  if (declaredType.includes("image") || declaredType.includes("photo")) {
+    return "image";
+  }
+
+  return /\.(mp4|webm|mov|m4v|avi)(?:\?|$)/i.test(getMediaUrl(media))
+    ? "video"
+    : "image";
+}
+
+function normalizeMediaList(payload) {
+  const data = payload?.data ?? payload;
+
+  if (Array.isArray(data)) {
+    return data.map((media, index) => ({
+      ...(typeof media === "string" ? { url: media } : media),
+      _localKey:
+        media?.id ?? media?.public_id ?? `${getMediaType(media)}-${index}`,
+    }));
+  }
+
+  const normalizeGroup = (items, type) =>
+    (Array.isArray(items) ? items : []).map((media, index) => ({
+      ...(typeof media === "string" ? { url: media } : media),
+      media_type: media?.media_type || media?.type || type,
+      _localKey: media?.id ?? media?.public_id ?? `${type}-${index}`,
+    }));
+
+  return [
+    ...normalizeGroup(data?.images || data?.photos, "image"),
+    ...normalizeGroup(data?.videos, "video"),
+  ];
+}
+
 export default function RoomsAdmin() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +96,14 @@ export default function RoomsAdmin() {
     roomId: null,
     type: null,
   });
+  const [mediaManager, setMediaManager] = useState({
+    isOpen: false,
+    room: null,
+    items: [],
+  });
+  const [loadingRoomMedia, setLoadingRoomMedia] = useState(false);
+  const [deletingMediaKey, setDeletingMediaKey] = useState(null);
+  const [deletingCoverRoomId, setDeletingCoverRoomId] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -158,7 +218,7 @@ export default function RoomsAdmin() {
       setSuccess("");
 
       if (!formData.name.trim()) {
-        setError("El nombre de la habitación es obligatorio.");
+        setError("El nombre de la habitaciÃ³n es obligatorio.");
         return;
       }
 
@@ -168,7 +228,7 @@ export default function RoomsAdmin() {
       }
 
       if (!formData.capacity || Number(formData.capacity) < 1) {
-        setError("La capacidad debe ser como mínimo 1 persona.");
+        setError("La capacidad debe ser como mÃ­nimo 1 persona.");
         return;
       }
 
@@ -183,19 +243,19 @@ export default function RoomsAdmin() {
 
       if (editingRoomId) {
         await api.put(`/rooms/${editingRoomId}`, payload);
-        setSuccess("Habitación actualizada correctamente.");
+        setSuccess("HabitaciÃ³n actualizada correctamente.");
       } else {
         await api.post("/rooms", payload);
-        setSuccess("Habitación creada correctamente.");
+        setSuccess("HabitaciÃ³n creada correctamente.");
       }
 
       resetForm();
       await loadRooms();
     } catch (err) {
-      console.error("Error guardando habitación:", err);
+      console.error("Error guardando habitaciÃ³n:", err);
 
       const backendMessage = err.response?.data?.message;
-      setError(backendMessage || "No se pudo guardar la habitación.");
+      setError(backendMessage || "No se pudo guardar la habitaciÃ³n.");
     } finally {
       setSaving(false);
     }
@@ -215,11 +275,11 @@ export default function RoomsAdmin() {
         main_image_url: room.main_image_url || null,
       });
 
-      setSuccess("Estado de habitación actualizado correctamente.");
+      setSuccess("Estado de habitaciÃ³n actualizado correctamente.");
       await loadRooms();
     } catch (err) {
-      console.error("Error actualizando estado de habitación:", err);
-      setError("No se pudo actualizar el estado de la habitación.");
+      console.error("Error actualizando estado de habitaciÃ³n:", err);
+      setError("No se pudo actualizar el estado de la habitaciÃ³n.");
     }
   }
 
@@ -300,6 +360,135 @@ export default function RoomsAdmin() {
     }
   }
 
+  async function loadRoomMedia(room) {
+    try {
+      setLoadingRoomMedia(true);
+      setError("");
+
+      const response = await api.get(`/rooms/${room.id}/media`);
+      const items = normalizeMediaList(response.data);
+
+      setMediaManager((prev) => ({
+        ...prev,
+        room,
+        items,
+      }));
+    } catch (err) {
+      console.error("Error cargando fotos y videos:", err);
+
+      const backendMessage = err.response?.data?.message;
+      setError(
+        backendMessage ||
+          "No se pudieron cargar las fotos y videos de la habitaciÃ³n."
+      );
+    } finally {
+      setLoadingRoomMedia(false);
+    }
+  }
+
+  async function openMediaManager(room) {
+    setSuccess("");
+    setError("");
+    setMediaManager({
+      isOpen: true,
+      room,
+      items: [],
+    });
+
+    await loadRoomMedia(room);
+  }
+
+  function closeMediaManager() {
+    if (deletingMediaKey || loadingRoomMedia) return;
+
+    setMediaManager({
+      isOpen: false,
+      room: null,
+      items: [],
+    });
+  }
+
+  async function handleDeleteMedia(media) {
+    const room = mediaManager.room;
+    const mediaId = media?.id;
+
+    if (!room || !mediaId) {
+      setError(
+        "Este archivo no tiene un identificador vÃ¡lido y no se puede eliminar."
+      );
+      return;
+    }
+
+    const mediaType = getMediaType(media);
+    const confirmed = window.confirm(
+      `Â¿Seguro que deseas eliminar este ${
+        mediaType === "video" ? "video" : "foto"
+      }? Esta acciÃ³n no se puede deshacer.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const mediaKey = media._localKey ?? mediaId;
+
+      setDeletingMediaKey(mediaKey);
+      setError("");
+      setSuccess("");
+
+      await api.delete(`/rooms/${room.id}/media/${mediaId}`);
+
+      setMediaManager((prev) => ({
+        ...prev,
+        items: prev.items.filter(
+          (item) => (item._localKey ?? item.id) !== mediaKey
+        ),
+      }));
+
+      setSuccess(
+        mediaType === "video"
+          ? "Video eliminado correctamente."
+          : "Foto eliminada correctamente."
+      );
+
+      await loadRooms();
+    } catch (err) {
+      console.error("Error eliminando archivo:", err);
+
+      const backendMessage = err.response?.data?.message;
+      setError(backendMessage || "No se pudo eliminar el archivo.");
+    } finally {
+      setDeletingMediaKey(null);
+    }
+  }
+
+  async function handleDeleteCover(room) {
+    if (!room?.main_image_url) return;
+
+    const confirmed = window.confirm(
+      "Â¿Seguro que deseas eliminar la foto de portada? Esta acciÃ³n no se puede deshacer."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingCoverRoomId(room.id);
+      setError("");
+      setSuccess("");
+
+      await api.delete(`/rooms/${room.id}/image`);
+
+      setSuccess("Portada eliminada correctamente.");
+      await loadRooms();
+    } catch (err) {
+      console.error("Error eliminando portada:", err);
+
+      const backendMessage = err.response?.data?.message;
+      setError(backendMessage || "No se pudo eliminar la portada.");
+    } finally {
+      setDeletingCoverRoomId(null);
+    }
+  }
+
   const stats = useMemo(() => {
     const activeRooms = rooms.filter((room) => room.status === "active");
     const inactiveRooms = rooms.filter((room) => room.status === "inactive");
@@ -336,25 +525,25 @@ export default function RoomsAdmin() {
       title: "Total habitaciones",
       value: stats.totalRooms,
       helper: "Registradas",
-      icon: "🛏️",
+      icon: "ðŸ›ï¸",
     },
     {
       title: "Activas",
       value: stats.activeRooms,
       helper: "Visibles en la web",
-      icon: "✅",
+      icon: "âœ…",
     },
     {
       title: "Inactivas",
       value: stats.inactiveRooms,
       helper: "No disponibles",
-      icon: "⏸️",
+      icon: "â¸ï¸",
     },
     {
       title: "Mantenimiento",
       value: stats.maintenanceRooms,
-      helper: "En revisión",
-      icon: "🛠️",
+      helper: "En revisiÃ³n",
+      icon: "ðŸ› ï¸",
     },
   ];
 
@@ -366,7 +555,7 @@ export default function RoomsAdmin() {
           <div className="absolute inset-0 opacity-20">
             <img
               src="https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1800&auto=format&fit=crop"
-              alt="Habitaciones Casa Huéspedes Pimentel"
+              alt="Habitaciones Casa HuÃ©spedes Pimentel"
               className="w-full h-full object-cover"
             />
           </div>
@@ -385,7 +574,7 @@ export default function RoomsAdmin() {
 
               <p className="text-white/75 leading-relaxed mt-4 max-w-2xl">
                 Crea, edita y administra las habitaciones que se muestran en la
-                web pública del hospedaje.
+                web pÃºblica del hospedaje.
               </p>
             </div>
 
@@ -413,7 +602,7 @@ export default function RoomsAdmin() {
           </div>
         )}
 
-        {/* MÉTRICAS */}
+        {/* MÃ‰TRICAS */}
         <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
           {summaryCards.map((card) => (
             <SummaryCard
@@ -434,36 +623,36 @@ export default function RoomsAdmin() {
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
             <div>
               <p className="uppercase tracking-[0.2em] text-[11px] font-black text-[#a87545]">
-                Gestión
+                GestiÃ³n
               </p>
 
               <h2 className="font-serif text-3xl leading-none tracking-[-0.035em] text-[#2d261f] mt-2">
-                {editingRoomId ? "Editar habitación" : "Crear nueva habitación"}
+                {editingRoomId ? "Editar habitaciÃ³n" : "Crear nueva habitaciÃ³n"}
               </h2>
 
               <p className="text-[#6f6258] text-sm mt-2 leading-relaxed">
                 Las habitaciones activas aparecen en la web y pueden ser
-                seleccionadas por los huéspedes.
+                seleccionadas por los huÃ©spedes.
               </p>
             </div>
 
             {editingRoomId && (
               <span className="inline-flex w-fit rounded-full bg-[#fbf7ef] border border-[#d9b48f] text-[#2d261f] px-4 py-2 text-sm font-black">
-                Editando habitación #{editingRoomId}
+                Editando habitaciÃ³n #{editingRoomId}
               </span>
             )}
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="admin-label">Nombre de habitación</label>
+              <label className="admin-label">Nombre de habitaciÃ³n</label>
 
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Ej: Habitación Familiar con terraza"
+                placeholder="Ej: HabitaciÃ³n Familiar con terraza"
                 className="admin-input"
               />
             </div>
@@ -511,7 +700,7 @@ export default function RoomsAdmin() {
               </select>
 
               <p className="text-xs text-[#6f6258] mt-2">
-                Activa: aparece en la web. Inactiva o mantenimiento: no debería
+                Activa: aparece en la web. Inactiva o mantenimiento: no deberÃ­a
                 reservarse.
               </p>
             </div>
@@ -529,20 +718,20 @@ export default function RoomsAdmin() {
               />
 
               <p className="text-xs text-[#6f6258] mt-2">
-                Puedes pegar una URL o usar el botón “Subir imagen” en la lista
+                Puedes pegar una URL o usar el botÃ³n â€œSubir imagenâ€ en la lista
                 de habitaciones.
               </p>
             </div>
 
             <div className="md:col-span-2">
-              <label className="admin-label">Descripción</label>
+              <label className="admin-label">DescripciÃ³n</label>
 
               <textarea
                 name="description"
                 rows="4"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Describe servicios, camas, baño privado, WiFi, terraza, vista, etc."
+                placeholder="Describe servicios, camas, baÃ±o privado, WiFi, terraza, vista, etc."
                 className="admin-input resize-none"
               />
             </div>
@@ -557,8 +746,8 @@ export default function RoomsAdmin() {
               {saving
                 ? "Guardando..."
                 : editingRoomId
-                  ? "Actualizar habitación"
-                  : "Crear habitación"}
+                  ? "Actualizar habitaciÃ³n"
+                  : "Crear habitaciÃ³n"}
             </button>
 
             {editingRoomId && (
@@ -567,7 +756,7 @@ export default function RoomsAdmin() {
                 onClick={resetForm}
                 className="border border-[#eadfce] bg-[#fbf7ef] px-6 py-3 rounded-xl font-black text-[#2d261f] hover:bg-[#f7f1e8] transition"
               >
-                Cancelar edición
+                Cancelar ediciÃ³n
               </button>
             )}
           </div>
@@ -577,13 +766,13 @@ export default function RoomsAdmin() {
         <div className="bg-white rounded-[1.5rem] border border-[#eadfce] p-5 mt-6 shadow-sm">
           <div className="grid lg:grid-cols-[1fr_260px] gap-4">
             <div>
-              <label className="admin-label">Buscar habitación</label>
+              <label className="admin-label">Buscar habitaciÃ³n</label>
 
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por nombre o descripción..."
+                placeholder="Buscar por nombre o descripciÃ³n..."
                 className="admin-input"
               />
             </div>
@@ -605,7 +794,7 @@ export default function RoomsAdmin() {
           </div>
 
           <p className="text-sm text-[#6f6258] mt-3 font-bold">
-            Mostrando {filteredRooms.length} de {rooms.length} habitación(es).
+            Mostrando {filteredRooms.length} de {rooms.length} habitaciÃ³n(es).
           </p>
         </div>
 
@@ -619,15 +808,15 @@ export default function RoomsAdmin() {
 
           {!loading && rooms.length === 0 && (
             <EmptyBlock
-              title="Aún no hay habitaciones registradas"
-              text="Crea la primera habitación usando el formulario superior."
+              title="AÃºn no hay habitaciones registradas"
+              text="Crea la primera habitaciÃ³n usando el formulario superior."
             />
           )}
 
           {!loading && rooms.length > 0 && filteredRooms.length === 0 && (
             <EmptyBlock
               title="No se encontraron habitaciones"
-              text="Prueba con otro nombre, descripción o estado."
+              text="Prueba con otro nombre, descripciÃ³n o estado."
             />
           )}
 
@@ -643,8 +832,8 @@ export default function RoomsAdmin() {
                 </h2>
 
                 <p className="text-[#6f6258] text-sm mt-2">
-                  Gestiona disponibilidad, precios, imágenes y estado de cada
-                  habitación.
+                  Gestiona disponibilidad, precios, imÃ¡genes y estado de cada
+                  habitaciÃ³n.
                 </p>
               </div>
 
@@ -652,7 +841,7 @@ export default function RoomsAdmin() {
                 <table className="w-full text-sm">
                   <thead className="bg-[#2b1d12] text-white">
                     <tr>
-                      <th className="text-left px-5 py-4">Habitación</th>
+                      <th className="text-left px-5 py-4">HabitaciÃ³n</th>
                       <th className="text-left px-5 py-4">Capacidad</th>
                       <th className="text-left px-5 py-4">Precio</th>
                       <th className="text-left px-5 py-4">Estado</th>
@@ -684,23 +873,23 @@ export default function RoomsAdmin() {
 
                             <div>
                               <p className="font-black text-[#2d261f]">
-                                {room.name || "Habitación sin nombre"}
+                                {room.name || "HabitaciÃ³n sin nombre"}
                               </p>
 
                               <p className="text-xs text-[#9d9187] mt-1 font-bold">
-                                Habitación #{room.id}
+                                HabitaciÃ³n #{room.id}
                               </p>
 
                               <p className="text-sm text-[#6f6258] line-clamp-2 mt-2 max-w-xl">
-                                {room.description || "Sin descripción"}
+                                {room.description || "Sin descripciÃ³n"}
                               </p>
 
                               <div className="mt-2 flex flex-wrap gap-2">
                                 <span className="rounded-full border border-[#eadfce] bg-white px-2.5 py-1 text-[11px] font-black text-[#6f6258]">
-                                  📷 {Number(room.image_count || 0)} foto(s)
+                                  ðŸ“· {Number(room.image_count || 0)} foto(s)
                                 </span>
                                 <span className="rounded-full border border-[#eadfce] bg-white px-2.5 py-1 text-[11px] font-black text-[#6f6258]">
-                                  🎥 {Number(room.video_count || 0)} video(s)
+                                  ðŸŽ¥ {Number(room.video_count || 0)} video(s)
                                 </span>
                               </div>
                             </div>
@@ -778,6 +967,19 @@ export default function RoomsAdmin() {
                                 : "Cambiar portada"}
                             </label>
 
+                            {room.main_image_url && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCover(room)}
+                                disabled={deletingCoverRoomId === room.id}
+                                className="border border-red-200 bg-red-50 text-red-700 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-100 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {deletingCoverRoomId === room.id
+                                  ? "Eliminando portada..."
+                                  : "Eliminar portada"}
+                              </button>
+                            )}
+
                             <input
                               id={`room-images-${room.id}`}
                               type="file"
@@ -840,6 +1042,14 @@ export default function RoomsAdmin() {
                                 : "Agregar varios videos"}
                             </label>
 
+                            <button
+                              type="button"
+                              onClick={() => openMediaManager(room)}
+                              className="border border-[#d9b48f] bg-[#fbf7ef] text-[#2b1d12] px-4 py-2 rounded-xl text-xs font-black hover:bg-[#f2e7d8] transition"
+                            >
+                              Ver y eliminar archivos
+                            </button>
+
                             <p className="text-[11px] leading-relaxed text-[#9d9187]">
                               Selecciona varios archivos desde tu PC en una sola
                               carga.
@@ -855,6 +1065,141 @@ export default function RoomsAdmin() {
           )}
         </div>
       </section>
+
+      {mediaManager.isOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/65 p-4 md:p-8 flex items-center justify-center"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeMediaManager();
+          }}
+        >
+          <section className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-[1.5rem] bg-[#f7f1e8] border border-[#eadfce] shadow-2xl flex flex-col">
+            <header className="bg-[#2b1d12] text-white px-5 py-4 md:px-6 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.2em] font-black text-[#d9b48f]">
+                  GalerÃ­a administrativa
+                </p>
+                <h2 className="font-serif text-2xl md:text-3xl mt-1">
+                  {mediaManager.room?.name || "HabitaciÃ³n"}
+                </h2>
+                <p className="text-white/70 text-sm mt-1">
+                  Selecciona Ãºnicamente el archivo que deseas eliminar.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeMediaManager}
+                disabled={Boolean(deletingMediaKey) || loadingRoomMedia}
+                className="w-10 h-10 shrink-0 rounded-full bg-white/10 hover:bg-white/20 text-2xl font-bold transition disabled:opacity-50"
+                aria-label="Cerrar galerÃ­a"
+              >
+                Ã—
+              </button>
+            </header>
+
+            <div className="overflow-y-auto p-5 md:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                <p className="font-black text-[#2d261f]">
+                  {mediaManager.items.length} archivo(s)
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => loadRoomMedia(mediaManager.room)}
+                  disabled={loadingRoomMedia || Boolean(deletingMediaKey)}
+                  className="border border-[#d9b48f] bg-white px-4 py-2 rounded-xl text-xs font-black text-[#2b1d12] hover:bg-[#fbf7ef] transition disabled:opacity-60"
+                >
+                  {loadingRoomMedia ? "Actualizando..." : "Actualizar galerÃ­a"}
+                </button>
+              </div>
+
+              {loadingRoomMedia && (
+                <div className="rounded-2xl border border-[#eadfce] bg-white p-8 text-center font-bold text-[#6f6258]">
+                  Cargando fotos y videos...
+                </div>
+              )}
+
+              {!loadingRoomMedia && mediaManager.items.length === 0 && (
+                <div className="rounded-2xl border border-[#eadfce] bg-white p-8 text-center">
+                  <h3 className="font-serif text-2xl text-[#2d261f]">
+                    No hay archivos adicionales
+                  </h3>
+                  <p className="text-sm text-[#6f6258] mt-2">
+                    Usa los botones de carga para agregar fotos o videos.
+                  </p>
+                </div>
+              )}
+
+              {!loadingRoomMedia && mediaManager.items.length > 0 && (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mediaManager.items.map((media) => {
+                    const mediaUrl = getMediaUrl(media);
+                    const mediaType = getMediaType(media);
+                    const mediaKey = media._localKey ?? media.id;
+                    const isDeleting = deletingMediaKey === mediaKey;
+
+                    return (
+                      <article
+                        key={mediaKey}
+                        className="overflow-hidden rounded-2xl bg-white border border-[#eadfce] shadow-sm"
+                      >
+                        <div className="h-52 bg-[#2b1d12]">
+                          {mediaType === "video" ? (
+                            <video
+                              src={mediaUrl}
+                              controls
+                              preload="metadata"
+                              className="w-full h-full object-contain"
+                            >
+                              Tu navegador no puede reproducir este video.
+                            </video>
+                          ) : (
+                            <img
+                              src={mediaUrl}
+                              alt={`Foto de ${
+                                mediaManager.room?.name || "la habitaciÃ³n"
+                              }`}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                        </div>
+
+                        <div className="p-4">
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <span className="rounded-full bg-[#fbf7ef] border border-[#eadfce] px-3 py-1 text-[11px] font-black text-[#6f6258]">
+                              {mediaType === "video" ? "ðŸŽ¥ Video" : "ðŸ“· Foto"}
+                            </span>
+
+                            {!media.id && (
+                              <span className="text-[10px] font-bold text-red-600">
+                                Sin ID
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMedia(media)}
+                            disabled={isDeleting || !media.id}
+                            className="w-full rounded-xl bg-red-600 text-white px-4 py-2.5 text-xs font-black hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isDeleting
+                              ? "Eliminando..."
+                              : mediaType === "video"
+                                ? "Eliminar video"
+                                : "Eliminar foto"}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
