@@ -742,7 +742,7 @@ export default function Home() {
         id="por-que-pimentel"
         eyebrow="Destino"
         title="¿Por qué viajar a Pimentel?"
-        description="Pimentel es un balneario tranquilo, ideal para caminar cerca al mar, visitar el muelle, disfrutar atardeceres y desconectarse en un ambiente costero sin complicaciones."
+        description="Disfruta de la tranquilidad de Pimentel, un destino ideal para caminar junto al mar, visitar su emblemático muelle y descubrir restaurantes donde podrás disfrutar lo mejor de la gastronomía peruana."
         videoSrc="/videos/pimentel.mp4"
       />
 
