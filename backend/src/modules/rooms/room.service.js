@@ -423,3 +423,173 @@ export async function addRoomVideosService(roomId, uploadedVideos) {
     client.release();
   }
 }
+
+// Elimina una foto concreta. Si era la portada, convierte la siguiente foto
+// disponible en portada y mantiene rooms.main_image_url sincronizado.
+export async function deleteRoomImageService(roomId, imageId) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const roomResult = await client.query(
+      `SELECT id, main_image_url FROM rooms WHERE id = $1 FOR UPDATE;`,
+      [roomId]
+    );
+
+    if (roomResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const imageResult = await client.query(
+      `
+        SELECT *
+        FROM room_images
+        WHERE id = $1 AND room_id = $2
+        FOR UPDATE;
+      `,
+      [imageId, roomId]
+    );
+
+    if (imageResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const image = imageResult.rows[0];
+    const wasMain =
+      Boolean(image.is_main) ||
+      roomResult.rows[0].main_image_url === image.image_url;
+
+    await client.query(
+      `DELETE FROM room_images WHERE id = $1 AND room_id = $2;`,
+      [imageId, roomId]
+    );
+
+    let replacementImage = null;
+
+    if (wasMain) {
+      await client.query(
+        `UPDATE room_images SET is_main = FALSE WHERE room_id = $1;`,
+        [roomId]
+      );
+
+      const replacementResult = await client.query(
+        `
+          SELECT id, image_url
+          FROM room_images
+          WHERE room_id = $1
+          ORDER BY display_order NULLS LAST, id
+          LIMIT 1
+          FOR UPDATE;
+        `,
+        [roomId]
+      );
+
+      replacementImage = replacementResult.rows[0] || null;
+
+      if (replacementImage) {
+        await client.query(
+          `UPDATE room_images SET is_main = TRUE WHERE id = $1;`,
+          [replacementImage.id]
+        );
+      }
+
+      await client.query(
+        `
+          UPDATE rooms
+          SET main_image_url = $1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2;
+        `,
+        [replacementImage?.image_url || null, roomId]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return {
+      ...image,
+      replacement_image_url: replacementImage?.image_url || null,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// Elimina un video concreto. Si era el principal, promociona el siguiente.
+export async function deleteRoomVideoService(roomId, videoId) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const videoResult = await client.query(
+      `
+        SELECT *
+        FROM room_videos
+        WHERE id = $1 AND room_id = $2
+        FOR UPDATE;
+      `,
+      [videoId, roomId]
+    );
+
+    if (videoResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const video = videoResult.rows[0];
+
+    await client.query(
+      `DELETE FROM room_videos WHERE id = $1 AND room_id = $2;`,
+      [videoId, roomId]
+    );
+
+    let replacementVideo = null;
+
+    if (video.is_main) {
+      await client.query(
+        `UPDATE room_videos SET is_main = FALSE WHERE room_id = $1;`,
+        [roomId]
+      );
+
+      const replacementResult = await client.query(
+        `
+          SELECT id, video_url
+          FROM room_videos
+          WHERE room_id = $1
+          ORDER BY display_order NULLS LAST, id
+          LIMIT 1
+          FOR UPDATE;
+        `,
+        [roomId]
+      );
+
+      replacementVideo = replacementResult.rows[0] || null;
+
+      if (replacementVideo) {
+        await client.query(
+          `UPDATE room_videos SET is_main = TRUE WHERE id = $1;`,
+          [replacementVideo.id]
+        );
+      }
+    }
+
+    await client.query("COMMIT");
+
+    return {
+      ...video,
+      replacement_video_url: replacementVideo?.video_url || null,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}

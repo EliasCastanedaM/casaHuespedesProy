@@ -10,6 +10,8 @@ import {
   addRoomImageService,
   addRoomImagesService,
   addRoomVideosService,
+  deleteRoomImageService,
+  deleteRoomVideoService,
 } from "./room.service.js";
 
 function uploadBufferToCloudinary(file, options) {
@@ -317,6 +319,95 @@ export async function uploadRoomVideosController(req, res, next) {
       await removeUploadedFiles(uploadedVideos, "video");
     }
 
+    return next(error);
+  }
+}
+
+async function destroyCloudinaryAsset(publicId, resourceType) {
+  if (!publicId) return { deleted: false, reason: "missing_public_id" };
+
+  try {
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+      invalidate: true,
+    });
+
+    return {
+      deleted: result?.result === "ok" || result?.result === "not found",
+      result: result?.result,
+    };
+  } catch (error) {
+    console.error(
+      `No se pudo eliminar ${publicId} de Cloudinary:`,
+      error.message
+    );
+
+    return { deleted: false, reason: "cloudinary_error" };
+  }
+}
+
+export async function deleteRoomImageController(req, res, next) {
+  try {
+    const deletedImage = await deleteRoomImageService(
+      req.params.roomId,
+      req.params.imageId
+    );
+
+    if (!deletedImage) {
+      return res.status(404).json({
+        success: false,
+        message: "Foto no encontrada en esta habitación",
+      });
+    }
+
+    const cloudinaryResult = await destroyCloudinaryAsset(
+      deletedImage.public_id,
+      "image"
+    );
+
+    return res.json({
+      success: true,
+      message: "Foto eliminada correctamente",
+      data: {
+        id: deletedImage.id,
+        replacement_image_url: deletedImage.replacement_image_url,
+        cloudinary_deleted: cloudinaryResult.deleted,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function deleteRoomVideoController(req, res, next) {
+  try {
+    const deletedVideo = await deleteRoomVideoService(
+      req.params.roomId,
+      req.params.videoId
+    );
+
+    if (!deletedVideo) {
+      return res.status(404).json({
+        success: false,
+        message: "Video no encontrado en esta habitación",
+      });
+    }
+
+    const cloudinaryResult = await destroyCloudinaryAsset(
+      deletedVideo.public_id,
+      "video"
+    );
+
+    return res.json({
+      success: true,
+      message: "Video eliminado correctamente",
+      data: {
+        id: deletedVideo.id,
+        replacement_video_url: deletedVideo.replacement_video_url,
+        cloudinary_deleted: cloudinaryResult.deleted,
+      },
+    });
+  } catch (error) {
     return next(error);
   }
 }

@@ -15,6 +15,8 @@ import {
   uploadRoomImageController,
   uploadRoomImagesController,
   uploadRoomVideosController,
+  deleteRoomImageController,
+  deleteRoomVideoController,
 } from "./room.controller.js";
 
 const router = Router();
@@ -43,6 +45,10 @@ router.post(
   uploadRoomVideos.array("files", 10),
   uploadRoomVideosController
 );
+
+// Elimina una foto o un video específico de una habitación.
+router.delete("/:roomId/images/:imageId", deleteRoomImageController);
+router.delete("/:roomId/videos/:videoId", deleteRoomVideoController);
 
 router.post("/", createRoomController);
 router.put("/:id", updateRoomController);
