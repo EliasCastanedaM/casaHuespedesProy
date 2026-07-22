@@ -51,19 +51,19 @@ const extraServices = [
 
 const galleryImages = [
   {
-    src: "/img/galeria/galeria-1.jpg",
+    src: "/img/galeria/galeria-1.webp",
     alt: "Fachada de Casa Huéspedes Pimentel",
   },
   {
-    src: "/img/galeria/galeria-2.jpg",
+    src: "/img/galeria/galeria-2.webp",
     alt: "Habitación de Casa Huéspedes Pimentel",
   },
   {
-    src: "/img/galeria/galeria-3.jpg",
+    src: "/img/galeria/galeria-3.webp",
     alt: "Espacios comunes de Casa Huéspedes Pimentel",
   },
   {
-    src: "/img/galeria/galeria-4.jpg",
+    src: "/img/galeria/galeria-4.webp",
     alt: "Vista desde Casa Huéspedes Pimentel",
   },
 ];
