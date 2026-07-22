@@ -1,5 +1,10 @@
 import { Link } from "react-router-dom";
 
+import { Link } from "react-router-dom";
+
+// Pega aquí el enlace de la imagen principal
+const heroImage = "";
+
 const gallerySections = [
   {
     id: "lugares",
@@ -10,7 +15,7 @@ const gallerySections = [
     images: [
       {
         id: "caballitos-totora",
-        src: "/img/turismo/caballitos-totora.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Caballitos de totora navegando en el mar de Pimentel",
         title: "Caballitos de Totora",
         category: "Tradición",
@@ -19,7 +24,7 @@ const gallerySections = [
       },
       {
         id: "muelle-pimentel",
-        src: "/img/turismo/muelle-pimentel.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Muelle histórico de Pimentel frente al océano Pacífico",
         title: "Muelle de Pimentel",
         category: "Historia",
@@ -28,7 +33,7 @@ const gallerySections = [
       },
       {
         id: "playa-pimentel",
-        src: "/img/turismo/playa-pimentel.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Playa de Pimentel en Lambayeque",
         title: "Playa de Pimentel",
         category: "Naturaleza",
@@ -37,7 +42,7 @@ const gallerySections = [
       },
       {
         id: "malecon-pimentel",
-        src: "/img/turismo/malecon-pimentel.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Malecón turístico de Pimentel",
         title: "Malecón de Pimentel",
         category: "Paseo",
@@ -46,25 +51,25 @@ const gallerySections = [
       },
       {
         id: "playa-las-rocas",
-        src: "/img/turismo/playa-las-rocas.jpg",
-        alt: "Playa Las Rocas en el distrito de Pimentel",
+        src: "", // LINK DE LA FOTO
+        alt: "Playa Las Rocas en Pimentel",
         title: "Playa Las Rocas",
         category: "Naturaleza",
         description:
-          "Un rincón costero de Pimentel que combina formaciones rocosas, brisa marina y paisajes naturales.",
+          "Un rincón costero que combina formaciones rocosas, brisa marina y paisajes naturales.",
       },
       {
         id: "casa-museo-quinones",
-        src: "/img/turismo/casa-museo-quinones.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Casa Museo José Abelardo Quiñones",
         title: "Casa Museo José Quiñones",
         category: "Cultura",
         description:
-          "Casa natal del héroe de la aviación peruana José Abelardo Quiñones, convertida en un espacio histórico y cultural.",
+          "Casa natal del héroe de la aviación peruana, convertida en un espacio histórico y cultural.",
       },
       {
         id: "pesca-artesanal",
-        src: "/img/turismo/pesca-artesanal.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Pescadores artesanales trabajando en Pimentel",
         title: "Pesca artesanal",
         category: "Identidad",
@@ -73,7 +78,7 @@ const gallerySections = [
       },
       {
         id: "atardecer-pimentel",
-        src: "/img/turismo/atardecer-pimentel.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Atardecer frente al mar en Pimentel",
         title: "Atardeceres frente al mar",
         category: "Experiencia",
@@ -91,7 +96,7 @@ const gallerySections = [
     images: [
       {
         id: "ceviche",
-        src: "/img/turismo/ceviche.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Ceviche de pescado preparado en Pimentel",
         title: "Ceviche de pescado",
         category: "Cocina marina",
@@ -100,7 +105,7 @@ const gallerySections = [
       },
       {
         id: "arroz-mariscos",
-        src: "/img/turismo/arroz-mariscos.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Arroz con mariscos",
         title: "Arroz con mariscos",
         category: "Cocina marina",
@@ -109,16 +114,16 @@ const gallerySections = [
       },
       {
         id: "chinguirito",
-        src: "/img/turismo/chinguirito.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Chinguirito tradicional de Lambayeque",
         title: "Chinguirito",
         category: "Tradición lambayecana",
         description:
-          "Especialidad norteña elaborada tradicionalmente con pescado seco deshilachado, limón, cebolla y ají.",
+          "Especialidad norteña elaborada con pescado seco deshilachado, limón, cebolla y ají.",
       },
       {
         id: "tortilla-raya",
-        src: "/img/turismo/tortilla-raya.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Tortilla de raya tradicional",
         title: "Tortilla de raya",
         category: "Tradición lambayecana",
@@ -127,16 +132,16 @@ const gallerySections = [
       },
       {
         id: "arroz-pato",
-        src: "/img/turismo/arroz-pato.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Arroz con pato a la chiclayana",
         title: "Arroz con pato",
         category: "Cocina regional",
         description:
-          "Uno de los platos bandera de Lambayeque, reconocido por su arroz verde con culantro y su sazón norteña.",
+          "Uno de los platos bandera de Lambayeque, reconocido por su arroz verde y sazón norteña.",
       },
       {
         id: "seco-cabrito",
-        src: "/img/turismo/seco-cabrito.jpg",
+        src: "", // LINK DE LA FOTO
         alt: "Seco de cabrito tradicional",
         title: "Seco de cabrito",
         category: "Cocina regional",
