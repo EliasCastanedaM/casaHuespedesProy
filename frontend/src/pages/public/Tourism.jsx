@@ -21,7 +21,7 @@ const gallerySections = [
     images: [
       {
         id: "caballitos-totora",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://blog.howlanders.com/wp-content/uploads/2021/06/los-caballitos-de-totora.jpg", // PEGA AQUÍ EL LINK
         alt: "Caballitos de totora navegando en el mar de Pimentel",
         title: "Caballitos de Totora",
         category: "Tradición",
@@ -30,7 +30,7 @@ const gallerySections = [
       },
       {
         id: "muelle-pimentel",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkyVc-k19HTUQmi1tKH5DgssSPDkMj3Uy2pcSssbkcRFwPJSnwSDdDYhrWMB4W5Qm-kkATZtmCIsIAErtAM9RAAQQleDstOFad9u_zqKtEHM3PfsmUcH2NYup897_Tj8jNZ4ubS=s1360-w1360-h1020-rw", // PEGA AQUÍ EL LINK
         alt: "Muelle histórico de Pimentel frente al océano Pacífico",
         title: "Muelle de Pimentel",
         category: "Historia",
@@ -39,7 +39,7 @@ const gallerySections = [
       },
       {
         id: "playa-pimentel",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzOo8uI-sItyPAUxivjiJVYcNYWJu31J1iDkIZlej61w&s=10", // PEGA AQUÍ EL LINK
         alt: "Playa de Pimentel en Lambayeque",
         title: "Playa de Pimentel",
         category: "Naturaleza",
@@ -48,7 +48,7 @@ const gallerySections = [
       },
       {
         id: "malecon-pimentel",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSb_rzKUPzfSsgsZ3iIe7PcMa9JR7agD7NQuXisqS8F3A&s=10", // PEGA AQUÍ EL LINK
         alt: "Malecón turístico de Pimentel",
         title: "Malecón de Pimentel",
         category: "Paseo",
@@ -57,7 +57,7 @@ const gallerySections = [
       },
       {
         id: "playa-las-rocas",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7AE-fh9qq15vJKBcyNoQDceVp_WWX6fj4cw0hvNzokA&s=10", // PEGA AQUÍ EL LINK
         alt: "Playa Las Rocas en el distrito de Pimentel",
         title: "Playa Las Rocas",
         category: "Naturaleza",
@@ -66,7 +66,7 @@ const gallerySections = [
       },
       {
         id: "casa-museo-quinones",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR48OMr_02c4mPikmLa_dEHbsCEIkM5ovO0YEqed_PKdA&s=10", // PEGA AQUÍ EL LINK
         alt: "Casa Museo José Abelardo Quiñones",
         title: "Casa Museo José Quiñones",
         category: "Cultura",
@@ -75,7 +75,7 @@ const gallerySections = [
       },
       {
         id: "pesca-artesanal",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://live.staticflickr.com/4013/4247805265_133f139857_b.jpg", // PEGA AQUÍ EL LINK
         alt: "Pescadores artesanales trabajando en Pimentel",
         title: "Pesca artesanal",
         category: "Identidad",
@@ -84,7 +84,7 @@ const gallerySections = [
       },
       {
         id: "atardecer-pimentel",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4Nt3RNJ0wlw_XQjZFve-f6DAZ693pNxb-bMRjG3b9kg&s=10", // PEGA AQUÍ EL LINK
         alt: "Atardecer frente al mar en Pimentel",
         title: "Atardeceres frente al mar",
         category: "Experiencia",
@@ -102,7 +102,7 @@ const gallerySections = [
     images: [
       {
         id: "ceviche",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQDLTbO_12T6u6YO8nEju4ZTybiffKMKZJkW5pxN0aMg&s=10", // PEGA AQUÍ EL LINK
         alt: "Ceviche de pescado preparado en Pimentel",
         title: "Ceviche de pescado",
         category: "Cocina marina",
@@ -111,7 +111,7 @@ const gallerySections = [
       },
       {
         id: "arroz-mariscos",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzO9PMaWCd-B9JdTzQIjTEsqvSJH9kmn0LzYvI4mCOfA&s=10", // PEGA AQUÍ EL LINK
         alt: "Arroz con mariscos de Pimentel",
         title: "Arroz con mariscos",
         category: "Cocina marina",
@@ -120,7 +120,7 @@ const gallerySections = [
       },
       {
         id: "chinguirito",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPRYqzUCmyZsrVVofGMwfTREWDrmmSW5NHn6LWlmdkBA&s=10", // PEGA AQUÍ EL LINK
         alt: "Chinguirito tradicional de Lambayeque",
         title: "Chinguirito",
         category: "Tradición lambayecana",
@@ -129,7 +129,7 @@ const gallerySections = [
       },
       {
         id: "tortilla-raya",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgESuP4BMzJbss7_fgZmVNhGh6iNMaX5T5cBVhrlnmkg&s=10", // PEGA AQUÍ EL LINK
         alt: "Tortilla de raya tradicional de Lambayeque",
         title: "Tortilla de raya",
         category: "Tradición lambayecana",
@@ -138,7 +138,7 @@ const gallerySections = [
       },
       {
         id: "arroz-pato",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBGdP-b6woqv8K9QoQkNcvA4xjcxOKB9Vp_uoZfMFAxw&s=10", // PEGA AQUÍ EL LINK
         alt: "Arroz con pato a la chiclayana",
         title: "Arroz con pato",
         category: "Cocina regional",
@@ -147,7 +147,7 @@ const gallerySections = [
       },
       {
         id: "seco-cabrito",
-        src: "", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvSTTLrcCpHZfAmJu9swHLuAtaHlCf-xdCpbAMnuda7w&s=10", // PEGA AQUÍ EL LINK
         alt: "Seco de cabrito tradicional de Lambayeque",
         title: "Seco de cabrito",
         category: "Cocina regional",
