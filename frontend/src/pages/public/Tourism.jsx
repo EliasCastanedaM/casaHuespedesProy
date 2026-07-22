@@ -109,17 +109,29 @@ export default function Tourism() {
       <header className="w-full sticky top-0 z-50 bg-[#fbf7ef]/95 backdrop-blur-md border-b border-[#eadfce]">
         <nav className="max-w-7xl mx-auto px-5 md:px-8 h-[76px] flex items-center justify-between gap-6">
           <Link to="/" className="flex items-center gap-3 shrink-0">
-            <div className="w-11 h-11 rounded-full border border-[#a87545] text-[#a87545] flex items-center justify-center font-black text-sm overflow-hidden bg-white">
-              <img
-                src="/img/brand/logo-casa-huespedes.png"
-                alt="Casa Huéspedes Pimentel"
-                className="w-full h-full object-contain p-1.5"
-                onError={(event) => {
-                  event.currentTarget.style.display = "none";
-                  event.currentTarget.parentElement.textContent = "CH";
-                }}
-              />
-            </div>
+            <a
+  href="/#inicio"
+  aria-label="Ir al inicio de Casa Huéspedes Pimentel"
+  className="flex items-center shrink-0 group"
+>
+  <div
+    role="img"
+    aria-label="Casa Huéspedes Pimentel"
+    className="w-[105px] sm:w-[120px] h-[62px] bg-[#2b1d12] group-hover:-translate-y-0.5 transition"
+    style={{
+      WebkitMaskImage:
+        'url("/img/brand/logo-casa-huespedes.png")',
+      WebkitMaskRepeat: "no-repeat",
+      WebkitMaskPosition: "center",
+      WebkitMaskSize: "contain",
+      maskImage:
+        'url("/img/brand/logo-casa-huespedes.png")',
+      maskRepeat: "no-repeat",
+      maskPosition: "center",
+      maskSize: "contain",
+    }}
+  />
+</a>
 
             <div className="leading-tight">
               <p className="font-black text-[#2d261f] text-sm md:text-base">
