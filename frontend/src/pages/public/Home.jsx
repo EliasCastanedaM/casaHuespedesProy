@@ -661,7 +661,10 @@ export default function Home() {
             <div className="hotel-hero-text">
               <p className="hotel-hero-kicker">Descanso · Playa · Pimentel</p>
 
-              <h1>Un refugio cerca al mar: Casa Huéspedes Pimentel</h1>
+              <h1 className="hotel-hero-main-title">
+                Un refugio cerca al mar:
+                <span>Casa Huéspedes Pimentel</span>
+              </h1>
 
               <p>
                 Habitaciones de acuerdo a tus necesidades, atención familiar y
@@ -1160,9 +1163,8 @@ function StoryVideoSection({
   return (
     <section
       id={id}
-      className={`home-section hotel-story-section scroll-mt-32 ${
-        reverse ? "hotel-story-section-reverse" : ""
-      }`}
+      className={`home-section hotel-story-section scroll-mt-32 ${reverse ? "hotel-story-section-reverse" : ""
+        }`}
     >
       <div className="hotel-story-copy">
         <p className="hotel-eyebrow">{eyebrow}</p>
@@ -1392,9 +1394,8 @@ function RoomBox({ room, selectedRoomId, hasDateSelected, onSelectRoom }) {
       onClick={() => onSelectRoom(room)}
       disabled={isBlocked}
       title={`${room.name} — ${details.bedType}`}
-      className={`floor-room floor-room-${roomStatus} min-h-[118px] ${
-        isSelected ? "floor-room-selected" : ""
-      }`}
+      className={`floor-room floor-room-${roomStatus} min-h-[118px] ${isSelected ? "floor-room-selected" : ""
+        }`}
     >
       <strong>
         Hab. {details.roomNumber} · {details.roomType}

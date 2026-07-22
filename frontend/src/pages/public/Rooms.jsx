@@ -1,103 +1,248 @@
-// useEffect permite ejecutar una función cuando carga la página
-// useState permite guardar datos dentro del componente
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
-// Importamos el servicio que obtiene habitaciones desde el backend
+// Servicio para obtener habitaciones desde el backend
 import { getRooms } from "../../services/roomService";
 
-// Importamos la tarjeta visual de habitación
+// Tarjeta visual de cada habitación
 import RoomCard from "../../components/RoomCard";
 
-// Página pública donde se mostrarán todas las habitaciones
+// Reutilizamos los estilos del Home
+import "./Home.css";
+
 export default function Rooms() {
-  // Estado donde guardaremos las habitaciones recibidas desde el backend
   const [rooms, setRooms] = useState([]);
-
-  // Estado para saber si la página está cargando información
   const [loading, setLoading] = useState(true);
-
-  // Estado para guardar algún mensaje de error
   const [error, setError] = useState("");
 
-  // Esta función obtiene las habitaciones desde el backend
   async function loadRooms() {
     try {
-      // Activamos el estado de carga
       setLoading(true);
-
-      // Limpiamos errores anteriores
       setError("");
 
-      // Pedimos habitaciones al backend
       const data = await getRooms();
 
-      // Guardamos las habitaciones en el estado
-      setRooms(data);
+      setRooms(Array.isArray(data) ? data : []);
     } catch (err) {
-      // Mostramos el error técnico en consola para depurar
       console.error("Error cargando habitaciones:", err);
 
-      // Mostramos un mensaje amigable al usuario
-      setError("No se pudieron cargar las habitaciones. Revisa si el backend está encendido.");
+      setError(
+        "No se pudieron cargar las habitaciones. Inténtalo nuevamente."
+      );
     } finally {
-      // Terminamos la carga
       setLoading(false);
     }
   }
 
-  // Ejecutamos loadRooms cuando se abre la página por primera vez
   useEffect(() => {
     loadRooms();
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      
-      {/* Encabezado de la página */}
-      <div className="mb-10">
-        <p className="text-brand-blue font-semibold">Hospedaje disponible</p>
+    <main className="home-page">
+      {/* HERO CON VIDEO */}
+      <section className="hotel-hero">
+        <div className="hotel-hero-image">
+          <video
+            className="hotel-hero-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster="https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1800&auto=format&fit=crop"
+            aria-hidden="true"
+          >
+            <source
+              src="/videos/habitaciones.mp4"
+              type="video/mp4"
+            />
 
-        <h1 className="text-4xl font-bold text-brand-dark mt-2">
-          Habitaciones
-        </h1>
+            Tu navegador no puede reproducir este video.
+          </video>
 
-        <p className="mt-3 text-gray-600 max-w-2xl">
-          Consulta las habitaciones disponibles de Casa Huéspedes Pimentel.
-          Luego podrás seleccionar fechas y confirmar tu reserva online.
-        </p>
-      </div>
+          {/* Oscurecimiento del video */}
+          <div className="hotel-hero-overlay" />
 
-      {/* Mensaje mientras cargan las habitaciones */}
-      {loading && (
-        <div className="bg-white rounded-xl p-6 border border-gray-100">
-          <p className="text-gray-600">Cargando habitaciones...</p>
+          {/* Contenido encima del video */}
+          <div className="home-section hotel-hero-content">
+            <div className="hotel-hero-text">
+              <p className="hotel-hero-kicker">
+                Comodidad · Descanso · Pimentel
+              </p>
+
+              <h1>Encuentra tu habitación ideal.</h1>
+
+              <p>
+                Descubre nuestras habitaciones matrimoniales, dobles, triples
+                y familiares. Cada espacio está preparado para ofrecerte una
+                estadía cómoda y tranquila cerca del mar.
+              </p>
+
+              <div className="hotel-hero-actions">
+                <a
+                  href="#habitaciones"
+                  className="hotel-btn-primary"
+                >
+                  Ver habitaciones
+                </a>
+
+                <Link
+                  to="/#disponibilidad"
+                  className="hotel-btn-light"
+                >
+                  Consultar disponibilidad
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
 
-      {/* Mensaje si ocurre error */}
-      {!loading && error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6">
-          {error}
-        </div>
-      )}
+        {/* BARRA FLOTANTE */}
+        <div className="hotel-booking-bar">
+          <div className="hotel-booking-inner">
+            <div className="hotel-booking-grid">
+              <div className="hotel-booking-field">
+                <label>Habitaciones</label>
 
-      {/* Mensaje si no hay habitaciones registradas */}
-      {!loading && !error && rooms.length === 0 && (
-        <div className="bg-white rounded-xl p-6 border border-gray-100">
-          <p className="text-gray-600">
-            Aún no hay habitaciones registradas.
-          </p>
-        </div>
-      )}
+                <strong className="block mt-2 text-[#2b1d12]">
+                  {loading ? "Cargando..." : `${rooms.length} disponibles`}
+                </strong>
+              </div>
 
-      {/* Tarjetas de habitaciones */}
-      {!loading && !error && rooms.length > 0 && (
-        <div className="grid md:grid-cols-3 gap-6">
-          {rooms.map((room) => (
-            <RoomCard key={room.id} room={room} />
-          ))}
+              <div className="hotel-booking-field">
+                <label>Tipos</label>
+
+                <strong className="block mt-2 text-[#2b1d12]">
+                  Matrimonial, doble y triple
+                </strong>
+              </div>
+
+              <div className="hotel-booking-field">
+                <label>Ubicación</label>
+
+                <strong className="block mt-2 text-[#2b1d12]">
+                  Cerca al mar
+                </strong>
+              </div>
+
+              <Link
+                to="/#disponibilidad"
+                className="hotel-booking-button"
+              >
+                Ver disponibilidad
+              </Link>
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+      </section>
+
+      {/* LISTADO DE HABITACIONES */}
+      <section
+        id="habitaciones"
+        className="home-section hotel-rooms-section scroll-mt-32"
+      >
+        {/* Encabezado */}
+        <div className="hotel-section-header">
+          <div>
+            <p className="hotel-eyebrow">Alojamiento</p>
+
+            <h2 className="hotel-title">
+              Habitaciones para cada viajero
+            </h2>
+
+            <p className="hotel-section-description mt-4">
+              Conoce nuestras habitaciones, revisa sus fotografías, capacidad,
+              características y precio por noche antes de realizar tu reserva.
+            </p>
+          </div>
+
+          <Link
+            to="/#disponibilidad"
+            className="hotel-small-link"
+          >
+            Consultar disponibilidad →
+          </Link>
+        </div>
+
+        {/* Cargando */}
+        {loading && (
+          <div className="hotel-empty-card">
+            <div className="flex items-center justify-center gap-3">
+              <span className="w-5 h-5 rounded-full border-2 border-[#a87545] border-t-transparent animate-spin" />
+
+              <span>Cargando habitaciones...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Error */}
+        {!loading && error && (
+          <div className="rounded-[18px] border border-red-200 bg-red-50 p-7 text-center">
+            <p className="font-bold text-red-700">
+              {error}
+            </p>
+
+            <button
+              type="button"
+              onClick={loadRooms}
+              className="mt-5 rounded-full bg-[#2b1d12] px-6 py-3 text-sm font-black text-white transition hover:bg-[#a87545]"
+            >
+              Intentar nuevamente
+            </button>
+          </div>
+        )}
+
+        {/* Sin habitaciones */}
+        {!loading && !error && rooms.length === 0 && (
+          <div className="hotel-empty-card">
+            No hay habitaciones disponibles por el momento.
+          </div>
+        )}
+
+        {/* Tarjetas */}
+        {!loading && !error && rooms.length > 0 && (
+          <div className="hotel-room-grid">
+            {rooms.map((room) => (
+              <RoomCard
+                key={room.id}
+                room={room}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Información inferior */}
+        {!loading && !error && rooms.length > 0 && (
+          <div className="mt-14 rounded-[26px] border border-[#eadfce] bg-white p-7 md:p-9 shadow-[0_18px_45px_rgba(43,29,18,0.08)]">
+            <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+              <div>
+                <p className="hotel-eyebrow">
+                  ¿Necesitas ayuda?
+                </p>
+
+                <h3 className="hotel-title mt-2 text-3xl md:text-4xl">
+                  Te ayudamos a elegir una habitación
+                </h3>
+
+                <p className="mt-3 max-w-2xl leading-relaxed text-[#6f6258]">
+                  Consulta la disponibilidad y recibe orientación según la
+                  cantidad de huéspedes y las fechas de tu viaje.
+                </p>
+              </div>
+
+              <a
+                href="https://wa.me/51901551287?text=Hola,%20quiero%20consultar%20qué%20habitación%20me%20recomiendan%20en%20Casa%20Huéspedes%20Pimentel"
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 rounded-full bg-gradient-to-r from-[#a87545] to-[#7b4a1f] px-7 py-4 text-sm font-black text-white shadow-lg transition hover:-translate-y-1"
+              >
+                Consultar por WhatsApp
+              </a>
+            </div>
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
