@@ -648,7 +648,7 @@ export default function Home() {
             loop
             playsInline
             preload="metadata"
-            poster="https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1800&auto=format&fit=crop"
+            poster="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkHdw5hzGtHMnAH_fmaZXxD6XIvDdJFRQkP5tack1E0BG9rSwu4THaP9mj&s=10"
             aria-hidden="true"
           >
             <source src="/videos/pimentel.mp4" type="video/mp4" />
