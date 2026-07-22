@@ -1214,7 +1214,7 @@ function HowToGetThereSection({ videoSrc }) {
               muted
               playsInline
               preload="metadata"
-              poster="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop"
+              poster="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnIW04XObA4w_sLFpFazaqVZjuWjTnTv9stcaizVWyN3NX05tDQ5rhJzFqVd7FT9N6Ro8EKNn3pKusyTkOff-bVCmxNxrQ6mYuqqogUKdCahS2x8U_ioHj78CGX9vtvrqCs0o9BnUlak2hs=s1360-w1360-h1020-rw"
             >
               <source src={videoSrc} type="video/mp4" />
               Tu navegador no puede reproducir este video.
