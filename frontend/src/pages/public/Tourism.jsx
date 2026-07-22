@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const gallerySections = [
   {
     id: "lugares",
@@ -8,7 +10,7 @@ const gallerySections = [
     images: [
       {
         id: "caballitos-totora",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
+        src: "/img/turismo/caballitos-totora.jpg",
         alt: "Caballitos de totora navegando en el mar de Pimentel",
         title: "Caballitos de Totora",
         category: "Tradición",
@@ -17,7 +19,7 @@ const gallerySections = [
       },
       {
         id: "muelle-pimentel",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
+        src: "/img/turismo/muelle-pimentel.jpg",
         alt: "Muelle histórico de Pimentel frente al océano Pacífico",
         title: "Muelle de Pimentel",
         category: "Historia",
@@ -26,7 +28,7 @@ const gallerySections = [
       },
       {
         id: "playa-pimentel",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
+        src: "/img/turismo/playa-pimentel.jpg",
         alt: "Playa de Pimentel en Lambayeque",
         title: "Playa de Pimentel",
         category: "Naturaleza",
@@ -35,7 +37,7 @@ const gallerySections = [
       },
       {
         id: "malecon-pimentel",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
+        src: "/img/turismo/malecon-pimentel.jpg",
         alt: "Malecón turístico de Pimentel",
         title: "Malecón de Pimentel",
         category: "Paseo",
@@ -44,7 +46,7 @@ const gallerySections = [
       },
       {
         id: "playa-las-rocas",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
+        src: "/img/turismo/playa-las-rocas.jpg",
         alt: "Playa Las Rocas en el distrito de Pimentel",
         title: "Playa Las Rocas",
         category: "Naturaleza",
@@ -53,8 +55,8 @@ const gallerySections = [
       },
       {
         id: "casa-museo-quinones",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
-        alt: "Casa Museo del capitán FAP José Abelardo Quiñones en Pimentel",
+        src: "/img/turismo/casa-museo-quinones.jpg",
+        alt: "Casa Museo José Abelardo Quiñones",
         title: "Casa Museo José Quiñones",
         category: "Cultura",
         description:
@@ -62,8 +64,8 @@ const gallerySections = [
       },
       {
         id: "pesca-artesanal",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
-        alt: "Pescadores artesanales trabajando en la playa de Pimentel",
+        src: "/img/turismo/pesca-artesanal.jpg",
+        alt: "Pescadores artesanales trabajando en Pimentel",
         title: "Pesca artesanal",
         category: "Identidad",
         description:
@@ -71,7 +73,7 @@ const gallerySections = [
       },
       {
         id: "atardecer-pimentel",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
+        src: "/img/turismo/atardecer-pimentel.jpg",
         alt: "Atardecer frente al mar en Pimentel",
         title: "Atardeceres frente al mar",
         category: "Experiencia",
@@ -83,13 +85,13 @@ const gallerySections = [
   {
     id: "gastronomia",
     eyebrow: "Sabores del norte",
-    title: "Gastronomía de Pimentel y Lambayeque",
+    title: "Gastronomía de Pimentel",
     description:
       "La cercanía al mar y la tradición culinaria lambayecana ofrecen platos preparados con pescados, mariscos e ingredientes característicos del norte peruano.",
     images: [
       {
         id: "ceviche",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
+        src: "/img/turismo/ceviche.jpg",
         alt: "Ceviche de pescado preparado en Pimentel",
         title: "Ceviche de pescado",
         category: "Cocina marina",
@@ -98,8 +100,8 @@ const gallerySections = [
       },
       {
         id: "arroz-mariscos",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
-        alt: "Arroz con mariscos de la gastronomía de Pimentel",
+        src: "/img/turismo/arroz-mariscos.jpg",
+        alt: "Arroz con mariscos",
         title: "Arroz con mariscos",
         category: "Cocina marina",
         description:
@@ -107,7 +109,7 @@ const gallerySections = [
       },
       {
         id: "chinguirito",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
+        src: "/img/turismo/chinguirito.jpg",
         alt: "Chinguirito tradicional de Lambayeque",
         title: "Chinguirito",
         category: "Tradición lambayecana",
@@ -116,8 +118,8 @@ const gallerySections = [
       },
       {
         id: "tortilla-raya",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
-        alt: "Tortilla de raya tradicional de Lambayeque",
+        src: "/img/turismo/tortilla-raya.jpg",
+        alt: "Tortilla de raya tradicional",
         title: "Tortilla de raya",
         category: "Tradición lambayecana",
         description:
@@ -125,7 +127,7 @@ const gallerySections = [
       },
       {
         id: "arroz-pato",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
+        src: "/img/turismo/arroz-pato.jpg",
         alt: "Arroz con pato a la chiclayana",
         title: "Arroz con pato",
         category: "Cocina regional",
@@ -134,8 +136,8 @@ const gallerySections = [
       },
       {
         id: "seco-cabrito",
-        src: "", // PEGA AQUÍ EL LINK DE LA FOTO
-        alt: "Seco de cabrito tradicional de Lambayeque",
+        src: "/img/turismo/seco-cabrito.jpg",
+        alt: "Seco de cabrito tradicional",
         title: "Seco de cabrito",
         category: "Cocina regional",
         description:
@@ -145,66 +147,211 @@ const gallerySections = [
   },
 ];
 
-export default function Gallery() {
+function TourismCard({ image }) {
   return (
-    <main className="pimentel-gallery-page">
-      <section className="gallery-hero">
-        <div className="gallery-hero-overlay" />
+    <article className="group overflow-hidden rounded-[26px] bg-white border border-[#eadfce] shadow-[0_18px_45px_rgba(43,29,18,0.08)]">
+      <div className="relative h-[360px] sm:h-[410px] overflow-hidden bg-[#e9ddce]">
+        <img
+          src={image.src}
+          alt={image.alt}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+            event.currentTarget.nextElementSibling.style.display = "flex";
+          }}
+        />
 
-        <div className="gallery-hero-content">
-          <span>Casa Huéspedes Pimentel</span>
+        {/* Aparece solamente si la fotografía no existe */}
+        <div className="absolute inset-0 hidden flex-col items-center justify-center bg-[#e9ddce] px-6 text-center">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="mb-4 h-10 w-10 text-[#a87545]"
+          >
+            <path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-13Z" />
+            <path d="m3 16 5-5 4 4 2-2 7 7" />
+            <circle cx="16.5" cy="7.5" r="1.5" />
+          </svg>
 
-          <h1>Conoce la esencia de Pimentel</h1>
+          <span className="text-xs font-black uppercase tracking-[0.18em] text-[#a87545]">
+            Agrega la fotografía
+          </span>
 
-          <p>
-            Tradición, historia, mar y gastronomía en uno de los balnearios
-            más representativos de Lambayeque.
+          <strong className="mt-2 text-xl text-[#2b1d12]">
+            {image.title}
+          </strong>
+        </div>
+
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1c1009]/95 via-[#1c1009]/25 to-transparent" />
+
+        <div className="absolute inset-x-0 bottom-0 p-6 sm:p-7 text-white">
+          <span className="inline-flex rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] backdrop-blur-md">
+            {image.category}
+          </span>
+
+          <h3 className="mt-3 text-2xl sm:text-3xl font-serif font-semibold leading-tight">
+            {image.title}
+          </h3>
+
+          <p className="mt-3 max-w-md text-sm leading-6 text-white/85">
+            {image.description}
           </p>
         </div>
+      </div>
+    </article>
+  );
+}
+
+export default function Tourism() {
+  return (
+    <main
+      id="inicio-turismo"
+      className="min-h-screen overflow-hidden bg-[#fbf7ef] text-[#2b1d12]"
+    >
+      {/* PORTADA */}
+      <section className="relative min-h-[650px] lg:min-h-[720px] flex items-center">
+        <img
+          src="/img/turismo/portada-pimentel.jpg"
+          alt="Vista del mar y del muelle de Pimentel"
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+        />
+
+        <div className="absolute inset-0 bg-gradient-to-r from-[#211208]/95 via-[#211208]/70 to-[#211208]/25" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#211208]/70 via-transparent to-[#211208]/20" />
+
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-10 lg:px-12 py-24">
+          <div className="max-w-4xl">
+            <p className="text-xs sm:text-sm font-black uppercase tracking-[0.28em] text-[#e0b37f]">
+              Casa Huéspedes Pimentel
+            </p>
+
+            <h1 className="mt-6 max-w-4xl font-serif text-5xl sm:text-6xl lg:text-[82px] leading-[0.98] tracking-[-0.035em] text-white">
+              Conoce la esencia de Pimentel
+            </h1>
+
+            <p className="mt-7 max-w-2xl text-base sm:text-lg leading-8 text-white/85">
+              Tradición, historia, mar y gastronomía en uno de los balnearios
+              más representativos de Lambayeque.
+            </p>
+
+            <div className="mt-9 flex flex-col sm:flex-row gap-4">
+              <a
+                href="#lugares"
+                className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#8d5a2e] hover:shadow-xl"
+              >
+                Descubrir Pimentel
+              </a>
+
+              <Link
+                to="/habitaciones"
+                className="inline-flex items-center justify-center rounded-full border border-white/50 bg-white/10 px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white backdrop-blur-sm transition hover:bg-white hover:text-[#2b1d12]"
+              >
+                Ver habitaciones
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <a
+          href="#lugares"
+          aria-label="Bajar a la galería"
+          className="absolute z-10 bottom-7 left-1/2 -translate-x-1/2 flex h-12 w-12 items-center justify-center rounded-full border border-white/40 bg-white/10 text-white backdrop-blur-sm animate-bounce"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-5 w-5"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </a>
       </section>
 
-      {gallerySections.map((section) => (
+      {/* SECCIONES DE TURISMO */}
+      {gallerySections.map((section, sectionIndex) => (
         <section
           key={section.id}
           id={section.id}
-          className="hotel-gallery-section"
+          className={`scroll-mt-24 py-20 sm:py-24 ${
+            sectionIndex % 2 === 0 ? "bg-[#fbf7ef]" : "bg-white"
+          }`}
         >
-          <div className="hotel-gallery-heading">
-            <span>{section.eyebrow}</span>
-            <h2>{section.title}</h2>
-            <p>{section.description}</p>
-          </div>
+          <div className="max-w-7xl mx-auto px-5 md:px-8">
+            <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-7 lg:gap-20 items-end mb-12">
+              <div>
+                <span className="text-xs font-black uppercase tracking-[0.22em] text-[#a87545]">
+                  {section.eyebrow}
+                </span>
 
-          <div className="hotel-gallery-grid">
-            {section.images.map((image) => (
-              <article className="hotel-gallery-card" key={image.id}>
-                <div className="hotel-gallery-image">
-                  {image.src ? (
-                    <img
-                      src={image.src}
-                      alt={image.alt}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="gallery-image-placeholder">
-                      <span>Agrega la fotografía</span>
-                      <small>{image.title}</small>
-                    </div>
-                  )}
+                <h2 className="mt-4 font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.02] tracking-[-0.025em] text-[#2b1d12]">
+                  {section.title}
+                </h2>
+              </div>
 
-                  <div className="hotel-gallery-overlay" />
+              <p className="max-w-2xl text-base sm:text-lg leading-8 text-[#6c5b50]">
+                {section.description}
+              </p>
+            </div>
 
-                  <div className="hotel-gallery-information">
-                    <span>{image.category}</span>
-                    <h3>{image.title}</h3>
-                    <p>{image.description}</p>
-                  </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {section.images.map((image, imageIndex) => (
+                <div
+                  key={image.id}
+                  className={
+                    imageIndex === 0 && section.images.length > 6
+                      ? "sm:col-span-2"
+                      : ""
+                  }
+                >
+                  <TourismCard image={image} />
                 </div>
-              </article>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
       ))}
+
+      {/* LLAMADO A RESERVAR */}
+      <section className="bg-[#2b1d12] py-20 text-white">
+        <div className="max-w-7xl mx-auto px-5 md:px-8 text-center">
+          <span className="text-xs font-black uppercase tracking-[0.22em] text-[#d9a86e]">
+            Descansa cerca del mar
+          </span>
+
+          <h2 className="mx-auto mt-4 max-w-3xl font-serif text-4xl sm:text-5xl lg:text-6xl leading-tight">
+            Vive Pimentel desde Casa Huéspedes
+          </h2>
+
+          <p className="mx-auto mt-6 max-w-2xl text-base sm:text-lg leading-8 text-white/70">
+            Encuentra una habitación cómoda y disfruta de los principales
+            atractivos del balneario durante tu estadía.
+          </p>
+
+          <div className="mt-9 flex flex-col sm:flex-row justify-center gap-4">
+            <Link
+              to="/habitaciones"
+              className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#bd8753]"
+            >
+              Ver habitaciones
+            </Link>
+
+            <a
+              href="/#disponibilidad"
+              className="inline-flex items-center justify-center rounded-full border border-white/30 px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:bg-white hover:text-[#2b1d12]"
+            >
+              Consultar disponibilidad
+            </a>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
