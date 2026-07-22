@@ -28,24 +28,25 @@ const includedServices = [
 
 const extraServices = [
   {
-    title: "Cocina equipada",
-    image:
-      "https://images.unsplash.com/photo-1556911220-bff31c812dba?q=80&w=1200&auto=format&fit=crop",
+    title: "Uso de cocina",
+    image: "https://www.casahuespedespimentel.com/wp-content/uploads/2026/01/WhatsApp-Image-2026-01-29-at-9.49.51-AM-2.jpeg",
+    alt: "Cocina disponible en Casa Huéspedes Pimentel",
     description:
-      "Ambiente equipado para preparar alimentos durante la estadía.",
+      "Espacio disponible para que los huéspedes puedan preparar sus alimentos, previa coordinación.",
   },
   {
     title: "Lavado y planchado",
-    image:
-      "https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?q=80&w=1200&auto=format&fit=crop",
-    description: "Servicio de lavandería previa coordinación con el hospedaje.",
+    image: "https://www.casahuespedespimentel.com/wp-content/uploads/elementor/thumbs/WhatsApp-Image-2026-01-29-at-9.49.51-AM-3-rji065r0by8iez82rkb1evh747e3vj68wquxlxyw48.jpeg",
+    alt: "Servicio de lavado y planchado de Casa Huéspedes Pimentel",
+    description:
+      "Servicio adicional de lavado y planchado disponible previa coordinación con el hospedaje.",
   },
   {
-    title: "Taxi y estacionamiento",
-    image:
-      "https://images.unsplash.com/photo-1494515843206-f3117d3f51b7?q=80&w=1200&auto=format&fit=crop",
+    title: "Movilidad y estacionamiento",
+    image: "PEGA_AQUI_EL_LINK_REAL_DE_LA_ENTRADA_O_ESTACIONAMIENTO",
+    alt: "Ingreso y orientación de estacionamiento en Casa Huéspedes Pimentel",
     description:
-      "Apoyo en movilidad local y orientación sobre estacionamiento cercano.",
+      "Orientación sobre movilidad local, servicios de taxi y estacionamiento cercano al hospedaje.",
   },
 ];
 
