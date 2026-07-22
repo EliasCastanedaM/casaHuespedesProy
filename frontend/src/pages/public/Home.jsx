@@ -51,19 +51,19 @@ const extraServices = [
 
 const galleryImages = [
   {
-    src: "/img/galeria/galeria-1.webp",
+    src: "/img/galeria/galeria-1.jpg",
     alt: "Fachada de Casa Huéspedes Pimentel",
   },
   {
-    src: "/img/galeria/galeria-2.webp",
+    src: "/img/galeria/galeria-2.jpg",
     alt: "Habitación de Casa Huéspedes Pimentel",
   },
   {
-    src: "/img/galeria/galeria-3.webp",
+    src: "/img/galeria/galeria-3.jpg",
     alt: "Espacios comunes de Casa Huéspedes Pimentel",
   },
   {
-    src: "/img/galeria/galeria-4.webp",
+    src: "/img/galeria/galeria-4.jpg",
     alt: "Vista desde Casa Huéspedes Pimentel",
   },
 ];
@@ -902,10 +902,10 @@ export default function Home() {
         <div className="hotel-gallery-grid">
           {galleryImages.map((image) => (
             <img
-              key={image}
-              src={image}
-              alt="Galería Casa Huéspedes Pimentel"
-              className="hotel-gallery-img"
+              key={image.src}
+              src={image.src}
+              alt={image.alt}
+              loading="lazy"
             />
           ))}
         </div>
