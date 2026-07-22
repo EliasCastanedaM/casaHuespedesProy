@@ -96,7 +96,7 @@ const routeSteps = [
   },
   {
     number: "3",
-    title: "Cena o atardecer",
+    title: "Almuerzos, cenas",
     description:
       "Cierra el día con comida marina o una vista tranquila frente al mar.",
   },
