@@ -756,6 +756,9 @@ export default function Home() {
         reverse
       />
 
+      {/* CÓMO LLEGAR */}
+      <HowToGetThereSection videoSrc="/videos/como-llegar.mp4" />
+
       {/* HABITACIONES */}
       <section
         id="habitaciones"
@@ -1170,6 +1173,96 @@ function StoryVideoSection({
           <source src={videoSrc} type="video/mp4" />
           Tu navegador no puede reproducir este video.
         </video>
+      </div>
+    </section>
+  );
+}
+
+function HowToGetThereSection({ videoSrc }) {
+  const latitude = -6.836223132813942;
+  const longitude = -79.93713663068512;
+  const googleMapsEmbedUrl = `https://www.google.com/maps?q=${latitude},${longitude}&z=17&output=embed`;
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+  return (
+    <section
+      id="como-llegar"
+      className="home-section scroll-mt-32 py-16 lg:py-24"
+    >
+      <div className="mx-auto mb-10 max-w-3xl text-center lg:mb-14">
+        <p className="hotel-eyebrow">Ubicación</p>
+
+        <h2 className="hotel-title mt-3">
+          ¿Cómo llegar a Casa de Huéspedes Pimentel?
+        </h2>
+
+        <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#6f6257]">
+          Conoce nuestra ubicación y planifica tu llegada de manera sencilla.
+          Revisa el video o abre el mapa para obtener indicaciones desde tu
+          ubicación.
+        </p>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+        <article className="overflow-hidden rounded-[28px] border border-[#eadfce] bg-white shadow-[0_18px_50px_rgba(43,33,24,0.10)]">
+          <div className="aspect-video overflow-hidden bg-[#2b2118]">
+            <video
+              className="h-full w-full object-cover"
+              controls
+              muted
+              playsInline
+              preload="metadata"
+              poster="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop"
+            >
+              <source src={videoSrc} type="video/mp4" />
+              Tu navegador no puede reproducir este video.
+            </video>
+          </div>
+
+          <div className="p-6 lg:p-7">
+            <h3 className="text-xl font-black text-[#2b2118]">
+              Mira cómo llegar
+            </h3>
+            <p className="mt-2 leading-7 text-[#6f6257]">
+              Sigue el recorrido del video para reconocer los principales puntos
+              de referencia antes de tu llegada.
+            </p>
+          </div>
+        </article>
+
+        <article className="overflow-hidden rounded-[28px] border border-[#eadfce] bg-white shadow-[0_18px_50px_rgba(43,33,24,0.10)]">
+          <div className="aspect-video overflow-hidden bg-[#eee7dc]">
+            <iframe
+              className="h-full w-full border-0"
+              src={googleMapsEmbedUrl}
+              title="Ubicación de Casa de Huéspedes Pimentel en Google Maps"
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+
+          <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-7">
+            <div>
+              <h3 className="text-xl font-black text-[#2b2118]">
+                Nuestra ubicación
+              </h3>
+              <p className="mt-2 leading-7 text-[#6f6257]">
+                Consulta la ruta más conveniente desde donde te encuentres.
+              </p>
+            </div>
+
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#2b1d12] px-5 py-3 text-sm font-black text-white transition hover:bg-[#a87545]"
+            >
+              Abrir en Maps
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </article>
       </div>
     </section>
   );
