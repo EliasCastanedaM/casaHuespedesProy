@@ -95,6 +95,9 @@ CREATE TABLE IF NOT EXISTS rooms (
     -- Imagen principal de la habitación
     main_image_url TEXT,
 
+    -- Orden usado para mostrar las habitaciones
+    display_order INTEGER NOT NULL DEFAULT 0,
+
     -- Fecha de creación
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -119,12 +122,50 @@ CREATE TABLE IF NOT EXISTS room_images (
     -- ID público de Cloudinary para poder eliminar la imagen después
     public_id TEXT,
 
+    -- Nombre y texto alternativo de la foto
+    title VARCHAR(180),
+    alt_text TEXT,
+
     -- Indica si esta imagen es la principal
     is_main BOOLEAN DEFAULT FALSE,
+
+    -- Orden de aparición dentro de la galería de la habitación
+    display_order INTEGER NOT NULL DEFAULT 0,
 
     -- Fecha de creación
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_room_images_room_id
+ON room_images(room_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_room_images_one_main
+ON room_images(room_id)
+WHERE is_main = TRUE;
+
+
+-- ============================================================
+-- TABLA: room_videos
+-- Guarda videos asociados a una habitación.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS room_videos (
+    id SERIAL PRIMARY KEY,
+    room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    video_url TEXT NOT NULL,
+    public_id TEXT,
+    title VARCHAR(180),
+    poster_url TEXT,
+    is_main BOOLEAN DEFAULT FALSE,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_videos_room_id
+ON room_videos(room_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_room_videos_one_main
+ON room_videos(room_id)
+WHERE is_main = TRUE;
 
 
 -- ============================================================

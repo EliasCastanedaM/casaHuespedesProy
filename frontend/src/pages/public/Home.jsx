@@ -1187,12 +1187,12 @@ function HowToGetThereSection({ videoSrc }) {
   return (
     <section
       id="como-llegar"
-      className="home-section scroll-mt-32 py-16 lg:py-24"
+      className="home-section scroll-mt-32 pb-16 pt-8 lg:pb-24 lg:pt-12"
     >
       <div className="mx-auto mb-10 max-w-3xl text-center lg:mb-14">
         <p className="hotel-eyebrow">Ubicación</p>
 
-        <h2 className="hotel-title mt-3">
+        <h2 className="hotel-title hotel-story-title mt-3">
           ¿Cómo llegar a Casa de Huéspedes Pimentel?
         </h2>
 
