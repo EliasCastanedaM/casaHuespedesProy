@@ -1,3 +1,5 @@
+import SocialDock from "../../components/SocialDock";
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -243,6 +245,8 @@ export default function Rooms() {
           </div>
         )}
       </section>
+            <SocialDock />
+
     </main>
   );
 }
