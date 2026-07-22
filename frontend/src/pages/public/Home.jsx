@@ -746,6 +746,7 @@ export default function Home() {
         Pimentel es un encantador balneario ubicado en la costa norte del Perú, en el departamento de Lambayeque. Destaca por sus hermosas playas, su tradicional muelle y su ambiente tranquilo, ideal para descansar y disfrutar de la riqueza cultural y gastronómica de la región.
         "
         videoSrc="/videos/pimentel.mp4"
+        poster="https://www.caminoincamachu.com/wp-content/uploads/2024/03/playa-pimentel-1.jpg"
       />
 
       {/* POR QUÉ HOSPEDARSE */}
@@ -756,6 +757,7 @@ export default function Home() {
         description="Porque tendrás una estadía sencilla, cómoda y cercana al mar. Casa Huéspedes Pimentel ofrece habitaciones funcionales, atención directa y una ubicación pensada para descansar durante tu visita."
         videoSrc="/videos/casa-huespedes.mp4"
         reverse
+        poster="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNgk5I02gkcVtGTCcBFDQw7JPuzaGrK-w26uUyhTMgTQ&s=10"
       />
 
       {/* CÓMO LLEGAR */}
