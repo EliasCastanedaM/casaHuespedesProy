@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 
-// Este componente muestra el pie de página de la web pública
 export default function Footer() {
   return (
     <footer className="bg-[#2b1d12] text-white">
@@ -8,37 +7,20 @@ export default function Footer() {
         <div className="grid md:grid-cols-[1.2fr_0.8fr_0.8fr_1fr] gap-10">
           {/* Marca */}
           <div>
-            <a href="/#inicio" className="inline-flex items-center gap-3">
-             <a
-  href="/#inicio"
-  aria-label="Ir al inicio de Casa Huéspedes Pimentel"
-  className="flex items-center shrink-0 group"
->
-  <div
-    role="img"
-    aria-label="Casa Huéspedes Pimentel"
-    className="w-[105px] sm:w-[120px] h-[62px] bg-[#2b1d12] group-hover:-translate-y-0.5 transition"
-    style={{
-      WebkitMaskImage:
-        'url("/img/brand/logo-casa-huespedes.png")',
-      WebkitMaskRepeat: "no-repeat",
-      WebkitMaskPosition: "center",
-      WebkitMaskSize: "contain",
-      maskImage:
-        'url("/img/brand/logo-casa-huespedes.png")',
-      maskRepeat: "no-repeat",
-      maskPosition: "center",
-      maskSize: "contain",
-    }}
-  />
-</a>
+            <a
+              href="/#inicio"
+              aria-label="Ir al inicio de Casa Huéspedes Pimentel"
+              className="inline-flex flex-col items-start group"
+            >
+              <img
+                src="/img/brand/logo-casa-huespedes.png"
+                alt="Casa Huéspedes Pimentel"
+                className="w-[150px] h-auto object-contain group-hover:-translate-y-0.5 transition"
+              />
 
-              <div>
-                <h3 className="font-black text-lg leading-tight">
-                  Casa Huéspedes
-                </h3>
-                <p className="text-sm text-white/60">Pimentel</p>
-              </div>
+              <span className="text-sm text-white/60 tracking-[0.18em] uppercase mt-2">
+                Pimentel
+              </span>
             </a>
 
             <p className="text-sm text-white/65 leading-relaxed mt-5 max-w-sm">
@@ -59,6 +41,7 @@ export default function Footer() {
                   Inicio
                 </a>
               </li>
+
               <li>
                 <a
                   href="/#habitaciones"
@@ -67,6 +50,7 @@ export default function Footer() {
                   Habitaciones
                 </a>
               </li>
+
               <li>
                 <a
                   href="/#disponibilidad"
@@ -75,6 +59,7 @@ export default function Footer() {
                   Reservas
                 </a>
               </li>
+
               <li>
                 <a
                   href="/#servicios-extras"
@@ -101,6 +86,7 @@ export default function Footer() {
                   Conoce Lambayeque
                 </Link>
               </li>
+
               <li>
                 <a
                   href="/#galeria"
@@ -109,6 +95,7 @@ export default function Footer() {
                   Galería
                 </a>
               </li>
+
               <li>
                 <a
                   href="/#servicios-extras"
