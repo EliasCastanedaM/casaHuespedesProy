@@ -9,7 +9,7 @@ import Footer from "../../components/Footer";
   Ejemplo:
   https://res.cloudinary.com/tu-cloud/image/upload/portada.jpg
 */
-const heroImage = "";
+const heroImage = "https://f.rpp-noticias.io/2020/10/10/285928_1008166.jpg?width=1020&quality=80";
 
 const gallerySections = [
   {
