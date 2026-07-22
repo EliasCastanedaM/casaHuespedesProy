@@ -8,9 +8,19 @@ export default function Navbar() {
     <header className="w-full sticky top-0 z-50 bg-[#fbf7ef]/90 backdrop-blur-xl border-b border-[#eadfce]/80 shadow-[0_10px_30px_rgba(43,29,18,0.05)]">
       <nav className="max-w-7xl mx-auto px-5 md:px-8 h-[78px] flex items-center justify-between gap-6">
         <a href="/#inicio" className="flex items-center gap-3 shrink-0 group">
-          <div className="w-12 h-12 rounded-2xl bg-white border border-[#eadfce] text-[#a87545] flex items-center justify-center font-black text-sm shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition">
-            CH
-          </div>
+         <a
+  href="/#inicio"
+  aria-label="Ir al inicio de Casa Huéspedes Pimentel"
+  className="flex items-center shrink-0 group"
+>
+  <div className="w-[96px] sm:w-[112px] h-[62px] rounded-2xl overflow-hidden bg-[#2b1d12] border border-[#4a3525] shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition">
+    <img
+      src="/img/brand/logo-casa-huespedes.png"
+      alt="Casa Huéspedes Pimentel"
+      className="w-full h-full object-contain p-1.5"
+    />
+  </div>
+</a>
 
           <div className="leading-tight">
             <p className="font-black text-[#2d261f] text-sm md:text-base tracking-tight">
