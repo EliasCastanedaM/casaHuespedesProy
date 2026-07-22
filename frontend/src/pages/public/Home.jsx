@@ -50,10 +50,22 @@ const extraServices = [
 ];
 
 const galleryImages = [
-  "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=900&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=900&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=900&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=900&auto=format&fit=crop",
+  {
+    src: "/img/galeria/galeria-1.jpg",
+    alt: "Fachada de Casa Huéspedes Pimentel",
+  },
+  {
+    src: "/img/galeria/galeria-2.jpg",
+    alt: "Habitación de Casa Huéspedes Pimentel",
+  },
+  {
+    src: "/img/galeria/galeria-3.jpg",
+    alt: "Espacios comunes de Casa Huéspedes Pimentel",
+  },
+  {
+    src: "/img/galeria/galeria-4.jpg",
+    alt: "Vista desde Casa Huéspedes Pimentel",
+  },
 ];
 
 const ROOM_ORDER = [
