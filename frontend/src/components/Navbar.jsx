@@ -53,10 +53,9 @@ export default function Navbar() {
           <Link to="/#servicios-extras" className={navLink}>
             Servicios
           </Link>
-
-          <Link to="/#galeria" className={navLink}>
-            Galería
-          </Link>
+<Link to="/galeria" className={navLink}>
+  Galería
+</Link>
 
           <Link to="/#disponibilidad" className={navLink}>
             Reservas
