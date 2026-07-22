@@ -661,7 +661,7 @@ export default function Home() {
             <div className="hotel-hero-text">
               <p className="hotel-hero-kicker">Descanso · Playa · Pimentel</p>
 
-              <h1>Un refugio cerca al mar.</h1>
+              <h1>Un refugio cerca al mar: Casa Huéspedes Pimentel</h1>
 
               <p>
                 Habitaciones de acuerdo a tus necesidades, atención familiar y
