@@ -14,6 +14,36 @@ import { getRoomById } from "../../services/roomService";
 // Servicios para validar disponibilidad y crear reserva
 import { checkAvailability, createBooking } from "../../services/bookingService";
 
+const BOOKING_DRAFT_KEY = "pimentelBookingDraft";
+
+function readStoredBookingDraft(roomId) {
+  if (!roomId) return null;
+
+  try {
+    const storedDraft = JSON.parse(
+      sessionStorage.getItem(BOOKING_DRAFT_KEY) || "null"
+    );
+
+    if (
+      storedDraft &&
+      String(storedDraft.roomId) === String(roomId)
+    ) {
+      return storedDraft;
+    }
+  } catch (storageError) {
+    console.warn("No se pudo leer la reserva temporal.", storageError);
+  }
+
+  return null;
+}
+
+function getLocalDateValue(date = new Date()) {
+  const timezoneOffset = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - timezoneOffset)
+    .toISOString()
+    .split("T")[0];
+}
+
 // Página donde el cliente crea una reserva
 export default function Booking() {
   // Simulación visual de pago
@@ -25,6 +55,14 @@ export default function Booking() {
 
   // Obtenemos el roomId desde la URL
   const roomId = searchParams.get("roomId");
+
+  // Fechas enviadas desde la página de detalle de la habitación
+  const checkInFromUrl =
+    searchParams.get("checkIn") || searchParams.get("check_in") || "";
+  const checkOutFromUrl =
+    searchParams.get("checkOut") || searchParams.get("check_out") || "";
+
+  const today = getLocalDateValue();
 
   // Estado para guardar habitación seleccionada
   const [room, setRoom] = useState(null);
@@ -45,18 +83,22 @@ export default function Booking() {
   const [createdBooking, setCreatedBooking] = useState(null);
 
   // Estado principal del formulario
-  const [formData, setFormData] = useState({
-    check_in: "",
-    check_out: "",
-    guests_count: 1,
-    special_requests: "",
-    customer: {
-      full_name: "",
-      phone: "",
-      email: "",
-      document_type: "DNI",
-      document_number: "",
-    },
+  const [formData, setFormData] = useState(() => {
+    const storedDraft = readStoredBookingDraft(roomId);
+
+    return {
+      check_in: checkInFromUrl || storedDraft?.checkIn || "",
+      check_out: checkOutFromUrl || storedDraft?.checkOut || "",
+      guests_count: Number(storedDraft?.guestsCount || 1),
+      special_requests: "",
+      customer: {
+        full_name: "",
+        phone: "",
+        email: "",
+        document_type: "DNI",
+        document_number: "",
+      },
+    };
   });
 
   // Simula un pago superficial, no cobra ni conecta con backend
@@ -98,16 +140,63 @@ export default function Booking() {
     loadSelectedRoom();
   }, [roomId]);
 
+  // Si la URL o la habitación cambian, recupera las fechas correspondientes.
+  useEffect(() => {
+    const storedDraft = readStoredBookingDraft(roomId);
+
+    setFormData((prev) => ({
+      ...prev,
+      check_in: checkInFromUrl || storedDraft?.checkIn || "",
+      check_out: checkOutFromUrl || storedDraft?.checkOut || "",
+      guests_count: Number(storedDraft?.guestsCount || 1),
+    }));
+  }, [roomId, checkInFromUrl, checkOutFromUrl]);
+
+  // Mantiene las fechas y huéspedes mientras el usuario completa la reserva.
+  useEffect(() => {
+    if (!roomId || (!formData.check_in && !formData.check_out)) return;
+
+    const bookingDraft = {
+      roomId: String(roomId),
+      checkIn: formData.check_in,
+      checkOut: formData.check_out,
+      guestsCount: Number(formData.guests_count || 1),
+    };
+
+    sessionStorage.setItem(
+      BOOKING_DRAFT_KEY,
+      JSON.stringify(bookingDraft)
+    );
+  }, [
+    roomId,
+    formData.check_in,
+    formData.check_out,
+    formData.guests_count,
+  ]);
+
   // Función para actualizar campos simples del formulario
   function handleChange(event) {
     // Obtenemos nombre y valor del input
     const { name, value } = event.target;
 
     // Actualizamos el campo correspondiente
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const nextFormData = {
+        ...prev,
+        [name]: value,
+      };
+
+      // Si cambia el ingreso y la salida deja de ser válida, se limpia.
+      if (
+        name === "check_in" &&
+        prev.check_out &&
+        prev.check_out <= value
+      ) {
+        nextFormData.check_out = "";
+      }
+
+      return nextFormData;
+    });
   }
 
   // Función para actualizar campos dentro de customer
@@ -230,6 +319,9 @@ export default function Booking() {
       setSuccess(
         "Reserva registrada correctamente. El pago queda pendiente de confirmación."
       );
+
+      // La reserva temporal ya no es necesaria después de registrarla.
+      sessionStorage.removeItem(BOOKING_DRAFT_KEY);
     } catch (err) {
       // Mostramos error técnico en consola
       console.error("Error creando reserva:", err);
@@ -293,6 +385,7 @@ export default function Booking() {
                     name="check_in"
                     value={formData.check_in}
                     onChange={handleChange}
+                    min={today}
                     className="booking-input"
                   />
                 </div>
@@ -307,6 +400,7 @@ export default function Booking() {
                     name="check_out"
                     value={formData.check_out}
                     onChange={handleChange}
+                    min={formData.check_in || today}
                     className="booking-input"
                   />
                 </div>
@@ -664,6 +758,16 @@ export default function Booking() {
             </div>
 
             <div className="booking-summary-list">
+              <div className="booking-summary-row">
+                <span>Ingreso</span>
+                <strong>{formData.check_in || "Por seleccionar"}</strong>
+              </div>
+
+              <div className="booking-summary-row">
+                <span>Salida</span>
+                <strong>{formData.check_out || "Por seleccionar"}</strong>
+              </div>
+
               <div className="booking-summary-row">
                 <span>Precio por noche</span>
                 <strong>S/ {Number(room.price_per_night).toFixed(2)}</strong>

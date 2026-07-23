@@ -1,9 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { getRoomById, getRooms } from "../../services/roomService";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1400&auto=format&fit=crop";
+
+const BOOKING_DRAFT_KEY = "pimentelBookingDraft";
+
+function getLocalDateValue(date = new Date()) {
+  const timezoneOffset = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - timezoneOffset)
+    .toISOString()
+    .split("T")[0];
+}
 
 const ROOM_DETAILS = {
   101: {
@@ -255,6 +264,7 @@ function amenityIcon(amenity) {
 
 export default function RoomDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [room, setRoom] = useState(null);
   const [selectedMedia, setSelectedMedia] = useState(null);
@@ -262,6 +272,11 @@ export default function RoomDetail() {
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [dateError, setDateError] = useState("");
+
+  const today = getLocalDateValue();
 
   useEffect(() => {
     async function loadRoom() {
@@ -381,6 +396,86 @@ export default function RoomDetail() {
     ? room.videos.filter((video) => video?.video_url)
     : [];
   const visiblePhotos = showAllPhotos ? photos : photos.slice(0, 12);
+
+  // Recupera las fechas si el usuario vuelve desde la página de reserva.
+  useEffect(() => {
+    if (!room?.databaseId) return;
+
+    try {
+      const storedDraft = JSON.parse(
+        sessionStorage.getItem(BOOKING_DRAFT_KEY) || "null"
+      );
+
+      if (
+        storedDraft &&
+        String(storedDraft.roomId) === String(room.databaseId)
+      ) {
+        setCheckIn(storedDraft.checkIn || "");
+        setCheckOut(storedDraft.checkOut || "");
+      }
+    } catch (storageError) {
+      console.warn("No se pudieron recuperar las fechas guardadas.", storageError);
+    }
+  }, [room?.databaseId]);
+
+  function handleCheckInChange(event) {
+    const nextCheckIn = event.target.value;
+
+    setCheckIn(nextCheckIn);
+    setDateError("");
+
+    // Si la salida dejó de ser válida, se limpia para evitar una reserva errónea.
+    if (checkOut && checkOut <= nextCheckIn) {
+      setCheckOut("");
+    }
+  }
+
+  function handleCheckOutChange(event) {
+    setCheckOut(event.target.value);
+    setDateError("");
+  }
+
+  function handleContinueToBooking() {
+    if (!checkIn || !checkOut) {
+      setDateError("Selecciona la fecha de ingreso y la fecha de salida.");
+      return;
+    }
+
+    if (checkOut <= checkIn) {
+      setDateError(
+        "La fecha de salida debe ser posterior a la fecha de ingreso."
+      );
+      return;
+    }
+
+    if (!room?.databaseId) {
+      setDateError(
+        "Esta habitación todavía no está habilitada para reserva online."
+      );
+      return;
+    }
+
+    const bookingDraft = {
+      roomId: String(room.databaseId),
+      checkIn,
+      checkOut,
+      guestsCount: 1,
+    };
+
+    // Mantiene la información si el usuario actualiza o vuelve a la página.
+    sessionStorage.setItem(
+      BOOKING_DRAFT_KEY,
+      JSON.stringify(bookingDraft)
+    );
+
+    const params = new URLSearchParams({
+      roomId: String(room.databaseId),
+      checkIn,
+      checkOut,
+    });
+
+    navigate(`/reservar?${params.toString()}`);
+  }
 
   if (loading) {
     return (
@@ -716,6 +811,9 @@ export default function RoomDetail() {
                   </label>
                   <input
                     type="date"
+                    value={checkIn}
+                    min={today}
+                    onChange={handleCheckInChange}
                     className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-3 text-sm"
                   />
                 </div>
@@ -726,18 +824,31 @@ export default function RoomDetail() {
                   </label>
                   <input
                     type="date"
+                    value={checkOut}
+                    min={checkIn || today}
+                    onChange={handleCheckOutChange}
                     className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-3 text-sm"
                   />
                 </div>
               </div>
 
+              {dateError && (
+                <p
+                  role="alert"
+                  className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700"
+                >
+                  {dateError}
+                </p>
+              )}
+
               {room.databaseId ? (
-                <Link
-                  to={`/reservar?roomId=${room.databaseId}`}
+                <button
+                  type="button"
+                  onClick={handleContinueToBooking}
                   className="mt-6 flex w-full items-center justify-center rounded-xl bg-[#8b5427] px-6 py-4 font-black text-white transition hover:bg-[#633817] focus:outline-none focus:ring-2 focus:ring-[#8b5427] focus:ring-offset-2"
                 >
                   Consultar disponibilidad
-                </Link>
+                </button>
               ) : (
                 <a
                   href={whatsappUrl}
