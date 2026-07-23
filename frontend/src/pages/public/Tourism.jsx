@@ -3,13 +3,60 @@ import { Link } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 
-/*
-  PEGA AQUÍ EL LINK DIRECTO DE LA IMAGEN DE PORTADA.
+/* =========================================================
+   VIDEOS DE LA PÁGINA
+   PEGA AQUÍ LOS LINKS DIRECTOS DE CLOUDINARY.
 
-  Ejemplo:
-  https://res.cloudinary.com/tu-cloud/image/upload/portada.jpg
-*/
-const heroImage = "https://f.rpp-noticias.io/2020/10/10/285928_1008166.jpg?width=1020&quality=80";
+   Los enlaces deben contener:
+   /video/upload/
+
+   Ejemplo:
+   https://res.cloudinary.com/tu-cloud/video/upload/v123/video.mp4
+========================================================= */
+
+// Video principal detrás del título
+const videoPortadaPimentel = "";
+
+// Video después de los lugares turísticos
+const videoExperienciaPimentel = "";
+
+// Video después de la gastronomía
+const videoGastronomiaPimentel = "";
+
+// Imagen que aparece si todavía no agregaste el video principal
+const imagenPortadaPimentel =
+  "https://f.rpp-noticias.io/2020/10/10/285928_1008166.jpg?width=1020&quality=80";
+
+/* =========================================================
+   VIDEOS INFERIORES
+========================================================= */
+
+const tourismVideos = [
+  {
+    id: "experiencia-pimentel",
+    eyebrow: "Pimentel en movimiento",
+    title: "Una experiencia frente al mar",
+    description:
+      "Recorre el muelle, contempla el océano y descubre la tradición que convierte a Pimentel en uno de los destinos más especiales de Lambayeque.",
+    videoSrc: videoExperienciaPimentel,
+    buttonText: "Conocer las habitaciones",
+    buttonLink: "/habitaciones",
+  },
+  {
+    id: "gastronomia-pimentel",
+    eyebrow: "Sabores de Lambayeque",
+    title: "Tradición que también se disfruta",
+    description:
+      "La gastronomía lambayecana reúne productos del mar, recetas tradicionales y sabores que forman parte de la identidad del norte peruano.",
+    videoSrc: videoGastronomiaPimentel,
+    buttonText: "Consultar disponibilidad",
+    buttonLink: "/#disponibilidad",
+  },
+];
+
+/* =========================================================
+   FOTOGRAFÍAS
+========================================================= */
 
 const gallerySections = [
   {
@@ -21,7 +68,7 @@ const gallerySections = [
     images: [
       {
         id: "caballitos-totora",
-        src: "https://blog.howlanders.com/wp-content/uploads/2021/06/los-caballitos-de-totora.jpg", // PEGA AQUÍ EL LINK
+        src: "https://blog.howlanders.com/wp-content/uploads/2021/06/los-caballitos-de-totora.jpg",
         alt: "Caballitos de totora navegando en el mar de Pimentel",
         title: "Caballitos de Totora",
         category: "Tradición",
@@ -30,7 +77,7 @@ const gallerySections = [
       },
       {
         id: "muelle-pimentel",
-        src: "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkyVc-k19HTUQmi1tKH5DgssSPDkMj3Uy2pcSssbkcRFwPJSnwSDdDYhrWMB4W5Qm-kkATZtmCIsIAErtAM9RAAQQleDstOFad9u_zqKtEHM3PfsmUcH2NYup897_Tj8jNZ4ubS=s1360-w1360-h1020-rw", // PEGA AQUÍ EL LINK
+        src: "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkyVc-k19HTUQmi1tKH5DgssSPDkMj3Uy2pcSssbkcRFwPJSnwSDdDYhrWMB4W5Qm-kkATZtmCIsIAErtAM9RAAQQleDstOFad9u_zqKtEHM3PfsmUcH2NYup897_Tj8jNZ4ubS=s1360-w1360-h1020-rw",
         alt: "Muelle histórico de Pimentel frente al océano Pacífico",
         title: "Muelle de Pimentel",
         category: "Historia",
@@ -39,7 +86,7 @@ const gallerySections = [
       },
       {
         id: "playa-pimentel",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzOo8uI-sItyPAUxivjiJVYcNYWJu31J1iDkIZlej61w&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzOo8uI-sItyPAUxivjiJVYcNYWJu31J1iDkIZlej61w&s=10",
         alt: "Playa de Pimentel en Lambayeque",
         title: "Playa de Pimentel",
         category: "Naturaleza",
@@ -48,7 +95,7 @@ const gallerySections = [
       },
       {
         id: "malecon-pimentel",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSb_rzKUPzfSsgsZ3iIe7PcMa9JR7agD7NQuXisqS8F3A&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSb_rzKUPzfSsgsZ3iIe7PcMa9JR7agD7NQuXisqS8F3A&s=10",
         alt: "Malecón turístico de Pimentel",
         title: "Malecón de Pimentel",
         category: "Paseo",
@@ -57,7 +104,7 @@ const gallerySections = [
       },
       {
         id: "playa-las-rocas",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7AE-fh9qq15vJKBcyNoQDceVp_WWX6fj4cw0hvNzokA&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7AE-fh9qq15vJKBcyNoQDceVp_WWX6fj4cw0hvNzokA&s=10",
         alt: "Playa Las Rocas en el distrito de Pimentel",
         title: "Playa Las Rocas",
         category: "Naturaleza",
@@ -66,7 +113,7 @@ const gallerySections = [
       },
       {
         id: "casa-museo-quinones",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR48OMr_02c4mPikmLa_dEHbsCEIkM5ovO0YEqed_PKdA&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR48OMr_02c4mPikmLa_dEHbsCEIkM5ovO0YEqed_PKdA&s=10",
         alt: "Casa Museo José Abelardo Quiñones",
         title: "Casa Museo José Quiñones",
         category: "Cultura",
@@ -75,7 +122,7 @@ const gallerySections = [
       },
       {
         id: "pesca-artesanal",
-        src: "https://live.staticflickr.com/4013/4247805265_133f139857_b.jpg", // PEGA AQUÍ EL LINK
+        src: "https://live.staticflickr.com/4013/4247805265_133f139857_b.jpg",
         alt: "Pescadores artesanales trabajando en Pimentel",
         title: "Pesca artesanal",
         category: "Identidad",
@@ -84,7 +131,7 @@ const gallerySections = [
       },
       {
         id: "atardecer-pimentel",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4Nt3RNJ0wlw_XQjZFve-f6DAZ693pNxb-bMRjG3b9kg&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4Nt3RNJ0wlw_XQjZFve-f6DAZ693pNxb-bMRjG3b9kg&s=10",
         alt: "Atardecer frente al mar en Pimentel",
         title: "Atardeceres frente al mar",
         category: "Experiencia",
@@ -102,7 +149,7 @@ const gallerySections = [
     images: [
       {
         id: "ceviche",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQDLTbO_12T6u6YO8nEju4ZTybiffKMKZJkW5pxN0aMg&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQDLTbO_12T6u6YO8nEju4ZTybiffKMKZJkW5pxN0aMg&s=10",
         alt: "Ceviche de pescado preparado en Pimentel",
         title: "Ceviche de pescado",
         category: "Cocina marina",
@@ -111,7 +158,7 @@ const gallerySections = [
       },
       {
         id: "arroz-mariscos",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzO9PMaWCd-B9JdTzQIjTEsqvSJH9kmn0LzYvI4mCOfA&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzO9PMaWCd-B9JdTzQIjTEsqvSJH9kmn0LzYvI4mCOfA&s=10",
         alt: "Arroz con mariscos de Pimentel",
         title: "Arroz con mariscos",
         category: "Cocina marina",
@@ -120,7 +167,7 @@ const gallerySections = [
       },
       {
         id: "chinguirito",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPRYqzUCmyZsrVVofGMwfTREWDrmmSW5NHn6LWlmdkBA&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPRYqzUCmyZsrVVofGMwfTREWDrmmSW5NHn6LWlmdkBA&s=10",
         alt: "Chinguirito tradicional de Lambayeque",
         title: "Chinguirito",
         category: "Tradición lambayecana",
@@ -129,7 +176,7 @@ const gallerySections = [
       },
       {
         id: "tortilla-raya",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgESuP4BMzJbss7_fgZmVNhGh6iNMaX5T5cBVhrlnmkg&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgESuP4BMzJbss7_fgZmVNhGh6iNMaX5T5cBVhrlnmkg&s=10",
         alt: "Tortilla de raya tradicional de Lambayeque",
         title: "Tortilla de raya",
         category: "Tradición lambayecana",
@@ -138,7 +185,7 @@ const gallerySections = [
       },
       {
         id: "arroz-pato",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBGdP-b6woqv8K9QoQkNcvA4xjcxOKB9Vp_uoZfMFAxw&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBGdP-b6woqv8K9QoQkNcvA4xjcxOKB9Vp_uoZfMFAxw&s=10",
         alt: "Arroz con pato a la chiclayana",
         title: "Arroz con pato",
         category: "Cocina regional",
@@ -147,7 +194,7 @@ const gallerySections = [
       },
       {
         id: "seco-cabrito",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvSTTLrcCpHZfAmJu9swHLuAtaHlCf-xdCpbAMnuda7w&s=10", // PEGA AQUÍ EL LINK
+        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvSTTLrcCpHZfAmJu9swHLuAtaHlCf-xdCpbAMnuda7w&s=10",
         alt: "Seco de cabrito tradicional de Lambayeque",
         title: "Seco de cabrito",
         category: "Cocina regional",
@@ -158,7 +205,9 @@ const gallerySections = [
   },
 ];
 
-/* ICONOS DE LA BARRA SOCIAL */
+/* =========================================================
+   ICONOS DE LA BARRA SOCIAL
+========================================================= */
 
 function DockIcon({ type }) {
   const iconProps = {
@@ -233,7 +282,9 @@ function DockIcon({ type }) {
   );
 }
 
-/* BARRA SOCIAL IZQUIERDA */
+/* =========================================================
+   BARRA SOCIAL
+========================================================= */
 
 function SocialDock() {
   const mensajeWhatsApp =
@@ -335,11 +386,13 @@ function SocialDock() {
   );
 }
 
-/* TARJETA DE TURISMO */
+/* =========================================================
+   TARJETA DE TURISMO
+========================================================= */
 
 function TourismCard({ image }) {
   return (
-    <article className="group overflow-hidden rounded-[26px] border border-[#eadfce] bg-white shadow-[0_18px_45px_rgba(43,29,18,0.08)]">
+    <article className="group overflow-hidden rounded-[26px] border border-[#eadfce] bg-white shadow-[0_18px_45px_rgba(43,29,18,0.08)] transition duration-300 hover:-translate-y-2 hover:shadow-[0_25px_55px_rgba(43,29,18,0.15)]">
       <div className="relative h-[390px] overflow-hidden bg-[#e9ddce] sm:h-[430px]">
         {image.src ? (
           <img
@@ -372,7 +425,7 @@ function TourismCard({ image }) {
           </div>
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1c1009]/95 via-[#1c1009]/25 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1c1009]/95 via-[#1c1009]/20 to-transparent" />
 
         <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-7">
           <span className="inline-flex rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] backdrop-blur-md">
@@ -392,7 +445,151 @@ function TourismCard({ image }) {
   );
 }
 
-/* PÁGINA COMPLETA */
+/* =========================================================
+   SECCIÓN DE FOTOGRAFÍAS
+========================================================= */
+
+function TourismGallerySection({ section, featured = false, background }) {
+  return (
+    <section
+      id={section.id}
+      className={`scroll-mt-24 py-20 sm:py-24 ${background}`}
+    >
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <div className="mb-12 grid items-end gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+          <div>
+            <span className="text-xs font-black uppercase tracking-[0.22em] text-[#a87545]">
+              {section.eyebrow}
+            </span>
+
+            <h2 className="mt-4 font-serif text-4xl leading-[1.05] tracking-[-0.025em] text-[#2b1d12] sm:text-5xl lg:text-6xl">
+              {section.title}
+            </h2>
+          </div>
+
+          <p className="max-w-2xl text-base leading-8 text-[#6c5b50] sm:text-lg">
+            {section.description}
+          </p>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {section.images.map((image, index) => (
+            <div
+              key={image.id}
+              className={featured && index === 0 ? "sm:col-span-2" : ""}
+            >
+              <TourismCard image={image} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   SECCIÓN DE VIDEO INFERIOR
+========================================================= */
+
+function TourismVideoSection({ video, reverse = false }) {
+  return (
+    <section
+      id={video.id}
+      className="relative overflow-hidden bg-[#2b1d12] py-20 sm:py-24"
+    >
+      <div className="absolute -left-32 top-12 h-72 w-72 rounded-full bg-[#a87545]/20 blur-[100px]" />
+
+      <div className="absolute -right-32 bottom-0 h-80 w-80 rounded-full bg-[#d9a86e]/10 blur-[120px]" />
+
+      <div className="relative mx-auto max-w-7xl px-5 md:px-8">
+        <div
+          className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${
+            reverse ? "lg:[&>*:first-child]:order-2" : ""
+          }`}
+        >
+          {/* VIDEO */}
+          <div className="relative">
+            <div className="absolute -inset-4 rounded-[36px] border border-white/10" />
+
+            <div className="relative aspect-video overflow-hidden rounded-[28px] border border-white/15 bg-[#160c07] shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+              {video.videoSrc ? (
+                <video
+                  src={video.videoSrc}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
+                  preload="metadata"
+                  className="h-full w-full object-cover"
+                >
+                  Tu navegador no puede reproducir este video.
+                </video>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#51331f] to-[#1d1009] px-8 text-center">
+                  <span className="grid h-16 w-16 place-items-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-sm">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="ml-1 h-7 w-7"
+                    >
+                      <path d="M8 5v14l11-7-11-7Z" />
+                    </svg>
+                  </span>
+
+                  <strong className="mt-5 font-serif text-2xl text-white">
+                    Agrega el link del video
+                  </strong>
+
+                  <small className="mt-2 text-sm text-white/60">
+                    {video.title}
+                  </small>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* TEXTO */}
+          <div className={reverse ? "lg:pr-8" : "lg:pl-8"}>
+            <span className="text-xs font-black uppercase tracking-[0.24em] text-[#d9a86e]">
+              {video.eyebrow}
+            </span>
+
+            <h2 className="mt-5 max-w-xl font-serif text-4xl leading-[1.05] tracking-[-0.025em] text-white sm:text-5xl lg:text-6xl">
+              {video.title}
+            </h2>
+
+            <p className="mt-6 max-w-xl text-base leading-8 text-white/70 sm:text-lg">
+              {video.description}
+            </p>
+
+            <a
+              href={video.buttonLink}
+              className="mt-8 inline-flex items-center justify-center rounded-full bg-[#a87545] px-7 py-4 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-1 hover:bg-[#bd8753] hover:shadow-xl"
+            >
+              {video.buttonText}
+
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="ml-3 h-4 w-4"
+              >
+                <path d="M5 12h14" />
+                <path d="m13 6 6 6-6 6" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   PÁGINA COMPLETA
+========================================================= */
 
 export default function Tourism() {
   return (
@@ -404,29 +601,56 @@ export default function Tourism() {
         id="inicio-turismo"
         className="min-h-screen overflow-hidden bg-[#fbf7ef] text-[#2b1d12]"
       >
-        {/* PORTADA */}
-        <section className="relative flex min-h-[650px] items-center lg:min-h-[720px]">
-          {heroImage ? (
+        {/* PORTADA CON VIDEO */}
+        <section className="relative flex min-h-[650px] items-center overflow-hidden lg:min-h-[720px]">
+          {videoPortadaPimentel ? (
+            <video
+              src={videoPortadaPimentel}
+              poster={imagenPortadaPimentel}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 h-full w-full object-cover"
+            >
+              Tu navegador no puede reproducir este video.
+            </video>
+          ) : (
             <img
-              src={heroImage}
+              src={imagenPortadaPimentel}
               alt="Vista del mar y del muelle de Pimentel"
               className="absolute inset-0 h-full w-full object-cover"
             />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-[#62432c] via-[#3c2618] to-[#1e1109]" />
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-r from-[#211208]/95 via-[#211208]/70 to-[#211208]/20" />
+          {/* CAPAS OSCURAS */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#170c06]/95 via-[#211208]/70 to-[#211208]/20" />
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#211208]/70 via-transparent to-[#211208]/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#170c06]/80 via-transparent to-[#211208]/20" />
 
+          <div className="absolute -right-28 top-20 h-96 w-96 rounded-full bg-[#d9a86e]/15 blur-[120px]" />
+
+          {/* CONTENIDO */}
           <div className="relative z-10 mx-auto w-full max-w-7xl px-6 py-24 md:px-10 lg:px-12">
             <div className="max-w-4xl">
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-[#e0b37f] sm:text-sm">
+              <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#d9a86e] opacity-75" />
+
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#d9a86e]" />
+                </span>
+
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white">
+                  Descubre el norte del Perú
+                </span>
+              </div>
+
+              <p className="mt-7 text-xs font-black uppercase tracking-[0.28em] text-[#e0b37f] sm:text-sm">
                 Casa Huéspedes Pimentel
               </p>
 
-              <h1 className="mt-6 max-w-4xl font-serif text-5xl leading-[1.05] tracking-[-0.035em] text-white sm:text-6xl lg:text-[82px]">
+              <h1 className="mt-5 max-w-4xl font-serif text-5xl leading-[1.02] tracking-[-0.035em] text-white sm:text-6xl lg:text-[82px]">
                 Conoce la esencia de Pimentel
               </h1>
 
@@ -453,9 +677,10 @@ export default function Tourism() {
             </div>
           </div>
 
+          {/* FLECHA PARA BAJAR */}
           <a
             href="#lugares"
-            aria-label="Bajar a la galería turística"
+            aria-label="Bajar a los lugares turísticos"
             className="absolute bottom-7 left-1/2 z-10 flex h-12 w-12 -translate-x-1/2 animate-bounce items-center justify-center rounded-full border border-white/40 bg-white/10 text-white backdrop-blur-sm"
           >
             <svg
@@ -470,62 +695,42 @@ export default function Tourism() {
           </a>
         </section>
 
-        {/* LUGARES Y GASTRONOMÍA */}
-        {gallerySections.map((section, sectionIndex) => (
-          <section
-            key={section.id}
-            id={section.id}
-            className={`scroll-mt-24 py-20 sm:py-24 ${
-              sectionIndex % 2 === 0 ? "bg-[#fbf7ef]" : "bg-white"
-            }`}
-          >
-            <div className="mx-auto max-w-7xl px-5 md:px-8">
-              <div className="mb-12 grid items-end gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
-                <div>
-                  <span className="text-xs font-black uppercase tracking-[0.22em] text-[#a87545]">
-                    {section.eyebrow}
-                  </span>
+        {/* LUGARES TURÍSTICOS */}
+        <TourismGallerySection
+          section={gallerySections[0]}
+          featured
+          background="bg-[#fbf7ef]"
+        />
 
-                  <h2 className="mt-4 font-serif text-4xl leading-[1.05] tracking-[-0.025em] text-[#2b1d12] sm:text-5xl lg:text-6xl">
-                    {section.title}
-                  </h2>
-                </div>
+        {/* PRIMER VIDEO INFERIOR */}
+        <TourismVideoSection video={tourismVideos[0]} />
 
-                <p className="max-w-2xl text-base leading-8 text-[#6c5b50] sm:text-lg">
-                  {section.description}
-                </p>
-              </div>
+        {/* GASTRONOMÍA */}
+        <TourismGallerySection
+          section={gallerySections[1]}
+          background="bg-white"
+        />
 
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {section.images.map((image, imageIndex) => (
-                  <div
-                    key={image.id}
-                    className={
-                      imageIndex === 0 && section.images.length > 6
-                        ? "sm:col-span-2"
-                        : ""
-                    }
-                  >
-                    <TourismCard image={image} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        ))}
+        {/* SEGUNDO VIDEO INFERIOR */}
+        <TourismVideoSection
+          video={tourismVideos[1]}
+          reverse
+        />
 
         {/* INVITACIÓN FINAL */}
-        <section className="bg-[#2b1d12] py-20 text-white">
+        <section className="relative overflow-hidden bg-[#fbf7ef] py-24">
+          <div className="absolute left-1/2 top-0 h-px w-[85%] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#a87545]/40 to-transparent" />
+
           <div className="mx-auto max-w-7xl px-5 text-center md:px-8">
-            <span className="text-xs font-black uppercase tracking-[0.22em] text-[#d9a86e]">
+            <span className="text-xs font-black uppercase tracking-[0.22em] text-[#a87545]">
               Descansa cerca del mar
             </span>
 
-            <h2 className="mx-auto mt-4 max-w-3xl font-serif text-4xl leading-tight sm:text-5xl lg:text-6xl">
+            <h2 className="mx-auto mt-5 max-w-3xl font-serif text-4xl leading-tight text-[#2b1d12] sm:text-5xl lg:text-6xl">
               Vive Pimentel desde Casa Huéspedes
             </h2>
 
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-white/70 sm:text-lg">
+            <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-[#6c5b50] sm:text-lg">
               Encuentra una habitación cómoda y disfruta de los principales
               atractivos del balneario durante tu estadía.
             </p>
@@ -533,14 +738,14 @@ export default function Tourism() {
             <div className="mt-9 flex flex-col justify-center gap-4 sm:flex-row">
               <Link
                 to="/habitaciones"
-                className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#bd8753]"
+                className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#8d5a2e] hover:shadow-xl"
               >
                 Ver habitaciones
               </Link>
 
               <a
                 href="/#disponibilidad"
-                className="inline-flex items-center justify-center rounded-full border border-white/30 px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:bg-white hover:text-[#2b1d12]"
+                className="inline-flex items-center justify-center rounded-full border border-[#a87545]/40 bg-white px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-[#2b1d12] transition hover:-translate-y-1 hover:border-[#a87545] hover:text-[#a87545]"
               >
                 Consultar disponibilidad
               </a>
