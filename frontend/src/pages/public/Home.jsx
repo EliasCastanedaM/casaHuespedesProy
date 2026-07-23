@@ -43,7 +43,7 @@ const extraServices = [
   },
   {
     title: "Movilidad y estacionamiento",
-    image: "PEGA_AQUI_EL_LINK_REAL_DE_LA_ENTRADA_O_ESTACIONAMIENTO",
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTu5InvjMrkiLLGxwyUPvryBqhKGVzenaO21qn4U6GGHg&s=10",
     alt: "Ingreso y orientación de estacionamiento en Casa Huéspedes Pimentel",
     description:
       "Orientación sobre movilidad local, servicios de taxi y estacionamiento cercano al hospedaje.",

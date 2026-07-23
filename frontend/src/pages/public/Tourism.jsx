@@ -104,7 +104,7 @@ const gallerySections = [
       },
       {
         id: "playa-las-rocas",
-        src: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7AE-fh9qq15vJKBcyNoQDceVp_WWX6fj4cw0hvNzokA&s=10",
+        src: "https://consultasenlinea.mincetur.gob.pe/fichaInventario//foto.aspx?cod=555297",
         alt: "Playa Las Rocas en el distrito de Pimentel",
         title: "Playa Las Rocas",
         category: "Naturaleza",
