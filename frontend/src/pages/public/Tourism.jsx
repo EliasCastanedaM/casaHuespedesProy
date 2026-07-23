@@ -601,7 +601,9 @@ export default function Tourism() {
         id="inicio-turismo"
         className="min-h-screen overflow-hidden bg-[#fbf7ef] text-[#2b1d12]"
       >
-        {/* PORTADA CON VIDEO */}
+        {/* =====================================================
+            1. VIDEO PRINCIPAL DE PORTADA
+        ===================================================== */}
         <section className="relative flex min-h-[650px] items-center overflow-hidden lg:min-h-[720px]">
           {videoPortadaPimentel ? (
             <video
@@ -624,14 +626,14 @@ export default function Tourism() {
             />
           )}
 
-          {/* CAPAS OSCURAS */}
+          {/* Capas oscuras para poder leer el título */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#170c06]/95 via-[#211208]/70 to-[#211208]/20" />
 
           <div className="absolute inset-0 bg-gradient-to-t from-[#170c06]/80 via-transparent to-[#211208]/20" />
 
           <div className="absolute -right-28 top-20 h-96 w-96 rounded-full bg-[#d9a86e]/15 blur-[120px]" />
 
-          {/* CONTENIDO */}
+          {/* Contenido de la portada */}
           <div className="relative z-10 mx-auto w-full max-w-7xl px-6 py-24 md:px-10 lg:px-12">
             <div className="max-w-4xl">
               <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
@@ -661,10 +663,10 @@ export default function Tourism() {
 
               <div className="mt-9 flex flex-col gap-4 sm:flex-row">
                 <a
-                  href="#lugares"
+                  href="#videos-pimentel"
                   className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#8d5a2e] hover:shadow-xl"
                 >
-                  Descubrir Pimentel
+                  Ver Pimentel
                 </a>
 
                 <Link
@@ -677,10 +679,10 @@ export default function Tourism() {
             </div>
           </div>
 
-          {/* FLECHA PARA BAJAR */}
+          {/* Flecha para bajar */}
           <a
-            href="#lugares"
-            aria-label="Bajar a los lugares turísticos"
+            href="#videos-pimentel"
+            aria-label="Bajar a los videos de Pimentel"
             className="absolute bottom-7 left-1/2 z-10 flex h-12 w-12 -translate-x-1/2 animate-bounce items-center justify-center rounded-full border border-white/40 bg-white/10 text-white backdrop-blur-sm"
           >
             <svg
@@ -695,42 +697,118 @@ export default function Tourism() {
           </a>
         </section>
 
-        {/* LUGARES TURÍSTICOS */}
+        {/* =====================================================
+            PRESENTACIÓN DE LOS VIDEOS
+        ===================================================== */}
+        <section
+          id="videos-pimentel"
+          className="scroll-mt-24 bg-[#fbf7ef] px-5 py-20 text-center sm:py-24 md:px-8"
+        >
+          <div className="mx-auto max-w-4xl">
+            <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">
+              Pimentel en movimiento
+            </span>
+
+            <h2 className="mt-5 font-serif text-4xl leading-[1.05] text-[#2b1d12] sm:text-5xl lg:text-6xl">
+              Descubre este destino antes de visitarlo
+            </h2>
+
+            <p className="mx-auto mt-6 max-w-3xl text-base leading-8 text-[#6c5b50] sm:text-lg">
+              Conoce el mar, el muelle, las tradiciones y los sabores de
+              Pimentel mediante una selección de videos preparados para
+              mostrarte lo mejor del balneario.
+            </p>
+          </div>
+        </section>
+
+        {/* =====================================================
+            2. VIDEO DE EXPERIENCIA EN PIMENTEL
+        ===================================================== */}
+        <TourismVideoSection video={tourismVideos[0]} />
+
+        {/* =====================================================
+            3. VIDEO DE GASTRONOMÍA
+        ===================================================== */}
+        <TourismVideoSection
+          video={tourismVideos[1]}
+          reverse
+        />
+
+        {/* =====================================================
+            INICIO DE LA INFORMACIÓN
+        ===================================================== */}
+        <section className="relative overflow-hidden bg-white px-5 py-20 text-center sm:py-24 md:px-8">
+          <div className="absolute left-1/2 top-0 h-px w-[85%] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#a87545]/40 to-transparent" />
+
+          <div className="mx-auto max-w-4xl">
+            <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">
+              Explora Pimentel
+            </span>
+
+            <h2 className="mt-5 font-serif text-4xl leading-[1.05] text-[#2b1d12] sm:text-5xl lg:text-6xl">
+              Lugares, tradiciones y sabores
+            </h2>
+
+            <p className="mx-auto mt-6 max-w-3xl text-base leading-8 text-[#6c5b50] sm:text-lg">
+              Después de conocer Pimentel en video, descubre cada uno de sus
+              principales atractivos y algunas de las especialidades más
+              representativas de la gastronomía lambayecana.
+            </p>
+
+            <a
+              href="#lugares"
+              className="mt-8 inline-flex items-center gap-3 text-xs font-black uppercase tracking-[0.16em] text-[#a87545] transition hover:text-[#7b4a1f]"
+            >
+              Ver lugares turísticos
+
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="h-4 w-4"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </a>
+          </div>
+        </section>
+
+        {/* =====================================================
+            4. LUGARES TURÍSTICOS
+        ===================================================== */}
         <TourismGallerySection
           section={gallerySections[0]}
           featured
           background="bg-[#fbf7ef]"
         />
 
-        {/* PRIMER VIDEO INFERIOR */}
-        <TourismVideoSection video={tourismVideos[0]} />
-
-        {/* GASTRONOMÍA */}
+        {/* =====================================================
+            5. GASTRONOMÍA
+        ===================================================== */}
         <TourismGallerySection
           section={gallerySections[1]}
           background="bg-white"
         />
 
-        {/* SEGUNDO VIDEO INFERIOR */}
-        <TourismVideoSection
-          video={tourismVideos[1]}
-          reverse
-        />
+        {/* =====================================================
+            6. INVITACIÓN FINAL
+        ===================================================== */}
+        <section className="relative overflow-hidden bg-[#2b1d12] py-24 text-white">
+          <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-[#a87545]/15 blur-[110px]" />
 
-        {/* INVITACIÓN FINAL */}
-        <section className="relative overflow-hidden bg-[#fbf7ef] py-24">
-          <div className="absolute left-1/2 top-0 h-px w-[85%] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#a87545]/40 to-transparent" />
+          <div className="absolute -right-32 bottom-0 h-80 w-80 rounded-full bg-[#d9a86e]/10 blur-[110px]" />
 
-          <div className="mx-auto max-w-7xl px-5 text-center md:px-8">
-            <span className="text-xs font-black uppercase tracking-[0.22em] text-[#a87545]">
+          <div className="relative mx-auto max-w-7xl px-5 text-center md:px-8">
+            <span className="text-xs font-black uppercase tracking-[0.22em] text-[#d9a86e]">
               Descansa cerca del mar
             </span>
 
-            <h2 className="mx-auto mt-5 max-w-3xl font-serif text-4xl leading-tight text-[#2b1d12] sm:text-5xl lg:text-6xl">
+            <h2 className="mx-auto mt-5 max-w-3xl font-serif text-4xl leading-tight sm:text-5xl lg:text-6xl">
               Vive Pimentel desde Casa Huéspedes
             </h2>
 
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-[#6c5b50] sm:text-lg">
+            <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-white/70 sm:text-lg">
               Encuentra una habitación cómoda y disfruta de los principales
               atractivos del balneario durante tu estadía.
             </p>
@@ -738,14 +816,14 @@ export default function Tourism() {
             <div className="mt-9 flex flex-col justify-center gap-4 sm:flex-row">
               <Link
                 to="/habitaciones"
-                className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#8d5a2e] hover:shadow-xl"
+                className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#bd8753] hover:shadow-xl"
               >
                 Ver habitaciones
               </Link>
 
               <a
                 href="/#disponibilidad"
-                className="inline-flex items-center justify-center rounded-full border border-[#a87545]/40 bg-white px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-[#2b1d12] transition hover:-translate-y-1 hover:border-[#a87545] hover:text-[#a87545]"
+                className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/5 px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white backdrop-blur-sm transition hover:-translate-y-1 hover:bg-white hover:text-[#2b1d12]"
               >
                 Consultar disponibilidad
               </a>
