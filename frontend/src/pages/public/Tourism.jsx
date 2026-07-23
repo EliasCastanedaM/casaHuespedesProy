@@ -14,9 +14,7 @@ import Footer from "../../components/Footer";
 ========================================================= */
 
 // Video principal detrás del título
-const videoPortadaPimentel =
-  "https://youtu.be/i9sVbpX1v7U?si=FhqjNPrlLj24cQli";
-
+const videoPortadaPimentel = "/videos/pimentel.mp4";
 // Primer video
 const videoExperienciaPimentel =
   "https://youtu.be/i9sVbpX1v7U?si=FhqjNPrlLj24cQli";
