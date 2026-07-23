@@ -15,13 +15,13 @@ import Footer from "../../components/Footer";
 ========================================================= */
 
 // Video principal detrás del título
-const videoPortadaPimentel = "";
+const videoPortadaPimentel = "https://youtu.be/i9sVbpX1v7U?si=FhqjNPrlLj24cQli";
 
 // Video después de los lugares turísticos
-const videoExperienciaPimentel = "";
+const videoExperienciaPimentel = "https://youtu.be/i9sVbpX1v7U?si=FhqjNPrlLj24cQli";
 
 // Video después de la gastronomía
-const videoGastronomiaPimentel = "";
+const videoGastronomiaPimentel = "https://youtu.be/9TlXvLy2_rw?si=mz5nWpckSbfk_Nnb";
 
 // Imagen que aparece si todavía no agregaste el video principal
 const imagenPortadaPimentel =
