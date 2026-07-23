@@ -432,7 +432,8 @@ export default function Home() {
             </div>
 
             <p className="hotel-section-description">
-              Servicios adicionales coordinados directamente con terceros.
+              Servicios adicionales coordinados directamente con el hospedaje,
+              según disponibilidad.
             </p>
           </div>
 
@@ -616,59 +617,58 @@ function HouseConcept() {
   return (
     <section
       id="distribucion-casa"
-      className="scroll-mt-32 bg-[#f7f0e6] px-5 py-20 sm:py-24 md:px-8"
+      className="scroll-mt-28 bg-[#f7f0e6] px-4 py-12 sm:px-6 sm:py-14 md:px-8"
     >
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-3xl text-center">
           <p className="hotel-eyebrow">Distribución referencial</p>
 
-          <h2 className="hotel-title mt-3">
-            Habitaciones organizadas como una casa
+          <h2 className="hotel-title mt-2">
+            Habitaciones por piso
           </h2>
 
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#6f6257]">
-            Esta maqueta muestra la ubicación de las habitaciones por piso. Es
-            únicamente informativa; más adelante la disponibilidad se manejará
-            desde la página de habitaciones.
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[#6f6257] sm:text-base">
+            Consulta rápidamente dónde se encuentra cada habitación dentro de
+            Casa Huéspedes Pimentel.
           </p>
         </div>
 
-        <div className="mx-auto mt-14 max-w-5xl">
+        <div className="mx-auto mt-8 max-w-5xl">
+          {/* Techo más pequeño para que el edificio pueda verse completo */}
           <div
             aria-hidden="true"
-            className="h-24 w-full bg-[#7b4a1f] [clip-path:polygon(50%_0,100%_100%,0_100%)] sm:h-32"
+            className="mx-auto h-12 w-[94%] bg-[#7b4a1f] [clip-path:polygon(50%_0,100%_100%,0_100%)] sm:h-16"
           />
 
-          <div className="overflow-hidden rounded-b-[28px] border-x-[8px] border-b-[8px] border-[#7b4a1f] bg-[#7b4a1f] shadow-[0_30px_70px_rgba(43,29,18,0.22)]">
+          <div className="overflow-hidden rounded-b-2xl border-x-[5px] border-b-[5px] border-[#7b4a1f] bg-[#7b4a1f] shadow-[0_22px_55px_rgba(43,29,18,0.18)]">
             {HOUSE_FLOORS.map((floor) => (
               <section
                 key={floor.number}
-                className="border-b border-[#decbb4] bg-[#fbf7ef] p-4 last:border-b-0 sm:p-6"
+                className="grid gap-3 border-b border-[#decbb4] bg-[#fbf7ef] p-3 last:border-b-0 md:grid-cols-[125px_minmax(0,1fr)] md:items-center"
               >
-                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                {/* Nombre del piso */}
+                <div className="flex items-center justify-between gap-3 md:block">
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a87545]">
+                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#a87545]">
                       Nivel {floor.number}
                     </span>
 
-                    <h3 className="mt-1 text-xl font-black text-[#2b1d12]">
+                    <h3 className="mt-0.5 text-base font-black text-[#2b1d12]">
                       {floor.label}
                     </h3>
                   </div>
 
-                  <span className="w-fit rounded-full bg-[#efe1cf] px-4 py-2 text-xs font-black text-[#7b4a1f]">
-                    {floor.rooms.length}{" "}
-                    {floor.rooms.length === 1
-                      ? "habitación"
-                      : "habitaciones"}
+                  <span className="w-fit rounded-full bg-[#efe1cf] px-2.5 py-1 text-[10px] font-black text-[#7b4a1f] md:mt-2 md:inline-flex">
+                    {floor.rooms.length} hab.
                   </span>
                 </div>
 
+                {/* Habitaciones compactas */}
                 <div
-                  className={`grid gap-3 ${
+                  className={`grid gap-2 ${
                     floor.rooms.length === 1
-                      ? "grid-cols-1"
-                      : "sm:grid-cols-2 lg:grid-cols-3"
+                      ? "grid-cols-1 sm:max-w-[245px]"
+                      : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-5"
                   }`}
                 >
                   {floor.rooms.map((roomNumber) => {
@@ -677,24 +677,31 @@ function HouseConcept() {
                     return (
                       <article
                         key={roomNumber}
-                        className="relative overflow-hidden rounded-2xl border border-[#decbb4] bg-white p-5 shadow-[0_10px_25px_rgba(43,29,18,0.07)]"
+                        className="relative min-w-0 overflow-hidden rounded-xl border border-[#decbb4] bg-white px-3 py-2.5 shadow-[0_6px_16px_rgba(43,29,18,0.06)]"
                       >
-                        <div className="absolute right-0 top-0 h-14 w-14 rounded-bl-full bg-[#a87545]/15" />
+                        <div className="absolute right-0 top-0 h-8 w-8 rounded-bl-full bg-[#a87545]/15" />
 
-                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#a87545]">
-                          Habitación {roomNumber}
-                        </span>
+                        <div className="relative flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <span className="block text-[8px] font-black uppercase tracking-[0.14em] text-[#a87545]">
+                              Habitación {roomNumber}
+                            </span>
 
-                        <h4 className="mt-2 text-lg font-black text-[#2b1d12]">
-                          {room.roomType}
-                        </h4>
+                            <h4 className="mt-0.5 truncate text-sm font-black text-[#2b1d12]">
+                              {room.roomType}
+                            </h4>
+                          </div>
+                        </div>
 
-                        <p className="mt-3 text-sm leading-6 text-[#6f6257]">
+                        <p
+                          className="mt-1 truncate text-[10px] text-[#6f6257]"
+                          title={room.bedType}
+                        >
                           {room.bedType}
                         </p>
 
-                        <div className="mt-4 flex flex-col gap-2 border-t border-[#eee2d4] pt-4 text-xs font-bold text-[#5f5147] sm:flex-row sm:items-center sm:justify-between">
-                          <span>Hasta {room.capacity} personas</span>
+                        <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#eee2d4] pt-2 text-[9px] font-bold text-[#5f5147]">
+                          <span>Hasta {room.capacity}</span>
                           <span>Baño privado</span>
                         </div>
                       </article>
@@ -704,16 +711,16 @@ function HouseConcept() {
               </section>
             ))}
 
-            <div className="bg-[#7b4a1f] px-6 py-4 text-center text-xs font-black uppercase tracking-[0.2em] text-white">
+            <div className="bg-[#7b4a1f] px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-[0.18em] text-white">
               Casa Huéspedes Pimentel
             </div>
           </div>
         </div>
 
-        <div className="mt-10 text-center">
+        <div className="mt-7 text-center">
           <Link
             to="/habitaciones"
-            className="inline-flex items-center justify-center rounded-full bg-[#2b1d12] px-7 py-3.5 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-0.5 hover:bg-[#a87545]"
+            className="inline-flex items-center justify-center rounded-full bg-[#2b1d12] px-6 py-3 text-[11px] font-black uppercase tracking-[0.12em] text-white transition hover:-translate-y-0.5 hover:bg-[#a87545]"
           >
             Conocer las habitaciones
             <span className="ml-2" aria-hidden="true">
