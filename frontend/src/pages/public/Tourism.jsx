@@ -1,34 +1,36 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 
 /* =========================================================
-   VIDEOS DE LA PÁGINA
-   PEGA AQUÍ LOS LINKS DIRECTOS DE CLOUDINARY.
+   VIDEOS
 
-   Los enlaces deben contener:
-   /video/upload/
-
-   Ejemplo:
-   https://res.cloudinary.com/tu-cloud/video/upload/v123/video.mp4
+   Puedes pegar:
+   - Links de YouTube
+   - Links youtu.be
+   - Links directos de Cloudinary
 ========================================================= */
 
 // Video principal detrás del título
-const videoPortadaPimentel = "https://youtu.be/i9sVbpX1v7U?si=FhqjNPrlLj24cQli";
+const videoPortadaPimentel =
+  "https://youtu.be/i9sVbpX1v7U?si=FhqjNPrlLj24cQli";
 
-// Video después de los lugares turísticos
-const videoExperienciaPimentel = "https://youtu.be/i9sVbpX1v7U?si=FhqjNPrlLj24cQli";
+// Primer video
+const videoExperienciaPimentel =
+  "https://youtu.be/i9sVbpX1v7U?si=FhqjNPrlLj24cQli";
 
-// Video después de la gastronomía
-const videoGastronomiaPimentel = "https://youtu.be/9TlXvLy2_rw?si=mz5nWpckSbfk_Nnb";
+// Segundo video
+const videoGastronomiaPimentel =
+  "https://youtu.be/9TlXvLy2_rw?si=mz5nWpckSbfk_Nnb";
 
-// Imagen que aparece si todavía no agregaste el video principal
+// Imagen de respaldo de la portada
 const imagenPortadaPimentel =
   "https://f.rpp-noticias.io/2020/10/10/285928_1008166.jpg?width=1020&quality=80";
 
 /* =========================================================
-   VIDEOS INFERIORES
+   INFORMACIÓN DE LOS VIDEOS
 ========================================================= */
 
 const tourismVideos = [
@@ -204,6 +206,195 @@ const gallerySections = [
     ],
   },
 ];
+
+/* =========================================================
+   CONVERTIR LINKS DE YOUTUBE
+========================================================= */
+
+function getYouTubeVideoId(videoUrl) {
+  if (!videoUrl) {
+    return "";
+  }
+
+  try {
+    const parsedUrl = new URL(videoUrl);
+
+    const hostname = parsedUrl.hostname
+      .replace("www.", "")
+      .replace("m.", "");
+
+    // Ejemplo: https://youtu.be/i9sVbpX1v7U
+    if (hostname === "youtu.be") {
+      return parsedUrl.pathname.split("/").filter(Boolean)[0] || "";
+    }
+
+    if (
+      hostname === "youtube.com" ||
+      hostname === "youtube-nocookie.com"
+    ) {
+      // Ejemplo: https://youtube.com/watch?v=i9sVbpX1v7U
+      if (parsedUrl.pathname === "/watch") {
+        return parsedUrl.searchParams.get("v") || "";
+      }
+
+      // Enlaces embed, shorts o live
+      const pathParts = parsedUrl.pathname.split("/").filter(Boolean);
+
+      if (
+        pathParts[0] === "embed" ||
+        pathParts[0] === "shorts" ||
+        pathParts[0] === "live"
+      ) {
+        return pathParts[1] || "";
+      }
+    }
+  } catch (error) {
+    console.error("El enlace del video no es válido:", error);
+  }
+
+  return "";
+}
+
+/* =========================================================
+   MENSAJE CUANDO NO EXISTE VIDEO
+========================================================= */
+
+function VideoPlaceholder({ title }) {
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#51331f] to-[#1d1009] px-8 text-center">
+      <span className="grid h-16 w-16 place-items-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-sm">
+        <svg
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="ml-1 h-7 w-7"
+        >
+          <path d="M8 5v14l11-7-11-7Z" />
+        </svg>
+      </span>
+
+      <strong className="mt-5 font-serif text-2xl text-white">
+        Agrega el link del video
+      </strong>
+
+      <small className="mt-2 text-sm text-white/60">
+        {title}
+      </small>
+    </div>
+  );
+}
+
+/* =========================================================
+   REPRODUCTOR UNIVERSAL
+
+   Acepta:
+   - YouTube
+   - Cloudinary
+   - Archivos MP4 directos
+========================================================= */
+
+function TourismVideoPlayer({
+  src,
+  title,
+  background = false,
+  fallbackImage = "",
+}) {
+  const [videoError, setVideoError] = useState(false);
+
+  const youtubeId = getYouTubeVideoId(src);
+
+  // Si no se agregó ningún link
+  if (!src) {
+    if (background && fallbackImage) {
+      return (
+        <img
+          src={fallbackImage}
+          alt={title}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      );
+    }
+
+    return <VideoPlaceholder title={title} />;
+  }
+
+  // Reproductor para YouTube
+  if (youtubeId) {
+    const youtubeParameters = background
+      ? `autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&rel=0&playsinline=1&modestbranding=1`
+      : "autoplay=0&controls=1&rel=0&playsinline=1&modestbranding=1";
+
+    if (background) {
+      return (
+        <div className="absolute inset-0 overflow-hidden bg-black">
+          {fallbackImage && (
+            <img
+              src={fallbackImage}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+
+          <iframe
+            src={`https://www.youtube.com/embed/${youtubeId}?${youtubeParameters}`}
+            title={title}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="pointer-events-none absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <iframe
+        src={`https://www.youtube.com/embed/${youtubeId}?${youtubeParameters}`}
+        title={title}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+        className="absolute inset-0 h-full w-full border-0"
+      />
+    );
+  }
+
+  // Si el link directo tiene un error
+  if (videoError) {
+    if (background && fallbackImage) {
+      return (
+        <img
+          src={fallbackImage}
+          alt={title}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      );
+    }
+
+    return <VideoPlaceholder title={title} />;
+  }
+
+  // Reproductor para Cloudinary o MP4 directo
+  return (
+    <video
+      src={src}
+      poster={fallbackImage || undefined}
+      autoPlay={background}
+      muted={background}
+      loop={background}
+      playsInline
+      controls={!background}
+      preload="metadata"
+      onError={() => setVideoError(true)}
+      className={
+        background
+          ? "absolute inset-0 h-full w-full object-cover"
+          : "absolute inset-0 h-full w-full object-cover"
+      }
+    >
+      Tu navegador no puede reproducir este video.
+    </video>
+  );
+}
 
 /* =========================================================
    ICONOS DE LA BARRA SOCIAL
@@ -403,18 +594,6 @@ function TourismCard({ image }) {
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#eee3d4] to-[#d8c2a8] px-8 text-center">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              className="mb-5 h-12 w-12 text-[#a87545]"
-            >
-              <path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-13Z" />
-              <path d="m3 16 5-5 4 4 2-2 7 7" />
-              <circle cx="16.5" cy="7.5" r="1.5" />
-            </svg>
-
             <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#a87545]">
               Agrega el link de la fotografía
             </span>
@@ -449,7 +628,11 @@ function TourismCard({ image }) {
    SECCIÓN DE FOTOGRAFÍAS
 ========================================================= */
 
-function TourismGallerySection({ section, featured = false, background }) {
+function TourismGallerySection({
+  section,
+  featured = false,
+  background,
+}) {
   return (
     <section
       id={section.id}
@@ -476,7 +659,11 @@ function TourismGallerySection({ section, featured = false, background }) {
           {section.images.map((image, index) => (
             <div
               key={image.id}
-              className={featured && index === 0 ? "sm:col-span-2" : ""}
+              className={
+                featured && index === 0
+                  ? "sm:col-span-2"
+                  : ""
+              }
             >
               <TourismCard image={image} />
             </div>
@@ -488,7 +675,7 @@ function TourismGallerySection({ section, featured = false, background }) {
 }
 
 /* =========================================================
-   SECCIÓN DE VIDEO INFERIOR
+   SECCIÓN DE VIDEO
 ========================================================= */
 
 function TourismVideoSection({ video, reverse = false }) {
@@ -512,40 +699,10 @@ function TourismVideoSection({ video, reverse = false }) {
             <div className="absolute -inset-4 rounded-[36px] border border-white/10" />
 
             <div className="relative aspect-video overflow-hidden rounded-[28px] border border-white/15 bg-[#160c07] shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
-              {video.videoSrc ? (
-                <video
-                  src={video.videoSrc}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  controls
-                  preload="metadata"
-                  className="h-full w-full object-cover"
-                >
-                  Tu navegador no puede reproducir este video.
-                </video>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#51331f] to-[#1d1009] px-8 text-center">
-                  <span className="grid h-16 w-16 place-items-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-sm">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="ml-1 h-7 w-7"
-                    >
-                      <path d="M8 5v14l11-7-11-7Z" />
-                    </svg>
-                  </span>
-
-                  <strong className="mt-5 font-serif text-2xl text-white">
-                    Agrega el link del video
-                  </strong>
-
-                  <small className="mt-2 text-sm text-white/60">
-                    {video.title}
-                  </small>
-                </div>
-              )}
+              <TourismVideoPlayer
+                src={video.videoSrc}
+                title={video.title}
+              />
             </div>
           </div>
 
@@ -594,7 +751,6 @@ function TourismVideoSection({ video, reverse = false }) {
 export default function Tourism() {
   return (
     <>
-      {/* NAVBAR */}
       <Navbar />
 
       <main
@@ -602,38 +758,24 @@ export default function Tourism() {
         className="min-h-screen overflow-hidden bg-[#fbf7ef] text-[#2b1d12]"
       >
         {/* =====================================================
-            1. VIDEO PRINCIPAL DE PORTADA
+            1. VIDEO PRINCIPAL
         ===================================================== */}
         <section className="relative flex min-h-[650px] items-center overflow-hidden lg:min-h-[720px]">
-          {videoPortadaPimentel ? (
-            <video
-              src={videoPortadaPimentel}
-              poster={imagenPortadaPimentel}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              className="absolute inset-0 h-full w-full object-cover"
-            >
-              Tu navegador no puede reproducir este video.
-            </video>
-          ) : (
-            <img
-              src={imagenPortadaPimentel}
-              alt="Vista del mar y del muelle de Pimentel"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          )}
+          <TourismVideoPlayer
+            src={videoPortadaPimentel}
+            title="Video principal de Pimentel"
+            background
+            fallbackImage={imagenPortadaPimentel}
+          />
 
-          {/* Capas oscuras para poder leer el título */}
+          {/* Capas oscuras */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#170c06]/95 via-[#211208]/70 to-[#211208]/20" />
 
           <div className="absolute inset-0 bg-gradient-to-t from-[#170c06]/80 via-transparent to-[#211208]/20" />
 
           <div className="absolute -right-28 top-20 h-96 w-96 rounded-full bg-[#d9a86e]/15 blur-[120px]" />
 
-          {/* Contenido de la portada */}
+          {/* Texto de portada */}
           <div className="relative z-10 mx-auto w-full max-w-7xl px-6 py-24 md:px-10 lg:px-12">
             <div className="max-w-4xl">
               <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
@@ -657,8 +799,8 @@ export default function Tourism() {
               </h1>
 
               <p className="mt-7 max-w-2xl text-base leading-8 text-white/85 sm:text-lg">
-                Tradición, historia, mar y gastronomía en uno de los balnearios
-                más representativos de Lambayeque.
+                Tradición, historia, mar y gastronomía en uno de los
+                balnearios más representativos de Lambayeque.
               </p>
 
               <div className="mt-9 flex flex-col gap-4 sm:flex-row">
@@ -679,7 +821,6 @@ export default function Tourism() {
             </div>
           </div>
 
-          {/* Flecha para bajar */}
           <a
             href="#videos-pimentel"
             aria-label="Bajar a los videos de Pimentel"
@@ -715,27 +856,22 @@ export default function Tourism() {
 
             <p className="mx-auto mt-6 max-w-3xl text-base leading-8 text-[#6c5b50] sm:text-lg">
               Conoce el mar, el muelle, las tradiciones y los sabores de
-              Pimentel mediante una selección de videos preparados para
-              mostrarte lo mejor del balneario.
+              Pimentel mediante una selección de videos.
             </p>
           </div>
         </section>
 
-        {/* =====================================================
-            2. VIDEO DE EXPERIENCIA EN PIMENTEL
-        ===================================================== */}
+        {/* VIDEO 1 */}
         <TourismVideoSection video={tourismVideos[0]} />
 
-        {/* =====================================================
-            3. VIDEO DE GASTRONOMÍA
-        ===================================================== */}
+        {/* VIDEO 2 */}
         <TourismVideoSection
           video={tourismVideos[1]}
           reverse
         />
 
         {/* =====================================================
-            INICIO DE LA INFORMACIÓN
+            INFORMACIÓN
         ===================================================== */}
         <section className="relative overflow-hidden bg-white px-5 py-20 text-center sm:py-24 md:px-8">
           <div className="absolute left-1/2 top-0 h-px w-[85%] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#a87545]/40 to-transparent" />
@@ -750,7 +886,7 @@ export default function Tourism() {
             </h2>
 
             <p className="mx-auto mt-6 max-w-3xl text-base leading-8 text-[#6c5b50] sm:text-lg">
-              Después de conocer Pimentel en video, descubre cada uno de sus
+              Después de conocer Pimentel en video, descubre sus
               principales atractivos y algunas de las especialidades más
               representativas de la gastronomía lambayecana.
             </p>
@@ -774,26 +910,20 @@ export default function Tourism() {
           </div>
         </section>
 
-        {/* =====================================================
-            4. LUGARES TURÍSTICOS
-        ===================================================== */}
+        {/* LUGARES TURÍSTICOS */}
         <TourismGallerySection
           section={gallerySections[0]}
           featured
           background="bg-[#fbf7ef]"
         />
 
-        {/* =====================================================
-            5. GASTRONOMÍA
-        ===================================================== */}
+        {/* GASTRONOMÍA */}
         <TourismGallerySection
           section={gallerySections[1]}
           background="bg-white"
         />
 
-        {/* =====================================================
-            6. INVITACIÓN FINAL
-        ===================================================== */}
+        {/* INVITACIÓN FINAL */}
         <section className="relative overflow-hidden bg-[#2b1d12] py-24 text-white">
           <div className="absolute -left-32 top-0 h-80 w-80 rounded-full bg-[#a87545]/15 blur-[110px]" />
 
@@ -809,8 +939,8 @@ export default function Tourism() {
             </h2>
 
             <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-white/70 sm:text-lg">
-              Encuentra una habitación cómoda y disfruta de los principales
-              atractivos del balneario durante tu estadía.
+              Encuentra una habitación cómoda y disfruta de los
+              principales atractivos del balneario durante tu estadía.
             </p>
 
             <div className="mt-9 flex flex-col justify-center gap-4 sm:flex-row">
@@ -832,10 +962,7 @@ export default function Tourism() {
         </section>
       </main>
 
-      {/* BARRA SOCIAL */}
       <SocialDock />
-
-      {/* FOOTER */}
       <Footer />
     </>
   );
