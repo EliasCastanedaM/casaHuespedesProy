@@ -432,8 +432,7 @@ export default function Home() {
             </div>
 
             <p className="hotel-section-description">
-              Servicios adicionales coordinados directamente con el hospedaje,
-              según disponibilidad.
+              Servicios adicionales coordinados directamente con terceros.
             </p>
           </div>
 
