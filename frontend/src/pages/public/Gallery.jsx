@@ -169,12 +169,6 @@ export default function Gallery() {
               Ver fotografías
             </a>
 
-            <Link
-              to="/#disponibilidad"
-              className="gallery-reservation-link"
-            >
-              Reservar ahora
-            </Link>
           </div>
 
           <div className="gallery-hero-summary">
