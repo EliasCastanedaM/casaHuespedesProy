@@ -820,12 +820,7 @@ export default function Tourism() {
                   Ver Pimentel
                 </a>
 
-                <Link
-                  to="/habitaciones"
-                  className="inline-flex items-center justify-center rounded-full border border-white/50 bg-white/10 px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white backdrop-blur-sm transition hover:bg-white hover:text-[#2b1d12]"
-                >
-                  Ver habitaciones
-                </Link>
+           
               </div>
             </div>
           </div>
