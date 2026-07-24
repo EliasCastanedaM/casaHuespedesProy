@@ -589,7 +589,16 @@ export async function createBookingService(bookingData) {
   const booking = bookingResult.rows[0];
   const details = await getBookingDetailsById(booking.id);
 
-  await sendBookingPendingEmails(details);
+  try {
+    await sendBookingPendingEmails(details);
+  } catch (emailError) {
+    // La reserva ya fue creada. Un problema con el correo no debe impedir
+    // que el frontend continúe hacia la pantalla de pago.
+    console.error(
+      "La reserva fue creada, pero no se pudo enviar su correo:",
+      emailError.message
+    );
+  }
 
   return {
     mode: "booking",
@@ -702,7 +711,14 @@ export async function reportBookingPaymentService(id, publicToken) {
   const details = await getBookingDetailsById(id);
 
   if (shouldNotifyHotel) {
-    await sendPaymentReportedEmail(details);
+    try {
+      await sendPaymentReportedEmail(details);
+    } catch (emailError) {
+      console.error(
+        "El pago fue reportado, pero no se pudo enviar su correo:",
+        emailError.message
+      );
+    }
   }
 
   return toPublicPaymentStatus(details);
@@ -813,7 +829,14 @@ export async function updateBookingStatusService(id, status) {
     status === "confirmed" &&
     currentDetails.status !== "confirmed"
   ) {
-    await sendBookingConfirmedEmail(updatedDetails);
+    try {
+      await sendBookingConfirmedEmail(updatedDetails);
+    } catch (emailError) {
+      console.error(
+        "La reserva fue confirmada, pero no se pudo enviar su correo:",
+        emailError.message
+      );
+    }
   }
 
   return updatedDetails || result.rows[0];

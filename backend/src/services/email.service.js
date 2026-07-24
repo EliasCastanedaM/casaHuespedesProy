@@ -19,14 +19,52 @@ function formatMoney(value) {
 function formatDate(value) {
   if (!value) return "-";
 
-  const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
+  const monthNames = [
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
+  ];
 
-  return new Intl.DateTimeFormat("es-PE", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    timeZone: "America/Lima",
-  }).format(date);
+  let year;
+  let month;
+  let day;
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    year = value.getUTCFullYear();
+    month = value.getUTCMonth() + 1;
+    day = value.getUTCDate();
+  } else {
+    const match = String(value).match(
+      /^(\d{4})-(\d{2})-(\d{2})/
+    );
+
+    if (match) {
+      year = Number(match[1]);
+      month = Number(match[2]);
+      day = Number(match[3]);
+    } else {
+      const parsedDate = new Date(value);
+
+      if (Number.isNaN(parsedDate.getTime())) return "-";
+
+      year = parsedDate.getUTCFullYear();
+      month = parsedDate.getUTCMonth() + 1;
+      day = parsedDate.getUTCDate();
+    }
+  }
+
+  return `${String(day).padStart(2, "0")} de ${
+    monthNames[month - 1]
+  } de ${year}`;
 }
 
 function getTransporter() {
