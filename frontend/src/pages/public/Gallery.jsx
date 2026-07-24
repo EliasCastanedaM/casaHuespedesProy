@@ -148,7 +148,7 @@ export default function Gallery() {
             Casa Huéspedes Pimentel
           </p>
 
-          <h1>Nuestra galería</h1>
+          <h1>Galeria de fotos y videos</h1>
 
           <p className="gallery-hero-description">
             Recorre nuestros ambientes, habitaciones y espacios antes de
