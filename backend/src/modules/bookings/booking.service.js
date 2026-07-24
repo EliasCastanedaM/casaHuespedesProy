@@ -751,7 +751,9 @@ export async function updateBookingStatusService(id, status) {
 
   const currentDetails = await getBookingDetailsById(id);
 
-  if (!currentDetails) return null;
+  if (!currentDetails) {
+    return null;
+  }
 
   if (
     status === "confirmed" &&
@@ -761,48 +763,70 @@ export async function updateBookingStatusService(id, status) {
     const error = new Error(
       "El huésped todavía no reportó el pago. Verifica el flujo antes de confirmar."
     );
+
     error.statusCode = 409;
     throw error;
   }
 
+  /*
+   * $1 = nuevo estado
+   * $2 = identificador de la reserva
+   * $3 = indica si la reserva se está confirmando
+   *
+   * Se utiliza $3 para no volver a usar $1 dentro del CASE.
+   * Así PostgreSQL no mezcla text con character varying.
+   */
   const query = `
     UPDATE bookings
     SET
       status = $1::character varying,
       payment_confirmed_at = CASE
-        WHEN $1::character varying = 'confirmed' THEN COALESCE(
+        WHEN $3::boolean THEN COALESCE(
           payment_confirmed_at,
           CURRENT_TIMESTAMP
         )
         ELSE payment_confirmed_at
       END,
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $2
+    WHERE id = $2::integer
     RETURNING *;
   `;
 
-  const result = await pool.query(query, [status, id]);
+  const result = await pool.query(query, [
+    status,
+    Number(id),
+    status === "confirmed",
+  ]);
 
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  // Cuando se confirma la reserva, registramos el pago como pagado.
   if (status === "confirmed") {
     await pool.query(
       `
       UPDATE payments
       SET
         status = 'paid',
-        paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP),
+        paid_at = COALESCE(
+          paid_at,
+          CURRENT_TIMESTAMP
+        ),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = (
         SELECT id
         FROM payments
-        WHERE booking_id = $1
+        WHERE booking_id = $1::integer
         ORDER BY created_at DESC, id DESC
         LIMIT 1
       );
       `,
-      [id]
+      [Number(id)]
     );
   }
 
+  // Si la reserva se rechaza o cancela, actualizamos el pago pendiente.
   if (["rejected", "cancelled"].includes(status)) {
     await pool.query(
       `
@@ -813,24 +837,31 @@ export async function updateBookingStatusService(id, status) {
           ELSE 'failed'
         END,
         updated_at = CURRENT_TIMESTAMP
-      WHERE booking_id = $1;
+      WHERE booking_id = $1::integer;
       `,
-      [id]
+      [Number(id)]
     );
   }
 
   const updatedDetails = await getBookingDetailsById(id);
 
+  /*
+   * El correo se envía únicamente cuando la reserva pasa por primera vez
+   * al estado confirmed.
+   */
   if (
     status === "confirmed" &&
-    currentDetails.status !== "confirmed"
+    currentDetails.status !== "confirmed" &&
+    updatedDetails
   ) {
-    void sendBookingConfirmedEmail(updatedDetails).catch((emailError) => {
-      console.error(
-        "La reserva fue confirmada, pero no se pudo enviar su correo:",
-        emailError.message
-      );
-    });
+    void sendBookingConfirmedEmail(updatedDetails).catch(
+      (emailError) => {
+        console.error(
+          "La reserva fue confirmada, pero no se pudo enviar su correo:",
+          emailError.message
+        );
+      }
+    );
   }
 
   return updatedDetails || result.rows[0];
