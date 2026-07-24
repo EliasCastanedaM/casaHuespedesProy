@@ -768,9 +768,9 @@ export async function updateBookingStatusService(id, status) {
   const query = `
     UPDATE bookings
     SET
-      status = $1,
+      status = $1::character varying,
       payment_confirmed_at = CASE
-        WHEN $1 = 'confirmed' THEN COALESCE(
+        WHEN $1::character varying = 'confirmed' THEN COALESCE(
           payment_confirmed_at,
           CURRENT_TIMESTAMP
         )
