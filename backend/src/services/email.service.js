@@ -83,6 +83,9 @@ function getTransporter() {
     host: env.smtp.host,
     port: env.smtp.port,
     secure: env.smtp.secure,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
     auth: {
       user: env.smtp.user,
       pass: env.smtp.password,
@@ -162,12 +165,16 @@ async function sendEmail({ to, subject, html }) {
     return false;
   }
 
-  await mailer.sendMail({
+  const result = await mailer.sendMail({
     from: env.emailFrom,
     to,
     subject,
     html,
   });
+
+  console.log(
+    `Correo enviado correctamente: ${subject} -> ${to} (${result.messageId})`
+  );
 
   return true;
 }
