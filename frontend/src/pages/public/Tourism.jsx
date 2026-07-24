@@ -214,8 +214,19 @@ function getYouTubeVideoId(videoUrl) {
     return "";
   }
 
+  const normalizedVideoUrl = String(videoUrl).trim();
+
+  // Los archivos locales y los enlaces directos de video no son YouTube.
+  // Se reproducen posteriormente mediante la etiqueta <video>.
+  if (
+    /^(\/|\.\/|\.\.\/)/.test(normalizedVideoUrl) ||
+    /\.(mp4|webm|ogg)(?:[?#].*)?$/i.test(normalizedVideoUrl)
+  ) {
+    return "";
+  }
+
   try {
-    const parsedUrl = new URL(videoUrl);
+    const parsedUrl = new URL(normalizedVideoUrl);
 
     const hostname = parsedUrl.hostname
       .replace("www.", "")
@@ -965,3 +976,4 @@ export default function Tourism() {
     </>
   );
 }
+
