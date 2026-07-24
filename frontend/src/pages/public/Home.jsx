@@ -355,7 +355,7 @@ export default function Home() {
       <StoryVideoSection
         id="nosotros"
         eyebrow="Hospedaje"
-        title="¿Por qué hospedarse en Casa Huéspedes?"
+        title="¿Por qué hospedarse en Casa Huéspedes Pimentel?"
         description="Porque tendrás una estadía sencilla, cómoda y cercana al mar. Casa Huéspedes Pimentel ofrece habitaciones funcionales, atención directa y una ubicación pensada para descansar durante tu visita."
         videoSrc="/videos/casa-huespedes.mp4"
         reverse
