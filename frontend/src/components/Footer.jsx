@@ -83,7 +83,7 @@ export default function Footer() {
                   to="/turismo#inicio-turismo"
                   className="hover:text-[#d9b48f] transition"
                 >
-                  Conoce Lambayeque
+                  Conoce Pimentel
                 </Link>
               </li>
 

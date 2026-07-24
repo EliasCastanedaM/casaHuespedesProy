@@ -239,7 +239,7 @@ export default function Gallery() {
             <div>
               <p className="gallery-eyebrow">Experiencias en movimiento</p>
 
-              <h2>Conoce nuestros espacios</h2>
+              <h2>Opiniones de nuestros huéspedes</h2>
 
               <p>
                 Reproduce los videos para recorrer Casa Huéspedes Pimentel.
@@ -355,8 +355,6 @@ export default function Gallery() {
         <div className="gallery-cta">
           <div>
             <p className="gallery-eyebrow">Reserva online</p>
-
-            <h2>¿Encontraste la habitación ideal?</h2>
 
             <p>
               Consulta las fechas disponibles o comunícate directamente con
