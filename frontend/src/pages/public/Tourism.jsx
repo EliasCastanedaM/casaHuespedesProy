@@ -953,12 +953,6 @@ export default function Tourism() {
             </p>
 
             <div className="mt-9 flex flex-col justify-center gap-4 sm:flex-row">
-              <Link
-                to="/habitaciones"
-                className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#bd8753] hover:shadow-xl"
-              >
-                Ver habitaciones
-              </Link>
 
               <a
                 href="/#disponibilidad"
