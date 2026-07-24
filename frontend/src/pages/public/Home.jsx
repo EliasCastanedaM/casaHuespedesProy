@@ -27,15 +27,15 @@ const includedServices = [
 
 const extraServices = [
   {
-    title: "Uso de cocina",
-    image: "https://www.casahuespedespimentel.com/wp-content/uploads/2026/01/WhatsApp-Image-2026-01-29-at-9.49.51-AM-2.jpeg",
+    title: "Cocina para uso de Huéspedes",
+    image: "https://www.casahuespedespimentel.com/wp-content/uploads/elementor/thumbs/WhatsApp-Image-2026-01-29-at-9.49.51-AM-3-rji065r0by8iez82rkb1evh747e3vj68wquxlxyw48.jpeg",
     alt: "Cocina disponible en Casa Huéspedes Pimentel",
     description:
       "Espacio disponible para que los huéspedes puedan preparar sus alimentos, previa coordinación.",
   },
   {
     title: "Lavado y planchado",
-    image: "https://www.casahuespedespimentel.com/wp-content/uploads/elementor/thumbs/WhatsApp-Image-2026-01-29-at-9.49.51-AM-3-rji065r0by8iez82rkb1evh747e3vj68wquxlxyw48.jpeg",
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS_pyP3gWez8kIDJJAhu_ENU5VWF5rdfhW3eUWRXzNrxQ&s=10",
     alt: "Servicio de lavado y planchado de Casa Huéspedes Pimentel",
     description:
       "Servicio adicional de lavado y planchado disponible previa coordinación con el hospedaje.",
