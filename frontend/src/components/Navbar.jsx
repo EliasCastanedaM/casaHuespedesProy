@@ -62,15 +62,7 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* BOTÓN DE RESERVA PARA PANTALLAS GRANDES */}
-        <div className="hidden xl:flex items-center gap-3">
-          <Link
-            to="/#disponibilidad"
-            className="ml-2 bg-gradient-to-r from-[#a87545] to-[#7b4a1f] text-white px-6 py-3 rounded-full font-black text-xs uppercase tracking-[0.14em] hover:shadow-lg hover:-translate-y-0.5 transition whitespace-nowrap"
-          >
-            Reservar ahora
-          </Link>
-        </div>
+    
 
         {/* NAVEGACIÓN PARA CELULAR Y TABLET */}
         <div className="flex xl:hidden items-center gap-2">
