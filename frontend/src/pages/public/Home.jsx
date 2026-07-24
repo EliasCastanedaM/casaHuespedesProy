@@ -29,7 +29,7 @@ const extraServices = [
   {
     title: "Estacionamiento",
     image:
-      "https://images.unsplash.com/photo-1730833545354-b886de49873e?auto=format&fit=crop&w=1200&q=80",
+      "https://www.interseguro.pe/blog/_next/image?url=https%3A%2F%2Fstorage.googleapis.com%2Fis-blog%2FDistancias_Minimas_de_Estacionamiento_en_Peru_Cuales_Son_f0e1cc07e8%2FDistancias_Minimas_de_Estacionamiento_en_Peru_Cuales_Son_f0e1cc07e8.jpg&w=3840&q=75",
     alt: "Estacionamiento referencial para huéspedes",
     description:
       "Orientación sobre opciones de estacionamiento cercanas a Casa Huéspedes Pimentel, previa coordinación.",
@@ -37,7 +37,7 @@ const extraServices = [
   {
     title: "Servicio de taxi",
     image:
-      "https://images.unsplash.com/photo-1421885624916-1898de336bb1?auto=format&fit=crop&w=1200&q=80",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRqki7AM3MSeHRXkTQCj-jbZSxmpSpHvOXmx_8HhuEjpW5n-RTKQjm9gJQ&s=10",
     alt: "Servicio referencial de taxi para huéspedes",
     description:
       "Apoyo para coordinar servicios de taxi y movilidad local durante la estadía, sujeto a disponibilidad.",
