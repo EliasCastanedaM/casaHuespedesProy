@@ -343,7 +343,7 @@ export default function Home() {
       <StoryVideoSection
         id="por-que-pimentel"
         eyebrow="Destino"
-        title="¿Por qué viajar a Pimentel?"
+        title="Viaje a Pimentel"
         description="Disfruta de la tranquilidad de Pimentel, un destino ideal para caminar junto al mar, visitar su emblemático muelle y descubrir restaurantes donde podrás disfrutar lo mejor de la gastronomía peruana.
         Pimentel es un encantador balneario ubicado en la costa norte del Perú, en el departamento de Lambayeque. Destaca por sus hermosas playas, su tradicional muelle y su ambiente tranquilo, ideal para descansar y disfrutar de la riqueza cultural y gastronómica de la región.
         "
