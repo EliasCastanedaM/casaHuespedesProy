@@ -1,35 +1,29 @@
+// Importamos la instancia base de axios
 import api from "./api";
 
-// Consulta si una habitación está disponible.
-export async function checkAvailability({
-  room_id,
-  check_in,
-  check_out,
-}) {
-  const response = await api.post(
-    "/bookings/check-availability",
-    {
-      room_id,
-      check_in,
-      check_out,
-    }
-  );
+// Esta función consulta si una habitación está disponible para ciertas fechas
+export async function checkAvailability({ room_id, check_in, check_out }) {
+  // Enviamos room_id, check_in y check_out al backend
+  const response = await api.post("/bookings/check-availability", {
+    room_id,
+    check_in,
+    check_out,
+  });
 
-  // Aquí estaba el error.
+  // El backend devuelve la disponibilidad dentro de response.data.data.
   return response.data.data;
 }
 
-// Crea una reserva pendiente de pago.
+// Esta función crea una reserva pendiente de pago
 export async function createBooking(bookingData) {
-  const response = await api.post(
-    "/bookings",
-    bookingData
-  );
+  // Enviamos toda la información de reserva al backend
+  const response = await api.post("/bookings", bookingData);
 
+  // Retornamos la reserva creada
   return response.data;
 }
 
-// Avisa que el huésped terminó el pago en Culqi.
+// Avisa al hospedaje que el huésped terminó el pago en Culqi.
 export async function reportBookingPayment({
   bookingId,
   publicToken,
@@ -44,7 +38,7 @@ export async function reportBookingPayment({
   return response.data;
 }
 
-// Consulta el estado público del pago.
+// Consulta el estado sin exponer información privada de la reserva.
 export async function getBookingPaymentStatus({
   bookingId,
   publicToken,
