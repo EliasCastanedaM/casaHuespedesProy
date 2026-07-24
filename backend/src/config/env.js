@@ -37,14 +37,12 @@ export const env = {
 
   hotelNotificationEmail: process.env.HOTEL_NOTIFICATION_EMAIL,
 
-  emailFrom: process.env.EMAIL_FROM,
-
-  smtp: {
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: String(process.env.SMTP_SECURE || "true") === "true",
-    user: process.env.SMTP_USER,
-    password: process.env.SMTP_PASS,
+  // Brevo utiliza una API HTTPS compatible con Render gratuito.
+  brevo: {
+    apiKey: process.env.BREVO_API_KEY,
+    senderName:
+      process.env.EMAIL_FROM_NAME || "Casa Huéspedes Pimentel",
+    senderEmail: process.env.EMAIL_FROM_EMAIL,
   },
 
   cloudinary: {

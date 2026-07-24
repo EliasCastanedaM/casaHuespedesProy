@@ -1,7 +1,4 @@
-import nodemailer from "nodemailer";
 import { env } from "../config/env.js";
-
-let transporter;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -67,34 +64,6 @@ function formatDate(value) {
   } de ${year}`;
 }
 
-function getTransporter() {
-  if (transporter) return transporter;
-
-  if (
-    !env.smtp.host ||
-    !env.smtp.user ||
-    !env.smtp.password ||
-    !env.emailFrom
-  ) {
-    return null;
-  }
-
-  transporter = nodemailer.createTransport({
-    host: env.smtp.host,
-    port: env.smtp.port,
-    secure: env.smtp.secure,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-    auth: {
-      user: env.smtp.user,
-      pass: env.smtp.password,
-    },
-  });
-
-  return transporter;
-}
-
 function emailShell(title, content) {
   return `
     <!doctype html>
@@ -156,24 +125,78 @@ function bookingSummary(details) {
 }
 
 async function sendEmail({ to, subject, html }) {
-  const mailer = getTransporter();
-
-  if (!mailer || !to) {
+  if (
+    !env.brevo.apiKey ||
+    !env.brevo.senderEmail ||
+    !to
+  ) {
     console.warn(
-      "Correo omitido: falta configurar SMTP, EMAIL_FROM o el destinatario."
+      "Correo omitido: falta BREVO_API_KEY, EMAIL_FROM_EMAIL o el destinatario."
     );
     return false;
   }
 
-  const result = await mailer.sendMail({
-    from: env.emailFrom,
-    to,
-    subject,
-    html,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  let response;
+
+  try {
+    response = await fetch(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "api-key": env.brevo.apiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: {
+            name: env.brevo.senderName,
+            email: env.brevo.senderEmail,
+          },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+          ...(env.hotelNotificationEmail
+            ? {
+                replyTo: {
+                  email: env.hotelNotificationEmail,
+                },
+              }
+            : {}),
+        }),
+        signal: controller.signal,
+      }
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const responseText = await response.text();
+  let result = {};
+
+  if (responseText) {
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = { message: responseText };
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Brevo respondió ${response.status}: ${
+        result.message || "No se pudo enviar el correo."
+      }`
+    );
+  }
 
   console.log(
-    `Correo enviado correctamente: ${subject} -> ${to} (${result.messageId})`
+    `Correo enviado correctamente por Brevo: ${subject} -> ${to} (${
+      result.messageId || "sin identificador"
+    })`
   );
 
   return true;
