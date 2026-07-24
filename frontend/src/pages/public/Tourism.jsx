@@ -5,6 +5,29 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 
 /* =========================================================
+   IMÁGENES DE MUSEOS DESDE ASSETS/GALLERY
+
+   Guarda los folletos con nombres museo-... dentro de:
+   frontend/src/assets/gallery/
+========================================================= */
+
+const museumGalleryModules = import.meta.glob(
+  "../../assets/gallery/museo-*.{jpg,jpeg,png,webp}",
+  {
+    eager: true,
+    import: "default",
+  }
+);
+
+function getMuseumGalleryImage(fileName) {
+  const galleryEntry = Object.entries(museumGalleryModules).find(
+    ([path]) => path.endsWith(`/${fileName}`)
+  );
+
+  return galleryEntry?.[1] || "";
+}
+
+/* =========================================================
    VIDEOS
 
    Puedes pegar:
@@ -204,6 +227,76 @@ const gallerySections = [
     ],
   },
 ];
+
+/* =========================================================
+   MUSEOS DE LAMBAYEQUE
+
+   Todas las imágenes se cargan desde src/assets/gallery.
+========================================================= */
+
+const museumSection = {
+  id: "museos",
+  eyebrow: "Historia viva del norte",
+  title: "Museos de Lambayeque",
+  description:
+    "Completa tu visita a Pimentel con una ruta por algunos de los museos más representativos de Lambayeque y descubre el legado de las culturas Mochica, Lambayeque, Sicán, Chimú e Inca.",
+  map: {
+    src: getMuseumGalleryImage("museo-mapa-lambayeque.png"),
+    alt: "Mapa referencial de los museos de Lambayeque",
+    title: "Ruta de museos",
+    description:
+      "Una guía visual para ubicar los principales museos y complejos arqueológicos de la región.",
+  },
+  museums: [
+    {
+      id: "tumbas-reales-sipan",
+      fileName: "museo-tumbas-reales-sipan.png",
+      src: getMuseumGalleryImage("museo-tumbas-reales-sipan.png"),
+      alt: "Folleto del Museo Tumbas Reales de Sipán",
+      title: "Museo Tumbas Reales de Sipán",
+      location: "Lambayeque",
+      description:
+        "Conoce los hallazgos del Señor de Sipán y una extraordinaria colección de ornamentos, emblemas y piezas de la élite mochica.",
+      officialUrl: "https://museos.cultura.pe/node/385",
+    },
+    {
+      id: "museo-sitio-tucume",
+      fileName: "museo-sitio-tucume.png",
+      src: getMuseumGalleryImage("museo-sitio-tucume.png"),
+      alt: "Folleto del Museo de Sitio Túcume",
+      title: "Museo de Sitio Túcume",
+      location: "Túcume",
+      description:
+        "Descubre la historia del Valle de las Pirámides y la continuidad cultural de las sociedades que habitaron este complejo arqueológico.",
+      officialUrl:
+        "https://museos.cultura.pe/museos/museo-de-sitio-t%C3%BAcume",
+    },
+    {
+      id: "museo-arqueologico-bruning",
+      fileName: "museo-arqueologico-bruning.png",
+      src: getMuseumGalleryImage("museo-arqueologico-bruning.png"),
+      alt: "Folleto del Museo Arqueológico Nacional Brüning",
+      title: "Museo Arqueológico Nacional Brüning",
+      location: "Lambayeque",
+      description:
+        "Recorre una colección arqueológica que presenta el desarrollo cultural del norte peruano mediante cerámica, metales y otras piezas históricas.",
+      officialUrl:
+        "https://museos.cultura.pe/museos/museo-arqueol%C3%B3gico-nacional-br%C3%BCning",
+    },
+    {
+      id: "museo-nacional-sican",
+      fileName: "museo-nacional-sican.png",
+      src: getMuseumGalleryImage("museo-nacional-sican.png"),
+      alt: "Folleto del Museo Nacional Sicán",
+      title: "Museo Nacional Sicán",
+      location: "Ferreñafe",
+      description:
+        "Aprecia los hallazgos de la cultura Sicán, sus técnicas metalúrgicas, cerámica y recreaciones vinculadas a sus contextos funerarios.",
+      officialUrl:
+        "https://museos.cultura.pe/museos/museo-nacional-sic%C3%A1n",
+    },
+  ],
+};
 
 /* =========================================================
    CONVERTIR LINKS DE YOUTUBE
@@ -684,6 +777,173 @@ function TourismGallerySection({
 }
 
 /* =========================================================
+   TARJETA DE MUSEO
+========================================================= */
+
+function MuseumCard({ museum }) {
+  return (
+    <article className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-[#dfcfbb] bg-white shadow-[0_18px_45px_rgba(43,29,18,0.08)] transition duration-300 hover:-translate-y-2 hover:shadow-[0_26px_60px_rgba(43,29,18,0.15)]">
+      <div className="relative overflow-hidden bg-[#eee4d7] p-4 sm:p-5">
+        {museum.src ? (
+          <img
+            src={museum.src}
+            alt={museum.alt}
+            loading="lazy"
+            className="mx-auto h-[440px] w-full object-contain transition-transform duration-700 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="flex h-[440px] flex-col items-center justify-center rounded-[20px] bg-gradient-to-br from-[#eee3d4] to-[#d8c2a8] px-8 text-center">
+            <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#a87545]">
+              Agrega esta imagen en assets/gallery
+            </span>
+
+            <strong className="mt-3 font-serif text-xl text-[#2b1d12]">
+              {museum.fileName}
+            </strong>
+          </div>
+        )}
+
+        <span className="absolute left-7 top-7 rounded-full border border-white/50 bg-[#2b1d12]/85 px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-lg backdrop-blur-md">
+          {museum.location}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-6 sm:p-7">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a87545]">
+          Patrimonio cultural
+        </span>
+
+        <h3 className="mt-3 font-serif text-2xl font-semibold leading-tight text-[#2b1d12]">
+          {museum.title}
+        </h3>
+
+        <p className="mt-4 flex-1 text-sm leading-7 text-[#6c5b50]">
+          {museum.description}
+        </p>
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          {museum.src && (
+            <a
+              href={museum.src}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-0.5 hover:bg-[#875426]"
+            >
+              Ver folleto
+            </a>
+          )}
+
+          <a
+            href={museum.officialUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center rounded-full border border-[#d9c6ae] bg-[#fbf7ef] px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-[#6f4423] transition hover:-translate-y-0.5 hover:border-[#a87545]"
+          >
+            Información oficial
+          </a>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/* =========================================================
+   SECCIÓN DE MUSEOS
+========================================================= */
+
+function MuseumsSection({ section }) {
+  return (
+    <section
+      id={section.id}
+      className="scroll-mt-24 overflow-hidden bg-[#f2e8da] py-20 sm:py-24"
+    >
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <div className="mb-12 grid items-end gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+          <div>
+            <span className="text-xs font-black uppercase tracking-[0.22em] text-[#a87545]">
+              {section.eyebrow}
+            </span>
+
+            <h2 className="mt-4 font-serif text-4xl leading-[1.05] tracking-[-0.025em] text-[#2b1d12] sm:text-5xl lg:text-6xl">
+              {section.title}
+            </h2>
+          </div>
+
+          <p className="max-w-2xl text-base leading-8 text-[#6c5b50] sm:text-lg">
+            {section.description}
+          </p>
+        </div>
+
+        <div className="mb-8 overflow-hidden rounded-[30px] border border-[#dfcfbb] bg-[#2b1d12] shadow-[0_22px_60px_rgba(43,29,18,0.15)]">
+          <div className="grid items-center lg:grid-cols-[0.7fr_1.3fr]">
+            <div className="bg-[#e8ded1] p-5 sm:p-8">
+              {section.map.src ? (
+                <a
+                  href={section.map.src}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Abrir mapa de museos de Lambayeque"
+                >
+                  <img
+                    src={section.map.src}
+                    alt={section.map.alt}
+                    loading="lazy"
+                    className="mx-auto h-[430px] w-full object-contain transition duration-500 hover:scale-[1.02]"
+                  />
+                </a>
+              ) : (
+                <div className="flex h-[430px] items-center justify-center rounded-[22px] bg-[#d8c2a8] px-8 text-center font-bold text-[#2b1d12]">
+                  Guarda museo-mapa-lambayeque.png en assets/gallery
+                </div>
+              )}
+            </div>
+
+            <div className="p-8 text-white sm:p-12 lg:p-14">
+              <span className="text-xs font-black uppercase tracking-[0.22em] text-[#d9a86e]">
+                Planea tu recorrido
+              </span>
+
+              <h3 className="mt-4 font-serif text-4xl leading-tight sm:text-5xl">
+                {section.map.title}
+              </h3>
+
+              <p className="mt-6 max-w-xl text-base leading-8 text-white/70 sm:text-lg">
+                {section.map.description}
+              </p>
+
+              {section.map.src && (
+                <a
+                  href={section.map.src}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-8 inline-flex items-center justify-center rounded-full bg-[#a87545] px-6 py-4 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-1 hover:bg-[#bd8753]"
+                >
+                  Ampliar mapa
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          {section.museums.map((museum) => (
+            <MuseumCard
+              key={museum.id}
+              museum={museum}
+            />
+          ))}
+        </div>
+
+        <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-7 text-[#79685c]">
+          Antes de visitar un museo, consulta sus horarios, tarifas y
+          condiciones actuales en el enlace oficial del Ministerio de Cultura.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
    SECCIÓN DE VIDEO
 ========================================================= */
 
@@ -820,7 +1080,12 @@ export default function Tourism() {
                   Ver Pimentel
                 </a>
 
-           
+                <Link
+                  to="/habitaciones"
+                  className="inline-flex items-center justify-center rounded-full border border-white/50 bg-white/10 px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white backdrop-blur-sm transition hover:bg-white hover:text-[#2b1d12]"
+                >
+                  Ver habitaciones
+                </Link>
               </div>
             </div>
           </div>
@@ -921,6 +1186,9 @@ export default function Tourism() {
           background="bg-[#fbf7ef]"
         />
 
+        {/* MUSEOS DE LAMBAYEQUE */}
+        <MuseumsSection section={museumSection} />
+
         {/* GASTRONOMÍA */}
         <TourismGallerySection
           section={gallerySections[1]}
@@ -948,6 +1216,12 @@ export default function Tourism() {
             </p>
 
             <div className="mt-9 flex flex-col justify-center gap-4 sm:flex-row">
+              <Link
+                to="/habitaciones"
+                className="inline-flex items-center justify-center rounded-full bg-[#a87545] px-8 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#bd8753] hover:shadow-xl"
+              >
+                Ver habitaciones
+              </Link>
 
               <a
                 href="/#disponibilidad"
@@ -965,4 +1239,3 @@ export default function Tourism() {
     </>
   );
 }
-
