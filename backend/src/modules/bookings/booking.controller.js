@@ -1,7 +1,9 @@
 import {
   checkAvailabilityService,
   createBookingService,
+  getBookingPaymentStatusService,
   getAllBookingsService,
+  reportBookingPaymentService,
   updateBookingStatusService,
 } from "./booking.service.js";
 
@@ -51,11 +53,20 @@ export async function createBookingController(req, res, next) {
     // Soporta estructura nueva del Home.jsx y estructura antigua con customer
     const finalFullName = customer?.full_name || full_name;
     const finalPhone = customer?.phone || phone;
+    const finalEmail = customer?.email || req.body.email;
 
     if (!finalFullName || !finalPhone) {
       return res.status(400).json({
         success: false,
         message: "Nombre completo y celular son obligatorios.",
+      });
+    }
+
+    if (!finalEmail) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "El correo es obligatorio para enviarte el estado de la reserva.",
       });
     }
 
@@ -102,6 +113,63 @@ return res.status(201).json({
   message: "Solicitud de reserva registrada correctamente.",
   data: result,
 });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// El huésped avisa que terminó el pago en el enlace externo de Culqi.
+export async function reportBookingPaymentController(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { public_token: publicToken } = req.body;
+
+    if (!publicToken) {
+      return res.status(400).json({
+        success: false,
+        message: "No se pudo validar la reserva.",
+      });
+    }
+
+    const result = await reportBookingPaymentService(id, publicToken);
+
+    return res.json({
+      success: true,
+      message:
+        "Avisamos al hospedaje. Tu reserva se confirmará después de verificar el pago en Culqi.",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Devuelve únicamente el estado necesario para la pantalla pública de pago.
+export async function getBookingPaymentStatusController(req, res, next) {
+  try {
+    const { id } = req.params;
+    const publicToken = req.query.token;
+
+    if (!publicToken) {
+      return res.status(400).json({
+        success: false,
+        message: "No se pudo validar la reserva.",
+      });
+    }
+
+    const result = await getBookingPaymentStatusService(id, publicToken);
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: "Reserva no encontrada.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: result,
+    });
   } catch (error) {
     next(error);
   }

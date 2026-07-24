@@ -1,8 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool } from "../../config/db.js";
-
-const JWT_SECRET = process.env.JWT_SECRET || "casa_huespedes_secret_temporal";
+import { env } from "../../config/env.js";
 
 export async function loginService(email, password) {
   const result = await pool.query(
@@ -37,7 +36,7 @@ export async function loginService(email, password) {
       email: user.email,
       role: user.role,
     },
-    JWT_SECRET,
+    env.jwtSecret,
     {
       expiresIn: "8h",
     }

@@ -1,20 +1,15 @@
-// useEffect ejecuta lógica al cargar la página
-// useState guarda datos del formulario
 import "./Home.css";
 import "./Booking.css";
-import { useEffect, useState } from "react";
-
-// useSearchParams permite leer roomId desde la URL
-// Link permite navegar entre páginas
-import { Link, useSearchParams } from "react-router-dom";
-
-// Servicio para obtener datos de una habitación
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { getRoomById } from "../../services/roomService";
-
-// Servicios para validar disponibilidad y crear reserva
-import { checkAvailability, createBooking } from "../../services/bookingService";
+import {
+  checkAvailability,
+  createBooking,
+} from "../../services/bookingService";
 
 const BOOKING_DRAFT_KEY = "pimentelBookingDraft";
+const PAYMENT_SESSION_KEY = "pimentelPendingPayment";
 
 function readStoredBookingDraft(roomId) {
   if (!roomId) return null;
@@ -39,50 +34,44 @@ function readStoredBookingDraft(roomId) {
 
 function getLocalDateValue(date = new Date()) {
   const timezoneOffset = date.getTimezoneOffset() * 60 * 1000;
+
   return new Date(date.getTime() - timezoneOffset)
     .toISOString()
     .split("T")[0];
 }
 
-// Página donde el cliente crea una reserva
+function calculateNights(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return 0;
+
+  const [startYear, startMonth, startDay] = checkIn.split("-").map(Number);
+  const [endYear, endMonth, endDay] = checkOut.split("-").map(Number);
+  const start = Date.UTC(startYear, startMonth - 1, startDay);
+  const end = Date.UTC(endYear, endMonth - 1, endDay);
+  const difference = (end - start) / (1000 * 60 * 60 * 24);
+
+  return difference > 0 ? difference : 0;
+}
+
+function formatMoney(value) {
+  return `S/ ${Number(value || 0).toFixed(2)}`;
+}
+
 export default function Booking() {
-  // Simulación visual de pago
-  const [paymentMethod, setPaymentMethod] = useState("card");
-  const [paymentSimulated, setPaymentSimulated] = useState(false);
-
-  // Leemos parámetros de la URL, por ejemplo /reservar?roomId=1
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
-  // Obtenemos el roomId desde la URL
   const roomId = searchParams.get("roomId");
-
-  // Fechas enviadas desde la página de detalle de la habitación
   const checkInFromUrl =
     searchParams.get("checkIn") || searchParams.get("check_in") || "";
   const checkOutFromUrl =
     searchParams.get("checkOut") || searchParams.get("check_out") || "";
-
   const today = getLocalDateValue();
 
-  // Estado para guardar habitación seleccionada
   const [room, setRoom] = useState(null);
-
-  // Estado para indicar carga inicial
   const [loadingRoom, setLoadingRoom] = useState(true);
-
-  // Estado para indicar envío del formulario
   const [submitting, setSubmitting] = useState(false);
-
-  // Estado para mensajes de error
   const [error, setError] = useState("");
-
-  // Estado para mensaje de éxito
   const [success, setSuccess] = useState("");
 
-  // Estado para guardar la reserva creada
-  const [createdBooking, setCreatedBooking] = useState(null);
-
-  // Estado principal del formulario
   const [formData, setFormData] = useState(() => {
     const storedDraft = readStoredBookingDraft(roomId);
 
@@ -101,71 +90,40 @@ export default function Booking() {
     };
   });
 
-  // Simula un pago superficial, no cobra ni conecta con backend
-  function handleFakePayment() {
-    setPaymentSimulated(true);
-  }
-
-  // Función para cargar habitación seleccionada
-  async function loadSelectedRoom() {
-    try {
-      // Limpiamos error anterior
-      setError("");
-
-      // Si no existe roomId en la URL, mostramos error
-      if (!roomId) {
-        setError("No se seleccionó ninguna habitación.");
-        return;
-      }
-
-      // Pedimos la habitación al backend
-      const data = await getRoomById(roomId);
-
-      // Guardamos la habitación
-      setRoom(data);
-    } catch (err) {
-      // Mostramos error técnico en consola
-      console.error("Error cargando habitación para reserva:", err);
-
-      // Mostramos mensaje amigable
-      setError("No se pudo cargar la habitación seleccionada.");
-    } finally {
-      // Terminamos carga inicial
-      setLoadingRoom(false);
-    }
-  }
-
-  // Ejecutamos carga de habitación cuando abre la página
   useEffect(() => {
+    async function loadSelectedRoom() {
+      try {
+        setError("");
+
+        if (!roomId) {
+          setError("No se seleccionó ninguna habitación.");
+          return;
+        }
+
+        const data = await getRoomById(roomId);
+        setRoom(data);
+      } catch (loadError) {
+        console.error("Error cargando habitación para reserva:", loadError);
+        setError("No se pudo cargar la habitación seleccionada.");
+      } finally {
+        setLoadingRoom(false);
+      }
+    }
+
     loadSelectedRoom();
   }, [roomId]);
 
-  // Si la URL o la habitación cambian, recupera las fechas correspondientes.
-  useEffect(() => {
-    const storedDraft = readStoredBookingDraft(roomId);
-
-    setFormData((prev) => ({
-      ...prev,
-      check_in: checkInFromUrl || storedDraft?.checkIn || "",
-      check_out: checkOutFromUrl || storedDraft?.checkOut || "",
-      guests_count: Number(storedDraft?.guestsCount || 1),
-    }));
-  }, [roomId, checkInFromUrl, checkOutFromUrl]);
-
-  // Mantiene las fechas y huéspedes mientras el usuario completa la reserva.
   useEffect(() => {
     if (!roomId || (!formData.check_in && !formData.check_out)) return;
 
-    const bookingDraft = {
-      roomId: String(roomId),
-      checkIn: formData.check_in,
-      checkOut: formData.check_out,
-      guestsCount: Number(formData.guests_count || 1),
-    };
-
     sessionStorage.setItem(
       BOOKING_DRAFT_KEY,
-      JSON.stringify(bookingDraft)
+      JSON.stringify({
+        roomId: String(roomId),
+        checkIn: formData.check_in,
+        checkOut: formData.check_out,
+        guestsCount: Number(formData.guests_count || 1),
+      })
     );
   }, [
     roomId,
@@ -174,23 +132,28 @@ export default function Booking() {
     formData.guests_count,
   ]);
 
-  // Función para actualizar campos simples del formulario
+  const nights = useMemo(
+    () => calculateNights(formData.check_in, formData.check_out),
+    [formData.check_in, formData.check_out]
+  );
+
+  const totalAmount = room
+    ? nights * Number(room.price_per_night || 0)
+    : 0;
+
   function handleChange(event) {
-    // Obtenemos nombre y valor del input
     const { name, value } = event.target;
 
-    // Actualizamos el campo correspondiente
-    setFormData((prev) => {
+    setFormData((previous) => {
       const nextFormData = {
-        ...prev,
+        ...previous,
         [name]: value,
       };
 
-      // Si cambia el ingreso y la salida deja de ser válida, se limpia.
       if (
         name === "check_in" &&
-        prev.check_out &&
-        prev.check_out <= value
+        previous.check_out &&
+        previous.check_out <= value
       ) {
         nextFormData.check_out = "";
       }
@@ -199,224 +162,198 @@ export default function Booking() {
     });
   }
 
-  // Función para actualizar campos dentro de customer
   function handleCustomerChange(event) {
-    // Obtenemos nombre y valor del input
     const { name, value } = event.target;
 
-    // Actualizamos solo el objeto customer
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((previous) => ({
+      ...previous,
       customer: {
-        ...prev.customer,
+        ...previous.customer,
         [name]: value,
       },
     }));
   }
 
-  // Función para calcular noches en el frontend
-  function calculateNightsFrontend() {
-    // Si faltan fechas, retornamos 0
-    if (!formData.check_in || !formData.check_out) return 0;
-
-    // Convertimos fechas
-    const start = new Date(formData.check_in);
-    const end = new Date(formData.check_out);
-
-    // Calculamos diferencia en días
-    const diff = (end - start) / (1000 * 60 * 60 * 24);
-
-    // Retornamos noches si es positivo
-    return diff > 0 ? diff : 0;
-  }
-
-  // Calculamos noches
-  const nights = calculateNightsFrontend();
-
-  // Calculamos total estimado
-  const totalAmount = room ? nights * Number(room.price_per_night) : 0;
-
-  // Función principal para enviar reserva
   async function handleSubmit(event) {
-    // Evitamos que el formulario recargue la página
     event.preventDefault();
 
     try {
-      // Activamos envío
       setSubmitting(true);
-
-      // Limpiamos mensajes anteriores
       setError("");
       setSuccess("");
-      setCreatedBooking(null);
 
-      // Validamos que exista habitación
       if (!room) {
-        setError("No hay habitación seleccionada.");
+        setError("No hay una habitación seleccionada.");
         return;
       }
 
-      // Validamos fechas
-      if (!formData.check_in || !formData.check_out) {
-        setError("Selecciona fecha de ingreso y fecha de salida.");
+      if (!formData.check_in || !formData.check_out || nights <= 0) {
+        setError(
+          "Selecciona fechas válidas. La salida debe ser posterior al ingreso."
+        );
         return;
       }
 
-      // Validamos noches
-      if (nights <= 0) {
-        setError("La fecha de salida debe ser posterior a la fecha de ingreso.");
+      if (
+        Number(formData.guests_count) < 1 ||
+        Number(formData.guests_count) > Number(room.capacity)
+      ) {
+        setError(
+          "La cantidad de huéspedes supera la capacidad de la habitación."
+        );
         return;
       }
 
-      // Validamos cantidad de huéspedes
-      if (Number(formData.guests_count) > Number(room.capacity)) {
-        setError("La cantidad de huéspedes supera la capacidad de la habitación.");
+      if (
+        !formData.customer.full_name.trim() ||
+        !formData.customer.phone.trim() ||
+        !formData.customer.email.trim()
+      ) {
+        setError("El nombre, el celular y el correo son obligatorios.");
         return;
       }
 
-      // Validamos datos básicos del cliente
-      if (!formData.customer.full_name || !formData.customer.phone) {
-        setError("El nombre y el celular son obligatorios.");
+      if (totalAmount <= 0) {
+        setError(
+          "Esta habitación todavía no tiene un precio configurado. Comunícate con el hospedaje."
+        );
         return;
       }
 
-      // Primero validamos disponibilidad
       const availability = await checkAvailability({
         room_id: Number(room.id),
         check_in: formData.check_in,
         check_out: formData.check_out,
       });
 
-      // Si no está disponible, detenemos el proceso
       if (!availability.available) {
-        setError("La habitación no está disponible en esas fechas.");
+        setError(
+          availability.reason ||
+            "La habitación no está disponible en esas fechas."
+        );
         return;
       }
 
-      // Armamos objeto para enviar al backend
-      const bookingPayload = {
+      const result = await createBooking({
         room_id: Number(room.id),
         check_in: formData.check_in,
         check_out: formData.check_out,
         guests_count: Number(formData.guests_count),
-        special_requests: formData.special_requests,
+        special_requests: formData.special_requests.trim(),
         customer: {
-          full_name: formData.customer.full_name,
-          phone: formData.customer.phone,
-          email: formData.customer.email,
+          full_name: formData.customer.full_name.trim(),
+          phone: formData.customer.phone.trim(),
+          email: formData.customer.email.trim().toLowerCase(),
           document_type: formData.customer.document_type,
-          document_number: formData.customer.document_number,
+          document_number: formData.customer.document_number.trim(),
         },
+      });
+
+      if (result.data?.mode === "inquiry") {
+        setSuccess(result.message || result.data.message);
+        return;
+      }
+
+      const paymentData = {
+        booking: result.data.booking,
+        customer: result.data.customer,
+        room: result.data.room,
+        publicToken: result.data.public_token,
+        paymentUrl: result.data.payment_url,
       };
 
-      // Creamos reserva en backend
-      const result = await createBooking(bookingPayload);
-
-      // Guardamos reserva creada
-      setCreatedBooking(result.data.booking);
-
-      // Mostramos mensaje de éxito
-      setSuccess(
-        "Reserva registrada correctamente. El pago queda pendiente de confirmación."
+      sessionStorage.setItem(
+        PAYMENT_SESSION_KEY,
+        JSON.stringify(paymentData)
       );
-
-      // La reserva temporal ya no es necesaria después de registrarla.
       sessionStorage.removeItem(BOOKING_DRAFT_KEY);
-    } catch (err) {
-      // Mostramos error técnico en consola
-      console.error("Error creando reserva:", err);
 
-      // Mensaje específico si el backend respondió
-      const backendMessage = err.response?.data?.message;
-
-      // Mostramos mensaje amigable
-      setError(backendMessage || "No se pudo crear la reserva.");
+      navigate("/pago-resultado", {
+        state: paymentData,
+      });
+    } catch (submitError) {
+      console.error("Error creando reserva:", submitError);
+      setError(
+        submitError.response?.data?.message ||
+          submitError.message ||
+          "No se pudo crear la reserva."
+      );
     } finally {
-      // Terminamos envío
       setSubmitting(false);
     }
   }
 
   return (
-  <main className="booking-page">
-    <div className="booking-container">
-      {/* Encabezado */}
-      <div className="booking-header">
-        <p className="hotel-eyebrow">Reserva online</p>
-
-        <h1>Confirmar reserva</h1>
-
-        <p>
-          Completa tus datos, revisa el resumen y visualiza la simulación del
-          pago para continuar con la reserva.
-        </p>
-      </div>
-
-      {/* Carga inicial */}
-      {loadingRoom && (
-        <div className="booking-loading-card">
-          Cargando habitación...
+    <main className="booking-page">
+      <div className="booking-container">
+        <div className="booking-header">
+          <p className="hotel-eyebrow">Reserva online</p>
+          <h1>Solicita tu reserva</h1>
+          <p>
+            Completa tus datos y revisa el monto. En el siguiente paso podrás
+            pagar de forma segura utilizando el enlace oficial de Culqi.
+          </p>
         </div>
-      )}
 
-      {/* Error si no carga habitación */}
-      {!loadingRoom && error && !room && (
-        <div className="booking-error-card">
-          {error}
-        </div>
-      )}
+        {loadingRoom && (
+          <div className="booking-loading-card">
+            Cargando habitación...
+          </div>
+        )}
 
-      {/* Formulario principal */}
-      {!loadingRoom && room && (
-        <div className="booking-layout">
-          <form onSubmit={handleSubmit} className="booking-form-card">
-            {/* Fechas */}
-            <section className="booking-section">
-              <h2>Fechas de estadía</h2>
+        {!loadingRoom && error && !room && (
+          <div className="booking-error-card">{error}</div>
+        )}
 
-              <div className="booking-grid">
-                <div>
-                  <label className="booking-label">
-                    Fecha de ingreso
-                  </label>
+        {!loadingRoom && room && (
+          <div className="booking-layout">
+            <form onSubmit={handleSubmit} className="booking-form-card">
+              <section className="booking-section">
+                <h2>Fechas de estadía</h2>
 
-                  <input
-                    type="date"
-                    name="check_in"
-                    value={formData.check_in}
-                    onChange={handleChange}
-                    min={today}
-                    className="booking-input"
-                  />
+                <div className="booking-grid">
+                  <div>
+                    <label className="booking-label" htmlFor="check-in">
+                      Fecha de ingreso
+                    </label>
+                    <input
+                      id="check-in"
+                      type="date"
+                      name="check_in"
+                      value={formData.check_in}
+                      onChange={handleChange}
+                      min={today}
+                      className="booking-input"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="booking-label" htmlFor="check-out">
+                      Fecha de salida
+                    </label>
+                    <input
+                      id="check-out"
+                      type="date"
+                      name="check_out"
+                      value={formData.check_out}
+                      onChange={handleChange}
+                      min={formData.check_in || today}
+                      className="booking-input"
+                      required
+                    />
+                  </div>
                 </div>
+              </section>
 
-                <div>
-                  <label className="booking-label">
-                    Fecha de salida
-                  </label>
+              <section className="booking-section">
+                <h2>Huéspedes</h2>
 
-                  <input
-                    type="date"
-                    name="check_out"
-                    value={formData.check_out}
-                    onChange={handleChange}
-                    min={formData.check_in || today}
-                    className="booking-input"
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Huéspedes */}
-            <section className="booking-section">
-              <h2>Huéspedes</h2>
-
-              <div>
-                <label className="booking-label">
+                <label className="booking-label" htmlFor="guests-count">
                   Cantidad de huéspedes
                 </label>
-
                 <input
+                  id="guests-count"
                   type="number"
                   name="guests_count"
                   min="1"
@@ -424,405 +361,213 @@ export default function Booking() {
                   value={formData.guests_count}
                   onChange={handleChange}
                   className="booking-input"
+                  required
                 />
-
                 <p className="booking-help-text">
                   Capacidad máxima: {room.capacity} persona(s)
                 </p>
-              </div>
-            </section>
+              </section>
 
-            {/* Datos del cliente */}
-            <section className="booking-section">
-              <h2>Datos del cliente</h2>
+              <section className="booking-section">
+                <h2>Datos del cliente</h2>
 
-              <div className="booking-grid">
-                <div className="booking-field-full">
-                  <label className="booking-label">
-                    Nombre completo
-                  </label>
+                <div className="booking-grid">
+                  <div className="booking-field-full">
+                    <label className="booking-label" htmlFor="full-name">
+                      Nombre completo
+                    </label>
+                    <input
+                      id="full-name"
+                      type="text"
+                      name="full_name"
+                      value={formData.customer.full_name}
+                      onChange={handleCustomerChange}
+                      placeholder="Nombre y apellidos"
+                      autoComplete="name"
+                      className="booking-input"
+                      required
+                    />
+                  </div>
 
-                  <input
-                    type="text"
-                    name="full_name"
-                    value={formData.customer.full_name}
-                    onChange={handleCustomerChange}
-                    placeholder="Nombre y apellidos"
-                    className="booking-input"
-                  />
-                </div>
-
-                <div>
-                  <label className="booking-label">
-                    Celular / WhatsApp
-                  </label>
-
-                  <input
-                    type="text"
-                    name="phone"
-                    value={formData.customer.phone}
-                    onChange={handleCustomerChange}
-                    placeholder="999999999"
-                    className="booking-input"
-                  />
-                </div>
-
-                <div>
-                  <label className="booking-label">
-                    Correo
-                  </label>
-
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.customer.email}
-                    onChange={handleCustomerChange}
-                    placeholder="cliente@email.com"
-                    className="booking-input"
-                  />
-                </div>
-
-                <div>
-                  <label className="booking-label">
-                    Tipo de documento
-                  </label>
-
-                  <select
-                    name="document_type"
-                    value={formData.customer.document_type}
-                    onChange={handleCustomerChange}
-                    className="booking-select"
-                  >
-                    <option value="DNI">DNI</option>
-                    <option value="CE">Carné de extranjería</option>
-                    <option value="PASAPORTE">Pasaporte</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="booking-label">
-                    Número de documento
-                  </label>
-
-                  <input
-                    type="text"
-                    name="document_number"
-                    value={formData.customer.document_number}
-                    onChange={handleCustomerChange}
-                    placeholder="Documento"
-                    className="booking-input"
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Simulación visual de pago */}
-            <section className="booking-section">
-              <div className="booking-payment-card">
-                <div className="booking-payment-header">
                   <div>
-                    <p className="hotel-eyebrow">Pago referencial</p>
+                    <label className="booking-label" htmlFor="phone">
+                      Celular
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      name="phone"
+                      value={formData.customer.phone}
+                      onChange={handleCustomerChange}
+                      placeholder="999999999"
+                      autoComplete="tel"
+                      className="booking-input"
+                      required
+                    />
+                  </div>
 
-                    <h2 className="booking-payment-title">
-                      Método de pago
-                    </h2>
-
-                    <p className="booking-payment-description">
-                      Selecciona un método para visualizar cómo sería el proceso
-                      de pago.
+                  <div>
+                    <label className="booking-label" htmlFor="email">
+                      Correo
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      name="email"
+                      value={formData.customer.email}
+                      onChange={handleCustomerChange}
+                      placeholder="cliente@email.com"
+                      autoComplete="email"
+                      className="booking-input"
+                      required
+                    />
+                    <p className="booking-help-text">
+                      Usa el mismo correo cuando pagues en Culqi.
                     </p>
                   </div>
 
-                  <span className="booking-payment-badge">
-                    Simulación
-                  </span>
+                  <div>
+                    <label className="booking-label" htmlFor="document-type">
+                      Tipo de documento
+                    </label>
+                    <select
+                      id="document-type"
+                      name="document_type"
+                      value={formData.customer.document_type}
+                      onChange={handleCustomerChange}
+                      className="booking-select"
+                    >
+                      <option value="DNI">DNI</option>
+                      <option value="CE">Carné de extranjería</option>
+                      <option value="PASAPORTE">Pasaporte</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="booking-label" htmlFor="document-number">
+                      Número de documento
+                    </label>
+                    <input
+                      id="document-number"
+                      type="text"
+                      name="document_number"
+                      value={formData.customer.document_number}
+                      onChange={handleCustomerChange}
+                      placeholder="Documento"
+                      className="booking-input"
+                    />
+                  </div>
                 </div>
+              </section>
 
-                <div className="booking-payment-methods">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPaymentMethod("card");
-                      setPaymentSimulated(false);
-                    }}
-                    className={`booking-payment-option ${
-                      paymentMethod === "card" ? "active" : ""
-                    }`}
-                  >
-                    <span className="booking-payment-icon">💳</span>
-                    <strong>Tarjeta</strong>
-                    <small>Visa, Mastercard o débito</small>
-                  </button>
+              <section className="booking-section">
+                <label className="booking-label" htmlFor="special-requests">
+                  Solicitudes adicionales
+                </label>
+                <textarea
+                  id="special-requests"
+                  name="special_requests"
+                  value={formData.special_requests}
+                  onChange={handleChange}
+                  rows="4"
+                  placeholder="Ejemplo: llegaré en la noche..."
+                  className="booking-textarea"
+                />
+              </section>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPaymentMethod("yape");
-                      setPaymentSimulated(false);
-                    }}
-                    className={`booking-payment-option ${
-                      paymentMethod === "yape" ? "active" : ""
-                    }`}
-                  >
-                    <span className="booking-payment-icon">📱</span>
-                    <strong>Yape / Plin</strong>
-                    <small>Pago rápido con QR</small>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPaymentMethod("transfer");
-                      setPaymentSimulated(false);
-                    }}
-                    className={`booking-payment-option ${
-                      paymentMethod === "transfer" ? "active" : ""
-                    }`}
-                  >
-                    <span className="booking-payment-icon">🏦</span>
-                    <strong>Transferencia</strong>
-                    <small>Banco o cuenta corriente</small>
-                  </button>
-                </div>
-
-                {paymentMethod === "card" && (
-                  <div className="booking-payment-box">
-                    <h3>Datos de tarjeta</h3>
-
-                    <div className="booking-card-preview">
-                      <div>
-                        <span>Casa Real Huéspedes</span>
-                        <strong>**** **** **** 0000</strong>
-                      </div>
-
-                      <small>MM/AA</small>
-                    </div>
-
-                    <div className="booking-payment-grid">
-                      <input
-                        type="text"
-                        placeholder="Nombre del titular"
-                        className="booking-input"
-                      />
-
-                      <input
-                        type="text"
-                        placeholder="Número de tarjeta"
-                        className="booking-input"
-                      />
-
-                      <input
-                        type="text"
-                        placeholder="MM/AA"
-                        className="booking-input"
-                      />
-
-                      <input
-                        type="text"
-                        placeholder="CVV"
-                        className="booking-input"
-                      />
-                    </div>
-
-                    <p className="booking-payment-note">
-                      Esta información es solo visual. No se guarda ni se valida.
-                    </p>
-                  </div>
-                )}
-
-                {paymentMethod === "yape" && (
-                  <div className="booking-payment-box booking-payment-center">
-                    <h3>Escanea el QR de Yape / Plin</h3>
-
-                    <div className="booking-qr-placeholder">
-                      QR
-                    </div>
-
-                    <p>
-                      Aquí se colocará el QR oficial del hospedaje.
-                    </p>
-
-                    <strong>
-                      Monto referencial: S/ {totalAmount.toFixed(2)}
-                    </strong>
-                  </div>
-                )}
-
-                {paymentMethod === "transfer" && (
-                  <div className="booking-payment-box">
-                    <h3>Datos de transferencia</h3>
-
-                    <div className="booking-bank-list">
-                      <p>
-                        <span>Banco:</span> BCP
-                      </p>
-                      <p>
-                        <span>Titular:</span> Casa Real Huéspedes
-                      </p>
-                      <p>
-                        <span>Cuenta:</span> 000-0000000000
-                      </p>
-                      <p>
-                        <span>CCI:</span> 00000000000000000000
-                      </p>
-                      <p>
-                        <span>Monto:</span> S/ {totalAmount.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleFakePayment}
-                  className="booking-submit-button booking-pay-button"
-                >
-                  Pagar ahora
-                </button>
-
-                {paymentSimulated && (
-                  <div className="booking-alert booking-alert-success">
-                    Pago simulado correctamente. Puedes continuar con la reserva.
-                  </div>
-                )}
-
-                <p className="booking-payment-disclaimer">
-                  Esta sección es una simulación visual. La web todavía no
-                  procesa pagos reales.
-                </p>
-              </div>
-            </section>
-
-            {/* Solicitudes especiales */}
-            <section className="booking-section">
-              <label className="booking-label">
-                Solicitudes adicionales
-              </label>
-
-              <textarea
-                name="special_requests"
-                value={formData.special_requests}
-                onChange={handleChange}
-                rows="4"
-                placeholder="Ejemplo: llegaré en la noche, necesito información adicional..."
-                className="booking-textarea"
-              />
-            </section>
-
-            {/* Mensaje de error */}
-            {error && (
-              <div className="booking-alert booking-alert-error">
-                {error}
-              </div>
-            )}
-
-            {/* Mensaje de éxito */}
-            {success && (
-              <div className="booking-alert booking-alert-success">
-                <strong>{success}</strong>
-
-                {createdBooking && (
+              <div className="booking-next-step-card">
+                <span className="booking-next-step-icon" aria-hidden="true">
+                  2
+                </span>
+                <div>
+                  <strong>El pago se realiza en el siguiente paso</strong>
                   <p>
-                    Código de reserva: #{createdBooking.id}
+                    Primero registraremos la reserva. Después verás el monto
+                    exacto, el botón de Culqi y las instrucciones.
                   </p>
-                )}
-
-                <p>
-                  El administrador validará la solicitud y confirmará la reserva.
-                </p>
-              </div>
-            )}
-
-            {/* Botón enviar */}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="booking-submit-button"
-            >
-              {submitting
-                ? "Creando reserva..."
-                : "Finalizar solicitud de reserva"}
-            </button>
-          </form>
-
-          {/* Resumen lateral */}
-          <aside className="booking-summary-card">
-            <h2 className="booking-summary-title">
-              Resumen
-            </h2>
-
-            <div className="booking-summary-room">
-              <p>Habitación</p>
-
-              <h3>{room.name}</h3>
-            </div>
-
-            <div className="booking-summary-list">
-              <div className="booking-summary-row">
-                <span>Ingreso</span>
-                <strong>{formData.check_in || "Por seleccionar"}</strong>
+                </div>
               </div>
 
-              <div className="booking-summary-row">
-                <span>Salida</span>
-                <strong>{formData.check_out || "Por seleccionar"}</strong>
+              {error && (
+                <div className="booking-alert booking-alert-error">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="booking-alert booking-alert-success">
+                  {success}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="booking-submit-button"
+              >
+                {submitting
+                  ? "Registrando reserva..."
+                  : "Registrar reserva y continuar al pago"}
+              </button>
+            </form>
+
+            <aside className="booking-summary-card">
+              <h2 className="booking-summary-title">Resumen</h2>
+
+              <div className="booking-summary-room">
+                <p>Habitación</p>
+                <h3>{room.name}</h3>
               </div>
 
-              <div className="booking-summary-row">
-                <span>Precio por noche</span>
-                <strong>S/ {Number(room.price_per_night).toFixed(2)}</strong>
+              <div className="booking-summary-list">
+                <div className="booking-summary-row">
+                  <span>Ingreso</span>
+                  <strong>{formData.check_in || "Por seleccionar"}</strong>
+                </div>
+                <div className="booking-summary-row">
+                  <span>Salida</span>
+                  <strong>{formData.check_out || "Por seleccionar"}</strong>
+                </div>
+                <div className="booking-summary-row">
+                  <span>Precio por noche</span>
+                  <strong>{formatMoney(room.price_per_night)}</strong>
+                </div>
+                <div className="booking-summary-row">
+                  <span>Noches</span>
+                  <strong>{nights}</strong>
+                </div>
+                <div className="booking-summary-row">
+                  <span>Huéspedes</span>
+                  <strong>{formData.guests_count}</strong>
+                </div>
               </div>
 
-              <div className="booking-summary-row">
-                <span>Noches</span>
-                <strong>{nights}</strong>
+              <div className="booking-summary-total">
+                <div className="booking-summary-total-row">
+                  <span>Total a pagar</span>
+                  <strong>{formatMoney(totalAmount)}</strong>
+                </div>
               </div>
 
-              <div className="booking-summary-row">
-                <span>Huéspedes</span>
-                <strong>{formData.guests_count}</strong>
+              <div className="booking-summary-payment">
+                <p>Pago seguro con Culqi</p>
+                <p>Ingresarás manualmente el monto exacto.</p>
+                <small>
+                  El hospedaje verificará el movimiento antes de confirmar la
+                  reserva.
+                </small>
               </div>
-            </div>
 
-            <div className="booking-summary-total">
-              <div className="booking-summary-total-row">
-                <span>Total estimado</span>
-
-                <strong>
-                  S/ {totalAmount.toFixed(2)}
-                </strong>
-              </div>
-            </div>
-
-            <div className="booking-summary-payment">
-              <p>Pago seleccionado</p>
-
-              <p>
-                {paymentMethod === "card" && "Tarjeta"}
-                {paymentMethod === "yape" && "Yape / Plin"}
-                {paymentMethod === "transfer" && "Transferencia bancaria"}
-              </p>
-
-              <small>
-                Simulación referencial para mostrar el flujo de pago.
-              </small>
-            </div>
-
-            <p className="booking-summary-note">
-              La reserva quedará pendiente de confirmación. La sección de pago es
-              solo visual por ahora.
-            </p>
-
-            <Link
-              to={`/habitaciones/${room.id}`}
-              className="booking-back-link"
-            >
-              Volver al detalle
-            </Link>
-          </aside>
-        </div>
-      )}
-    </div>
-  </main>
-);
+              <Link
+                to={`/habitaciones/${room.id}`}
+                className="booking-back-link"
+              >
+                Volver al detalle
+              </Link>
+            </aside>
+          </div>
+        )}
+      </div>
+    </main>
+  );
 }

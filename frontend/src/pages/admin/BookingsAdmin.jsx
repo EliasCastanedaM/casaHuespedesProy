@@ -4,6 +4,7 @@ import { getBookings, updateBookingStatus } from "../../services/api";
 const statusLabels = {
   pending: "Pendiente",
   pending_payment: "Pendiente de pago",
+  payment_reported: "Pago reportado",
   confirmed: "Confirmada",
   rejected: "Rechazada",
   cancelled: "Cancelada",
@@ -13,6 +14,7 @@ const statusLabels = {
 const statusStyles = {
   pending: "bg-yellow-100 text-yellow-800",
   pending_payment: "bg-orange-100 text-orange-800",
+  payment_reported: "bg-blue-100 text-blue-800",
   confirmed: "bg-green-100 text-green-800",
   rejected: "bg-red-100 text-red-800",
   cancelled: "bg-slate-200 text-slate-700",
@@ -75,14 +77,41 @@ export default function BookingsAdmin() {
     });
   }, [bookings, search, statusFilter]);
 
-  async function handleStatusChange(id, status) {
+  async function handleStatusChange(booking, status) {
+    if (status === "confirmed") {
+      const shouldConfirm = window.confirm(
+        `Antes de continuar, verifica en Culqi que recibiste ${formatMoney(
+          booking.total_amount
+        )} del correo ${booking.customer_email || "del cliente"}.\n\n¿El pago coincide y deseas confirmar la reserva ${
+          booking.booking_code || booking.id
+        }?`
+      );
+
+      if (!shouldConfirm) return;
+    }
+
+    if (
+      ["rejected", "cancelled"].includes(status) &&
+      !window.confirm(
+        `¿Seguro que deseas ${
+          status === "rejected" ? "rechazar" : "cancelar"
+        } esta reserva?`
+      )
+    ) {
+      return;
+    }
+
     try {
-      setIsUpdatingId(id);
+      setIsUpdatingId(booking.id);
       setMessage("");
       setError("");
 
-      await updateBookingStatus(id, status);
-      setMessage("Estado actualizado correctamente.");
+      await updateBookingStatus(booking.id, status);
+      setMessage(
+        status === "confirmed"
+          ? "Pago verificado. La reserva fue confirmada y se envió el correo al huésped."
+          : "Estado actualizado correctamente."
+      );
       await loadBookings();
     } catch (err) {
       console.error(err);
@@ -106,6 +135,8 @@ export default function BookingsAdmin() {
       "Huespedes",
       "Total",
       "Estado",
+      "Estado Pago",
+      "Pago Reportado",
       "Comentario",
       "Fecha Registro",
     ];
@@ -123,6 +154,8 @@ export default function BookingsAdmin() {
       booking.guests_count || "",
       booking.total_amount || 0,
       statusLabels[booking.status] || booking.status,
+      booking.payment_status || "",
+      booking.payment_reported_at || "",
       booking.special_requests || "",
       booking.created_at || "",
     ]);
@@ -186,7 +219,7 @@ export default function BookingsAdmin() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-4 mt-8">
+        <div className="grid sm:grid-cols-2 xl:grid-cols-5 gap-4 mt-8">
           <article className="bg-white rounded-2xl border border-slate-200 p-5">
             <p className="text-slate-500 font-bold">Total</p>
             <h2 className="text-3xl font-black text-brand-dark mt-2">
@@ -200,6 +233,17 @@ export default function BookingsAdmin() {
               {
                 bookings.filter((booking) =>
                   ["pending", "pending_payment"].includes(booking.status)
+                ).length
+              }
+            </h2>
+          </article>
+
+          <article className="bg-white rounded-2xl border-2 border-blue-200 p-5">
+            <p className="text-blue-700 font-bold">Pagos por verificar</p>
+            <h2 className="text-3xl font-black text-blue-700 mt-2">
+              {
+                bookings.filter(
+                  (booking) => booking.status === "payment_reported"
                 ).length
               }
             </h2>
@@ -241,6 +285,9 @@ export default function BookingsAdmin() {
             >
               <option value="all">Todos los estados</option>
               <option value="pending_payment">Pendiente de pago</option>
+              <option value="payment_reported">
+                Pago reportado
+              </option>
               <option value="pending">Pendiente</option>
               <option value="confirmed">Confirmada</option>
               <option value="rejected">Rechazada</option>
@@ -290,7 +337,11 @@ export default function BookingsAdmin() {
                   {filteredBookings.map((booking) => (
                     <tr
                       key={booking.id}
-                      className="border-b border-slate-100 align-top hover:bg-slate-50"
+                      className={`border-b border-slate-100 align-top hover:bg-slate-50 ${
+                        booking.status === "payment_reported"
+                          ? "bg-blue-50/60"
+                          : ""
+                      }`}
                     >
                       <td className="p-4 font-black text-brand-dark">
                         {booking.booking_code || `RES-${booking.id}`}
@@ -337,6 +388,11 @@ export default function BookingsAdmin() {
 
                       <td className="p-4 font-black text-brand-dark">
                         {formatMoney(booking.total_amount)}
+                        {booking.status === "payment_reported" && (
+                          <p className="mt-2 text-xs text-blue-700">
+                            Revisar en Culqi
+                          </p>
+                        )}
                       </td>
 
                       <td className="p-4">
@@ -348,37 +404,53 @@ export default function BookingsAdmin() {
                         >
                           {statusLabels[booking.status] || booking.status}
                         </span>
+                        {booking.payment_reported_at && (
+                          <p className="mt-2 text-xs text-slate-500">
+                            Avisó: {formatDate(booking.payment_reported_at)}
+                          </p>
+                        )}
                       </td>
 
                       <td className="p-4">
                         <div className="flex flex-col gap-2 min-w-[150px]">
                           <button
                             type="button"
-                            disabled={isUpdatingId === booking.id}
-                            onClick={() =>
-                              handleStatusChange(booking.id, "confirmed")
+                            disabled={
+                              isUpdatingId === booking.id ||
+                              booking.status !== "payment_reported"
                             }
-                            className="bg-green-600 text-white rounded-xl px-3 py-2 font-black hover:bg-green-700 disabled:opacity-50"
+                            onClick={() =>
+                              handleStatusChange(booking, "confirmed")
+                            }
+                            className="bg-green-600 text-white rounded-xl px-3 py-2 font-black hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Confirmar
+                            {booking.status === "confirmed"
+                              ? "Ya confirmada"
+                              : booking.status === "payment_reported"
+                                ? "Verifiqué el pago: confirmar"
+                                : "Esperando aviso de pago"}
                           </button>
+
+                          {!["confirmed", "completed"].includes(
+                            booking.status
+                          ) && (
+                            <button
+                              type="button"
+                              disabled={isUpdatingId === booking.id}
+                              onClick={() =>
+                                handleStatusChange(booking, "rejected")
+                              }
+                              className="bg-red-600 text-white rounded-xl px-3 py-2 font-black hover:bg-red-700 disabled:opacity-50"
+                            >
+                              Rechazar
+                            </button>
+                          )}
 
                           <button
                             type="button"
                             disabled={isUpdatingId === booking.id}
                             onClick={() =>
-                              handleStatusChange(booking.id, "rejected")
-                            }
-                            className="bg-red-600 text-white rounded-xl px-3 py-2 font-black hover:bg-red-700 disabled:opacity-50"
-                          >
-                            Rechazar
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={isUpdatingId === booking.id}
-                            onClick={() =>
-                              handleStatusChange(booking.id, "cancelled")
+                              handleStatusChange(booking, "cancelled")
                             }
                             className="bg-slate-700 text-white rounded-xl px-3 py-2 font-black hover:bg-slate-800 disabled:opacity-50"
                           >

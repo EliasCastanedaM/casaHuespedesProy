@@ -5,6 +5,7 @@ import { getDashboardData } from "../../services/api";
 const statusLabels = {
   pending: "Pendiente",
   pending_payment: "Pendiente de pago",
+  payment_reported: "Pago reportado",
   confirmed: "Confirmada",
   rejected: "Rechazada",
   cancelled: "Cancelada",
@@ -14,6 +15,7 @@ const statusLabels = {
 const statusStyles = {
   pending: "bg-[#fff7ed] text-[#9a5b13] border-[#fed7aa]",
   pending_payment: "bg-[#fff7ed] text-[#9a5b13] border-[#fed7aa]",
+  payment_reported: "bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]",
   confirmed: "bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]",
   rejected: "bg-[#fef2f2] text-[#991b1b] border-[#fecaca]",
   cancelled: "bg-[#fef2f2] text-[#991b1b] border-[#fecaca]",
@@ -74,7 +76,9 @@ export default function Dashboard() {
 
   const stats = useMemo(() => {
     const pendingBookings = data.bookings.filter((booking) =>
-      ["pending", "pending_payment"].includes(booking.status)
+      ["pending", "pending_payment", "payment_reported"].includes(
+        booking.status
+      )
     );
 
     const confirmedBookings = data.bookings.filter(
