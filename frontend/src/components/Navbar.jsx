@@ -50,9 +50,7 @@ export default function Navbar() {
             Habitaciones
           </Link>
 
-          <Link to="/#servicios-extras" className={navLink}>
-            Servicios
-          </Link>
+       
 <Link to="/galeria" className={navLink}>
   Galería
 </Link>
@@ -74,12 +72,7 @@ export default function Navbar() {
             Habitaciones
           </Link>
 
-          <Link
-            to="/#disponibilidad"
-            className="bg-gradient-to-r from-[#a87545] to-[#7b4a1f] text-white px-4 py-2.5 rounded-full font-black text-xs uppercase tracking-wide"
-          >
-            Reservar
-          </Link>
+        
         </div>
       </nav>
     </header>

@@ -174,6 +174,17 @@ const ROOM_DETAILS = {
       "Ubicación en terraza",
     ],
   },
+  406: {
+    name: "Habitación Triple #406",
+    roomType: "Triple",
+    floorLabel: "Segundo piso",
+    bedType: "3 camas de plaza y media",
+    capacity: 3,
+    description:
+      "Habitación triple ubicada en el segundo piso, con tres camas de plaza y media y capacidad para 3 personas.",
+    locationDetail: "Ubicada en el segundo piso.",
+    amenities: ["Baño privado", "Smart TV", "Ventilador", "Ropero"],
+  },
   407: {
     name: "Habitación Triple #407",
     roomType: "Triple",

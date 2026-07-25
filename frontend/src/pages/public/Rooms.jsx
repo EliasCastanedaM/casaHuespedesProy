@@ -100,43 +100,7 @@ export default function Rooms() {
           </div>
         </div>
 
-        {/* BARRA FLOTANTE */}
-        <div className="hotel-booking-bar">
-          <div className="hotel-booking-inner">
-            <div className="hotel-booking-grid">
-              <div className="hotel-booking-field">
-                <label>Habitaciones</label>
-
-                <strong className="block mt-2 text-[#2b1d12]">
-                  {loading ? "Cargando..." : `${rooms.length} disponibles`}
-                </strong>
-              </div>
-
-              <div className="hotel-booking-field">
-                <label>Tipos</label>
-
-                <strong className="block mt-2 text-[#2b1d12]">
-                  Matrimonial, doble y triple
-                </strong>
-              </div>
-
-              <div className="hotel-booking-field">
-                <label>Ubicación</label>
-
-                <strong className="block mt-2 text-[#2b1d12]">
-                  Cerca al mar
-                </strong>
-              </div>
-
-              <Link
-                to="/#disponibilidad"
-                className="hotel-booking-button"
-              >
-                Ver disponibilidad
-              </Link>
-            </div>
-          </div>
-        </div>
+ 
       </section>
 
       {/* LISTADO DE HABITACIONES */}

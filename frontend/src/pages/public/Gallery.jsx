@@ -342,40 +342,7 @@ export default function Gallery() {
         </section>
       )}
 
-      {/* ===================================================
-          LLAMADO A RESERVAR
-      =================================================== */}
-      <section className="gallery-cta-wrapper">
-        <div className="gallery-cta">
-          <div>
-            <p className="gallery-eyebrow">Reserva online</p>
-
-            <p>
-              Consulta las fechas disponibles o comunícate directamente con
-              Casa Huéspedes Pimentel.
-            </p>
-          </div>
-
-          <div className="gallery-cta-actions">
-            <Link
-              to="/#disponibilidad"
-              className="gallery-primary-button"
-            >
-              Ver disponibilidad
-            </Link>
-
-            <a
-              href="https://wa.me/51901551287?text=Hola,%20quiero%20consultar%20disponibilidad%20en%20Casa%20Huéspedes%20Pimentel"
-              target="_blank"
-              rel="noreferrer"
-              className="gallery-whatsapp-button"
-            >
-              Consultar por WhatsApp
-            </a>
-          </div>
-        </div>
-      </section>
-
+   
       {/* ===================================================
           VISOR DE FOTOGRAFÍAS
       =================================================== */}

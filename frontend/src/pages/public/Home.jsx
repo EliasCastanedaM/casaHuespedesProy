@@ -321,9 +321,6 @@ export default function Home() {
               </p>
 
               <div className="hotel-hero-actions">
-                <Link to="/habitaciones" className="hotel-btn-primary">
-                  Reservar ahora
-                </Link>
 
                 <Link to="/habitaciones" className="hotel-btn-light">
                   Ver habitaciones
