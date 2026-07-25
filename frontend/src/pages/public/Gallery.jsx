@@ -10,7 +10,11 @@ import "./Gallery.css";
 // =========================================================
 // ARCHIVOS MULTIMEDIA DE LA GALERÍA GENERAL
 // =========================================================
-// Las fotografías y videos generales deben guardarse en:
+// Las fotografías generales deben guardarse únicamente en:
+//
+// frontend/src/assets/gallery/fotos/
+//
+// Los videos generales continúan en:
 //
 // frontend/src/assets/gallery/
 //
@@ -20,7 +24,7 @@ import "./Gallery.css";
 // frontend/src/assets/fechas_importantes/
 
 const imageModules = import.meta.glob(
-  "../../assets/gallery/*.{jpg,jpeg,png,webp}",
+  "../../assets/gallery/fotos/*.{jpg,jpeg,png,webp}",
   {
     eager: true,
     import: "default",
@@ -278,7 +282,7 @@ export default function Gallery() {
             </p>
 
             <code>
-              frontend/src/assets/gallery/
+              frontend/src/assets/gallery/fotos/
             </code>
 
             <small>
