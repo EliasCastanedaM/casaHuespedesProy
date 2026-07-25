@@ -213,7 +213,7 @@ function extractRoomNumber(room) {
   if (room?.room_number) return String(room.room_number);
 
   const match = String(room?.name || "").match(
-    /(?:#|hab(?:itaci[oó]n)?\.?\s*)?(101|201|202|203|205|301|302|303|304|305|405|407|505)\b/i
+    /(?:#|hab(?:itaci[oó]n)?\.?\s*)?(101|201|202|203|205|301|302|303|304|305|405|407|406|505)\b/i
   );
 
   return match?.[1] || "";
