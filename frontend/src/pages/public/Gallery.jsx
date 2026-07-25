@@ -90,12 +90,12 @@ const importantVideos = [
   {
     id: "fecha-importante-1",
     src: fechaImportante1,
-    title: "Fecha importante 1",
+    title: "Media Maratón de Pimentel",
   },
   {
     id: "fecha-importante-2",
     src: fechaImportante2,
-    title: "Fecha importante 2",
+    title: "Navidad en Casa Huéspedes Pimentel",
   },
 ];
 
