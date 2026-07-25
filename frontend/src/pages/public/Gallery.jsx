@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-
 import SocialDock from "../../components/SocialDock";
 
 import "./Gallery.css";
@@ -76,9 +74,19 @@ const galleryVideos = sortMediaEntries(Object.entries(videoModules)).map(
 export default function Gallery() {
   const [selectedImage, setSelectedImage] = useState(null);
 
+  // Los 2 últimos videos, ordenados por nombre de archivo, se mostrarán
+  // exclusivamente en la sección "FECHAS IMPORTANTES".
+  const importantDateVideos = galleryVideos.slice(-2);
+  const guestOpinionVideos = galleryVideos.slice(
+    0,
+    Math.max(galleryVideos.length - 2, 0)
+  );
+
   const heroVideo = galleryVideos[0] ?? null;
   const heroImage = galleryImages[0] ?? null;
   const totalMedia = galleryImages.length + galleryVideos.length;
+  const firstVideoSection =
+    guestOpinionVideos.length > 0 ? "#videos" : "#fechas-importantes";
 
   // Permite cerrar el visor de fotografías presionando Escape.
   useEffect(() => {
@@ -157,7 +165,7 @@ export default function Gallery() {
 
           <div className="gallery-hero-actions">
             {galleryVideos.length > 0 && (
-              <a href="#videos" className="gallery-primary-button">
+              <a href={firstVideoSection} className="gallery-primary-button">
                 Ver videos
               </a>
             )}
@@ -191,7 +199,7 @@ export default function Gallery() {
         </div>
 
         <a
-          href={galleryVideos.length > 0 ? "#videos" : "#fotos"}
+          href={galleryVideos.length > 0 ? firstVideoSection : "#fotos"}
           className="gallery-scroll-indicator"
           aria-label="Bajar al contenido de la galería"
         >
@@ -227,7 +235,7 @@ export default function Gallery() {
       {/* ===================================================
           LISTADO DE VIDEOS
       =================================================== */}
-      {galleryVideos.length > 0 && (
+      {guestOpinionVideos.length > 0 && (
         <section id="videos" className="gallery-video-section">
           <div className="gallery-section-header gallery-video-header">
             <div>
@@ -241,16 +249,16 @@ export default function Gallery() {
             </div>
 
             <div className="gallery-counter gallery-counter-dark">
-              <strong>{galleryVideos.length}</strong>
+              <strong>{guestOpinionVideos.length}</strong>
 
               <span>
-                {galleryVideos.length === 1 ? "video" : "videos"}
+                {guestOpinionVideos.length === 1 ? "video" : "videos"}
               </span>
             </div>
           </div>
 
           <div className="gallery-video-grid">
-            {galleryVideos.map((video, index) => (
+            {guestOpinionVideos.map((video, index) => (
               <article
                 key={video.id}
                 className={`gallery-video-card ${
@@ -343,6 +351,65 @@ export default function Gallery() {
       )}
 
    
+      {/* ===================================================
+          FECHAS IMPORTANTES
+          Los 2 últimos videos de assets/gallery se muestran aquí.
+      =================================================== */}
+      {importantDateVideos.length > 0 && (
+        <section id="fechas-importantes" className="gallery-video-section">
+          <div className="gallery-section-header gallery-video-header">
+            <div>
+              <p className="gallery-eyebrow">Información para tu visita</p>
+
+              <h2>FECHAS IMPORTANTES</h2>
+
+              <p>
+                Revisa nuestros videos con fechas, actividades y anuncios
+                importantes de Casa Huéspedes Pimentel.
+              </p>
+            </div>
+
+            <div className="gallery-counter gallery-counter-dark">
+              <strong>{importantDateVideos.length}</strong>
+
+              <span>
+                {importantDateVideos.length === 1 ? "video" : "videos"}
+              </span>
+            </div>
+          </div>
+
+          <div className="gallery-video-grid">
+            {importantDateVideos.map((video, index) => (
+              <article key={video.id} className="gallery-video-card">
+                <div className="gallery-video-frame">
+                  <video
+                    controls
+                    playsInline
+                    preload="metadata"
+                    poster={heroImage?.src}
+                    aria-label={`Fecha importante: ${video.title}`}
+                  >
+                    <source src={video.src} />
+                    Tu navegador no puede reproducir este video.
+                  </video>
+                </div>
+
+                <div className="gallery-video-information">
+                  <div>
+                    <span>Casa Huéspedes Pimentel</span>
+                    <h3>{video.title}</h3>
+                  </div>
+
+                  <span className="gallery-video-number">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ===================================================
           VISOR DE FOTOGRAFÍAS
       =================================================== */}

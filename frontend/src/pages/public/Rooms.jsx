@@ -123,13 +123,7 @@ export default function Rooms() {
             </p>
           </div>
 
-          <Link
-            to="/#disponibilidad"
-            className="hotel-small-link"
-          >
-            Consultar disponibilidad →
-          </Link>
-        </div>
+             </div>
 
         {/* Cargando */}
         {loading && (
