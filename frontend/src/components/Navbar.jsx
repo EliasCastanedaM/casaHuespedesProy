@@ -1,8 +1,40 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 export default function Navbar() {
-  const navLink =
-    "relative text-xs font-black uppercase tracking-[0.16em] text-[#5f5147] hover:text-[#a87545] transition pb-2 after:absolute after:left-0 after:-bottom-0 after:h-[2px] after:w-0 after:bg-[#a87545] after:transition-all after:duration-300 hover:after:w-full";
+  const location = useLocation();
+
+  // Evita problemas con rutas terminadas en "/"
+  const currentPath =
+    location.pathname.replace(/\/+$/, "") || "/";
+
+  const navLink = (path) => {
+    const isActive = currentPath === path;
+
+    return `
+      relative
+      text-xs
+      font-black
+      uppercase
+      tracking-[0.16em]
+      pb-2
+      transition-colors
+      duration-300
+
+      after:absolute
+      after:left-0
+      after:bottom-0
+      after:h-[2px]
+      after:bg-[#a87545]
+      after:transition-all
+      after:duration-300
+
+      ${
+        isActive
+          ? "text-[#a87545] after:w-full"
+          : "text-[#5f5147] after:w-0 hover:text-[#a87545] hover:after:w-full"
+      }
+    `;
+  };
 
   return (
     <header className="w-full sticky top-0 z-50 bg-[#fbf7ef]/90 backdrop-blur-xl border-b border-[#eadfce]/80 shadow-[0_10px_30px_rgba(43,29,18,0.05)]">
@@ -16,7 +48,7 @@ export default function Navbar() {
           <div
             role="img"
             aria-label="Casa Huéspedes Pimentel"
-            className="w-[105px] sm:w-[120px] h-[62px] bg-[#2b1d12] group-hover:-translate-y-0.5 transition"
+            className="w-[105px] sm:w-[120px] h-[62px] bg-[#2b1d12] group-hover:-translate-y-0.5 transition-transform"
             style={{
               WebkitMaskImage:
                 'url("/img/brand/logo-casa-huespedes.png")',
@@ -34,22 +66,31 @@ export default function Navbar() {
 
         {/* NAVEGACIÓN PARA COMPUTADORAS */}
         <div className="hidden lg:flex items-center justify-center gap-7 flex-1">
-          <Link to="/turismo#inicio-turismo" className={navLink}>
+          <Link
+            to="/turismo#inicio-turismo"
+            className={navLink("/turismo")}
+          >
             Conoce Pimentel
           </Link>
 
           <Link
             to="/#inicio"
-            className="relative text-xs font-black uppercase tracking-[0.16em] text-[#a87545] pb-2 after:absolute after:left-0 after:-bottom-0 after:h-[2px] after:w-full after:bg-[#a87545]"
+            className={navLink("/")}
           >
             Inicio
           </Link>
 
-          <Link to="/habitaciones" className={navLink}>
+          <Link
+            to="/habitaciones"
+            className={navLink("/habitaciones")}
+          >
             Habitaciones
           </Link>
 
-          <Link to="/galeria" className={navLink}>
+          <Link
+            to="/galeria"
+            className={navLink("/galeria")}
+          >
             Galería
           </Link>
         </div>
