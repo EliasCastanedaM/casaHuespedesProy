@@ -55,10 +55,6 @@ export default function Navbar() {
   Galería
 </Link>
 
-          <Link to="/#disponibilidad" className={navLink}>
-            Reservas
-          </Link>
-        </div>
 
     
 
