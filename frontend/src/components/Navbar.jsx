@@ -45,30 +45,23 @@ export default function Navbar() {
             Inicio
           </Link>
 
-          {/* Abre Rooms.jsx */}
           <Link to="/habitaciones" className={navLink}>
             Habitaciones
           </Link>
 
-       
-<Link to="/galeria" className={navLink}>
-  Galería
-</Link>
-
-
-    
+          <Link to="/galeria" className={navLink}>
+            Galería
+          </Link>
+        </div>
 
         {/* NAVEGACIÓN PARA CELULAR Y TABLET */}
-        <div className="flex xl:hidden items-center gap-2">
-          {/* Abre Rooms.jsx */}
+        <div className="flex lg:hidden items-center gap-2">
           <Link
             to="/habitaciones"
             className="hidden sm:inline-flex bg-white border border-[#eadfce] text-[#4b250f] px-4 py-2.5 rounded-full font-black text-xs uppercase tracking-wide"
           >
             Habitaciones
           </Link>
-
-        
         </div>
       </nav>
     </header>

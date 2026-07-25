@@ -1,19 +1,23 @@
 import { useEffect, useState } from "react";
+
 import SocialDock from "../../components/SocialDock";
+
+import fechaImportante1 from "../../assets/fechas_importantes/fecha_importante_1.mp4";
+import fechaImportante2 from "../../assets/fechas_importantes/fecha_importante_2.mp4";
 
 import "./Gallery.css";
 
 // =========================================================
-// ARCHIVOS MULTIMEDIA
+// ARCHIVOS MULTIMEDIA DE LA GALERÍA GENERAL
 // =========================================================
-// Guarda aquí tus fotografías y videos:
+// Las fotografías y videos generales deben guardarse en:
+//
 // frontend/src/assets/gallery/
 //
-// Formatos admitidos:
-// Fotografías: jpg, jpeg, png y webp
-// Videos: mp4, webm y ogg
+// Los videos de FECHAS IMPORTANTES no deben colocarse aquí.
+// Deben guardarse en:
 //
-// No necesitas importar ni escribir el nombre de cada archivo.
+// frontend/src/assets/fechas_importantes/
 
 const imageModules = import.meta.glob(
   "../../assets/gallery/*.{jpg,jpeg,png,webp}",
@@ -31,7 +35,7 @@ const videoModules = import.meta.glob(
   }
 );
 
-// Convierte nombres como habitacion-matrimonial.jpg
+// Convierte nombres como habitacion_matrimonial.jpg
 // en títulos como Habitación Matrimonial.
 function createMediaTitle(path) {
   const fileName = path
@@ -44,6 +48,7 @@ function createMediaTitle(path) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+// Ordena los archivos alfabéticamente.
 function sortMediaEntries(entries) {
   return entries.sort(([firstPath], [secondPath]) =>
     firstPath.localeCompare(secondPath, "es", {
@@ -53,40 +58,55 @@ function sortMediaEntries(entries) {
   );
 }
 
+// =========================================================
+// FOTOGRAFÍAS GENERALES
+// =========================================================
 const galleryImages = sortMediaEntries(Object.entries(imageModules)).map(
   ([path, src], index) => ({
-    id: `image-${path}-${index}`,
+    id: `image-${index}`,
     src,
     title: createMediaTitle(path),
     type: "image",
   })
 );
 
+// =========================================================
+// VIDEOS GENERALES
+// =========================================================
 const galleryVideos = sortMediaEntries(Object.entries(videoModules)).map(
   ([path, src], index) => ({
-    id: `video-${path}-${index}`,
+    id: `video-${index}`,
     src,
     title: createMediaTitle(path),
     type: "video",
   })
 );
 
+// =========================================================
+// VIDEOS IMPORTADOS MANUALMENTE
+// FECHAS IMPORTANTES
+// =========================================================
+const importantVideos = [
+  {
+    id: "fecha-importante-1",
+    src: fechaImportante1,
+    title: "Fecha importante 1",
+  },
+  {
+    id: "fecha-importante-2",
+    src: fechaImportante2,
+    title: "Fecha importante 2",
+  },
+];
+
 export default function Gallery() {
   const [selectedImage, setSelectedImage] = useState(null);
 
-  // Los 2 últimos videos, ordenados por nombre de archivo, se mostrarán
-  // exclusivamente en la sección "FECHAS IMPORTANTES".
-  const importantDateVideos = galleryVideos.slice(-2);
-  const guestOpinionVideos = galleryVideos.slice(
-    0,
-    Math.max(galleryVideos.length - 2, 0)
-  );
-
   const heroVideo = galleryVideos[0] ?? null;
   const heroImage = galleryImages[0] ?? null;
-  const totalMedia = galleryImages.length + galleryVideos.length;
-  const firstVideoSection =
-    guestOpinionVideos.length > 0 ? "#videos" : "#fechas-importantes";
+
+  const totalMedia =
+    galleryImages.length + galleryVideos.length;
 
   // Permite cerrar el visor de fotografías presionando Escape.
   useEffect(() => {
@@ -110,6 +130,7 @@ export default function Gallery() {
     }
 
     const previousOverflow = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
     return () => {
@@ -121,8 +142,6 @@ export default function Gallery() {
     <main className="gallery-page">
       {/* ===================================================
           PORTADA
-          El primer video de assets/gallery se usa de fondo.
-          Si no hay videos, se usa la primera fotografía.
       =================================================== */}
       <section className="gallery-hero">
         {heroVideo ? (
@@ -137,6 +156,8 @@ export default function Gallery() {
             aria-hidden="true"
           >
             <source src={heroVideo.src} />
+
+            Tu navegador no puede reproducir este video.
           </video>
         ) : (
           heroImage && (
@@ -156,39 +177,54 @@ export default function Gallery() {
             Casa Huéspedes Pimentel
           </p>
 
-          <h1>Galeria de fotos y videos</h1>
+          <h1>Galería de fotos y videos</h1>
 
           <p className="gallery-hero-description">
-            Recorre nuestros ambientes, habitaciones y espacios antes de
-            realizar tu reserva.
+            Recorre nuestros ambientes, habitaciones y espacios
+            antes de realizar tu reserva.
           </p>
 
           <div className="gallery-hero-actions">
             {galleryVideos.length > 0 && (
-              <a href={firstVideoSection} className="gallery-primary-button">
+              <a
+                href="#videos"
+                className="gallery-primary-button"
+              >
                 Ver videos
               </a>
             )}
 
+            {galleryImages.length > 0 && (
+              <a
+                href="#fotos"
+                className="gallery-secondary-button"
+              >
+                Ver fotografías
+              </a>
+            )}
+
             <a
-              href={galleryImages.length > 0 ? "#fotos" : "#galeria"}
+              href="#fechas-importantes"
               className="gallery-secondary-button"
             >
-              Ver fotografías
+              Fechas importantes
             </a>
-
           </div>
 
           <div className="gallery-hero-summary">
             <div>
               <strong>{galleryVideos.length}</strong>
+
               <span>
-                {galleryVideos.length === 1 ? "video" : "videos"}
+                {galleryVideos.length === 1
+                  ? "video"
+                  : "videos"}
               </span>
             </div>
 
             <div>
               <strong>{galleryImages.length}</strong>
+
               <span>
                 {galleryImages.length === 1
                   ? "fotografía"
@@ -199,70 +235,105 @@ export default function Gallery() {
         </div>
 
         <a
-          href={galleryVideos.length > 0 ? firstVideoSection : "#fotos"}
+          href={
+            galleryVideos.length > 0
+              ? "#videos"
+              : galleryImages.length > 0
+                ? "#fotos"
+                : "#fechas-importantes"
+          }
           className="gallery-scroll-indicator"
           aria-label="Bajar al contenido de la galería"
         >
           <span>Explorar</span>
-          <span className="gallery-scroll-arrow">↓</span>
+
+          <span className="gallery-scroll-arrow">
+            ↓
+          </span>
         </a>
       </section>
 
       {/* ===================================================
-          ESTADO VACÍO
+          ESTADO VACÍO DE LA GALERÍA GENERAL
       =================================================== */}
       {totalMedia === 0 && (
-        <section id="galeria" className="gallery-section">
+        <section
+          id="galeria"
+          className="gallery-section"
+        >
           <div className="gallery-empty">
-            <div className="gallery-empty-icon" aria-hidden="true">
+            <div
+              className="gallery-empty-icon"
+              aria-hidden="true"
+            >
               ▣
             </div>
 
-            <h2>Aún no hay fotografías ni videos</h2>
+            <h2>
+              Aún no hay fotografías ni videos generales
+            </h2>
 
-            <p>Guarda tus archivos multimedia dentro de:</p>
+            <p>
+              Guarda los archivos generales dentro de:
+            </p>
 
-            <code>frontend/src/assets/gallery/</code>
+            <code>
+              frontend/src/assets/gallery/
+            </code>
 
             <small>
-              Puedes usar imágenes JPG, JPEG, PNG y WEBP, o videos MP4, WEBM y
-              OGG.
+              Puedes usar imágenes JPG, JPEG, PNG y WEBP, o
+              videos MP4, WEBM y OGG.
             </small>
           </div>
         </section>
       )}
 
       {/* ===================================================
-          LISTADO DE VIDEOS
+          VIDEOS GENERALES
       =================================================== */}
-      {guestOpinionVideos.length > 0 && (
-        <section id="videos" className="gallery-video-section">
+      {galleryVideos.length > 0 && (
+        <section
+          id="videos"
+          className="gallery-video-section"
+        >
           <div className="gallery-section-header gallery-video-header">
             <div>
-              <p className="gallery-eyebrow">Experiencias en movimiento</p>
+              <p className="gallery-eyebrow">
+                Experiencias en movimiento
+              </p>
 
-              <h2>Opiniones de nuestros huéspedes</h2>
+              <h2>
+                Opiniones de nuestros huéspedes
+              </h2>
 
               <p>
-                Reproduce los videos para recorrer Casa Huéspedes Pimentel.
+                Reproduce los videos para conocer las
+                experiencias en Casa Huéspedes Pimentel.
               </p>
             </div>
 
             <div className="gallery-counter gallery-counter-dark">
-              <strong>{guestOpinionVideos.length}</strong>
+              <strong>
+                {galleryVideos.length}
+              </strong>
 
               <span>
-                {guestOpinionVideos.length === 1 ? "video" : "videos"}
+                {galleryVideos.length === 1
+                  ? "video"
+                  : "videos"}
               </span>
             </div>
           </div>
 
           <div className="gallery-video-grid">
-            {guestOpinionVideos.map((video, index) => (
+            {galleryVideos.map((video, index) => (
               <article
                 key={video.id}
                 className={`gallery-video-card ${
-                  index === 0 ? "gallery-video-card-featured" : ""
+                  index === 0
+                    ? "gallery-video-card-featured"
+                    : ""
                 }`}
               >
                 <div className="gallery-video-frame">
@@ -274,13 +345,18 @@ export default function Gallery() {
                     aria-label={`Video: ${video.title}`}
                   >
                     <source src={video.src} />
-                    Tu navegador no puede reproducir este video.
+
+                    Tu navegador no puede reproducir este
+                    video.
                   </video>
                 </div>
 
                 <div className="gallery-video-information">
                   <div>
-                    <span>Casa Huéspedes Pimentel</span>
+                    <span>
+                      Casa Huéspedes Pimentel
+                    </span>
+
                     <h3>{video.title}</h3>
                   </div>
 
@@ -295,23 +371,33 @@ export default function Gallery() {
       )}
 
       {/* ===================================================
-          LISTADO DE FOTOGRAFÍAS
+          FOTOGRAFÍAS GENERALES
       =================================================== */}
       {galleryImages.length > 0 && (
-        <section id="fotos" className="gallery-section">
+        <section
+          id="fotos"
+          className="gallery-section"
+        >
           <div className="gallery-section-header">
             <div>
-              <p className="gallery-eyebrow">Nuestros espacios</p>
+              <p className="gallery-eyebrow">
+                Nuestros espacios
+              </p>
 
-              <h2>Detalles de Casa Huéspedes</h2>
+              <h2>
+                Detalles de Casa Huéspedes
+              </h2>
 
               <p>
-                Selecciona una fotografía para verla en tamaño completo.
+                Selecciona una fotografía para verla en
+                tamaño completo.
               </p>
             </div>
 
             <div className="gallery-counter">
-              <strong>{galleryImages.length}</strong>
+              <strong>
+                {galleryImages.length}
+              </strong>
 
               <span>
                 {galleryImages.length === 1
@@ -327,20 +413,34 @@ export default function Gallery() {
                 key={image.id}
                 type="button"
                 className={`gallery-card ${
-                  index === 0 ? "gallery-card-featured" : ""
+                  index === 0
+                    ? "gallery-card-featured"
+                    : ""
                 }`}
                 onClick={() => setSelectedImage(image)}
                 aria-label={`Abrir fotografía: ${image.title}`}
               >
-                <img src={image.src} alt={image.title} loading="lazy" />
+                <img
+                  src={image.src}
+                  alt={image.title}
+                  loading="lazy"
+                />
 
                 <div className="gallery-card-overlay">
                   <div>
-                    <strong>{image.title}</strong>
-                    <span>Ver fotografía</span>
+                    <strong>
+                      {image.title}
+                    </strong>
+
+                    <span>
+                      Ver fotografía
+                    </span>
                   </div>
 
-                  <div className="gallery-card-icon" aria-hidden="true">
+                  <div
+                    className="gallery-card-icon"
+                    aria-hidden="true"
+                  >
                     ↗
                   </div>
                 </div>
@@ -350,65 +450,85 @@ export default function Gallery() {
         </section>
       )}
 
-   
       {/* ===================================================
           FECHAS IMPORTANTES
-          Los 2 últimos videos de assets/gallery se muestran aquí.
+          VIDEOS IMPORTADOS MANUALMENTE
       =================================================== */}
-      {importantDateVideos.length > 0 && (
-        <section id="fechas-importantes" className="gallery-video-section">
-          <div className="gallery-section-header gallery-video-header">
-            <div>
-              <p className="gallery-eyebrow">Información para tu visita</p>
+      <section
+        id="fechas-importantes"
+        className="gallery-video-section"
+      >
+        <div className="gallery-section-header gallery-video-header">
+          <div>
+            <p className="gallery-eyebrow">
+              Información para nuestros huéspedes
+            </p>
 
-              <h2>FECHAS IMPORTANTES</h2>
+            <h2>
+              FECHAS IMPORTANTES
+            </h2>
 
-              <p>
-                Revisa nuestros videos con fechas, actividades y anuncios
-                importantes de Casa Huéspedes Pimentel.
-              </p>
-            </div>
-
-            <div className="gallery-counter gallery-counter-dark">
-              <strong>{importantDateVideos.length}</strong>
-
-              <span>
-                {importantDateVideos.length === 1 ? "video" : "videos"}
-              </span>
-            </div>
+            <p>
+              Revisa nuestros anuncios, actividades y fechas
+              especiales.
+            </p>
           </div>
 
-          <div className="gallery-video-grid">
-            {importantDateVideos.map((video, index) => (
-              <article key={video.id} className="gallery-video-card">
-                <div className="gallery-video-frame">
-                  <video
-                    controls
-                    playsInline
-                    preload="metadata"
-                    poster={heroImage?.src}
-                    aria-label={`Fecha importante: ${video.title}`}
-                  >
-                    <source src={video.src} />
-                    Tu navegador no puede reproducir este video.
-                  </video>
-                </div>
+          <div className="gallery-counter gallery-counter-dark">
+            <strong>
+              {importantVideos.length}
+            </strong>
 
-                <div className="gallery-video-information">
-                  <div>
-                    <span>Casa Huéspedes Pimentel</span>
-                    <h3>{video.title}</h3>
-                  </div>
+            <span>
+              {importantVideos.length === 1
+                ? "video"
+                : "videos"}
+            </span>
+          </div>
+        </div>
 
-                  <span className="gallery-video-number">
-                    {String(index + 1).padStart(2, "0")}
+        <div className="gallery-video-grid">
+          {importantVideos.map((video, index) => (
+            <article
+              key={video.id}
+              className="gallery-video-card"
+            >
+              <div className="gallery-video-frame">
+                <video
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster={heroImage?.src}
+                  aria-label={`Video: ${video.title}`}
+                >
+                  <source
+                    src={video.src}
+                    type="video/mp4"
+                  />
+
+                  Tu navegador no puede reproducir este video.
+                </video>
+              </div>
+
+              <div className="gallery-video-information">
+                <div>
+                  <span>
+                    Casa Huéspedes Pimentel
                   </span>
+
+                  <h3>
+                    {video.title}
+                  </h3>
                 </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+
+                <span className="gallery-video-number">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       {/* ===================================================
           VISOR DE FOTOGRAFÍAS
@@ -434,9 +554,14 @@ export default function Gallery() {
             className="gallery-lightbox-content"
             onClick={(event) => event.stopPropagation()}
           >
-            <img src={selectedImage.src} alt={selectedImage.title} />
+            <img
+              src={selectedImage.src}
+              alt={selectedImage.title}
+            />
 
-            <p>{selectedImage.title}</p>
+            <p>
+              {selectedImage.title}
+            </p>
           </div>
         </div>
       )}
