@@ -387,26 +387,24 @@ function HowToGetThereSection({ videoSrc }) {
   );
 }
 
-
 function HouseConcept() {
   return (
     <section
       id="promocion-casa"
-      className="scroll-mt-28 bg-[#f7f0e6] px-4 py-10 sm:px-6 sm:py-14 md:px-8"
+      className="w-full scroll-mt-28 bg-[#f7f0e6] px-4 py-10 sm:px-6 sm:py-14 md:px-8"
     >
-      <div className="mx-auto max-w-7xl">
-        <div className="overflow-hidden rounded-[24px] border border-[#decbb4] bg-white shadow-[0_22px_55px_rgba(43,29,18,0.18)]">
-          <img
-            src="/img/home/banner-casa-huespedes.png"
-            alt="Descansa cerca al mar en Casa Huéspedes Pimentel"
-            className="block h-auto w-full"
-            loading="lazy"
-          />
-        </div>
+      <div className="mx-auto max-w-7xl overflow-hidden rounded-[24px] border border-[#decbb4] bg-white shadow-[0_22px_55px_rgba(43,29,18,0.18)]">
+        <img
+          src="/img/home/banner-casa-huespedes.png"
+          alt="Descansa cerca al mar en Casa Huéspedes Pimentel"
+          className="block h-auto w-full"
+          loading="lazy"
+        />
       </div>
     </section>
   );
 }
+
 
 function DockIcon({ type }) {
   const iconProps = {
