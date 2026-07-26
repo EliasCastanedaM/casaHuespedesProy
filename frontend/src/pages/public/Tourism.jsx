@@ -1064,7 +1064,7 @@ export default function Tourism() {
               </p>
 
               <h1 className="mt-5 max-w-4xl font-serif text-5xl leading-[1.02] tracking-[-0.035em] text-white sm:text-6xl lg:text-[82px]">
-                Conoce la esencia de Pimentel
+                ConocePimentel
               </h1>
 
               <p className="mt-7 max-w-2xl text-base leading-8 text-white/85 sm:text-lg">
