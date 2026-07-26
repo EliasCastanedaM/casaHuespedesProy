@@ -76,6 +76,46 @@ function sortMediaEntries(entries) {
   );
 }
 
+
+// Muestra una vista previa propia de cada video.
+// Al cargar los metadatos, avanza a un punto corto del video
+// para evitar que todos aparezcan con una portada repetida o en negro.
+function VideoPreview({ src, title, type }) {
+  function showVideoPreview(event) {
+    const videoElement = event.currentTarget;
+
+    if (
+      Number.isFinite(videoElement.duration) &&
+      videoElement.duration > 0
+    ) {
+      const previewSecond = Math.min(
+        1.5,
+        Math.max(0.2, videoElement.duration * 0.08)
+      );
+
+      videoElement.currentTime = previewSecond;
+      videoElement.pause();
+    }
+  }
+
+  return (
+    <video
+      controls
+      playsInline
+      preload="metadata"
+      onLoadedMetadata={showVideoPreview}
+      aria-label={`Video: ${title}`}
+    >
+      <source
+        src={src}
+        {...(type ? { type } : {})}
+      />
+
+      Tu navegador no puede reproducir este video.
+    </video>
+  );
+}
+
 // =========================================================
 // FOTOGRAFÍAS GENERALES
 // =========================================================
@@ -374,18 +414,10 @@ export default function Gallery() {
                 }`}
               >
                 <div className="gallery-video-frame">
-                  <video
-                    controls
-                    playsInline
-                    preload="metadata"
-                    poster={heroImage?.src}
-                    aria-label={`Video: ${video.title}`}
-                  >
-                    <source src={video.src} />
-
-                    Tu navegador no puede reproducir este
-                    video.
-                  </video>
+                  <VideoPreview
+                    src={video.src}
+                    title={video.title}
+                  />
                 </div>
 
                 <div className="gallery-video-information">
@@ -531,20 +563,11 @@ export default function Gallery() {
               className="gallery-video-card"
             >
               <div className="gallery-video-frame">
-                <video
-                  controls
-                  playsInline
-                  preload="metadata"
-                  poster={heroImage?.src}
-                  aria-label={`Video: ${video.title}`}
-                >
-                  <source
-                    src={video.src}
-                    type="video/mp4"
-                  />
-
-                  Tu navegador no puede reproducir este video.
-                </video>
+                <VideoPreview
+                  src={video.src}
+                  title={video.title}
+                  type="video/mp4"
+                />
               </div>
 
               <div className="gallery-video-information">
@@ -618,17 +641,10 @@ export default function Gallery() {
                 }`}
               >
                 <div className="gallery-video-frame">
-                  <video
-                    controls
-                    playsInline
-                    preload="metadata"
-                    poster={heroImage?.src}
-                    aria-label={`Video: ${video.title}`}
-                  >
-                    <source src={video.src} />
-
-                    Tu navegador no puede reproducir este video.
-                  </video>
+                  <VideoPreview
+                    src={video.src}
+                    title={video.title}
+                  />
                 </div>
 
                 <div className="gallery-video-information">
