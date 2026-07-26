@@ -22,6 +22,11 @@ import "./Gallery.css";
 // Deben guardarse en:
 //
 // frontend/src/assets/fechas_importantes/
+//
+// Los videos de la sección CONOZCA MÁS SOBRE CASA HUÉSPEDES
+// deben guardarse en:
+//
+// frontend/src/assets/gallery/conoce_mas/
 
 const imageModules = import.meta.glob(
   "../../assets/gallery/fotos/*.{jpg,jpeg,png,webp}",
@@ -33,6 +38,15 @@ const imageModules = import.meta.glob(
 
 const videoModules = import.meta.glob(
   "../../assets/gallery/*.{mp4,webm,ogg}",
+  {
+    eager: true,
+    import: "default",
+  }
+);
+
+// Carga automáticamente todos los videos guardados en la carpeta conoce_mas.
+const moreAboutVideoModules = import.meta.glob(
+  "../../assets/gallery/conoce_mas/*.{mp4,webm,ogg}",
   {
     eager: true,
     import: "default",
@@ -85,6 +99,18 @@ const galleryVideos = sortMediaEntries(Object.entries(videoModules)).map(
     type: "video",
   })
 );
+
+// =========================================================
+// VIDEOS: CONOZCA MÁS SOBRE CASA HUÉSPEDES
+// =========================================================
+const moreAboutVideos = sortMediaEntries(
+  Object.entries(moreAboutVideoModules)
+).map(([path, src], index) => ({
+  id: `conoce-mas-${index}`,
+  src,
+  title: createMediaTitle(path),
+  type: "video",
+}));
 
 // =========================================================
 // VIDEOS IMPORTADOS MANUALMENTE
@@ -212,6 +238,13 @@ export default function Gallery() {
               className="gallery-secondary-button"
             >
               Fechas importantes
+            </a>
+
+            <a
+              href="#conoce-mas"
+              className="gallery-secondary-button"
+            >
+              Conoce más
             </a>
           </div>
 
@@ -532,6 +565,114 @@ export default function Gallery() {
             </article>
           ))}
         </div>
+      </section>
+
+      {/* ===================================================
+          CONOZCA MÁS SOBRE CASA HUÉSPEDES
+          VIDEOS CARGADOS AUTOMÁTICAMENTE DESDE:
+          frontend/src/assets/gallery/conoce_mas/
+      =================================================== */}
+      <section
+        id="conoce-mas"
+        className="gallery-video-section"
+      >
+        <div className="gallery-section-header gallery-video-header">
+          <div>
+            <p className="gallery-eyebrow">
+              Nuestra historia y experiencia
+            </p>
+
+            <h2>
+              CONOZCA MÁS SOBRE CASA HUÉSPEDES
+            </h2>
+
+            <p>
+              Descubre nuestros espacios, servicios y la
+              experiencia que ofrecemos en Casa Huéspedes
+              Pimentel.
+            </p>
+          </div>
+
+          <div className="gallery-counter gallery-counter-dark">
+            <strong>
+              {moreAboutVideos.length}
+            </strong>
+
+            <span>
+              {moreAboutVideos.length === 1
+                ? "video"
+                : "videos"}
+            </span>
+          </div>
+        </div>
+
+        {moreAboutVideos.length > 0 ? (
+          <div className="gallery-video-grid">
+            {moreAboutVideos.map((video, index) => (
+              <article
+                key={video.id}
+                className={`gallery-video-card ${
+                  index === 0
+                    ? "gallery-video-card-featured"
+                    : ""
+                }`}
+              >
+                <div className="gallery-video-frame">
+                  <video
+                    controls
+                    playsInline
+                    preload="metadata"
+                    poster={heroImage?.src}
+                    aria-label={`Video: ${video.title}`}
+                  >
+                    <source src={video.src} />
+
+                    Tu navegador no puede reproducir este video.
+                  </video>
+                </div>
+
+                <div className="gallery-video-information">
+                  <div>
+                    <span>
+                      Casa Huéspedes Pimentel
+                    </span>
+
+                    <h3>{video.title}</h3>
+                  </div>
+
+                  <span className="gallery-video-number">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="gallery-empty">
+            <div
+              className="gallery-empty-icon"
+              aria-hidden="true"
+            >
+              ▷
+            </div>
+
+            <h3>
+              Aún no hay videos en esta sección
+            </h3>
+
+            <p>
+              Guarda tus videos dentro de:
+            </p>
+
+            <code>
+              frontend/src/assets/gallery/conoce_mas/
+            </code>
+
+            <small>
+              Puedes usar archivos MP4, WEBM u OGG.
+            </small>
+          </div>
+        )}
       </section>
 
       {/* ===================================================
