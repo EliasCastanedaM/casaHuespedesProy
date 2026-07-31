@@ -59,7 +59,7 @@ export default function CustomersAdmin() {
     }
   }
 
-  useEffect(() => {
+  useEffect(() => {H
     loadCustomers();
   }, []);
 

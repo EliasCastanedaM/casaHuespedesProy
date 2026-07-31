@@ -866,3 +866,63 @@ export async function updateBookingStatusService(id, status) {
 
   return updatedDetails || result.rows[0];
 }
+
+export async function deleteBookingService(id) {
+  const bookingId = Number(id);
+
+  if (!Number.isInteger(bookingId) || bookingId <= 0) {
+    const error = new Error("El identificador de la reserva no es válido.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const bookingResult = await client.query(
+      `
+      SELECT id, booking_code, customer_id, room_id, status
+      FROM bookings
+      WHERE id = $1
+      FOR UPDATE;
+      `,
+      [bookingId]
+    );
+
+    const booking = bookingResult.rows[0];
+
+    if (!booking) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    // Los pagos dependen de la reserva y deben eliminarse primero.
+    await client.query(
+      `
+      DELETE FROM payments
+      WHERE booking_id = $1;
+      `,
+      [bookingId]
+    );
+
+    const deleteResult = await client.query(
+      `
+      DELETE FROM bookings
+      WHERE id = $1
+      RETURNING id, booking_code, customer_id, room_id, status;
+      `,
+      [bookingId]
+    );
+
+    await client.query("COMMIT");
+
+    return deleteResult.rows[0];
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}

@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { getBookings, updateBookingStatus } from "../../services/api";
+import {
+  deleteBooking,
+  getBookings,
+  updateBookingStatus,
+} from "../../services/api";
 
 const statusLabels = {
   pending: "Pendiente",
@@ -38,6 +42,7 @@ export default function BookingsAdmin() {
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingId, setIsUpdatingId] = useState(null);
+  const [isDeletingId, setIsDeletingId] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [error, setError] = useState("");
@@ -86,7 +91,6 @@ export default function BookingsAdmin() {
           booking.booking_code || booking.id
         }?`
       );
-
       if (!shouldConfirm) return;
     }
 
@@ -118,6 +122,44 @@ export default function BookingsAdmin() {
       setError(err.message || "No se pudo actualizar el estado.");
     } finally {
       setIsUpdatingId(null);
+    }
+  }
+
+  async function handleDeleteBooking(booking) {
+    const bookingReference = String(
+      booking.booking_code || booking.id
+    ).trim();
+
+    const confirmation = window.prompt(
+      `Esta acción eliminará definitivamente la reserva ${bookingReference}.\n\nPara confirmar, escribe exactamente: ${bookingReference}`
+    );
+
+    if (confirmation === null) return;
+
+    if (confirmation.trim() !== bookingReference) {
+      setMessage("");
+      setError(
+        "No se eliminó la reserva porque el código escrito no coincide."
+      );
+      return;
+    }
+
+    try {
+      setIsDeletingId(booking.id);
+      setMessage("");
+      setError("");
+
+      await deleteBooking(booking.id);
+
+      setBookings((currentBookings) =>
+        currentBookings.filter((item) => item.id !== booking.id)
+      );
+      setMessage(`La reserva ${bookingReference} fue eliminada correctamente.`);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "No se pudo eliminar la reserva.");
+    } finally {
+      setIsDeletingId(null);
     }
   }
 
@@ -448,13 +490,30 @@ export default function BookingsAdmin() {
 
                           <button
                             type="button"
-                            disabled={isUpdatingId === booking.id}
+                            disabled={
+                              isUpdatingId === booking.id ||
+                              isDeletingId === booking.id
+                            }
                             onClick={() =>
                               handleStatusChange(booking, "cancelled")
                             }
                             className="bg-slate-700 text-white rounded-xl px-3 py-2 font-black hover:bg-slate-800 disabled:opacity-50"
                           >
                             Cancelar
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              isUpdatingId === booking.id ||
+                              isDeletingId === booking.id
+                            }
+                            onClick={() => handleDeleteBooking(booking)}
+                            className="border-2 border-red-600 text-red-700 bg-white rounded-xl px-3 py-2 font-black hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isDeletingId === booking.id
+                              ? "Eliminando..."
+                              : "Eliminar definitivamente"}
                           </button>
                         </div>
                       </td>
