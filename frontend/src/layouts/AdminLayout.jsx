@@ -31,12 +31,6 @@ const menuItems = [
     path: "/admin/horarios",
     icon: "🕘",
   },
-
-  {
-    label: "Galería",
-    path: "/admin/galeria",
-    icon: "🖼️",
-  },
   {
     label: "Estadísticas",
     path: "/admin/estadisticas",
