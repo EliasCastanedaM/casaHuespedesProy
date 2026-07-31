@@ -60,14 +60,7 @@ export default function Footer() {
                 </a>
               </li>
 
-              <li>
-                <a
-                  href="/#servicios-extras"
-                  className="hover:text-[#d9b48f] transition"
-                >
-                  Servicios
-                </a>
-              </li>
+       
             </ul>
           </div>
 
