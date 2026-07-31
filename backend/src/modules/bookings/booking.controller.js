@@ -1,6 +1,7 @@
 import {
   checkAvailabilityService,
   createBookingService,
+  deleteBookingService,
   getBookingPaymentStatusService,
   getAllBookingsService,
   reportBookingPaymentService,
@@ -50,7 +51,6 @@ export async function createBookingController(req, res, next) {
       customer,
     } = req.body;
 
-    // Soporta estructura nueva del Home.jsx y estructura antigua con customer
     const finalFullName = customer?.full_name || full_name;
     const finalPhone = customer?.phone || phone;
     const finalEmail = customer?.email || req.body.email;
@@ -98,27 +98,27 @@ export async function createBookingController(req, res, next) {
       });
     }
 
- const result = await createBookingService(req.body);
+    const result = await createBookingService(req.body);
 
-if (result.mode === "inquiry") {
-  return res.status(201).json({
-    success: true,
-    message: result.message,
-    data: result,
-  });
-}
+    if (result.mode === "inquiry") {
+      return res.status(201).json({
+        success: true,
+        message: result.message,
+        data: result,
+      });
+    }
 
-return res.status(201).json({
-  success: true,
-  message: "Solicitud de reserva registrada correctamente.",
-  data: result,
-});
+    return res.status(201).json({
+      success: true,
+      message: "Solicitud de reserva registrada correctamente.",
+      data: result,
+    });
   } catch (error) {
     next(error);
   }
 }
 
-// El huésped avisa que terminó el pago en el enlace externo de Culqi.
+// El huésped avisa que terminó el pago
 export async function reportBookingPaymentController(req, res, next) {
   try {
     const { id } = req.params;
@@ -144,7 +144,7 @@ export async function reportBookingPaymentController(req, res, next) {
   }
 }
 
-// Devuelve únicamente el estado necesario para la pantalla pública de pago.
+// Consulta pública del estado del pago
 export async function getBookingPaymentStatusController(req, res, next) {
   try {
     const { id } = req.params;
@@ -214,6 +214,30 @@ export async function updateBookingStatusController(req, res, next) {
     return res.json({
       success: true,
       message: "Estado actualizado correctamente.",
+      data: booking,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Elimina definitivamente una reserva
+export async function deleteBookingController(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    const booking = await deleteBookingService(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Reserva no encontrada.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Reserva eliminada correctamente.",
       data: booking,
     });
   } catch (error) {
