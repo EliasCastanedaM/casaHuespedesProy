@@ -21,11 +21,7 @@ const menuItems = [
     path: "/admin/habitaciones",
     icon: "🛏️",
   },
-  {
-    label: "Clientes",
-    path: "/admin/clientes",
-    icon: "👥",
-  },
+
   {
     label: "Horarios",
     path: "/admin/horarios",
