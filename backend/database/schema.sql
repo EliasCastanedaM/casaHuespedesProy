@@ -145,6 +145,11 @@ WHERE is_main = TRUE;
 
 
 -- ============================================================
+
+-- Después de este archivo ejecuta:
+-- database/migrations/2026-09-01-production-ready.sql
+-- Esa migración añade campos actuales, bloqueos, vista administrativa
+-- y persistencia de conversaciones del asesor sin eliminar información.
 -- TABLA: room_videos
 -- Guarda videos asociados a una habitación.
 -- ============================================================

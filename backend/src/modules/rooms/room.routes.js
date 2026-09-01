@@ -18,16 +18,18 @@ import {
   deleteRoomImageController,
   deleteRoomVideoController,
 } from "./room.controller.js";
+import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 
 const router = Router();
 
 router.get("/", getPublicRoomsController);
-router.get("/admin", getAllRoomsController);
+router.get("/admin", requireAdminAuth, getAllRoomsController);
 router.get("/:id", getRoomByIdController);
 
 // Una sola foto que reemplaza la portada actual.
 router.post(
   "/:id/image",
+  requireAdminAuth,
   uploadImage.single("image"),
   uploadRoomImageController
 );
@@ -35,6 +37,7 @@ router.post(
 // Varias fotos adicionales elegidas desde la PC.
 router.post(
   "/:id/images",
+  requireAdminAuth,
   uploadRoomImages.array("files", 30),
   uploadRoomImagesController
 );
@@ -42,16 +45,25 @@ router.post(
 // Varios videos elegidos desde la PC.
 router.post(
   "/:id/videos",
+  requireAdminAuth,
   uploadRoomVideos.array("files", 10),
   uploadRoomVideosController
 );
 
 // Elimina una foto o un video específico de una habitación.
-router.delete("/:roomId/images/:imageId", deleteRoomImageController);
-router.delete("/:roomId/videos/:videoId", deleteRoomVideoController);
+router.delete(
+  "/:roomId/images/:imageId",
+  requireAdminAuth,
+  deleteRoomImageController
+);
+router.delete(
+  "/:roomId/videos/:videoId",
+  requireAdminAuth,
+  deleteRoomVideoController
+);
 
-router.post("/", createRoomController);
-router.put("/:id", updateRoomController);
-router.delete("/:id", deleteRoomController);
+router.post("/", requireAdminAuth, createRoomController);
+router.put("/:id", requireAdminAuth, updateRoomController);
+router.delete("/:id", requireAdminAuth, deleteRoomController);
 
 export default router;

@@ -1,5 +1,4 @@
 import { pool } from "../../config/db.js";
-import { calculateNights } from "../../utils/calculateNights.js";
 import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
 import {
@@ -7,12 +6,12 @@ import {
   sendBookingPendingEmails,
   sendPaymentReportedEmail,
 } from "../../services/email.service.js";
+import {
+  checkAvailabilityService,
+  normalizeAvailabilityInput,
+} from "../availability/availability.service.js";
 
-function calculateCheckOutDate(checkIn, nights) {
-  const date = new Date(`${checkIn}T00:00:00`);
-  date.setDate(date.getDate() + Number(nights || 1));
-  return date.toISOString().split("T")[0];
-}
+export { checkAvailabilityService };
 
 function normalizeBookingData(bookingData) {
   const customerData = bookingData.customer || {
@@ -23,255 +22,24 @@ function normalizeBookingData(bookingData) {
     document_number: bookingData.document_number,
   };
 
-  const nights = bookingData.nights
-    ? Number(bookingData.nights)
-    : calculateNights(bookingData.check_in, bookingData.check_out);
-
-  const checkOut = bookingData.check_out
-    ? bookingData.check_out
-    : calculateCheckOutDate(bookingData.check_in, nights);
-
-  return {
+  const stay = normalizeAvailabilityInput({
     room_id: bookingData.room_id,
     check_in: bookingData.check_in,
-    check_out: checkOut,
-    check_in_time: bookingData.check_in_time || null,
+    check_out: bookingData.check_out,
+    nights: bookingData.nights,
+    check_in_time: bookingData.check_in_time,
     guests_count: bookingData.guests_count || 1,
-    nights,
+  });
+
+  return {
+    room_id: stay.room_id,
+    check_in: stay.check_in,
+    check_out: stay.check_out,
+    check_in_time: stay.check_in_time,
+    guests_count: stay.guests_count,
+    nights: stay.nights,
     special_requests: bookingData.special_requests || null,
     customer: customerData,
-  };
-}
-
-function timeToMinutes(value) {
-  const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
-  return hours * 60 + minutes;
-}
-
-async function getDefaultAvailabilitySettings() {
-  const result = await pool.query(
-    `
-    SELECT *
-    FROM availability_settings
-    WHERE setting_name = 'default'
-    LIMIT 1;
-    `
-  );
-
-  return result.rows[0];
-}
-
-function validateAttentionSchedule(settings) {
-  if (!settings || !settings.is_active) {
-    return {
-      isAvailableSchedule: false,
-      reason: "El sistema de atención no se encuentra activo en este momento.",
-    };
-  }
-
-  const nowInPeru = new Date(
-    new Date().toLocaleString("en-US", {
-      timeZone: "America/Lima",
-    })
-  );
-
-  const dayMap = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ];
-
-  const dayKey = dayMap[nowInPeru.getDay()];
-
-  if (!settings[dayKey]) {
-    return {
-      isAvailableSchedule: false,
-      reason: "No hay atención disponible para confirmar reservas el día de hoy.",
-    };
-  }
-
-  const currentTime =
-    nowInPeru.getHours() * 60 + nowInPeru.getMinutes();
-
-  const startTime = timeToMinutes(settings.start_time);
-  const endTime = timeToMinutes(settings.end_time);
-
-  if (currentTime < startTime || currentTime >= endTime) {
-    return {
-      isAvailableSchedule: false,
-      reason: `En este momento no hay personal disponible para confirmar reservas. El horario de atención es de ${String(
-        settings.start_time
-      ).slice(0, 5)} a ${String(settings.end_time).slice(0, 5)}.`,
-    };
-  }
-
-  return {
-    isAvailableSchedule: true,
-    reason: "Hay atención disponible para confirmar reservas.",
-  };
-}
-
-async function createInquiryFromBookingRequest({
-  bookingData,
-  checkOut,
-  room,
-  reason,
-}) {
-  const customerName =
-    bookingData.customer?.full_name || bookingData.full_name || "Cliente web";
-
-  const phone = bookingData.customer?.phone || bookingData.phone;
-  const email = bookingData.customer?.email || bookingData.email || null;
-
-  const message = `
-Solicitud recibida desde el formulario de reservas, pero fue enviada como consulta porque está fuera del horario de atención.
-
-Motivo: ${reason}
-
-Habitación solicitada: ${room?.name || "No especificada"}
-Fecha de ingreso: ${bookingData.check_in}
-Fecha de salida: ${checkOut}
-Hora solicitada: ${bookingData.check_in_time || "No especificada"}
-Noches: ${bookingData.nights || "No especificado"}
-Huéspedes: ${bookingData.guests_count || "No especificado"}
-
-Comentario del huésped:
-${bookingData.special_requests || "Sin comentario adicional."}
-  `.trim();
-
-  const result = await pool.query(
-    `
-    INSERT INTO inquiries (
-      customer_name,
-      phone,
-      email,
-      subject,
-      message,
-      preferred_check_in,
-      preferred_check_out,
-      status
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
-    RETURNING *;
-    `,
-    [
-      customerName,
-      phone,
-      email,
-      "Solicitud de reserva fuera de horario",
-      message,
-      bookingData.check_in,
-      checkOut,
-    ]
-  );
-
-  return result.rows[0];
-}
-
-export async function checkRoomAvailabilityService(roomId, checkIn, checkOut) {
-  const query = `
-    SELECT id
-    FROM bookings
-    WHERE room_id = $1
-      AND status IN (
-        'pending',
-        'pending_payment',
-        'payment_reported',
-        'confirmed'
-      )
-      AND check_in < $3
-      AND check_out > $2
-    LIMIT 1;
-  `;
-
-  const result = await pool.query(query, [roomId, checkIn, checkOut]);
-
-  return result.rows.length === 0;
-}
-
-export async function checkAvailabilityService({
-  room_id,
-  check_in,
-  check_out,
-  nights,
-  check_in_time,
-}) {
-  const finalCheckOut = check_out || calculateCheckOutDate(check_in, nights);
-
-  // 1. Verificar si el admin bloqueó todo el día
-  const blockedDayQuery = `
-    SELECT id
-    FROM blocked_slots
-    WHERE room_id = $1
-      AND blocked_date::date = $2::date
-      AND block_type = 'day'
-    LIMIT 1;
-  `;
-
-  const blockedDayResult = await pool.query(blockedDayQuery, [
-    room_id,
-    check_in,
-  ]);
-
-  if (blockedDayResult.rows.length > 0) {
-    return {
-      available: false,
-      reason: "La habitación está bloqueada para la fecha seleccionada.",
-      check_out: finalCheckOut,
-    };
-  }
-
-  // 2. Verificar si el admin bloqueó una hora específica
-  if (check_in_time) {
-    const blockedTimeQuery = `
-      SELECT id
-      FROM blocked_slots
-      WHERE room_id = $1
-        AND blocked_date::date = $2::date
-        AND blocked_time = $3
-        AND block_type = 'time'
-      LIMIT 1;
-    `;
-
-    const blockedTimeResult = await pool.query(blockedTimeQuery, [
-      room_id,
-      check_in,
-      check_in_time,
-    ]);
-
-    if (blockedTimeResult.rows.length > 0) {
-      return {
-        available: false,
-        reason: "La habitación está bloqueada para el horario seleccionado.",
-        check_out: finalCheckOut,
-      };
-    }
-  }
-
-  // 3. Verificar cruce con reservas existentes
-  const isAvailable = await checkRoomAvailabilityService(
-    room_id,
-    check_in,
-    finalCheckOut
-  );
-
-  if (!isAvailable) {
-    return {
-      available: false,
-      reason:
-        "La habitación ya se encuentra ocupada o no disponible para la fecha seleccionada.",
-      check_out: finalCheckOut,
-    };
-  }
-
-  return {
-    available: true,
-    reason: "Habitación disponible.",
-    check_out: finalCheckOut,
   };
 }
 
@@ -375,6 +143,7 @@ async function getBookingDetailsById(id) {
       c.email AS customer_email,
       r.name AS room_name,
       r.price_per_night,
+      p.payment_provider,
       p.status AS payment_status,
       p.payment_url,
       p.reported_at,
@@ -425,6 +194,12 @@ export async function createBookingService(bookingData) {
     customer,
   } = normalizeBookingData(bookingData);
 
+  if (!customer?.full_name || !customer?.phone) {
+    const error = new Error("Nombre completo y celular son obligatorios.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const room = await getRoomForBooking(room_id);
 
   if (!room) {
@@ -464,6 +239,16 @@ export async function createBookingService(bookingData) {
     error.statusCode = 400;
     throw error;
   }
+
+  // Serializa la creación por habitación. Así dos solicitudes simultáneas
+  // no pueden aprobar la misma disponibilidad antes de insertar la reserva.
+  const bookingLockClient = await pool.connect();
+
+  try {
+    await bookingLockClient.query(
+      "SELECT pg_advisory_lock(481516, $1::integer);",
+      [Number(room_id)]
+    );
 
   // 1. Validar disponibilidad real de habitación.
   // La reserva puede registrarse las 24 horas. Si no hay personal,
@@ -606,6 +391,16 @@ export async function createBookingService(bookingData) {
     public_token: publicToken,
     payment_url: env.culqiPaymentUrl,
   };
+  } finally {
+    try {
+      await bookingLockClient.query(
+        "SELECT pg_advisory_unlock(481516, $1::integer);",
+        [Number(room_id)]
+      );
+    } finally {
+      bookingLockClient.release();
+    }
+  }
 }
 
 export async function getBookingPaymentStatusService(id, publicToken) {
@@ -722,9 +517,31 @@ export async function reportBookingPaymentService(id, publicToken) {
 
 export async function getAllBookingsService() {
   const query = `
-    SELECT *
-    FROM vw_bookings_admin
-    ORDER BY created_at DESC;
+    SELECT
+      b.*,
+      c.full_name AS customer_name,
+      c.phone AS customer_phone,
+      c.email AS customer_email,
+      c.document_type,
+      c.document_number,
+      r.name AS room_name,
+      r.price_per_night,
+      p.payment_provider,
+      p.status AS payment_status,
+      p.payment_url,
+      p.reported_at,
+      p.paid_at
+    FROM bookings b
+    JOIN customers c ON c.id = b.customer_id
+    JOIN rooms r ON r.id = b.room_id
+    LEFT JOIN LATERAL (
+      SELECT payment.*
+      FROM payments payment
+      WHERE payment.booking_id = b.id
+      ORDER BY payment.created_at DESC, payment.id DESC
+      LIMIT 1
+    ) p ON TRUE
+    ORDER BY b.created_at DESC;
   `;
 
   const result = await pool.query(query);

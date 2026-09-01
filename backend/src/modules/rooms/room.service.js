@@ -108,6 +108,15 @@ export async function createRoomService(roomData) {
     price_per_night,
     status,
     main_image_url,
+    room_number,
+    floor_number,
+    floor_label,
+    room_type,
+    bed_type,
+    view_type,
+    room_size_m2,
+    amenities,
+    display_order,
   } = roomData;
 
   const query = `
@@ -117,9 +126,18 @@ export async function createRoomService(roomData) {
       capacity,
       price_per_night,
       status,
-      main_image_url
+      main_image_url,
+      room_number,
+      floor_number,
+      floor_label,
+      room_type,
+      bed_type,
+      view_type,
+      room_size_m2,
+      amenities,
+      display_order
     )
-    VALUES ($1, $2, $3, $4, $5, $6)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15)
     RETURNING *;
   `;
 
@@ -130,6 +148,15 @@ export async function createRoomService(roomData) {
     price_per_night || 0,
     status || "active",
     main_image_url || null,
+    room_number || null,
+    floor_number || null,
+    floor_label || null,
+    room_type || null,
+    bed_type || null,
+    view_type || null,
+    room_size_m2 || null,
+    JSON.stringify(Array.isArray(amenities) ? amenities : []),
+    Number(display_order || 0),
   ];
 
   const result = await pool.query(query, values);
@@ -144,6 +171,15 @@ export async function updateRoomService(id, roomData) {
     price_per_night,
     status,
     main_image_url,
+    room_number,
+    floor_number,
+    floor_label,
+    room_type,
+    bed_type,
+    view_type,
+    room_size_m2,
+    amenities,
+    display_order,
   } = roomData;
 
   const query = `
@@ -155,8 +191,17 @@ export async function updateRoomService(id, roomData) {
       price_per_night = $4,
       status = $5,
       main_image_url = $6,
+      room_number = $7,
+      floor_number = $8,
+      floor_label = $9,
+      room_type = $10,
+      bed_type = $11,
+      view_type = $12,
+      room_size_m2 = $13,
+      amenities = $14::jsonb,
+      display_order = $15,
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $7
+    WHERE id = $16
     RETURNING *;
   `;
 
@@ -167,6 +212,15 @@ export async function updateRoomService(id, roomData) {
     price_per_night || 0,
     status || "active",
     main_image_url || null,
+    room_number || null,
+    floor_number || null,
+    floor_label || null,
+    room_type || null,
+    bed_type || null,
+    view_type || null,
+    room_size_m2 || null,
+    JSON.stringify(Array.isArray(amenities) ? amenities : []),
+    Number(display_order || 0),
     id,
   ];
 

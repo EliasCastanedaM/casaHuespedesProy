@@ -9,6 +9,7 @@ import {
   updateGalleryItemController,
   deleteGalleryItemController,
 } from "./gallery.controller.js";
+import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 
 // Creamos router
 const router = Router();
@@ -17,16 +18,16 @@ const router = Router();
 router.get("/", getPublicGalleryController);
 
 // Ruta admin para ver todo
-router.get("/admin", getAllGalleryController);
+router.get("/admin", requireAdminAuth, getAllGalleryController);
 
 // Ruta para crear elemento
-router.post("/", createGalleryItemController);
+router.post("/", requireAdminAuth, createGalleryItemController);
 
 // Ruta para actualizar elemento
-router.put("/:id", updateGalleryItemController);
+router.put("/:id", requireAdminAuth, updateGalleryItemController);
 
 // Ruta para eliminar elemento
-router.delete("/:id", deleteGalleryItemController);
+router.delete("/:id", requireAdminAuth, deleteGalleryItemController);
 
 // Exportamos router
 export default router;

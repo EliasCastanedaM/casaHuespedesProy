@@ -5,11 +5,12 @@ import {
   deleteBlockedSlotController,
   getBlockedSlotsController,
 } from "./blockedSlot.controller.js";
+import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 
 const router = Router();
 
-router.get("/", getBlockedSlotsController);
-router.post("/", createBlockedSlotController);
-router.delete("/:id", deleteBlockedSlotController);
+router.get("/", requireAdminAuth, getBlockedSlotsController);
+router.post("/", requireAdminAuth, createBlockedSlotController);
+router.delete("/:id", requireAdminAuth, deleteBlockedSlotController);
 
 export default router;
