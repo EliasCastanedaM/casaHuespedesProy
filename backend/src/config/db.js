@@ -14,6 +14,9 @@ const hasDatabaseUrl = Boolean(env.databaseUrl);
 const poolConfig = hasDatabaseUrl
   ? {
       connectionString: env.databaseUrl,
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
       ssl: {
         rejectUnauthorized: false,
       },
@@ -24,6 +27,9 @@ const poolConfig = hasDatabaseUrl
       database: env.db.name,
       user: env.db.user,
       password: env.db.password,
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
       ssl:
         env.nodeEnv === "production"
           ? {
@@ -34,6 +40,10 @@ const poolConfig = hasDatabaseUrl
 
 // Creamos el pool de conexión con PostgreSQL
 export const pool = new Pool(poolConfig);
+
+pool.on("error", (error) => {
+  console.error("Error inesperado en el pool de PostgreSQL:", error.message);
+});
 
 // Esta función prueba si la conexión a la base de datos funciona.
 export async function testDatabaseConnection() {

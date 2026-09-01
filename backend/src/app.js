@@ -1,91 +1,94 @@
-import availabilityRoutes from "./routes/availability.routes.js";
-import settingRoutes from "./modules/settings/setting.routes.js";
-import blockedSlotRoutes from "./modules/blockedSlots/blockedSlot.routes.js";
-// Importamos rutas de galería
-import galleryRoutes from "./modules/gallery/gallery.routes.js";
-// Importamos rutas de clientes
-import customerRoutes from "./modules/customers/customer.routes.js";
-// Importamos las rutas del módulo reservas
-import bookingRoutes from "./modules/bookings/booking.routes.js";
-// Importamos Express para crear la aplicación backend
 import express from "express";
-import inquiryRoutes from "./modules/inquiries/inquiry.routes.js";
-// Importamos CORS para permitir que el frontend se conecte con el backend
 import cors from "cors";
+import helmet from "helmet";
 
-// Importamos variables de entorno
 import { env } from "./config/env.js";
-
-// Importamos el middleware global de errores
 import { errorMiddleware } from "./middlewares/errorMiddleware.js";
+import { notFoundMiddleware } from "./middlewares/notFoundMiddleware.js";
+import {
+  aiLimiter,
+  apiLimiter,
+  authLimiter,
+} from "./middlewares/rateLimiters.js";
 
 import authRoutes from "./modules/auth/auth.routes.js";
-
-// Importamos las rutas del módulo habitaciones
+import aiRoutes from "./modules/ai/ai.routes.js";
+import blockedSlotRoutes from "./modules/blockedSlots/blockedSlot.routes.js";
+import bookingRoutes from "./modules/bookings/booking.routes.js";
+import customerRoutes from "./modules/customers/customer.routes.js";
+import galleryRoutes from "./modules/gallery/gallery.routes.js";
+import inquiryRoutes from "./modules/inquiries/inquiry.routes.js";
+import metaRoutes from "./modules/meta/meta.routes.js";
 import roomRoutes from "./modules/rooms/room.routes.js";
+import settingRoutes from "./modules/settings/setting.routes.js";
+import availabilityRoutes from "./routes/availability.routes.js";
 
-// Creamos la aplicación principal de Express
 const app = express();
 
-// Configuramos CORS.
-// Esto permite que React, corriendo en localhost:5173, consuma la API.
+// Render funciona detrás de un proxy. Así el límite usa la IP real del cliente.
+app.set("trust proxy", 1);
+
+app.use(helmet({ crossOriginResourcePolicy: false }));
+
 app.use(
   cors({
-    origin: env.frontendUrl,
+    origin(origin, callback) {
+      // Las llamadas servidor-a-servidor no envían la cabecera Origin.
+      if (!origin || env.frontendUrls.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      const error = new Error("Origen no permitido por CORS.");
+      error.statusCode = 403;
+      callback(error);
+    },
     credentials: true,
   })
 );
 
-// Permite recibir datos en formato JSON desde el frontend
-app.use(express.json());
+app.use(
+  express.json({
+    limit: "1mb",
+    verify(req, _res, buffer) {
+      // Meta firma exactamente estos bytes; se conservan para validar el webhook.
+      req.rawBody = Buffer.from(buffer);
+    },
+  })
+);
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
-// Permite recibir datos enviados desde formularios HTML
-app.use(express.urlencoded({ extended: true }));
-
-// Ruta principal de prueba.
-// Sirve para comprobar que la API está funcionando.
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.json({
     success: true,
     message: "API Casa Huéspedes Pimentel funcionando",
   });
 });
 
-// Ruta de salud del servidor.
-// Sirve para validar rápidamente que el backend responde.
-app.get("/api/health", (req, res) => {
+app.get("/api/health", (_req, res) => {
   res.json({
     success: true,
     status: "OK",
     service: "Casa Huéspedes Pimentel API",
+    aiConfigured: Boolean(env.openai.apiKey),
   });
 });
 
-// Rutas del módulo habitaciones.
-// Todas las rutas de room.routes.js empezarán con /api/rooms
-app.use("/api/rooms", roomRoutes);
-// Rutas del módulo reservas.
-// Todas empiezan con /api/bookings
-app.use("/api/bookings", bookingRoutes);
-// Rutas del módulo clientes.
-// Todas empiezan con /api/customers
-app.use("/api/customers", customerRoutes);
+// Meta puede entregar ráfagas y reintentos; no usa el limitador genérico.
+app.use("/api/meta", metaRoutes);
 
-// Middleware global de errores.
-// Debe ir después de las rutas.
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/ai", aiLimiter, aiRoutes);
+app.use("/api/rooms", apiLimiter, roomRoutes);
+app.use("/api/bookings", apiLimiter, bookingRoutes);
+app.use("/api/customers", apiLimiter, customerRoutes);
+app.use("/api/gallery", apiLimiter, galleryRoutes);
+app.use("/api/inquiries", apiLimiter, inquiryRoutes);
+app.use("/api/settings", apiLimiter, settingRoutes);
+app.use("/api/blocked-slots", apiLimiter, blockedSlotRoutes);
+app.use("/api/availability", apiLimiter, availabilityRoutes);
+
+app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
-// Rutas del módulo galería.
-// Todas empiezan con /api/gallery
-app.use("/api/gallery", galleryRoutes);
-
-app.use("/api/inquiries", inquiryRoutes);
-
-app.use("/api/settings", settingRoutes);
-app.use("/api/blocked-slots", blockedSlotRoutes);
-
-app.use("/api/auth", authRoutes);
-
-app.use("/api/availability", availabilityRoutes);
-// Exportamos app para usarla en server.js
 export default app;

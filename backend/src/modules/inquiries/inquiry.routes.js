@@ -5,11 +5,16 @@ import {
   getAllInquiriesController,
   updateInquiryStatusController,
 } from "./inquiry.controller.js";
+import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 
 const router = Router();
 
 router.post("/", createInquiryController);
-router.get("/", getAllInquiriesController);
-router.put("/:id/status", updateInquiryStatusController);
+router.get("/", requireAdminAuth, getAllInquiriesController);
+router.put(
+  "/:id/status",
+  requireAdminAuth,
+  updateInquiryStatusController
+);
 
 export default router;

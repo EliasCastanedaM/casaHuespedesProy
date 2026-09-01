@@ -8,6 +8,27 @@ function cleanEnvEmail(value) {
     .replace(/^["']|["']$/g, "");
 }
 
+function cleanEnvValue(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
+}
+
+function csvEnv(value, fallback = []) {
+  const items = cleanEnvValue(value)
+    .split(",")
+    .map((item) => item.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+
+  return items.length > 0 ? items : fallback;
+}
+
+function boundedNumber(value, fallback, { min, max }) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
 export const env = {
   port: process.env.PORT || 4000,
 
@@ -23,11 +44,52 @@ export const env = {
     password: process.env.DB_PASSWORD,
   },
 
-  jwtSecret:
-    process.env.JWT_SECRET || "casa_huespedes_secret_temporal",
+  jwtSecret: cleanEnvValue(process.env.JWT_SECRET),
 
-  frontendUrl:
+  frontendUrl: cleanEnvValue(
+    process.env.FRONTEND_URL || "http://localhost:5173"
+  ).replace(/\/+$/, ""),
+
+  frontendUrls: csvEnv(process.env.FRONTEND_URLS, [
     process.env.FRONTEND_URL || "http://localhost:5173",
+  ]),
+
+  openai: {
+    apiKey: cleanEnvValue(process.env.OPENAI_API_KEY),
+    model: cleanEnvValue(process.env.OPENAI_MODEL) || "gpt-5.6-luna",
+  },
+
+  ai: {
+    internalToken: cleanEnvValue(process.env.AI_INTERNAL_TOKEN),
+    maxOutputTokens: boundedNumber(
+      process.env.AI_MAX_OUTPUT_TOKENS,
+      500,
+      { min: 100, max: 2_000 }
+    ),
+  },
+
+  hotel: {
+    name: cleanEnvValue(process.env.HOTEL_NAME) || "Casa Huéspedes Pimentel",
+    phone: cleanEnvValue(process.env.HOTEL_PHONE),
+    website: cleanEnvValue(process.env.HOTEL_WEBSITE),
+  },
+
+  meta: {
+    verifyToken: cleanEnvValue(process.env.META_VERIFY_TOKEN),
+    appSecret: cleanEnvValue(process.env.META_APP_SECRET),
+    graphApiVersion: cleanEnvValue(process.env.META_GRAPH_API_VERSION),
+    whatsappAccessToken: cleanEnvValue(
+      process.env.WHATSAPP_ACCESS_TOKEN
+    ),
+    whatsappPhoneNumberId: cleanEnvValue(
+      process.env.WHATSAPP_PHONE_NUMBER_ID
+    ),
+    pageAccessToken: cleanEnvValue(process.env.META_PAGE_ACCESS_TOKEN),
+    pageId: cleanEnvValue(process.env.META_PAGE_ID),
+    instagramAccountId: cleanEnvValue(
+      process.env.META_INSTAGRAM_ACCOUNT_ID
+    ),
+  },
 
   culqiPaymentUrl:
     process.env.CULQI_PAYMENT_URL ||
