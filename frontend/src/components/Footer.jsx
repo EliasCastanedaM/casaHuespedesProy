@@ -43,12 +43,12 @@ export default function Footer() {
               </li>
 
               <li>
-                <a
-                  href="/#habitaciones"
+                <Link
+                  to="/habitaciones"
                   className="hover:text-[#d9b48f] transition"
                 >
                   Habitaciones
-                </a>
+                </Link>
               </li>
 
               <li>

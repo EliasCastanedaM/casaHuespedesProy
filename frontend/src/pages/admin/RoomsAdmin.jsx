@@ -195,8 +195,12 @@ export default function RoomsAdmin() {
         capacity: Number(formData.capacity),
         price_per_night: Number(formData.price_per_night),
         status: formData.status,
-        main_image_url: formData.main_image_url.trim() || null,
       };
+
+      const normalizedMainImageUrl = formData.main_image_url.trim();
+      if (normalizedMainImageUrl) {
+        payload.main_image_url = normalizedMainImageUrl;
+      }
 
       if (editingRoomId) {
         await api.put(`/rooms/${editingRoomId}`, payload);
@@ -224,12 +228,7 @@ export default function RoomsAdmin() {
       setSuccess("");
 
       await api.put(`/rooms/${room.id}`, {
-        name: room.name,
-        description: room.description || null,
-        capacity: Number(room.capacity),
-        price_per_night: Number(room.price_per_night),
         status: newStatus,
-        main_image_url: room.main_image_url || null,
       });
 
       setSuccess("Estado de habitación actualizado correctamente.");

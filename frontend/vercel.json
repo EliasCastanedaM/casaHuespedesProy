@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/ai-chat.js": {
-      "maxDuration": 60
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
