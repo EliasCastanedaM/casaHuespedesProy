@@ -17,5 +17,17 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // El proyecto carga datos asíncronos desde effects de montaje.
+      'react-hooks/set-state-in-effect': 'off',
+      // Los servicios convierten errores HTTP en mensajes seguros para la UI.
+      'preserve-caught-error': 'off',
+    },
+  },
+  {
+    files: ['api/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
   },
 ])
