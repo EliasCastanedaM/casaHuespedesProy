@@ -1,5 +1,22 @@
 # React + Vite
 
+## Configuración de API
+
+El navegador usa `VITE_API_URL` para habitaciones, disponibilidad, reservas y
+administración. El asesor virtual usa la función de servidor `/api/ai-chat`
+para que `AI_INTERNAL_TOKEN` nunca forme parte del código enviado al navegador.
+
+Configura estas variables en Vercel antes de publicar:
+
+- `VITE_API_URL`: URL del backend terminada en `/api`.
+- `BACKEND_API_URL`: la misma URL del backend; puede incluir o no `/api`.
+- `AI_INTERNAL_TOKEN`: el mismo valor configurado en el backend. Debe guardarse
+  como secreto y nunca usar el prefijo `VITE_`.
+
+Para probar el asesor localmente utiliza `vercel dev`, porque Vite por sí solo
+no ejecuta funciones de servidor. El resto del frontend continúa funcionando
+con `npm run dev`.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

@@ -12,16 +12,6 @@ const statusLabels = {
   completed: "Finalizada",
 };
 
-const statusStyles = {
-  pending: "bg-[#fff7ed] text-[#9a5b13] border-[#fed7aa]",
-  pending_payment: "bg-[#fff7ed] text-[#9a5b13] border-[#fed7aa]",
-  payment_reported: "bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]",
-  confirmed: "bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]",
-  rejected: "bg-[#fef2f2] text-[#991b1b] border-[#fecaca]",
-  cancelled: "bg-[#fef2f2] text-[#991b1b] border-[#fecaca]",
-  completed: "bg-[#f8fafc] text-[#475569] border-[#e2e8f0]",
-};
-
 function formatMoney(value) {
   return `S/ ${Number(value || 0).toFixed(2)}`;
 }
@@ -348,11 +338,6 @@ export default function StatisticsAdmin() {
   const bestMonthByBookings = useMemo(() => {
     if (monthlySummary.length === 0) return null;
     return [...monthlySummary].sort((a, b) => b.bookings - a.bookings)[0];
-  }, [monthlySummary]);
-
-  const bestMonthByRevenue = useMemo(() => {
-    if (monthlySummary.length === 0) return null;
-    return [...monthlySummary].sort((a, b) => b.amount - a.amount)[0];
   }, [monthlySummary]);
 
   const maxMonthlyBookings = useMemo(() => {
