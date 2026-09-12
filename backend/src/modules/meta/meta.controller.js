@@ -1,30 +1,39 @@
 import { env } from "../../config/env.js";
 import {
+  listActiveHandoffs,
   parseMetaWebhook,
   processMetaMessage,
+  setHandoffState,
   verifyMetaSignature,
 } from "./meta.service.js";
 
-async function processWithRetry(message) {
-  const delays = [0, 2_000, 10_000];
+const META_CHANNELS = new Set(["whatsapp", "instagram", "facebook"]);
+const conversationQueues = new Map();
 
-  for (let attempt = 0; attempt < delays.length; attempt += 1) {
-    if (delays[attempt] > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
-    }
-
-    try {
-      await processMetaMessage(message);
-      return;
-    } catch (error) {
-      if (attempt === delays.length - 1) {
-        console.error(
-          `No se pudo responder por ${message.channel} después de 3 intentos:`,
-          error.message
-        );
-      }
-    }
+async function processInBackground(message) {
+  try {
+    await processMetaMessage(message);
+  } catch (error) {
+    console.error(
+      `No se pudo procesar el mensaje ${message.messageId} de ${message.channel}:`,
+      error.message
+    );
   }
+}
+
+function scheduleMessage(message) {
+  const key = `${message.channel}:${message.externalUserId}`;
+  const previous = conversationQueues.get(key) ?? Promise.resolve();
+  const current = previous
+    .catch(() => {})
+    .then(() => processInBackground(message))
+    .finally(() => {
+      if (conversationQueues.get(key) === current) {
+        conversationQueues.delete(key);
+      }
+    });
+
+  conversationQueues.set(key, current);
 }
 
 export function verifyWebhookController(req, res) {
@@ -56,7 +65,55 @@ export function receiveWebhookController(req, res) {
   // Render mantiene el proceso activo después de responder al webhook.
   setImmediate(() => {
     for (const message of messages) {
-      void processWithRetry(message);
+      scheduleMessage(message);
     }
   });
+}
+
+export async function listHandoffsController(_req, res, next) {
+  try {
+    const conversations = await listActiveHandoffs();
+    return res.json({ success: true, data: conversations });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateHandoffController(req, res, next) {
+  try {
+    const channel = String(req.params.channel || "").toLowerCase();
+    const externalUserId = String(req.params.externalUserId || "").trim();
+    const active = req.body?.active;
+
+    if (!META_CHANNELS.has(channel)) {
+      return res.status(400).json({
+        success: false,
+        message: "Canal de Meta no válido.",
+      });
+    }
+
+    if (!externalUserId || externalUserId.length > 160) {
+      return res.status(400).json({
+        success: false,
+        message: "external_user_id no es válido.",
+      });
+    }
+
+    if (typeof active !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "active debe ser true o false.",
+      });
+    }
+
+    const conversation = await setHandoffState(
+      channel,
+      externalUserId,
+      active
+    );
+
+    return res.json({ success: true, data: conversation });
+  } catch (error) {
+    next(error);
+  }
 }

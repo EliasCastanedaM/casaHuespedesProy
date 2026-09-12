@@ -77,17 +77,27 @@ export const env = {
   meta: {
     verifyToken: cleanEnvValue(process.env.META_VERIFY_TOKEN),
     appSecret: cleanEnvValue(process.env.META_APP_SECRET),
-    graphApiVersion: cleanEnvValue(process.env.META_GRAPH_API_VERSION),
+    graphApiVersion:
+      cleanEnvValue(process.env.META_GRAPH_API_VERSION) || "v26.0",
     whatsappAccessToken: cleanEnvValue(
       process.env.WHATSAPP_ACCESS_TOKEN
     ),
     whatsappPhoneNumberId: cleanEnvValue(
       process.env.WHATSAPP_PHONE_NUMBER_ID
     ),
-    pageAccessToken: cleanEnvValue(process.env.META_PAGE_ACCESS_TOKEN),
-    pageId: cleanEnvValue(process.env.META_PAGE_ID),
+    facebookPageAccessToken: cleanEnvValue(
+      process.env.FACEBOOK_PAGE_ACCESS_TOKEN ||
+        process.env.META_PAGE_ACCESS_TOKEN
+    ),
+    facebookPageId: cleanEnvValue(
+      process.env.FACEBOOK_PAGE_ID || process.env.META_PAGE_ID
+    ),
+    instagramAccessToken: cleanEnvValue(
+      process.env.INSTAGRAM_ACCESS_TOKEN
+    ),
     instagramAccountId: cleanEnvValue(
-      process.env.META_INSTAGRAM_ACCOUNT_ID
+      process.env.INSTAGRAM_ACCOUNT_ID ||
+        process.env.META_INSTAGRAM_ACCOUNT_ID
     ),
   },
 

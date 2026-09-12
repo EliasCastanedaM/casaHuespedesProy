@@ -113,7 +113,8 @@ La reserva continúa por el formulario actual de la web.
   El proveedor debe reenviar el texto a ese endpoint y publicar la respuesta.
 
 Para Meta configura `META_VERIFY_TOKEN`, `META_APP_SECRET`,
-`META_GRAPH_API_VERSION` y las variables del canal. En producción el backend
+`META_GRAPH_API_VERSION` y las variables del canal. Consulta `META_SETUP.md` para
+los pasos completos. En producción el backend
 rechaza webhooks sin firma válida.
 
 ## Pruebas
