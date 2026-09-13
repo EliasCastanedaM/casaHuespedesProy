@@ -15,6 +15,9 @@ import Gallery from "./pages/public/Gallery";
 import Tourism from "./pages/public/Tourism";
 import Contact from "./pages/public/Contact";
 import PaymentResult from "./pages/public/PaymentResult";
+import PrivacyPolicy from "./pages/public/PrivacyPolicy";
+import TermsAndConditions from "./pages/public/TermsAndConditions";
+import DataDeletion from "./pages/public/DataDeletion";
 
 import Login from "./pages/admin/Login";
 import Dashboard from "./pages/admin/Dashboard";
@@ -40,6 +43,12 @@ export default function App() {
           <Route path="/galeria" element={<Gallery />} />
           <Route path="/contacto" element={<Contact />} />
           <Route path="/pago-resultado" element={<PaymentResult />} />
+          <Route path="/politica-privacidad" element={<PrivacyPolicy />} />
+          <Route
+            path="/terminos-y-condiciones"
+            element={<TermsAndConditions />}
+          />
+          <Route path="/eliminacion-datos" element={<DataDeletion />} />
         </Route>
 
         <Route path="/admin/login" element={<Login />} />

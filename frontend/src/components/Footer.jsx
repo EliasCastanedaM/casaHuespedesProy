@@ -114,12 +114,38 @@ export default function Footer() {
             derechos reservados.
           </p>
 
-          <Link
-            to="/admin/login"
-            className="text-xs text-white/35 hover:text-[#d9b48f] transition"
-          >
-            Acceso interno
-          </Link>
+          <div className="flex flex-col items-start gap-3 md:items-end">
+            <nav
+              aria-label="Información legal"
+              className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-white/45 md:justify-end"
+            >
+              <Link
+                to="/politica-privacidad"
+                className="hover:text-[#d9b48f] transition"
+              >
+                Política de privacidad
+              </Link>
+              <Link
+                to="/terminos-y-condiciones"
+                className="hover:text-[#d9b48f] transition"
+              >
+                Términos y condiciones
+              </Link>
+              <Link
+                to="/eliminacion-datos"
+                className="hover:text-[#d9b48f] transition"
+              >
+                Eliminación de datos
+              </Link>
+            </nav>
+
+            <Link
+              to="/admin/login"
+              className="text-xs text-white/35 hover:text-[#d9b48f] transition"
+            >
+              Acceso interno
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
