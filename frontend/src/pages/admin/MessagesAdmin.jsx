@@ -112,15 +112,24 @@ export default function MessagesAdmin() {
   }, [loadConversations]);
 
   useEffect(() => {
-    void loadMessages(selected);
-    if (!selected) return undefined;
+    if (!selectedId) {
+      setMessages([]);
+      return undefined;
+    }
 
+    const [channel, ...externalParts] = selectedId.split(":");
+    const conversation = {
+      channel,
+      external_user_id: externalParts.join(":"),
+    };
+
+    void loadMessages(conversation);
     const interval = window.setInterval(() => {
-      void loadMessages(selected, true);
+      void loadMessages(conversation, true);
     }, 3000);
 
     return () => window.clearInterval(interval);
-  }, [selected?.channel, selected?.external_user_id, loadMessages]);
+  }, [selectedId, loadMessages]);
 
   async function toggleMode() {
     if (!selected || saving) return;
