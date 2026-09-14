@@ -27,10 +27,13 @@ function successfulDependencies(overrides = {}) {
   return {
     claim: async () => true,
     release: async () => {},
+    complete: async () => {},
     getHandoff: async () => false,
     setHandoff: async () => {},
+    loadHistory: async () => [],
     generateReply: async () => ({ reply: "Respuesta IA" }),
-    sendReply: async () => {},
+    sendReply: async () => ({}),
+    recordOutgoing: async () => {},
     sleep: async () => {},
     ...overrides,
   };
@@ -222,9 +225,54 @@ test("llama al mismo asesor con canal y usuario separados", async () => {
   );
 
   assert.deepEqual(calls, [
-    { channel: "facebook", externalUserId: "usuario-a", message: "Hola" },
-    { channel: "instagram", externalUserId: "usuario-b", message: "Hola" },
+    {
+      channel: "facebook",
+      externalUserId: "usuario-a",
+      message: "Hola",
+      history: [],
+    },
+    {
+      channel: "instagram",
+      externalUserId: "usuario-b",
+      message: "Hola",
+      history: [],
+    },
   ]);
+});
+
+test("entrega el tramo manual a la IA y registra la respuesta enviada", async () => {
+  const history = [
+    { author: "client", content: "Llegaré tarde" },
+    { author: "admin", content: "No hay problema, te esperamos" },
+  ];
+  let aiInput;
+  let recorded;
+  let completed = 0;
+
+  const result = await processMetaMessage(
+    message({ text: "Gracias" }),
+    successfulDependencies({
+      loadHistory: async () => history,
+      generateReply: async (input) => {
+        aiInput = input;
+        return { reply: "Con gusto" };
+      },
+      sendReply: async () => ({ messages: [{ id: "wamid.out" }] }),
+      recordOutgoing: async (...args) => {
+        recorded = args;
+      },
+      complete: async () => {
+        completed += 1;
+      },
+    })
+  );
+
+  assert.equal(result.status, "replied");
+  assert.deepEqual(aiInput.history, history);
+  assert.equal(recorded[1], "Con gusto");
+  assert.equal(recorded[2], "assistant");
+  assert.equal(recorded[3].messages[0].id, "wamid.out");
+  assert.equal(completed, 1);
 });
 
 test("un mensaje duplicado no llama al asesor ni envía respuesta", async () => {
@@ -460,11 +508,21 @@ test("GET del webhook acepta el token correcto y rechaza el incorrecto", async (
   }
 });
 
-test("los endpoints de handoff exigen autenticación administrativa", async () => {
+test("los endpoints de mensajes exigen autenticación administrativa", async () => {
   const { server, baseUrl } = await startApp();
   try {
-    const response = await fetch(`${baseUrl}/api/meta/handoffs`);
-    assert.equal(response.status, 401);
+    const responses = await Promise.all([
+      fetch(baseUrl + "/api/meta/handoffs"),
+      fetch(baseUrl + "/api/meta/conversations"),
+      fetch(baseUrl + "/api/meta/conversations/whatsapp/51999999999/messages"),
+      fetch(baseUrl + "/api/meta/conversations/whatsapp/51999999999/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: "Hola" }),
+      }),
+    ]);
+
+    for (const response of responses) assert.equal(response.status, 401);
   } finally {
     await closeServer(server);
   }
