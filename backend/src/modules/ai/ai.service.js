@@ -180,6 +180,25 @@ async function executeTool(call) {
   }
 }
 
+async function loadStoredHistory(channel, externalUserId, currentMessage) {
+  try {
+    const result = await pool.query(
+      "SELECT author, content FROM meta_messages WHERE channel = $1 AND external_user_id = $2 AND content <> '' ORDER BY created_at DESC, id DESC LIMIT 20;",
+      [channel, externalUserId]
+    );
+    const history = result.rows.reverse();
+
+    const last = history[history.length - 1];
+    if (last?.author === "client" && last.content?.trim() === currentMessage.trim()) {
+      history.pop();
+    }
+
+    return history;
+  } catch {
+    return [];
+  }
+}
+
 function responseInput(history, message) {
   const recent = Array.isArray(history) ? history : [];
   const input = recent
@@ -195,12 +214,15 @@ function responseInput(history, message) {
 
 async function createFirstResponse(
   openai,
-  { message, previousResponseId, history }
+  { message, previousResponseId, history, recoveryHistory }
 ) {
   const request = {
     model: env.openai.model,
     instructions: buildHotelAssistantPrompt(),
-    input: responseInput(history, message),
+    input: responseInput(
+      previousResponseId ? history : recoveryHistory,
+      message
+    ),
     tools,
     parallel_tool_calls: false,
     max_output_tokens: env.ai.maxOutputTokens,
@@ -215,8 +237,11 @@ async function createFirstResponse(
       previous_response_id: previousResponseId,
     });
   } catch {
-    // El historial explícito conserva el tramo manual si OpenAI perdió el id previo.
-    return openai.responses.create(request);
+    // Si OpenAI perdió el id previo, reconstruye el contexto desde Supabase.
+    return openai.responses.create({
+      ...request,
+      input: responseInput(recoveryHistory, message),
+    });
   }
 }
 
@@ -232,10 +257,17 @@ export async function generateAiReply({
     externalUserId
   );
 
+  const recoveryHistory = await loadStoredHistory(
+    channel,
+    externalUserId,
+    message
+  );
+
   let response = await createFirstResponse(openai, {
     message,
     previousResponseId,
     history,
+    recoveryHistory,
   });
 
   for (let round = 0; round < 4; round += 1) {
