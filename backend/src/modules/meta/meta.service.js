@@ -302,7 +302,7 @@ async function claimMessage(message, db = pool) {
   }
 }
 
-async function releaseMessageClaim(message, db = pool, error = null) {
+async function releaseMessageClaim(message, error = null, db = pool) {
   const key = conversationKey(message.channel, message.messageId);
   processedInMemory.delete(key);
 
@@ -415,7 +415,7 @@ async function getRecentConversationHistory(
   db = pool
 ) {
   const result = await db.query(
-    "WITH last_ai AS (SELECT MAX(created_at) AS created_at FROM meta_messages WHERE channel = $1 AND external_user_id = $2 AND author = 'assistant' AND status = 'sent') SELECT author, content, created_at FROM meta_messages, last_ai WHERE channel = $1 AND external_user_id = $2 AND content <> '' AND ($3::text IS NULL OR meta_message_id IS DISTINCT FROM $3) AND (last_ai.created_at IS NULL OR meta_messages.created_at > last_ai.created_at) ORDER BY meta_messages.created_at DESC, id DESC LIMIT 20;",
+    "WITH last_ai AS (SELECT MAX(created_at) AS created_at FROM meta_messages WHERE channel = $1 AND external_user_id = $2 AND author = 'assistant' AND status = 'sent') SELECT author, content, meta_messages.created_at FROM meta_messages, last_ai WHERE channel = $1 AND external_user_id = $2 AND content <> '' AND ($3::text IS NULL OR meta_message_id IS DISTINCT FROM $3) AND (last_ai.created_at IS NULL OR meta_messages.created_at > last_ai.created_at) ORDER BY meta_messages.created_at DESC, id DESC LIMIT 20;",
     [channel, externalUserId, excludeMessageId || null]
   );
 
@@ -723,7 +723,7 @@ export async function processMetaMessage(message, overrides = {}) {
 
     return { status: "replied" };
   } catch (error) {
-    await dependencies.release(message, undefined, error);
+    await dependencies.release(message, error);
     throw error;
   }
 }
