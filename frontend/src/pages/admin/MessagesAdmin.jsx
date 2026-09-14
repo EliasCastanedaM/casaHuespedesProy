@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../../services/api";
 
 const CHANNEL_LABELS = {
@@ -38,6 +38,10 @@ function messageLabel(message) {
   return "Asistente IA";
 }
 
+function displayName(conversation) {
+  return conversation?.customer_name || conversation?.external_user_id || "Conversación";
+}
+
 export default function MessagesAdmin() {
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState("");
@@ -47,6 +51,8 @@ export default function MessagesAdmin() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const conversationsRequestRef = useRef(false);
+  const messagesRequestRef = useRef(false);
 
   const selected = useMemo(
     () => conversations.find((item) => conversationId(item) === selectedId),
@@ -54,6 +60,9 @@ export default function MessagesAdmin() {
   );
 
   const loadConversations = useCallback(async (quiet = false) => {
+    if (conversationsRequestRef.current) return;
+    conversationsRequestRef.current = true;
+
     try {
       if (!quiet) setLoadingConversations(true);
       const response = await api.get("/meta/conversations");
@@ -72,6 +81,7 @@ export default function MessagesAdmin() {
           "No se pudieron cargar las conversaciones."
       );
     } finally {
+      conversationsRequestRef.current = false;
       if (!quiet) setLoadingConversations(false);
     }
   }, []);
@@ -81,10 +91,14 @@ export default function MessagesAdmin() {
       setMessages([]);
       return;
     }
+    if (messagesRequestRef.current) return;
+    messagesRequestRef.current = true;
 
     try {
       if (!quiet) setLoadingMessages(true);
-      const response = await api.get(conversationPath(conversation) + "/messages");
+      const response = await api.get(
+        conversationPath(conversation) + "/messages?limit=50"
+      );
       setMessages(Array.isArray(response.data?.data) ? response.data.data : []);
       setError("");
     } catch (requestError) {
@@ -93,6 +107,7 @@ export default function MessagesAdmin() {
           "No se pudo cargar el historial del chat."
       );
     } finally {
+      messagesRequestRef.current = false;
       if (!quiet) setLoadingMessages(false);
     }
   }, []);
@@ -126,9 +141,14 @@ export default function MessagesAdmin() {
     void loadMessages(conversation);
     const interval = window.setInterval(() => {
       void loadMessages(conversation, true);
-    }, 3000);
+    }, 4000);
+    const handleFocus = () => void loadMessages(conversation, true);
+    window.addEventListener("focus", handleFocus);
 
-    return () => window.clearInterval(interval);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [selectedId, loadMessages]);
 
   async function toggleMode() {
@@ -145,6 +165,7 @@ export default function MessagesAdmin() {
           conversationId(item) === selectedId ? { ...item, ...updated } : item
         )
       );
+      await loadMessages(selected, true);
       setError("");
     } catch (requestError) {
       setError(
@@ -159,7 +180,7 @@ export default function MessagesAdmin() {
   async function sendMessage(event) {
     event.preventDefault();
     const text = draft.trim();
-    if (!selected || !text || saving) return;
+    if (!selected || !text || saving || !selected.handoff_active) return;
 
     try {
       setSaving(true);
@@ -172,6 +193,7 @@ export default function MessagesAdmin() {
         setMessages((current) => [...current, response.data.data]);
       }
       await loadConversations(true);
+      await loadMessages(selected, true);
       setError("");
     } catch (requestError) {
       setError(
@@ -248,7 +270,7 @@ export default function MessagesAdmin() {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="truncate font-black text-[#2d261f]">
-                          {conversation.external_user_id}
+                          {displayName(conversation)}
                         </p>
                         <span
                           className={
@@ -261,6 +283,11 @@ export default function MessagesAdmin() {
                           {conversation.handoff_active ? "Manual" : "IA"}
                         </span>
                       </div>
+                      {conversation.customer_name && (
+                        <p className="mt-0.5 truncate text-[11px] text-[#8a7d72]">
+                          {conversation.external_user_id}
+                        </p>
+                      )}
                       <p className="mt-1 text-xs font-bold text-[#a87545]">
                         {CHANNEL_LABELS[conversation.channel] || conversation.channel}
                       </p>
@@ -289,10 +316,13 @@ export default function MessagesAdmin() {
                 <header className="flex flex-col gap-3 border-b border-[#e7ddd3] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-black text-[#2d261f]">
+                      {displayName(selected)}
+                    </p>
+                    <p className="text-xs text-[#8a7d72]">
                       {CHANNEL_LABELS[selected.channel] || selected.channel} ·{" "}
                       {selected.external_user_id}
                     </p>
-                    <p className="text-xs text-[#8a7d72]">
+                    <p className="mt-1 text-xs text-[#8a7d72]">
                       {selected.handoff_active
                         ? "El equipo tiene el control. La IA está pausada."
                         : "La IA responde automáticamente."}
