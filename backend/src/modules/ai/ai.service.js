@@ -180,14 +180,27 @@ async function executeTool(call) {
   }
 }
 
+function responseInput(history, message) {
+  const recent = Array.isArray(history) ? history : [];
+  const input = recent
+    .filter((item) => typeof item?.content === "string" && item.content.trim())
+    .map((item) => ({
+      role: item.author === "client" ? "user" : "assistant",
+      content: item.content.trim(),
+    }));
+
+  input.push({ role: "user", content: message });
+  return input;
+}
+
 async function createFirstResponse(
   openai,
-  { message, previousResponseId }
+  { message, previousResponseId, history }
 ) {
   const request = {
     model: env.openai.model,
     instructions: buildHotelAssistantPrompt(),
-    input: [{ role: "user", content: message }],
+    input: responseInput(history, message),
     tools,
     parallel_tool_calls: false,
     max_output_tokens: env.ai.maxOutputTokens,
@@ -202,12 +215,17 @@ async function createFirstResponse(
       previous_response_id: previousResponseId,
     });
   } catch {
-    // Si el historial expiró o fue eliminado, inicia una conversación nueva.
+    // El historial explícito conserva el tramo manual si OpenAI perdió el id previo.
     return openai.responses.create(request);
   }
 }
 
-export async function generateAiReply({ channel, externalUserId, message }) {
+export async function generateAiReply({
+  channel,
+  externalUserId,
+  message,
+  history = [],
+}) {
   const openai = getClient();
   const previousResponseId = await getPreviousResponseId(
     channel,
@@ -217,6 +235,7 @@ export async function generateAiReply({ channel, externalUserId, message }) {
   let response = await createFirstResponse(openai, {
     message,
     previousResponseId,
+    history,
   });
 
   for (let round = 0; round < 4; round += 1) {
