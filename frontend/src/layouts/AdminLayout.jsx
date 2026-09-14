@@ -17,6 +17,11 @@ const menuItems = [
     icon: "💬",
   },
   {
+    label: "Mensajes",
+    path: "/admin/mensajes",
+    icon: "📨",
+  },
+  {
     label: "Habitaciones",
     path: "/admin/habitaciones",
     icon: "🛏️",
