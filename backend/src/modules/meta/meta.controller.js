@@ -1,9 +1,11 @@
 import { env } from "../../config/env.js";
 import {
+  applyMetaStatusUpdates,
   listActiveHandoffs,
   listConversationMessages,
   listConversations,
   listRecoverableMessages,
+  parseMetaStatusUpdates,
   parseMetaWebhook,
   persistIncomingMessages,
   processMetaMessage,
@@ -99,18 +101,26 @@ export async function receiveWebhookController(req, res, next) {
     }
 
     const messages = parseMetaWebhook(req.body);
+    const statusUpdates = parseMetaStatusUpdates(req.body);
 
+    // La persistencia/actualización durable ocurre antes del 200. Si Supabase
+    // falla, Express devolverá error y Meta podrá reintentar el webhook.
     if (messages.length > 0) {
       await persistIncomingMessages(messages);
+    }
+    if (statusUpdates.length > 0) {
+      await applyMetaStatusUpdates(statusUpdates);
     }
 
     res.status(200).send("EVENT_RECEIVED");
 
-    setImmediate(() => {
-      for (const message of messages) scheduleMessage(message);
-    });
+    // OpenAI y los envíos a Meta se ejecutan fuera del tiempo de respuesta HTTP.
+    if (messages.length > 0) {
+      setImmediate(() => {
+        for (const message of messages) scheduleMessage(message);
+      });
+    }
   } catch (error) {
-    // Al no responder 200, Meta podrá reintentar el evento.
     next(error);
   }
 }
