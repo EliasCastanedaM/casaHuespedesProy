@@ -6,6 +6,7 @@ import { generateAiReply } from "../ai/ai.service.js";
 const META_CHANNELS = new Set(["whatsapp", "instagram", "facebook"]);
 const processedInMemory = new Set();
 const handoffInMemory = new Map();
+const MAX_PROCESSING_ATTEMPTS = 5;
 let warnedMissingMessagesTable = false;
 let warnedMissingHandoffTable = false;
 
@@ -55,6 +56,7 @@ function normalizedMessage({
   text,
   messageType = "text",
   timestamp = "",
+  customerName = "",
 }) {
   const normalized = {
     channel,
@@ -64,6 +66,9 @@ function normalizedMessage({
     messageType: cleanText(messageType) || "unknown",
     timestamp: cleanText(timestamp),
   };
+
+  const name = cleanText(customerName);
+  if (name) normalized.customerName = name;
 
   if (!normalized.messageId) {
     normalized.messageId = fallbackMessageId(normalized);
@@ -78,6 +83,14 @@ function parseWhatsApp(body) {
   for (const entry of asArray(body.entry)) {
     for (const change of asArray(asObject(entry)?.changes)) {
       const value = asObject(asObject(change)?.value);
+      const contactNames = new Map();
+
+      for (const rawContact of asArray(value?.contacts)) {
+        const contact = asObject(rawContact);
+        const waId = cleanText(contact?.wa_id);
+        const name = cleanText(asObject(contact?.profile)?.name);
+        if (waId && name) contactNames.set(waId, name);
+      }
 
       for (const item of asArray(value?.messages)) {
         const message = asObject(item);
@@ -98,6 +111,7 @@ function parseWhatsApp(body) {
             text,
             messageType,
             timestamp: message.timestamp,
+            customerName: contactNames.get(externalUserId) || "",
           })
         );
       }
@@ -177,6 +191,40 @@ export function parseMetaWebhook(body = {}, options = {}) {
   return [];
 }
 
+export function parseMetaStatusUpdates(body = {}) {
+  const payload = asObject(body);
+  if (!payload || payload.object !== "whatsapp_business_account") return [];
+
+  const updates = [];
+  for (const entry of asArray(payload.entry)) {
+    for (const change of asArray(asObject(entry)?.changes)) {
+      const value = asObject(asObject(change)?.value);
+      for (const rawStatus of asArray(value?.statuses)) {
+        const status = asObject(rawStatus);
+        const messageId = cleanText(status?.id);
+        const state = cleanText(status?.status).toLowerCase();
+        if (!messageId || !["sent", "delivered", "read", "failed"].includes(state)) {
+          continue;
+        }
+
+        const firstError = asObject(asArray(status?.errors)[0]);
+        const errorDetail = cleanText(
+          firstError?.message || firstError?.title || firstError?.error_data?.details
+        );
+
+        updates.push({
+          channel: "whatsapp",
+          messageId,
+          status: state,
+          timestamp: cleanText(status?.timestamp),
+          errorDetail: errorDetail.slice(0, 1000),
+        });
+      }
+    }
+  }
+  return updates;
+}
+
 export function verifyMetaSignature(signatureHeader, rawBody) {
   if (!env.meta.appSecret) return env.nodeEnv !== "production";
   if (!signatureHeader || !Buffer.isBuffer(rawBody)) return false;
@@ -239,26 +287,48 @@ export async function persistIncomingMessages(messages, db = pool) {
 
     for (const message of messages) {
       validateConversation(message.channel, message.externalUserId);
+      const metaTimestamp = normalizeMetaTimestamp(message.timestamp, message.channel);
 
       await client.query(
-        "INSERT INTO meta_conversations (channel, external_user_id, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP) ON CONFLICT (channel, external_user_id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP;",
-        [message.channel, message.externalUserId]
+        `INSERT INTO meta_conversations
+          (channel, external_user_id, customer_name, last_message_at, updated_at)
+         VALUES ($1, $2, NULLIF($3, ''), COALESCE($4::timestamptz, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)
+         ON CONFLICT (channel, external_user_id) DO UPDATE SET
+           customer_name = COALESCE(NULLIF(EXCLUDED.customer_name, ''), meta_conversations.customer_name),
+           last_message_at = GREATEST(
+             COALESCE(meta_conversations.last_message_at, '-infinity'::timestamptz),
+             COALESCE(EXCLUDED.last_message_at, CURRENT_TIMESTAMP)
+           ),
+           updated_at = CURRENT_TIMESTAMP;`,
+        [
+          message.channel,
+          message.externalUserId,
+          cleanText(message.customerName),
+          metaTimestamp,
+        ]
       );
 
       await client.query(
-        "INSERT INTO meta_messages (channel, external_user_id, meta_message_id, direction, author, message_type, content, status, meta_timestamp) VALUES ($1, $2, $3, 'incoming', 'client', $4, $5, 'pending', $6) ON CONFLICT (channel, meta_message_id) WHERE meta_message_id IS NOT NULL DO NOTHING;",
+        `INSERT INTO meta_messages
+          (channel, external_user_id, meta_message_id, direction, author, message_type, content, status, meta_timestamp)
+         VALUES ($1, $2, $3, 'incoming', 'client', $4, $5, 'pending', $6)
+         ON CONFLICT (channel, meta_message_id) WHERE meta_message_id IS NOT NULL DO NOTHING;`,
         [
           message.channel,
           message.externalUserId,
           message.messageId,
           message.messageType,
           message.text,
-          normalizeMetaTimestamp(message.timestamp, message.channel),
+          metaTimestamp,
         ]
       );
 
       const result = await client.query(
-        "SELECT id, channel, external_user_id, meta_message_id, message_type, content, status, meta_timestamp, created_at FROM meta_messages WHERE channel = $1 AND meta_message_id = $2 LIMIT 1;",
+        `SELECT id, channel, external_user_id, meta_message_id, message_type, content,
+                status, meta_timestamp, processing_attempts, created_at
+         FROM meta_messages
+         WHERE channel = $1 AND meta_message_id = $2
+         LIMIT 1;`,
         [message.channel, message.messageId]
       );
       if (result.rows[0]) stored.push(result.rows[0]);
@@ -276,15 +346,25 @@ export async function persistIncomingMessages(messages, db = pool) {
 
 async function claimMessage(message, db = pool) {
   const key = conversationKey(message.channel, message.messageId);
-  if (processedInMemory.has(key)) return false;
 
   try {
     await persistIncomingMessages([message], db);
     const result = await db.query(
-      "UPDATE meta_messages SET status = 'processing', processing_attempts = processing_attempts + 1, last_attempt_at = CURRENT_TIMESTAMP, error_detail = NULL, updated_at = CURRENT_TIMESTAMP WHERE channel = $1 AND meta_message_id = $2 AND direction = 'incoming' AND status IN ('pending', 'failed') RETURNING id;",
-      [message.channel, message.messageId]
+      `UPDATE meta_messages
+       SET status = 'processing',
+           processing_attempts = processing_attempts + 1,
+           last_attempt_at = CURRENT_TIMESTAMP,
+           error_detail = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE channel = $1
+         AND meta_message_id = $2
+         AND direction = 'incoming'
+         AND status IN ('pending', 'failed')
+         AND processing_attempts < $3
+       RETURNING id, processing_attempts;`,
+      [message.channel, message.messageId, MAX_PROCESSING_ATTEMPTS]
     );
-    return result.rows.length > 0;
+    return result.rows[0] || false;
   } catch (error) {
     if (env.nodeEnv === "production") throw error;
 
@@ -296,6 +376,7 @@ async function claimMessage(message, db = pool) {
       warnedMissingMessagesTable = true;
     }
 
+    if (processedInMemory.has(key)) return false;
     processedInMemory.add(key);
     if (processedInMemory.size > 10_000) processedInMemory.clear();
     return true;
@@ -308,8 +389,14 @@ async function releaseMessageClaim(message, error = null, db = pool) {
 
   try {
     await db.query(
-      "UPDATE meta_messages SET status = 'failed', error_detail = $3, updated_at = CURRENT_TIMESTAMP WHERE channel = $1 AND meta_message_id = $2 AND direction = 'incoming';",
-      [message.channel, message.messageId, cleanText(error?.message || error).slice(0, 1000) || null]
+      `UPDATE meta_messages
+       SET status = 'failed', error_detail = $3, updated_at = CURRENT_TIMESTAMP
+       WHERE channel = $1 AND meta_message_id = $2 AND direction = 'incoming';`,
+      [
+        message.channel,
+        message.messageId,
+        cleanText(error?.message || error).slice(0, 1000) || null,
+      ]
     );
   } catch {
     // En desarrollo la tabla puede no existir antes de ejecutar la migración.
@@ -322,7 +409,9 @@ async function completeMessage(message, db = pool) {
 
   try {
     await db.query(
-      "UPDATE meta_messages SET status = 'received', error_detail = NULL, updated_at = CURRENT_TIMESTAMP WHERE channel = $1 AND meta_message_id = $2 AND direction = 'incoming';",
+      `UPDATE meta_messages
+       SET status = 'received', error_detail = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE channel = $1 AND meta_message_id = $2 AND direction = 'incoming';`,
       [message.channel, message.messageId]
     );
   } catch (error) {
@@ -365,7 +454,25 @@ export async function setHandoffState(
 
   try {
     const result = await db.query(
-      "INSERT INTO meta_conversations (channel, external_user_id, handoff_active, handoff_requested_at, handoff_resolved_at, updated_at) VALUES ($1, $2, $3, CASE WHEN $3 THEN CURRENT_TIMESTAMP ELSE NULL END, CASE WHEN $3 THEN NULL ELSE CURRENT_TIMESTAMP END, CURRENT_TIMESTAMP) ON CONFLICT (channel, external_user_id) DO UPDATE SET handoff_active = EXCLUDED.handoff_active, handoff_requested_at = CASE WHEN EXCLUDED.handoff_active THEN CURRENT_TIMESTAMP ELSE meta_conversations.handoff_requested_at END, handoff_resolved_at = CASE WHEN EXCLUDED.handoff_active THEN NULL ELSE CURRENT_TIMESTAMP END, updated_at = CURRENT_TIMESTAMP RETURNING channel, external_user_id, handoff_active, handoff_requested_at, handoff_resolved_at, updated_at;",
+      `INSERT INTO meta_conversations
+        (channel, external_user_id, handoff_active, handoff_requested_at, handoff_resolved_at, updated_at)
+       VALUES ($1, $2, $3,
+         CASE WHEN $3 THEN CURRENT_TIMESTAMP ELSE NULL END,
+         CASE WHEN $3 THEN NULL ELSE CURRENT_TIMESTAMP END,
+         CURRENT_TIMESTAMP)
+       ON CONFLICT (channel, external_user_id) DO UPDATE SET
+         handoff_active = EXCLUDED.handoff_active,
+         handoff_requested_at = CASE
+           WHEN EXCLUDED.handoff_active THEN CURRENT_TIMESTAMP
+           ELSE meta_conversations.handoff_requested_at
+         END,
+         handoff_resolved_at = CASE
+           WHEN EXCLUDED.handoff_active THEN NULL
+           ELSE CURRENT_TIMESTAMP
+         END,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING channel, external_user_id, customer_name, handoff_active,
+                 handoff_requested_at, handoff_resolved_at, updated_at;`,
       [channel, externalUserId, active === true]
     );
     return result.rows[0];
@@ -381,14 +488,31 @@ export async function setHandoffState(
 
 export async function listActiveHandoffs(db = pool) {
   const result = await db.query(
-    "SELECT channel, external_user_id, handoff_requested_at, updated_at FROM meta_conversations WHERE handoff_active = TRUE ORDER BY handoff_requested_at ASC NULLS LAST, updated_at ASC;"
+    `SELECT channel, external_user_id, customer_name, handoff_requested_at, updated_at
+     FROM meta_conversations
+     WHERE handoff_active = TRUE
+     ORDER BY handoff_requested_at ASC NULLS LAST, updated_at ASC;`
   );
   return result.rows;
 }
 
 export async function listConversations(db = pool) {
   const result = await db.query(
-    "SELECT c.channel, c.external_user_id, c.handoff_active, c.handoff_requested_at, c.handoff_resolved_at, c.created_at, c.updated_at, m.content AS last_message, m.author AS last_author, m.message_type AS last_message_type, m.status AS last_status, m.created_at AS last_message_at FROM meta_conversations c LEFT JOIN LATERAL (SELECT content, author, message_type, status, created_at FROM meta_messages WHERE channel = c.channel AND external_user_id = c.external_user_id ORDER BY COALESCE(meta_timestamp, created_at) DESC, id DESC LIMIT 1) m ON TRUE ORDER BY COALESCE(m.created_at, c.updated_at) DESC;"
+    `SELECT c.channel, c.external_user_id, c.customer_name, c.handoff_active,
+            c.handoff_requested_at, c.handoff_resolved_at, c.created_at, c.updated_at,
+            m.content AS last_message, m.author AS last_author,
+            m.message_type AS last_message_type, m.status AS last_status,
+            COALESCE(m.meta_timestamp, m.created_at, c.last_message_at, c.updated_at) AS last_message_at
+     FROM meta_conversations c
+     LEFT JOIN LATERAL (
+       SELECT content, author, message_type, status, meta_timestamp, created_at
+       FROM meta_messages
+       WHERE channel = c.channel AND external_user_id = c.external_user_id
+       ORDER BY COALESCE(meta_timestamp, created_at) DESC, id DESC
+       LIMIT 1
+     ) m ON TRUE
+     ORDER BY COALESCE(m.meta_timestamp, m.created_at, c.last_message_at, c.updated_at) DESC
+     LIMIT 50;`
   );
   return result.rows;
 }
@@ -396,13 +520,22 @@ export async function listConversations(db = pool) {
 export async function listConversationMessages(
   channel,
   externalUserId,
-  { limit = 100 } = {},
+  { limit = 50 } = {},
   db = pool
 ) {
   validateConversation(channel, externalUserId);
-  const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 200);
+  const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const result = await db.query(
-    "SELECT * FROM (SELECT id, channel, external_user_id, meta_message_id, direction, author, message_type, content, status, meta_timestamp, error_detail, created_at, updated_at FROM meta_messages WHERE channel = $1 AND external_user_id = $2 ORDER BY COALESCE(meta_timestamp, created_at) DESC, id DESC LIMIT $3) recent ORDER BY COALESCE(meta_timestamp, created_at) ASC, id ASC;",
+    `SELECT * FROM (
+       SELECT id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
+              direction, author, message_type, content, status, meta_timestamp,
+              error_detail, processing_attempts, created_at, updated_at
+       FROM meta_messages
+       WHERE channel = $1 AND external_user_id = $2
+       ORDER BY COALESCE(meta_timestamp, created_at) DESC, id DESC
+       LIMIT $3
+     ) recent
+     ORDER BY COALESCE(meta_timestamp, created_at) ASC, id ASC;`,
     [channel, externalUserId, safeLimit]
   );
   return result.rows;
@@ -415,7 +548,24 @@ async function getRecentConversationHistory(
   db = pool
 ) {
   const result = await db.query(
-    "WITH last_ai AS (SELECT MAX(created_at) AS created_at FROM meta_messages WHERE channel = $1 AND external_user_id = $2 AND author = 'assistant' AND status = 'sent') SELECT author, content, meta_messages.created_at FROM meta_messages, last_ai WHERE channel = $1 AND external_user_id = $2 AND content <> '' AND ($3::text IS NULL OR meta_message_id IS DISTINCT FROM $3) AND (last_ai.created_at IS NULL OR meta_messages.created_at > last_ai.created_at) ORDER BY meta_messages.created_at DESC, id DESC LIMIT 20;",
+    `WITH last_ai AS (
+       SELECT MAX(created_at) AS created_at
+       FROM meta_messages
+       WHERE channel = $1
+         AND external_user_id = $2
+         AND author = 'assistant'
+         AND status IN ('sent', 'delivered', 'read')
+     )
+     SELECT author, content, meta_messages.created_at
+     FROM meta_messages, last_ai
+     WHERE channel = $1
+       AND external_user_id = $2
+       AND content <> ''
+       AND ($3::text IS NULL OR meta_message_id IS DISTINCT FROM $3)
+       AND (direction = 'incoming' OR status IN ('sent', 'delivered', 'read'))
+       AND (last_ai.created_at IS NULL OR meta_messages.created_at > last_ai.created_at)
+     ORDER BY meta_messages.created_at DESC, id DESC
+     LIMIT 20;`,
     [channel, externalUserId, excludeMessageId || null]
   );
 
@@ -423,26 +573,131 @@ async function getRecentConversationHistory(
   return history.some((item) => item.author === "admin") ? history : [];
 }
 
-export async function listRecoverableMessages(db = pool) {
+async function findAssistantOutgoingForIncoming(incomingId, db = pool) {
+  if (!incomingId) return null;
   const result = await db.query(
-    "UPDATE meta_messages SET status = 'pending', updated_at = CURRENT_TIMESTAMP WHERE direction = 'incoming' AND status = 'processing' AND last_attempt_at < CURRENT_TIMESTAMP - INTERVAL '5 minutes';"
+    `SELECT id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
+            direction, author, message_type, content, status, error_detail,
+            processing_attempts, created_at, updated_at
+     FROM meta_messages
+     WHERE in_reply_to_message_id = $1
+       AND direction = 'outgoing'
+       AND author = 'assistant'
+     ORDER BY id ASC
+     LIMIT 1;`,
+    [incomingId]
   );
-  void result;
+  return result.rows[0] || null;
+}
+
+async function createOutgoingMessage(
+  message,
+  reply,
+  author,
+  inReplyToMessageId = null,
+  db = pool
+) {
+  await db.query(
+    `INSERT INTO meta_conversations
+      (channel, external_user_id, last_message_at, updated_at)
+     VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+     ON CONFLICT (channel, external_user_id) DO UPDATE SET
+       last_message_at = CURRENT_TIMESTAMP,
+       updated_at = CURRENT_TIMESTAMP;`,
+    [message.channel, message.externalUserId]
+  );
+
+  try {
+    const saved = await db.query(
+      `INSERT INTO meta_messages
+        (channel, external_user_id, direction, author, message_type, content,
+         status, meta_timestamp, in_reply_to_message_id)
+       VALUES ($1, $2, 'outgoing', $3, 'text', $4, 'pending', CURRENT_TIMESTAMP, $5)
+       RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
+                 direction, author, message_type, content, status, error_detail,
+                 processing_attempts, meta_timestamp, created_at, updated_at;`,
+      [message.channel, message.externalUserId, author, reply, inReplyToMessageId]
+    );
+    return saved.rows[0];
+  } catch (error) {
+    if (error?.code === "23505" && inReplyToMessageId && author === "assistant") {
+      return findAssistantOutgoingForIncoming(inReplyToMessageId, db);
+    }
+    throw error;
+  }
+}
+
+export async function listRecoverableMessages(db = pool) {
+  await db.query(
+    `UPDATE meta_messages
+     SET status = 'failed',
+         error_detail = COALESCE(error_detail, 'Procesamiento interrumpido antes de completarse.'),
+         updated_at = CURRENT_TIMESTAMP
+     WHERE direction = 'incoming'
+       AND status = 'processing'
+       AND last_attempt_at < CURRENT_TIMESTAMP - INTERVAL '5 minutes';`
+  );
 
   const pending = await db.query(
-    "SELECT channel, external_user_id, meta_message_id, content, message_type, meta_timestamp FROM meta_messages WHERE direction = 'incoming' AND status IN ('pending', 'failed') ORDER BY created_at ASC LIMIT 100;"
+    `SELECT channel, external_user_id, meta_message_id, content, message_type, meta_timestamp
+     FROM meta_messages
+     WHERE direction = 'incoming'
+       AND status IN ('pending', 'failed')
+       AND processing_attempts < $1
+     ORDER BY created_at ASC
+     LIMIT 100;`,
+    [MAX_PROCESSING_ATTEMPTS]
   );
 
-  return pending.rows.map((row) =>
-    normalizedMessage({
+  return pending.rows.map((row) => {
+    let timestamp = "";
+    if (row.meta_timestamp) {
+      const milliseconds = new Date(row.meta_timestamp).getTime();
+      timestamp =
+        row.channel === "whatsapp"
+          ? String(Math.floor(milliseconds / 1000))
+          : String(milliseconds);
+    }
+    return normalizedMessage({
       channel: row.channel,
       externalUserId: row.external_user_id,
       messageId: row.meta_message_id,
       text: row.content,
       messageType: row.message_type,
-      timestamp: row.meta_timestamp ? new Date(row.meta_timestamp).getTime() : "",
-    })
-  );
+      timestamp,
+    });
+  });
+}
+
+export async function applyMetaStatusUpdates(updates, db = pool) {
+  const changed = [];
+  for (const update of updates) {
+    if (update.channel !== "whatsapp") continue;
+
+    const result = await db.query(
+      `UPDATE meta_messages
+       SET status = CASE
+         WHEN $2 = 'read' AND status IN ('pending', 'processing', 'failed', 'sent', 'delivered', 'read') THEN 'read'
+         WHEN $2 = 'delivered' AND status IN ('pending', 'processing', 'failed', 'sent', 'delivered') THEN 'delivered'
+         WHEN $2 = 'sent' AND status IN ('pending', 'processing', 'failed', 'sent') THEN 'sent'
+         WHEN $2 = 'failed' AND status <> 'read' THEN 'failed'
+         ELSE status
+       END,
+       error_detail = CASE
+         WHEN $2 = 'failed' THEN NULLIF($3, '')
+         WHEN $2 IN ('sent', 'delivered', 'read') THEN NULL
+         ELSE error_detail
+       END,
+       updated_at = CURRENT_TIMESTAMP
+       WHERE channel = 'whatsapp'
+         AND meta_message_id = $1
+         AND direction = 'outgoing'
+       RETURNING id, meta_message_id, status;`,
+      [update.messageId, update.status, cleanText(update.errorDetail).slice(0, 1000)]
+    );
+    if (result.rows[0]) changed.push(result.rows[0]);
+  }
+  return changed;
 }
 
 function graphBaseUrl() {
@@ -552,24 +807,29 @@ async function recordOutgoingMessage(
   author,
   result,
   error = null,
-  db = pool
+  db = pool,
+  outgoing = null
 ) {
+  const savedOutgoing =
+    outgoing || (await createOutgoingMessage(message, reply, author, null, db));
   const status = error ? "failed" : "sent";
   const metaMessageId = sentMessageId(result);
 
-  await db.query(
-    "INSERT INTO meta_conversations (channel, external_user_id, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP) ON CONFLICT (channel, external_user_id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP;",
-    [message.channel, message.externalUserId]
-  );
-
   const saved = await db.query(
-    "INSERT INTO meta_messages (channel, external_user_id, meta_message_id, direction, author, message_type, content, status, error_detail, meta_timestamp) VALUES ($1, $2, $3, 'outgoing', $4, 'text', $5, $6, $7, CURRENT_TIMESTAMP) RETURNING id, channel, external_user_id, meta_message_id, direction, author, message_type, content, status, error_detail, meta_timestamp, created_at, updated_at;",
+    `UPDATE meta_messages
+     SET meta_message_id = COALESCE($2, meta_message_id),
+         status = $3,
+         error_detail = $4,
+         processing_attempts = processing_attempts + 1,
+         last_attempt_at = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1
+     RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
+               direction, author, message_type, content, status, error_detail,
+               processing_attempts, meta_timestamp, created_at, updated_at;`,
     [
-      message.channel,
-      message.externalUserId,
+      savedOutgoing.id,
       metaMessageId,
-      author,
-      reply,
       status,
       error ? cleanText(error.message || error).slice(0, 1000) : null,
     ]
@@ -591,6 +851,46 @@ async function sendWithRetry(message, reply, send, sleep) {
   }
 
   throw lastError;
+}
+
+async function deliverPersistedOutgoing(
+  message,
+  outgoing,
+  dependencies,
+  author = outgoing?.author || "assistant"
+) {
+  if (["sent", "delivered", "read"].includes(outgoing?.status)) {
+    return outgoing;
+  }
+
+  try {
+    const sent = await sendWithRetry(
+      message,
+      outgoing.content,
+      dependencies.sendReply,
+      dependencies.sleep
+    );
+    return await dependencies.recordOutgoing(
+      message,
+      outgoing.content,
+      author,
+      sent,
+      null,
+      pool,
+      outgoing
+    );
+  } catch (error) {
+    await dependencies.recordOutgoing(
+      message,
+      outgoing.content,
+      author,
+      null,
+      error,
+      pool,
+      outgoing
+    );
+    throw error;
+  }
 }
 
 export async function sendManualMetaMessage(
@@ -617,17 +917,40 @@ export async function sendManualMetaMessage(
   });
 
   await setHandoffState(channel, externalUserId, true, db);
+  const outgoing = await createOutgoingMessage(target, reply, "admin", null, db);
 
   try {
-    const result = await sendMetaReply(target, reply);
-    return await recordOutgoingMessage(target, reply, "admin", result, null, db);
+    const result = await sendWithRetry(
+      target,
+      reply,
+      sendMetaReply,
+      (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
+    );
+    return await recordOutgoingMessage(
+      target,
+      reply,
+      "admin",
+      result,
+      null,
+      db,
+      outgoing
+    );
   } catch (error) {
-    await recordOutgoingMessage(target, reply, "admin", null, error, db);
+    await recordOutgoingMessage(
+      target,
+      reply,
+      "admin",
+      null,
+      error,
+      db,
+      outgoing
+    );
     throw error;
   }
 }
 
 export async function processMetaMessage(message, overrides = {}) {
+  const mockedPersistence = overrides.claim !== undefined;
   const dependencies = {
     claim: overrides.claim ?? claimMessage,
     release: overrides.release ?? releaseMessageClaim,
@@ -637,6 +960,19 @@ export async function processMetaMessage(message, overrides = {}) {
     loadHistory: overrides.loadHistory ?? getRecentConversationHistory,
     generateReply: overrides.generateReply ?? generateAiReply,
     sendReply: overrides.sendReply ?? sendMetaReply,
+    findOutgoing:
+      overrides.findOutgoing ??
+      (mockedPersistence ? async () => null : findAssistantOutgoingForIncoming),
+    createOutgoing:
+      overrides.createOutgoing ??
+      (mockedPersistence
+        ? async (_message, reply, author) => ({
+            id: null,
+            content: reply,
+            author,
+            status: "pending",
+          })
+        : createOutgoingMessage),
     recordOutgoing: overrides.recordOutgoing ?? recordOutgoingMessage,
     sleep:
       overrides.sleep ??
@@ -644,11 +980,28 @@ export async function processMetaMessage(message, overrides = {}) {
         new Promise((resolve) => setTimeout(resolve, milliseconds))),
   };
 
-  if (!(await dependencies.claim(message))) {
+  const claimed = await dependencies.claim(message);
+  if (!claimed) {
     return { status: "duplicate" };
   }
 
+  const incomingId = typeof claimed === "object" ? claimed.id : null;
+
   try {
+    if (incomingId) {
+      const existingOutgoing = await dependencies.findOutgoing(incomingId);
+      if (existingOutgoing) {
+        await deliverPersistedOutgoing(
+          message,
+          existingOutgoing,
+          dependencies,
+          "assistant"
+        );
+        await dependencies.complete(message);
+        return { status: "replied_recovered" };
+      }
+    }
+
     if (
       await dependencies.getHandoff(message.channel, message.externalUserId)
     ) {
@@ -662,35 +1015,25 @@ export async function processMetaMessage(message, overrides = {}) {
         message.externalUserId,
         true
       );
-      const sent = await sendWithRetry(
-        message,
-        HUMAN_HANDOFF_REPLY,
-        dependencies.sendReply,
-        dependencies.sleep
-      );
-      await dependencies.recordOutgoing(
+      const outgoing = await dependencies.createOutgoing(
         message,
         HUMAN_HANDOFF_REPLY,
         "assistant",
-        sent
+        incomingId
       );
+      await deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
       await dependencies.complete(message);
       return { status: "handoff_requested" };
     }
 
     if (message.messageType !== "text") {
-      const sent = await sendWithRetry(
-        message,
-        UNSUPPORTED_MESSAGE_REPLY,
-        dependencies.sendReply,
-        dependencies.sleep
-      );
-      await dependencies.recordOutgoing(
+      const outgoing = await dependencies.createOutgoing(
         message,
         UNSUPPORTED_MESSAGE_REPLY,
         "assistant",
-        sent
+        incomingId
       );
+      await deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
       await dependencies.complete(message);
       return { status: "unsupported" };
     }
@@ -707,18 +1050,13 @@ export async function processMetaMessage(message, overrides = {}) {
       history,
     });
 
-    const sent = await sendWithRetry(
-      message,
-      result.reply,
-      dependencies.sendReply,
-      dependencies.sleep
-    );
-    await dependencies.recordOutgoing(
+    const outgoing = await dependencies.createOutgoing(
       message,
       result.reply,
       "assistant",
-      sent
+      incomingId
     );
+    await deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
     await dependencies.complete(message);
 
     return { status: "replied" };
