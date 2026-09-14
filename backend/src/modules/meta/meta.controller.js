@@ -1,8 +1,13 @@
 import { env } from "../../config/env.js";
 import {
   listActiveHandoffs,
+  listConversationMessages,
+  listConversations,
+  listRecoverableMessages,
   parseMetaWebhook,
+  persistIncomingMessages,
   processMetaMessage,
+  sendManualMetaMessage,
   setHandoffState,
   verifyMetaSignature,
 } from "./meta.service.js";
@@ -10,19 +15,46 @@ import {
 const META_CHANNELS = new Set(["whatsapp", "instagram", "facebook"]);
 const conversationQueues = new Map();
 
+function conversationParams(req, res) {
+  const channel = String(req.params.channel || "").toLowerCase();
+  const externalUserId = String(req.params.externalUserId || "").trim();
+
+  if (!META_CHANNELS.has(channel)) {
+    res.status(400).json({
+      success: false,
+      message: "Canal de Meta no válido.",
+    });
+    return null;
+  }
+
+  if (!externalUserId || externalUserId.length > 160) {
+    res.status(400).json({
+      success: false,
+      message: "external_user_id no es válido.",
+    });
+    return null;
+  }
+
+  return { channel, externalUserId };
+}
+
 async function processInBackground(message) {
   try {
     await processMetaMessage(message);
   } catch (error) {
     console.error(
-      `No se pudo procesar el mensaje ${message.messageId} de ${message.channel}:`,
+      "No se pudo procesar el mensaje " +
+        message.messageId +
+        " de " +
+        message.channel +
+        ":",
       error.message
     );
   }
 }
 
 function scheduleMessage(message) {
-  const key = `${message.channel}:${message.externalUserId}`;
+  const key = message.channel + ":" + message.externalUserId;
   const previous = conversationQueues.get(key) ?? Promise.resolve();
   const current = previous
     .catch(() => {})
@@ -34,6 +66,12 @@ function scheduleMessage(message) {
     });
 
   conversationQueues.set(key, current);
+}
+
+export async function recoverPendingMessages() {
+  const messages = await listRecoverableMessages();
+  for (const message of messages) scheduleMessage(message);
+  return messages.length;
 }
 
 export function verifyWebhookController(req, res) {
@@ -53,21 +91,28 @@ export function verifyWebhookController(req, res) {
   return res.sendStatus(403);
 }
 
-export function receiveWebhookController(req, res) {
-  const signature = req.header("x-hub-signature-256");
-  if (!verifyMetaSignature(signature, req.rawBody)) {
-    return res.sendStatus(401);
-  }
-
-  const messages = parseMetaWebhook(req.body);
-  res.status(200).send("EVENT_RECEIVED");
-
-  // Render mantiene el proceso activo después de responder al webhook.
-  setImmediate(() => {
-    for (const message of messages) {
-      scheduleMessage(message);
+export async function receiveWebhookController(req, res, next) {
+  try {
+    const signature = req.header("x-hub-signature-256");
+    if (!verifyMetaSignature(signature, req.rawBody)) {
+      return res.sendStatus(401);
     }
-  });
+
+    const messages = parseMetaWebhook(req.body);
+
+    if (messages.length > 0) {
+      await persistIncomingMessages(messages);
+    }
+
+    res.status(200).send("EVENT_RECEIVED");
+
+    setImmediate(() => {
+      for (const message of messages) scheduleMessage(message);
+    });
+  } catch (error) {
+    // Al no responder 200, Meta podrá reintentar el evento.
+    next(error);
+  }
 }
 
 export async function listHandoffsController(_req, res, next) {
@@ -79,26 +124,55 @@ export async function listHandoffsController(_req, res, next) {
   }
 }
 
+export async function listConversationsController(_req, res, next) {
+  try {
+    const conversations = await listConversations();
+    return res.json({ success: true, data: conversations });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listMessagesController(req, res, next) {
+  try {
+    const conversation = conversationParams(req, res);
+    if (!conversation) return;
+
+    const messages = await listConversationMessages(
+      conversation.channel,
+      conversation.externalUserId,
+      { limit: req.query.limit }
+    );
+    return res.json({ success: true, data: messages });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function sendManualMessageController(req, res, next) {
+  try {
+    const conversation = conversationParams(req, res);
+    if (!conversation) return;
+
+    const message = typeof req.body?.message === "string" ? req.body.message : "";
+    const saved = await sendManualMetaMessage(
+      conversation.channel,
+      conversation.externalUserId,
+      message
+    );
+
+    return res.status(201).json({ success: true, data: saved });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function updateHandoffController(req, res, next) {
   try {
-    const channel = String(req.params.channel || "").toLowerCase();
-    const externalUserId = String(req.params.externalUserId || "").trim();
+    const conversationParamsValue = conversationParams(req, res);
+    if (!conversationParamsValue) return;
+
     const active = req.body?.active;
-
-    if (!META_CHANNELS.has(channel)) {
-      return res.status(400).json({
-        success: false,
-        message: "Canal de Meta no válido.",
-      });
-    }
-
-    if (!externalUserId || externalUserId.length > 160) {
-      return res.status(400).json({
-        success: false,
-        message: "external_user_id no es válido.",
-      });
-    }
-
     if (typeof active !== "boolean") {
       return res.status(400).json({
         success: false,
@@ -107,8 +181,8 @@ export async function updateHandoffController(req, res, next) {
     }
 
     const conversation = await setHandoffState(
-      channel,
-      externalUserId,
+      conversationParamsValue.channel,
+      conversationParamsValue.externalUserId,
       active
     );
 
