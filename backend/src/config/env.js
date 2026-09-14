@@ -77,6 +77,7 @@ export const env = {
   meta: {
     verifyToken: cleanEnvValue(process.env.META_VERIFY_TOKEN),
     appSecret: cleanEnvValue(process.env.META_APP_SECRET),
+    instagramAppSecret: cleanEnvValue(process.env.INSTAGRAM_APP_SECRET),
     graphApiVersion:
       cleanEnvValue(process.env.META_GRAPH_API_VERSION) || "v26.0",
     whatsappAccessToken: cleanEnvValue(
