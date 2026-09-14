@@ -25,6 +25,7 @@ import BookingsAdmin from "./pages/admin/BookingsAdmin";
 import CustomersAdmin from "./pages/admin/CustomersAdmin";
 import RoomsAdmin from "./pages/admin/RoomsAdmin";
 import GalleryAdmin from "./pages/admin/GalleryAdmin";
+import MessagesAdmin from "./pages/admin/MessagesAdmin";
 
 export default function App() {
   return (
@@ -53,13 +54,12 @@ export default function App() {
 
         <Route path="/admin/login" element={<Login />} />
 
-        <Route path="/admin/login" element={<Login />} />
-
         <Route element={<ProtectedAdminRoute />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="reservas" element={<BookingsAdmin />} />
             <Route path="consultas" element={<InquiriesAdmin />} />
+            <Route path="mensajes" element={<MessagesAdmin />} />
             <Route path="horarios" element={<ScheduleAdmin />} />
             <Route path="clientes" element={<CustomersAdmin />} />
             <Route path="habitaciones" element={<RoomsAdmin />} />
