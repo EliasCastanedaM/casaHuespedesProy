@@ -2,6 +2,11 @@ import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import { generateAiReply } from "../ai/ai.service.js";
+import {
+  sendInstagramMessageParts,
+  sendInstagramMetaReply,
+  splitInstagramMessage,
+} from "./instagram.transport.js";
 
 const META_CHANNELS = new Set(["whatsapp", "instagram", "facebook"]);
 const processedInMemory = new Set();
@@ -578,7 +583,8 @@ async function findAssistantOutgoingForIncoming(incomingId, db = pool) {
   const result = await db.query(
     `SELECT id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
             direction, author, message_type, content, status, error_detail,
-            processing_attempts, created_at, updated_at
+            processing_attempts, delivery_part_count, delivery_next_part_index,
+            delivery_part_message_ids, created_at, updated_at
      FROM meta_messages
      WHERE in_reply_to_message_id = $1
        AND direction = 'outgoing'
@@ -615,7 +621,8 @@ async function createOutgoingMessage(
        VALUES ($1, $2, 'outgoing', $3, 'text', $4, 'pending', CURRENT_TIMESTAMP, $5)
        RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
                  direction, author, message_type, content, status, error_detail,
-                 processing_attempts, meta_timestamp, created_at, updated_at;`,
+                 processing_attempts, delivery_part_count, delivery_next_part_index,
+                 delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
       [message.channel, message.externalUserId, author, reply, inReplyToMessageId]
     );
     return saved.rows[0];
@@ -628,6 +635,28 @@ async function createOutgoingMessage(
 }
 
 export async function listRecoverableMessages(db = pool) {
+  await db.query(
+    `UPDATE meta_messages AS incoming
+     SET status = 'failed',
+         error_detail = COALESCE(
+           incoming.error_detail,
+           'Entrega de Instagram interrumpida antes de completarse.'
+         ),
+         updated_at = CURRENT_TIMESTAMP
+     WHERE incoming.channel = 'instagram'
+       AND incoming.direction = 'incoming'
+       AND incoming.status = 'processing'
+       AND EXISTS (
+         SELECT 1
+         FROM meta_messages AS outgoing
+         WHERE outgoing.in_reply_to_message_id = incoming.id
+           AND outgoing.channel = 'instagram'
+           AND outgoing.direction = 'outgoing'
+           AND outgoing.author = 'assistant'
+           AND outgoing.status IN ('pending', 'failed')
+       );`
+  );
+
   await db.query(
     `UPDATE meta_messages
      SET status = 'failed',
@@ -774,13 +803,15 @@ async function sendInstagram(externalUserId, reply) {
   if (!env.meta.instagramAccountId) {
     throw new Error("Falta INSTAGRAM_ACCOUNT_ID.");
   }
-  return graphPost(
-    env.meta.instagramAccountId + "/messages",
-    env.meta.instagramAccessToken || env.meta.facebookPageAccessToken,
-    {
-      recipient: { id: externalUserId },
-      message: { text: reply },
-    }
+  return sendInstagramMessageParts(reply, (part) =>
+    graphPost(
+      env.meta.instagramAccountId + "/messages",
+      env.meta.instagramAccessToken || env.meta.facebookPageAccessToken,
+      {
+        recipient: { id: externalUserId },
+        message: { text: part },
+      }
+    )
   );
 }
 
@@ -792,7 +823,7 @@ export async function sendMetaReply(message, reply) {
     return sendFacebook(message.externalUserId, reply);
   }
   if (message.channel === "instagram") {
-    return sendInstagram(message.externalUserId, reply);
+    return sendInstagramMetaReply(message, reply);
   }
   throw new Error("Canal de Meta no reconocido: " + message.channel);
 }
@@ -826,7 +857,8 @@ async function recordOutgoingMessage(
      WHERE id = $1
      RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
                direction, author, message_type, content, status, error_detail,
-               processing_attempts, meta_timestamp, created_at, updated_at;`,
+               processing_attempts, delivery_part_count, delivery_next_part_index,
+               delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
     [
       savedOutgoing.id,
       metaMessageId,
@@ -839,18 +871,231 @@ async function recordOutgoingMessage(
 
 async function sendWithRetry(message, reply, send, sleep) {
   const delays = [0, 500, 2_000];
-  let lastError;
+  const parts = message.channel === "instagram"
+    ? splitInstagramMessage(reply)
+    : [reply];
+  let lastResult;
 
+  for (const part of parts) {
+    lastResult = await sendPartWithRetry(message, part, send, sleep, delays);
+  }
+
+  return lastResult;
+}
+
+async function sendPartWithRetry(
+  message,
+  part,
+  send,
+  sleep,
+  delays = [0, 500, 2_000]
+) {
+  let lastError;
   for (const delay of delays) {
     if (delay > 0) await sleep(delay);
     try {
-      return await send(message, reply);
+      return await send(message, part);
     } catch (error) {
       lastError = error;
     }
   }
-
   throw lastError;
+}
+
+const INSTAGRAM_DELIVERY_LOCK_NAMESPACE = "instagram-outgoing:";
+
+async function loadOutgoingForDelivery(id, db) {
+  const result = await db.query(
+    `SELECT id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
+            direction, author, message_type, content, status, error_detail,
+            processing_attempts, delivery_part_count, delivery_next_part_index,
+            delivery_part_message_ids, meta_timestamp, created_at, updated_at
+     FROM meta_messages
+     WHERE id = $1
+     LIMIT 1;`,
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
+async function initializeInstagramDelivery(outgoingId, partCount, db) {
+  const result = await db.query(
+    `UPDATE meta_messages
+     SET delivery_part_count = COALESCE(delivery_part_count, $2),
+         updated_at = CASE
+           WHEN delivery_part_count IS NULL THEN CURRENT_TIMESTAMP
+           ELSE updated_at
+         END
+     WHERE id = $1
+       AND channel = 'instagram'
+       AND direction = 'outgoing'
+       AND (delivery_part_count IS NULL OR delivery_part_count = $2)
+     RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
+               direction, author, message_type, content, status, error_detail,
+               processing_attempts, delivery_part_count, delivery_next_part_index,
+               delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
+    [outgoingId, partCount]
+  );
+
+  if (!result.rows[0]) {
+    throw new Error(
+      "La división actual del mensaje de Instagram no coincide con el progreso persistido."
+    );
+  }
+  return result.rows[0];
+}
+
+async function recordInstagramPartAccepted(
+  outgoingId,
+  partCount,
+  partIndex,
+  result,
+  db
+) {
+  const messageId = sentMessageId(result);
+  const saved = await db.query(
+    `UPDATE meta_messages
+     SET delivery_next_part_index = $4,
+         delivery_part_message_ids =
+           delivery_part_message_ids || jsonb_build_array($5::text),
+         meta_message_id = COALESCE($5, meta_message_id),
+         error_detail = NULL,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1
+       AND delivery_part_count = $2
+       AND delivery_next_part_index = $3
+     RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
+               direction, author, message_type, content, status, error_detail,
+               processing_attempts, delivery_part_count, delivery_next_part_index,
+               delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
+    [outgoingId, partCount, partIndex, partIndex + 1, messageId]
+  );
+
+  if (!saved.rows[0]) {
+    throw new Error(
+      "No se pudo guardar el progreso de entrega de Instagram de forma consistente."
+    );
+  }
+  return saved.rows[0];
+}
+
+async function finalizeInstagramDelivery(outgoingId, db) {
+  const result = await db.query(
+    `UPDATE meta_messages
+     SET status = 'sent',
+         error_detail = NULL,
+         processing_attempts = processing_attempts + 1,
+         last_attempt_at = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1
+       AND delivery_part_count IS NOT NULL
+       AND delivery_next_part_index = delivery_part_count
+     RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
+               direction, author, message_type, content, status, error_detail,
+               processing_attempts, delivery_part_count, delivery_next_part_index,
+               delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
+    [outgoingId]
+  );
+
+  if (!result.rows[0]) {
+    throw new Error(
+      "Instagram no puede marcar el outgoing como enviado antes de completar todas sus partes."
+    );
+  }
+  return result.rows[0];
+}
+
+async function acquireInstagramDeliveryClient(db, outgoingId) {
+  const client = typeof db.connect === "function" ? await db.connect() : db;
+  let locked = false;
+  try {
+    await client.query(
+      `SELECT pg_advisory_lock(
+         hashtextextended($1::text || $2::text, 0)
+       );`,
+      [INSTAGRAM_DELIVERY_LOCK_NAMESPACE, outgoingId]
+    );
+    locked = true;
+    return {
+      client,
+      async release() {
+        try {
+          if (locked) {
+            await client.query(
+              `SELECT pg_advisory_unlock(
+                 hashtextextended($1::text || $2::text, 0)
+               );`,
+              [INSTAGRAM_DELIVERY_LOCK_NAMESPACE, outgoingId]
+            );
+          }
+        } finally {
+          if (typeof client.release === "function") client.release();
+        }
+      },
+    };
+  } catch (error) {
+    if (typeof client.release === "function") client.release();
+    throw error;
+  }
+}
+
+async function deliverInstagramPersistedOutgoing(
+  message,
+  outgoing,
+  dependencies,
+  author
+) {
+  const lock = await acquireInstagramDeliveryClient(dependencies.db, outgoing.id);
+  let current = outgoing;
+
+  try {
+    current = await loadOutgoingForDelivery(outgoing.id, lock.client);
+    if (!current) throw new Error("No se encontró el outgoing de Instagram.");
+    if (["sent", "delivered", "read"].includes(current.status)) return current;
+
+    const parts = splitInstagramMessage(current.content);
+    current = await initializeInstagramDelivery(current.id, parts.length, lock.client);
+
+    const nextPartIndex = Number(current.delivery_next_part_index);
+    if (
+      !Number.isInteger(nextPartIndex) ||
+      nextPartIndex < 0 ||
+      nextPartIndex > parts.length
+    ) {
+      throw new Error("El progreso persistido de Instagram no es válido.");
+    }
+
+    for (let index = nextPartIndex; index < parts.length; index += 1) {
+      const result = await sendPartWithRetry(
+        message,
+        parts[index],
+        dependencies.sendReply,
+        dependencies.sleep
+      );
+      current = await recordInstagramPartAccepted(
+        current.id,
+        parts.length,
+        index,
+        result,
+        lock.client
+      );
+    }
+
+    return await finalizeInstagramDelivery(current.id, lock.client);
+  } catch (error) {
+    await dependencies.recordOutgoing(
+      message,
+      current?.content || outgoing.content,
+      author,
+      null,
+      error,
+      lock.client,
+      current || outgoing
+    );
+    throw error;
+  } finally {
+    await lock.release();
+  }
 }
 
 async function deliverPersistedOutgoing(
@@ -861,6 +1106,15 @@ async function deliverPersistedOutgoing(
 ) {
   if (["sent", "delivered", "read"].includes(outgoing?.status)) {
     return outgoing;
+  }
+
+  if (message.channel === "instagram" && outgoing?.id && dependencies.db) {
+    return deliverInstagramPersistedOutgoing(
+      message,
+      outgoing,
+      dependencies,
+      author
+    );
   }
 
   try {
@@ -876,7 +1130,7 @@ async function deliverPersistedOutgoing(
       author,
       sent,
       null,
-      pool,
+      dependencies.db || pool,
       outgoing
     );
   } catch (error) {
@@ -886,7 +1140,7 @@ async function deliverPersistedOutgoing(
       author,
       null,
       error,
-      pool,
+      dependencies.db || pool,
       outgoing
     );
     throw error;
@@ -918,6 +1172,21 @@ export async function sendManualMetaMessage(
 
   await setHandoffState(channel, externalUserId, true, db);
   const outgoing = await createOutgoingMessage(target, reply, "admin", null, db);
+
+  if (channel === "instagram") {
+    return deliverPersistedOutgoing(
+      target,
+      outgoing,
+      {
+        db,
+        sendReply: sendMetaReply,
+        recordOutgoing: recordOutgoingMessage,
+        sleep: (milliseconds) =>
+          new Promise((resolve) => setTimeout(resolve, milliseconds)),
+      },
+      "admin"
+    );
+  }
 
   try {
     const result = await sendWithRetry(
@@ -952,6 +1221,7 @@ export async function sendManualMetaMessage(
 export async function processMetaMessage(message, overrides = {}) {
   const mockedPersistence = overrides.claim !== undefined;
   const dependencies = {
+    db: overrides.db ?? (mockedPersistence ? null : pool),
     claim: overrides.claim ?? claimMessage,
     release: overrides.release ?? releaseMessageClaim,
     complete: overrides.complete ?? completeMessage,

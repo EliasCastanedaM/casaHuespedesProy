@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { env } from "../../config/env.js";
-import { pool } from "../../config/db.js";
-import { setHandoffState } from "./meta.service.js";
+
+export const INSTAGRAM_MESSAGE_LIMIT = 1000;
 
 function cleanText(value) {
   return typeof value === "string" || typeof value === "number"
@@ -28,6 +28,7 @@ function signatureMatches(secret, signatureHeader, rawBody) {
   const expected =
     "sha256=" +
     crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+
   const actualBuffer = Buffer.from(signature, "utf8");
   const expectedBuffer = Buffer.from(expected, "utf8");
 
@@ -53,6 +54,7 @@ async function instagramPost(externalUserId, reply) {
   if (!env.meta.instagramAccountId) {
     throw new Error("Falta INSTAGRAM_ACCOUNT_ID.");
   }
+
   if (!env.meta.instagramAccessToken) {
     throw new Error("Falta INSTAGRAM_ACCESS_TOKEN.");
   }
@@ -74,9 +76,13 @@ async function instagramPost(externalUserId, reply) {
   );
 
   const responseText = await response.text();
+
   if (!response.ok) {
     throw new Error(
-      "Instagram respondió " + response.status + ": " + responseText.slice(0, 300)
+      "Instagram respondió " +
+        response.status +
+        ": " +
+        responseText.slice(0, 300)
     );
   }
 
@@ -91,105 +97,79 @@ export async function sendInstagramMetaReply(message, reply) {
   return instagramPost(message.externalUserId, reply);
 }
 
-function sentMessageId(result) {
-  return cleanText(result?.messages?.[0]?.id || result?.message_id) || null;
-}
+function preferredBreak(window, minimumPreferredIndex) {
+  const newline = window.lastIndexOf("\n");
+  if (newline >= minimumPreferredIndex) return newline + 1;
 
-async function updateOutgoing(outgoingId, result, error, db) {
-  const status = error ? "failed" : "sent";
-  const metaMessageId = sentMessageId(result);
-  const saved = await db.query(
-    `UPDATE meta_messages
-     SET meta_message_id = COALESCE($2, meta_message_id),
-         status = $3,
-         error_detail = $4,
-         processing_attempts = processing_attempts + 1,
-         last_attempt_at = CURRENT_TIMESTAMP,
-         updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1
-     RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
-               direction, author, message_type, content, status, error_detail,
-               processing_attempts, meta_timestamp, created_at, updated_at;`,
-    [
-      outgoingId,
-      metaMessageId,
-      status,
-      error ? cleanText(error.message || error).slice(0, 1000) : null,
-    ]
+  let sentence = -1;
+  for (const match of window.matchAll(/[.!?\u2026](?:[\t ]+|\n)/g)) {
+    sentence = match.index + match[0].length;
+  }
+  if (sentence >= minimumPreferredIndex) return sentence;
+
+  const space = Math.max(
+    window.lastIndexOf(" "),
+    window.lastIndexOf("\t")
   );
-  return saved.rows[0];
+
+  return space >= minimumPreferredIndex ? space + 1 : window.length;
 }
 
-async function sendWithRetry(externalUserId, reply) {
-  const delays = [0, 500, 2_000];
-  let lastError;
+export function splitInstagramMessage(
+  text,
+  limit = INSTAGRAM_MESSAGE_LIMIT
+) {
+  const message = String(text ?? "");
 
-  for (const delay of delays) {
-    if (delay > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-
-    try {
-      return await instagramPost(externalUserId, reply);
-    } catch (error) {
-      lastError = error;
-    }
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error("El límite de Instagram debe ser un entero positivo.");
   }
 
-  throw lastError;
+  if (message.length <= limit) return [message];
+
+  const parts = [];
+  let offset = 0;
+  const minimumPreferredIndex = Math.floor(limit * 0.5);
+
+  while (message.length - offset > limit) {
+    const window = message.slice(offset, offset + limit);
+    let breakAt = preferredBreak(window, minimumPreferredIndex);
+
+    if (
+      breakAt > 1 &&
+      /[\uD800-\uDBFF]/.test(window[breakAt - 1]) &&
+      /[\uDC00-\uDFFF]/.test(message[offset + breakAt])
+    ) {
+      breakAt -= 1;
+    }
+
+    parts.push(message.slice(offset, offset + breakAt));
+    offset += breakAt;
+  }
+
+  if (offset < message.length) {
+    parts.push(message.slice(offset));
+  }
+
+  return parts;
+}
+
+export async function sendInstagramMessageParts(text, sendPart) {
+  const parts = splitInstagramMessage(text);
+  let lastResult = {};
+
+  for (const part of parts) {
+    lastResult = await sendPart(part);
+  }
+
+  return lastResult;
 }
 
 export async function sendManualInstagramMessage(
   externalUserId,
   text,
-  db = pool
+  db
 ) {
-  const userId = cleanText(externalUserId);
-  const reply = cleanText(text);
-
-  if (!userId || userId.length > 160) {
-    const error = new Error("external_user_id no es válido.");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  if (!reply || reply.length > 4000) {
-    const error = new Error("El mensaje debe tener entre 1 y 4000 caracteres.");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  await setHandoffState("instagram", userId, true, db);
-
-  await db.query(
-    `INSERT INTO meta_conversations
-      (channel, external_user_id, last_message_at, updated_at)
-     VALUES ('instagram', $1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-     ON CONFLICT (channel, external_user_id) DO UPDATE SET
-       last_message_at = CURRENT_TIMESTAMP,
-       updated_at = CURRENT_TIMESTAMP;`,
-    [userId]
-  );
-
-  const inserted = await db.query(
-    `INSERT INTO meta_messages
-      (channel, external_user_id, direction, author, message_type, content,
-       status, meta_timestamp)
-     VALUES ('instagram', $1, 'outgoing', 'admin', 'text', $2,
-             'pending', CURRENT_TIMESTAMP)
-     RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
-               direction, author, message_type, content, status, error_detail,
-               processing_attempts, meta_timestamp, created_at, updated_at;`,
-    [userId, reply]
-  );
-
-  const outgoing = inserted.rows[0];
-
-  try {
-    const result = await sendWithRetry(userId, reply);
-    return await updateOutgoing(outgoing.id, result, null, db);
-  } catch (error) {
-    await updateOutgoing(outgoing.id, null, error, db);
-    throw error;
-  }
+  const { sendManualMetaMessage } = await import("./meta.service.js");
+  return sendManualMetaMessage("instagram", externalUserId, text, db);
 }

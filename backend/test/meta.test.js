@@ -5,8 +5,10 @@ import app from "../src/app.js";
 import { env } from "../src/config/env.js";
 import {
   isHumanHandoffRequest,
+  listRecoverableMessages,
   parseMetaWebhook,
   processMetaMessage,
+  sendManualMetaMessage,
   sendMetaReply,
   verifyMetaSignature,
 } from "../src/modules/meta/meta.service.js";
@@ -36,6 +38,187 @@ function successfulDependencies(overrides = {}) {
     recordOutgoing: async () => {},
     sleep: async () => {},
     ...overrides,
+  };
+}
+
+function createInstagramDeliveryDb(initialOutgoing = null) {
+  let outgoing = initialOutgoing
+    ? {
+        delivery_part_count: null,
+        delivery_next_part_index: 0,
+        delivery_part_message_ids: [],
+        processing_attempts: 0,
+        ...initialOutgoing,
+      }
+    : null;
+  let nextId = Number(outgoing?.id || 800);
+  const lockTails = new Map();
+
+  const clone = () =>
+    outgoing
+      ? {
+          ...outgoing,
+          delivery_part_message_ids: [...outgoing.delivery_part_message_ids],
+        }
+      : null;
+
+  async function runQuery(sql, params = [], heldLocks = null) {
+    const normalized = sql.replace(/\s+/g, " ").trim().toLowerCase();
+
+    if (normalized.includes("pg_advisory_lock")) {
+      const key = String(params[1]);
+      const previous = lockTails.get(key) || Promise.resolve();
+      let unlock;
+      const current = new Promise((resolve) => {
+        unlock = resolve;
+      });
+      const tail = previous.then(() => current);
+      lockTails.set(key, tail);
+      await previous;
+      heldLocks.set(key, { tail, unlock });
+      return { rows: [{}] };
+    }
+
+    if (normalized.includes("pg_advisory_unlock")) {
+      const key = String(params[1]);
+      const held = heldLocks.get(key);
+      if (held) {
+        held.unlock();
+        heldLocks.delete(key);
+        if (lockTails.get(key) === held.tail) lockTails.delete(key);
+      }
+      return { rows: [{ pg_advisory_unlock: Boolean(held) }] };
+    }
+
+    if (normalized.includes("insert into meta_conversations")) {
+      return { rows: [{ channel: params[0], external_user_id: params[1] }] };
+    }
+
+    if (normalized.includes("insert into meta_messages")) {
+      outgoing = {
+        id: nextId,
+        channel: params[0],
+        external_user_id: params[1],
+        meta_message_id: null,
+        in_reply_to_message_id: params[4] || null,
+        direction: "outgoing",
+        author: params[2],
+        message_type: "text",
+        content: params[3],
+        status: "pending",
+        error_detail: null,
+        processing_attempts: 0,
+        delivery_part_count: null,
+        delivery_next_part_index: 0,
+        delivery_part_message_ids: [],
+      };
+      nextId += 1;
+      return { rows: [clone()] };
+    }
+
+    if (
+      normalized.startsWith("select id, channel") &&
+      normalized.includes("from meta_messages") &&
+      normalized.includes("where id = $1")
+    ) {
+      return {
+        rows: outgoing && outgoing.id === params[0] ? [clone()] : [],
+      };
+    }
+
+    if (normalized.includes("set delivery_part_count = coalesce")) {
+      if (
+        !outgoing ||
+        outgoing.id !== params[0] ||
+        (outgoing.delivery_part_count !== null &&
+          outgoing.delivery_part_count !== params[1])
+      ) {
+        return { rows: [] };
+      }
+      outgoing.delivery_part_count = params[1];
+      return { rows: [clone()] };
+    }
+
+    if (normalized.includes("set delivery_next_part_index = $4")) {
+      if (
+        !outgoing ||
+        outgoing.id !== params[0] ||
+        outgoing.delivery_part_count !== params[1] ||
+        outgoing.delivery_next_part_index !== params[2]
+      ) {
+        return { rows: [] };
+      }
+      outgoing.delivery_next_part_index = params[3];
+      outgoing.delivery_part_message_ids.push(params[4]);
+      if (params[4]) outgoing.meta_message_id = params[4];
+      outgoing.error_detail = null;
+      return { rows: [clone()] };
+    }
+
+    if (normalized.includes("set status = 'sent'")) {
+      if (
+        !outgoing ||
+        outgoing.id !== params[0] ||
+        outgoing.delivery_part_count === null ||
+        outgoing.delivery_next_part_index !== outgoing.delivery_part_count
+      ) {
+        return { rows: [] };
+      }
+      outgoing.status = "sent";
+      outgoing.error_detail = null;
+      outgoing.processing_attempts += 1;
+      return { rows: [clone()] };
+    }
+
+    if (normalized.includes("set meta_message_id = coalesce")) {
+      if (!outgoing || outgoing.id !== params[0]) return { rows: [] };
+      if (params[1]) outgoing.meta_message_id = params[1];
+      outgoing.status = params[2];
+      outgoing.error_detail = params[3];
+      outgoing.processing_attempts += 1;
+      return { rows: [clone()] };
+    }
+
+    throw new Error(`SQL no simulado: ${normalized}`);
+  }
+
+  return {
+    query: (sql, params) => runQuery(sql, params, new Map()),
+    async connect() {
+      const heldLocks = new Map();
+      return {
+        query: (sql, params) => runQuery(sql, params, heldLocks),
+        release() {
+          for (const [key, held] of heldLocks) {
+            held.unlock();
+            if (lockTails.get(key) === held.tail) lockTails.delete(key);
+          }
+          heldLocks.clear();
+        },
+      };
+    },
+    current: clone,
+    async createOutgoing(message, content, author, inReplyToMessageId = null) {
+      outgoing = {
+        id: nextId,
+        channel: message.channel,
+        external_user_id: message.externalUserId,
+        meta_message_id: null,
+        in_reply_to_message_id: inReplyToMessageId,
+        direction: "outgoing",
+        author,
+        message_type: "text",
+        content,
+        status: "pending",
+        error_detail: null,
+        processing_attempts: 0,
+        delivery_part_count: null,
+        delivery_next_part_index: 0,
+        delivery_part_message_ids: [],
+      };
+      nextId += 1;
+      return clone();
+    },
   };
 }
 
@@ -439,13 +622,346 @@ test("envía la respuesta al endpoint y formato correctos de cada canal", async 
     assert.equal(requests[1].body.recipient.id, "psid");
     assert.equal(
       requests[2].url,
-      "https://graph.facebook.com/v26.0/ig-account-id/messages"
+      "https://graph.instagram.com/v26.0/ig-account-id/messages"
     );
     assert.equal(requests[2].body.recipient.id, "igsid");
   } finally {
     globalThis.fetch = previousFetch;
     Object.assign(env.meta, previousConfig);
   }
+});
+
+test("un mensaje manual largo de Instagram persiste completo antes de enviar sus partes", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousConfig = { ...env.meta };
+  const requests = [];
+  let persistedBeforeFirstSend = false;
+  const text = Array.from(
+    { length: 70 },
+    (_, index) => `Línea manual ${index + 1}: información para el huésped.\n`
+  ).join("");
+  const db = createInstagramDeliveryDb();
+
+  Object.assign(env.meta, {
+    graphApiVersion: "v26.0",
+    instagramAccessToken: "ig-token",
+    instagramAccountId: "ig-account-id",
+  });
+  globalThis.fetch = async (_url, options) => {
+    if (requests.length === 0) {
+      persistedBeforeFirstSend =
+        db.current()?.status === "pending" && db.current()?.content === text.trim();
+    }
+    requests.push(JSON.parse(options.body).message.text);
+    return new Response(JSON.stringify({ message_id: `ig-part-${requests.length}` }), {
+      status: 200,
+    });
+  };
+
+  try {
+    const saved = await sendManualMetaMessage("instagram", "ig-manual", text, db);
+    assert.equal(persistedBeforeFirstSend, true);
+    assert.equal(db.current().content, text.trim());
+    assert.ok(requests.length > 2);
+    assert.ok(requests.every((part) => part.length <= 1000));
+    assert.equal(requests.join(""), text.trim());
+    assert.equal(saved.status, "sent");
+    assert.equal(db.current().status, "sent");
+    assert.equal(db.current().delivery_next_part_index, requests.length);
+    assert.equal(db.current().delivery_part_count, requests.length);
+    assert.deepEqual(
+      db.current().delivery_part_message_ids,
+      requests.map((_, index) => `ig-part-${index + 1}`)
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+    Object.assign(env.meta, previousConfig);
+  }
+});
+
+test("si falla una parte de Instagram conserva el outgoing completo y no repite OpenAI", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousConfig = { ...env.meta };
+  const reply = `${"A".repeat(1000)}${"FALLO".repeat(30)}`;
+  let aiCalls = 0;
+  let persistedOutgoing;
+  let failedRecord;
+  const sentParts = [];
+
+  Object.assign(env.meta, {
+    graphApiVersion: "v26.0",
+    instagramAccessToken: "ig-token",
+    instagramAccountId: "ig-account-id",
+  });
+  globalThis.fetch = async (_url, options) => {
+    const part = JSON.parse(options.body).message.text;
+    sentParts.push(part);
+    if (part.startsWith("FALLO")) {
+      return new Response('{"error":{"message":"fallo parte"}}', { status: 400 });
+    }
+    return new Response('{"message_id":"ig-ok"}', { status: 200 });
+  };
+
+  try {
+    await assert.rejects(
+      processMetaMessage(
+        message({ channel: "instagram", externalUserId: "ig-error", messageId: "ig-in" }),
+        successfulDependencies({
+          claim: async () => ({ id: 99 }),
+          generateReply: async () => {
+            aiCalls += 1;
+            return { reply };
+          },
+          createOutgoing: async (_message, content, author, inReplyToMessageId) => {
+            persistedOutgoing = {
+              id: 700,
+              content,
+              author,
+              in_reply_to_message_id: inReplyToMessageId,
+              status: "pending",
+            };
+            return persistedOutgoing;
+          },
+          sendReply: sendMetaReply,
+          recordOutgoing: async (...args) => {
+            if (args[4]) failedRecord = args;
+            return { ...persistedOutgoing, status: args[4] ? "failed" : "sent" };
+          },
+          sleep: async () => {},
+        })
+      ),
+      /Instagram respondió 400/
+    );
+
+    assert.equal(aiCalls, 1);
+    assert.equal(persistedOutgoing.content, reply);
+    assert.equal(persistedOutgoing.status, "pending");
+    assert.equal(failedRecord[1], reply);
+    assert.equal(failedRecord[6], persistedOutgoing);
+    assert.equal(sentParts.filter((part) => part.length === 1000).length, 1);
+    assert.equal(sentParts.filter((part) => part.startsWith("FALLO")).length, 3);
+  } finally {
+    globalThis.fetch = previousFetch;
+    Object.assign(env.meta, previousConfig);
+  }
+});
+
+test("Instagram reanuda durablemente desde la parte fallida después de un reinicio", async () => {
+  const reply = `${"A".repeat(1000)}${"B".repeat(1000)}${"C".repeat(1000)}`;
+  const db = createInstagramDeliveryDb();
+  const calls = [];
+  let aiCalls = 0;
+  let failPartB = true;
+  const incoming = message({
+    channel: "instagram",
+    externalUserId: "ig-recovery",
+    messageId: "ig-in-recovery",
+  });
+  const sendReply = async (_message, part) => {
+    calls.push(part[0]);
+    if (part[0] === "B" && failPartB) throw new Error("falló parte 2");
+    return { message_id: `ig-part-${part[0]}` };
+  };
+
+  await assert.rejects(
+    processMetaMessage(
+      incoming,
+      successfulDependencies({
+        db,
+        claim: async () => ({ id: 901 }),
+        generateReply: async () => {
+          aiCalls += 1;
+          return { reply };
+        },
+        createOutgoing: (...args) => db.createOutgoing(...args),
+        sendReply,
+        recordOutgoing: undefined,
+      })
+    ),
+    /falló parte 2/
+  );
+
+  assert.equal(aiCalls, 1);
+  assert.equal(db.current().status, "failed");
+  assert.equal(db.current().content, reply);
+  assert.equal(db.current().delivery_part_count, 3);
+  assert.equal(db.current().delivery_next_part_index, 1);
+  assert.deepEqual(db.current().delivery_part_message_ids, ["ig-part-A"]);
+  assert.equal(calls.filter((part) => part === "A").length, 1);
+  assert.equal(calls.filter((part) => part === "B").length, 3);
+
+  failPartB = false;
+  const recovered = await processMetaMessage(
+    incoming,
+    successfulDependencies({
+      db,
+      claim: async () => ({ id: 901 }),
+      findOutgoing: async () => db.current(),
+      generateReply: async () => {
+        aiCalls += 1;
+        throw new Error("OpenAI no debe ejecutarse durante recovery");
+      },
+      sendReply,
+      recordOutgoing: undefined,
+    })
+  );
+
+  assert.equal(recovered.status, "replied_recovered");
+  assert.equal(aiCalls, 1);
+  assert.equal(calls.filter((part) => part === "A").length, 1);
+  assert.deepEqual(calls.slice(-2), ["B", "C"]);
+  assert.equal(db.current().delivery_next_part_index, 3);
+  assert.equal(db.current().delivery_part_count, 3);
+  assert.equal(db.current().status, "sent");
+  assert.equal(db.current().meta_message_id, "ig-part-C");
+  assert.deepEqual(db.current().delivery_part_message_ids, [
+    "ig-part-A",
+    "ig-part-B",
+    "ig-part-C",
+  ]);
+
+  const callCountAfterCompletion = calls.length;
+  await processMetaMessage(
+    incoming,
+    successfulDependencies({
+      db,
+      claim: async () => ({ id: 901 }),
+      findOutgoing: async () => db.current(),
+      generateReply: async () => {
+        aiCalls += 1;
+        throw new Error("OpenAI no debe ejecutarse para un outgoing terminado");
+      },
+      sendReply,
+      recordOutgoing: undefined,
+    })
+  );
+
+  assert.equal(calls.length, callCountAfterCompletion);
+  assert.equal(aiCalls, 1);
+});
+
+test("recovery vuelve a encolar de inmediato una entrega parcial de Instagram", async () => {
+  const queries = [];
+  const db = {
+    async query(sql) {
+      const normalized = sql.replace(/\s+/g, " ").trim().toLowerCase();
+      queries.push(normalized);
+      if (normalized.startsWith("select channel")) {
+        return {
+          rows: [
+            {
+              channel: "instagram",
+              external_user_id: "ig-restart",
+              meta_message_id: "ig-in-restart",
+              content: "Hola",
+              message_type: "text",
+              meta_timestamp: new Date("2026-09-15T12:00:00.000Z"),
+            },
+          ],
+        };
+      }
+      return { rows: [] };
+    },
+  };
+
+  const recovered = await listRecoverableMessages(db);
+
+  assert.equal(recovered.length, 1);
+  assert.equal(recovered[0].channel, "instagram");
+  assert.match(queries[0], /incoming\.channel = 'instagram'/);
+  assert.match(queries[0], /outgoing\.status in \('pending', 'failed'\)/);
+  assert.match(queries[0], /outgoing\.in_reply_to_message_id = incoming\.id/);
+});
+
+test("dos workers de Instagram comparten un lock durable y envían una sola secuencia", async () => {
+  const reply = `${"A".repeat(1000)}${"B".repeat(1000)}${"C".repeat(1000)}`;
+  const db = createInstagramDeliveryDb({
+    id: 920,
+    channel: "instagram",
+    external_user_id: "ig-concurrent",
+    in_reply_to_message_id: 902,
+    direction: "outgoing",
+    author: "assistant",
+    message_type: "text",
+    content: reply,
+    status: "failed",
+  });
+  const calls = [];
+  let aiCalls = 0;
+  const incoming = message({
+    channel: "instagram",
+    externalUserId: "ig-concurrent",
+    messageId: "ig-in-concurrent",
+  });
+  const overrides = successfulDependencies({
+    db,
+    claim: async () => ({ id: 902 }),
+    findOutgoing: async () => db.current(),
+    generateReply: async () => {
+      aiCalls += 1;
+      throw new Error("OpenAI no debe ejecutarse en recovery concurrente");
+    },
+    sendReply: async (_message, part) => {
+      calls.push(part[0]);
+      await new Promise((resolve) => setImmediate(resolve));
+      return { message_id: `ig-concurrent-${part[0]}` };
+    },
+    recordOutgoing: undefined,
+  });
+
+  const results = await Promise.all([
+    processMetaMessage(incoming, overrides),
+    processMetaMessage(incoming, overrides),
+  ]);
+
+  assert.deepEqual(
+    results.map((result) => result.status),
+    ["replied_recovered", "replied_recovered"]
+  );
+  assert.deepEqual(calls, ["A", "B", "C"]);
+  assert.equal(aiCalls, 0);
+  assert.equal(db.current().delivery_next_part_index, 3);
+  assert.equal(db.current().status, "sent");
+});
+
+test("un outgoing corto de Instagram también finaliza con progreso consistente", async () => {
+  const db = createInstagramDeliveryDb({
+    id: 930,
+    channel: "instagram",
+    external_user_id: "ig-short",
+    in_reply_to_message_id: 903,
+    direction: "outgoing",
+    author: "assistant",
+    message_type: "text",
+    content: "Mensaje corto",
+    status: "pending",
+  });
+  let sends = 0;
+
+  await processMetaMessage(
+    message({
+      channel: "instagram",
+      externalUserId: "ig-short",
+      messageId: "ig-in-short",
+    }),
+    successfulDependencies({
+      db,
+      claim: async () => ({ id: 903 }),
+      findOutgoing: async () => db.current(),
+      sendReply: async (_message, part) => {
+        sends += 1;
+        assert.equal(part, "Mensaje corto");
+        return { message_id: "ig-short-id" };
+      },
+      recordOutgoing: undefined,
+    })
+  );
+
+  assert.equal(sends, 1);
+  assert.equal(db.current().delivery_part_count, 1);
+  assert.equal(db.current().delivery_next_part_index, 1);
+  assert.deepEqual(db.current().delivery_part_message_ids, ["ig-short-id"]);
+  assert.equal(db.current().status, "sent");
 });
 
 test("libera la deduplicación si OpenAI falla", async () => {
