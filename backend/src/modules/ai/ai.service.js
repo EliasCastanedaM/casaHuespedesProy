@@ -1,15 +1,45 @@
 import OpenAI from "openai";
+import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import {
   listRoomsForAvailabilityService,
   searchAvailableRoomsService,
 } from "../availability/availability.service.js";
+import {
+  checkAvailabilityService,
+  createBookingService,
+  getBookingByIntentService,
+  reportBookingPaymentByIntentService,
+} from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import {
+  handleDeterministicBookingFlow,
+  isNewReservationIntent,
+  isReservationIntent,
+  mergeAvailabilityIntoBookingContext,
+} from "./ai.booking-flow.js";
 
 const memoryResponses = new Map();
+const memoryBookingContexts = new Map();
+const conversationQueues = new Map();
 let client;
 let warnedMissingConversationTable = false;
+let warnedMissingBookingContext = false;
+const DRAFT_CONTEXT_TTL_MS = 30 * 60 * 1000;
+const BOOKED_CONTEXT_TTL_MS = 24 * 60 * 60 * 1000;
+
+export function activeBookingContextFromRow(row, now = Date.now()) {
+  const expiresAt = row?.booking_context_expires_at
+    ? new Date(row.booking_context_expires_at).getTime()
+    : null;
+  const stored = row?.booking_context && typeof row.booking_context === "object"
+    ? row.booking_context
+    : {};
+  if (!expiresAt && Object.keys(stored).length > 0) return {};
+  if (expiresAt && expiresAt <= now) return {};
+  return stored;
+}
 
 const tools = [
   {
@@ -124,6 +154,183 @@ async function savePreviousResponseId(channel, externalUserId, responseId) {
   }
 }
 
+async function loadBookingContext(channel, externalUserId) {
+  const key = conversationKey(channel, externalUserId);
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT booking_context, booking_context_expires_at
+      FROM ai_conversations
+      WHERE channel = $1 AND external_user_id = $2
+      LIMIT 1;
+      `,
+      [channel, externalUserId]
+    );
+    const row = result.rows[0];
+    const expiresAt = row?.booking_context_expires_at
+      ? new Date(row.booking_context_expires_at)
+      : null;
+
+    const staleWithoutExpiry = !expiresAt &&
+      Object.keys(row?.booking_context || {}).length > 0;
+    if (staleWithoutExpiry || (expiresAt && expiresAt.getTime() <= Date.now())) {
+      await pool.query(
+        `
+        UPDATE ai_conversations
+        SET booking_context = '{}'::jsonb,
+            booking_context_expires_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE channel = $1
+          AND external_user_id = $2
+          AND (
+            booking_context_expires_at <= CURRENT_TIMESTAMP
+            OR booking_context_expires_at IS NULL
+          );
+        `,
+        [channel, externalUserId]
+      );
+      memoryBookingContexts.delete(key);
+      return {};
+    }
+
+    const context = activeBookingContextFromRow(row);
+    memoryBookingContexts.set(key, {
+      context,
+      expiresAt: expiresAt?.getTime() || null,
+    });
+    return context;
+  } catch (error) {
+    if (!warnedMissingBookingContext) {
+      console.warn(
+        "No se pudo persistir el contexto de reserva; se utilizará memoria temporal:",
+        error.message
+      );
+      warnedMissingBookingContext = true;
+    }
+    const stored = memoryBookingContexts.get(key);
+    if (!stored) return {};
+    if (stored.expiresAt && stored.expiresAt <= Date.now()) {
+      memoryBookingContexts.delete(key);
+      return {};
+    }
+    return stored.context || {};
+  }
+}
+
+async function saveBookingContext(channel, externalUserId, context) {
+  const key = conversationKey(channel, externalUserId);
+  const ttlMs = ["booked", "payment_reported"].includes(context?.state)
+    ? BOOKED_CONTEXT_TTL_MS
+    : DRAFT_CONTEXT_TTL_MS;
+  const expiresAt = Object.keys(context || {}).length > 0
+    ? Date.now() + ttlMs
+    : null;
+  memoryBookingContexts.set(key, { context, expiresAt });
+
+  try {
+    await pool.query(
+      `
+      INSERT INTO ai_conversations (
+        channel,
+        external_user_id,
+        last_response_id,
+        booking_context,
+        booking_context_expires_at,
+        updated_at
+      )
+      VALUES (
+        $1,
+        $2,
+        NULL,
+        $3::jsonb,
+        CASE
+          WHEN $4::bigint IS NULL THEN NULL
+          ELSE to_timestamp($4::double precision / 1000.0)
+        END,
+        CURRENT_TIMESTAMP
+      )
+      ON CONFLICT (channel, external_user_id)
+      DO UPDATE SET
+        booking_context = EXCLUDED.booking_context,
+        booking_context_expires_at = EXCLUDED.booking_context_expires_at,
+        updated_at = CURRENT_TIMESTAMP;
+      `,
+      [channel, externalUserId, JSON.stringify(context || {}), expiresAt]
+    );
+  } catch {
+    // Permite probar el flujo antes de ejecutar la migración de contexto.
+  }
+}
+
+async function ensureDurableBookingIntent(
+  channel,
+  externalUserId,
+  { forceNew = false } = {}
+) {
+  const dbClient = await pool.connect();
+
+  try {
+    await dbClient.query("BEGIN");
+    await dbClient.query(
+      `
+      INSERT INTO ai_conversations (
+        channel, external_user_id, last_response_id, booking_context,
+        booking_context_expires_at, updated_at
+      )
+      VALUES ($1, $2, NULL, '{}'::jsonb, NULL, CURRENT_TIMESTAMP)
+      ON CONFLICT (channel, external_user_id) DO NOTHING;
+      `,
+      [channel, externalUserId]
+    );
+
+    const currentResult = await dbClient.query(
+      `
+      SELECT booking_context, booking_context_expires_at
+      FROM ai_conversations
+      WHERE channel = $1 AND external_user_id = $2
+      FOR UPDATE;
+      `,
+      [channel, externalUserId]
+    );
+    const row = currentResult.rows[0];
+    const expired = row?.booking_context_expires_at &&
+      new Date(row.booking_context_expires_at).getTime() <= Date.now();
+    const current = !expired && row?.booking_context &&
+      typeof row.booking_context === "object"
+      ? row.booking_context
+      : {};
+    const canReuse = !forceNew && Boolean(current.intent_id) &&
+      ["draft", "booked", "payment_reported"].includes(current.state);
+    const next = canReuse
+      ? current
+      : {
+          ...(forceNew ? {} : current),
+          state: "draft",
+          active: true,
+          intent_id: randomUUID(),
+        };
+
+    await dbClient.query(
+      `
+      UPDATE ai_conversations
+      SET booking_context = $3::jsonb,
+          booking_context_expires_at = CURRENT_TIMESTAMP + INTERVAL '30 minutes',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE channel = $1 AND external_user_id = $2;
+      `,
+      [channel, externalUserId, JSON.stringify(next)]
+    );
+    await dbClient.query("COMMIT");
+    return next;
+  } catch (error) {
+    await dbClient.query("ROLLBACK");
+    throw error;
+  } finally {
+    dbClient.release();
+  }
+}
+
 function publicRoom(room) {
   return {
     id: room.id,
@@ -139,7 +346,7 @@ function publicRoom(room) {
   };
 }
 
-async function executeTool(call) {
+async function executeTool(call, { onAvailability } = {}) {
   try {
     const args = JSON.parse(call.arguments || "{}");
 
@@ -149,6 +356,8 @@ async function executeTool(call) {
         check_out: args.check_out,
         guests_count: args.guests_count,
       });
+
+      await onAvailability?.(result);
 
       return JSON.stringify({
         success: true,
@@ -245,17 +454,74 @@ async function createFirstResponse(
   }
 }
 
-export async function generateAiReply({
+async function generateAiReplyInternal({
   channel,
   externalUserId,
   message,
   history = [],
 }) {
-  const openai = getClient();
+  let bookingContext = await loadBookingContext(channel, externalUserId);
+  const newReservation = isNewReservationIntent(message);
+  if (newReservation || isReservationIntent(message)) {
+    bookingContext = await ensureDurableBookingIntent(
+      channel,
+      externalUserId,
+      { forceNew: newReservation }
+    );
+  }
+  const deterministic = await handleDeterministicBookingFlow({
+    message,
+    context: bookingContext,
+    hotelPhone: env.hotel.phone || "901551287",
+    paymentUrl: env.culqiPaymentUrl,
+    newIntentPrepared: newReservation,
+    services: {
+      listRooms: listRoomsForAvailabilityService,
+      searchAvailableRooms: searchAvailableRoomsService,
+      checkAvailability: checkAvailabilityService,
+      createBooking: (bookingData, options = {}) =>
+        createBookingService(bookingData, {
+          ...options,
+          conversation: { channel, externalUserId },
+        }),
+      getBooking: getBookingByIntentService,
+      reportPayment: reportBookingPaymentByIntentService,
+    },
+  });
+
+  if (deterministic.handled) {
+    if (!deterministic.contextPersisted) {
+      await saveBookingContext(
+        channel,
+        externalUserId,
+        deterministic.context
+      );
+    } else {
+      memoryBookingContexts.set(conversationKey(channel, externalUserId), {
+        context: deterministic.context,
+        expiresAt: Date.now() + BOOKED_CONTEXT_TTL_MS,
+      });
+    }
+    return {
+      reply: deterministic.reply,
+      responseId: null,
+      deterministic: true,
+    };
+  }
+
+  if (
+    JSON.stringify(deterministic.context) !== JSON.stringify(bookingContext)
+  ) {
+    bookingContext = deterministic.context;
+    await saveBookingContext(channel, externalUserId, bookingContext);
+  }
+
   const previousResponseId = await getPreviousResponseId(
     channel,
     externalUserId
   );
+
+  const openai = getClient();
 
   const recoveryHistory = await loadStoredHistory(
     channel,
@@ -280,7 +546,19 @@ export async function generateAiReply({
       calls.map(async (call) => ({
         type: "function_call_output",
         call_id: call.call_id,
-        output: await executeTool(call),
+        output: await executeTool(call, {
+          onAvailability: async (availability) => {
+            bookingContext = mergeAvailabilityIntoBookingContext(
+              bookingContext,
+              availability
+            );
+            await saveBookingContext(
+              channel,
+              externalUserId,
+              bookingContext
+            );
+          },
+        }),
       }))
     );
 
@@ -308,4 +586,22 @@ export async function generateAiReply({
   }
 
   return { reply, responseId: response.id };
+}
+
+export async function generateAiReply(input) {
+  const key = conversationKey(input.channel, input.externalUserId);
+  const previous = conversationQueues.get(key) || Promise.resolve();
+  const current = previous
+    .catch(() => undefined)
+    .then(() => generateAiReplyInternal(input));
+
+  conversationQueues.set(key, current);
+
+  try {
+    return await current;
+  } finally {
+    if (conversationQueues.get(key) === current) {
+      conversationQueues.delete(key);
+    }
+  }
 }

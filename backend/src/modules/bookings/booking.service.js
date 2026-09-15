@@ -43,19 +43,19 @@ function normalizeBookingData(bookingData) {
   };
 }
 
-async function getRoomForBooking(roomId) {
+async function getRoomForBooking(roomId, db = pool) {
   const query = `
     SELECT id, name, capacity, price_per_night, status
     FROM rooms
     WHERE id = $1;
   `;
 
-  const result = await pool.query(query, [roomId]);
+  const result = await db.query(query, [roomId]);
 
   return result.rows[0];
 }
 
-async function findCustomerByPhoneOrEmail(phone, email) {
+async function findCustomerByPhoneOrEmail(phone, email, db = pool) {
   const query = `
     SELECT *
     FROM customers
@@ -64,12 +64,12 @@ async function findCustomerByPhoneOrEmail(phone, email) {
     LIMIT 1;
   `;
 
-  const result = await pool.query(query, [phone, email || null]);
+  const result = await db.query(query, [phone, email || null]);
 
   return result.rows[0];
 }
 
-async function createCustomer(customerData) {
+async function createCustomer(customerData, db = pool) {
   const { full_name, phone, email, document_type, document_number } =
     customerData;
 
@@ -93,12 +93,12 @@ async function createCustomer(customerData) {
     document_number || null,
   ];
 
-  const result = await pool.query(query, values);
+  const result = await db.query(query, values);
 
   return result.rows[0];
 }
 
-async function updateCustomer(customerId, customerData) {
+async function updateCustomer(customerId, customerData, db = pool) {
   const {
     full_name,
     phone,
@@ -107,7 +107,7 @@ async function updateCustomer(customerId, customerData) {
     document_number,
   } = customerData;
 
-  const result = await pool.query(
+  const result = await db.query(
     `
     UPDATE customers
     SET
@@ -133,8 +133,8 @@ async function updateCustomer(customerId, customerData) {
   return result.rows[0];
 }
 
-async function getBookingDetailsById(id) {
-  const result = await pool.query(
+async function getBookingDetailsById(id, db = pool) {
+  const result = await db.query(
     `
     SELECT
       b.*,
@@ -182,39 +182,26 @@ function toPublicPaymentStatus(details) {
   };
 }
 
-export async function createBookingService(bookingData) {
-  const {
-    room_id,
-    check_in,
-    check_out,
-    check_in_time,
-    guests_count,
-    nights,
-    special_requests,
-    customer,
-  } = normalizeBookingData(bookingData);
-
+function validateBookingRequest({ customer, room, guests_count, nights }) {
   if (!customer?.full_name || !customer?.phone) {
     const error = new Error("Nombre completo y celular son obligatorios.");
     error.statusCode = 400;
     throw error;
   }
 
-  const room = await getRoomForBooking(room_id);
-
-  if (!room) {
+  if (!customer.email) {
     const error = new Error(
-      "La habitación seleccionada no está disponible para reservar."
+      "El correo es obligatorio para enviarte el estado de la reserva."
     );
-    error.statusCode = 404;
+    error.statusCode = 400;
     throw error;
   }
 
-  if (room.status !== "active") {
+  if (!room || room.status !== "active") {
     const error = new Error(
       "La habitación seleccionada no está disponible para reservar."
     );
-    error.statusCode = 400;
+    error.statusCode = room ? 400 : 404;
     throw error;
   }
 
@@ -231,176 +218,250 @@ export async function createBookingService(bookingData) {
     error.statusCode = 400;
     throw error;
   }
+}
 
-  if (!customer?.email) {
-    const error = new Error(
-      "El correo es obligatorio para enviarte el estado de la reserva."
-    );
-    error.statusCode = 400;
-    throw error;
-  }
+function completedBookingContext(details, bookingIntentId) {
+  return {
+    state: "booked",
+    active: false,
+    intent_id: bookingIntentId,
+    booking: {
+      id: details.id,
+      booking_code: details.booking_code,
+      status: details.status,
+    },
+  };
+}
 
-  // Serializa la creación por habitación. Así dos solicitudes simultáneas
-  // no pueden aprobar la misma disponibilidad antes de insertar la reserva.
-  const bookingLockClient = await pool.connect();
+async function findBookingByIntent(bookingIntentId, db = pool) {
+  if (!bookingIntentId) return null;
 
-  try {
-    await bookingLockClient.query(
-      "SELECT pg_advisory_lock(481516, $1::integer);",
-      [Number(room_id)]
-    );
-
-  // 1. Validar disponibilidad real de habitación.
-  // La reserva puede registrarse las 24 horas. Si no hay personal,
-  // quedará pendiente hasta que el hospedaje revise el pago.
-  const availability = await checkAvailabilityService({
-    room_id,
-    check_in,
-    check_out,
-    nights,
-    check_in_time,
-  });
-
-  if (!availability.available) {
-    const error = new Error(availability.reason);
-    error.statusCode = 409;
-    throw error;
-  }
-
-  // 2. Buscar o crear cliente
-  let existingCustomer = await findCustomerByPhoneOrEmail(
-    customer.phone,
-    customer.email
+  const result = await db.query(
+    `
+    SELECT id
+    FROM bookings
+    WHERE booking_intent_id = $1::uuid
+    LIMIT 1;
+    `,
+    [bookingIntentId]
   );
 
-  if (!existingCustomer) {
-    existingCustomer = await createCustomer(customer);
-  } else {
-    // Conserva el correo y los datos usados en esta reserva. Esto evita que
-    // una ficha antigua reciba la confirmación destinada al huésped actual.
-    existingCustomer = await updateCustomer(
-      existingCustomer.id,
-      customer
-    );
-  }
+  if (!result.rows[0]) return null;
+  return getBookingDetailsById(result.rows[0].id, db);
+}
 
-  // 3. Calcular monto total
-  const totalAmount = Number(room.price_per_night || 0) * Number(nights || 1);
+function bookingResult(details, { recovered = false } = {}) {
+  return {
+    mode: "booking",
+    booking: details,
+    customer: {
+      id: details.customer_id,
+      full_name: details.customer_name,
+      phone: details.customer_phone,
+      email: details.customer_email,
+    },
+    room: {
+      id: details.room_id,
+      name: details.room_name,
+      price_per_night: details.price_per_night,
+    },
+    public_token: details.public_token,
+    payment_url: env.culqiPaymentUrl,
+    recovered,
+  };
+}
 
-  if (totalAmount <= 0) {
-    const error = new Error(
-      "La habitación todavía no tiene un precio configurado. Comunícate con el hospedaje."
-    );
-    error.statusCode = 400;
-    throw error;
-  }
+export async function getBookingByIntentService(bookingIntentId) {
+  const details = await findBookingByIntent(bookingIntentId);
+  return details ? bookingResult(details, { recovered: true }) : null;
+}
 
-  // 4. Insertar reserva
-  const publicToken = randomUUID();
-  const query = `
-    INSERT INTO bookings (
-      customer_id,
-      room_id,
-      check_in,
-      check_out,
-      check_in_time,
-      guests_count,
-      nights,
-      total_amount,
-      status,
-      source,
-      special_requests,
-      public_token
-    )
-    VALUES (
-      $1,
-      $2,
-      $3,
-      $4,
-      $5,
-      $6,
-      $7,
-      $8,
-      'pending_payment',
-      'web',
-      $9,
-      $10
-    )
-    RETURNING *;
-  `;
-
-  const values = [
-    existingCustomer.id,
+export async function createBookingService(
+  bookingData,
+  options = {},
+  dependencies = {}
+) {
+  const {
     room_id,
     check_in,
     check_out,
     check_in_time,
     guests_count,
     nights,
-    totalAmount,
     special_requests,
-    publicToken,
-  ];
+    customer,
+  } = normalizeBookingData(bookingData);
+  const bookingIntentId = options.bookingIntentId || null;
+  const conversation = options.conversation || null;
+  const databasePool = dependencies.pool || pool;
+  const pendingEmailSender =
+    dependencies.sendBookingPendingEmails || sendBookingPendingEmails;
+  const availabilityChecker =
+    dependencies.checkAvailabilityService || checkAvailabilityService;
+  const client = await databasePool.connect();
+  let details;
+  let created = false;
 
-  const result = await pool.query(query, values);
-  const insertedBooking = result.rows[0];
-  const bookingCode = `CHP-${String(insertedBooking.id).padStart(5, "0")}`;
+  try {
+    await client.query("BEGIN");
 
-  const bookingResult = await pool.query(
-    `
-    UPDATE bookings
-    SET booking_code = $1
-    WHERE id = $2
-    RETURNING *;
-    `,
-    [bookingCode, insertedBooking.id]
-  );
-
-  await pool.query(
-    `
-    INSERT INTO payments (
-      booking_id,
-      payment_provider,
-      amount,
-      currency,
-      status,
-      payment_url
-    )
-    VALUES ($1, 'culqi_link', $2, 'PEN', 'pending', $3);
-    `,
-    [insertedBooking.id, totalAmount, env.culqiPaymentUrl]
-  );
-
-  const booking = bookingResult.rows[0];
-  const details = await getBookingDetailsById(booking.id);
-
-  // El correo se procesa en segundo plano. La reserva responde de inmediato
-  // para que el huésped avance a la pantalla de pago sin esperar a Gmail.
-  void sendBookingPendingEmails(details).catch((emailError) => {
-    console.error(
-      "La reserva fue creada, pero no se pudo enviar su correo:",
-      emailError.message
-    );
-  });
-
-  return {
-    mode: "booking",
-    booking,
-    customer: existingCustomer,
-    room,
-    public_token: publicToken,
-    payment_url: env.culqiPaymentUrl,
-  };
-  } finally {
-    try {
-      await bookingLockClient.query(
-        "SELECT pg_advisory_unlock(481516, $1::integer);",
-        [Number(room_id)]
+    if (bookingIntentId) {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(481517, hashtext($1));",
+        [bookingIntentId]
       );
-    } finally {
-      bookingLockClient.release();
+
+      const existing = await findBookingByIntent(bookingIntentId, client);
+      if (existing) {
+        await client.query("COMMIT");
+        return bookingResult(existing, { recovered: true });
+      }
     }
+
+    await client.query(
+      "SELECT pg_advisory_xact_lock(481516, $1::integer);",
+      [Number(room_id)]
+    );
+
+    const room = await getRoomForBooking(room_id, client);
+    validateBookingRequest({ customer, room, guests_count, nights });
+
+    const availability = await availabilityChecker(
+      {
+        room_id,
+        check_in,
+        check_out,
+        nights,
+        check_in_time,
+      },
+      client
+    );
+
+    if (!availability.available) {
+      const error = new Error(availability.reason);
+      error.statusCode = 409;
+      throw error;
+    }
+
+    let existingCustomer = await findCustomerByPhoneOrEmail(
+      customer.phone,
+      customer.email,
+      client
+    );
+
+    existingCustomer = existingCustomer
+      ? await updateCustomer(existingCustomer.id, customer, client)
+      : await createCustomer(customer, client);
+
+    const totalAmount = Number(room.price_per_night || 0) * Number(nights);
+    if (totalAmount <= 0) {
+      const error = new Error(
+        "La habitación todavía no tiene un precio configurado. Comunícate con el hospedaje."
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const insertResult = await client.query(
+      `
+      INSERT INTO bookings (
+        customer_id, room_id, check_in, check_out, check_in_time,
+        guests_count, nights, total_amount, status, source,
+        special_requests, public_token, booking_intent_id
+      )
+      VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8,
+        'pending_payment', 'web', $9, $10, $11::uuid
+      )
+      RETURNING *;
+      `,
+      [
+        existingCustomer.id,
+        room_id,
+        check_in,
+        check_out,
+        check_in_time,
+        guests_count,
+        nights,
+        totalAmount,
+        special_requests,
+        randomUUID(),
+        bookingIntentId,
+      ]
+    );
+
+    const insertedBooking = insertResult.rows[0];
+    const bookingCode = `CHP-${String(insertedBooking.id).padStart(5, "0")}`;
+
+    await client.query(
+      `UPDATE bookings
+       SET booking_code = $1
+       WHERE id = $2
+       RETURNING *;`,
+      [bookingCode, insertedBooking.id]
+    );
+
+    await client.query(
+      `
+      INSERT INTO payments (
+        booking_id, payment_provider, amount, currency, status, payment_url
+      )
+      VALUES ($1, 'culqi_link', $2, 'PEN', 'pending', $3);
+      `,
+      [insertedBooking.id, totalAmount, env.culqiPaymentUrl]
+    );
+
+    details = await getBookingDetailsById(insertedBooking.id, client);
+
+    if (bookingIntentId && conversation?.channel && conversation?.externalUserId) {
+      await client.query(
+        `
+        INSERT INTO ai_conversations (
+          channel, external_user_id, last_response_id, booking_context,
+          booking_context_expires_at, updated_at
+        )
+        VALUES ($1, $2, NULL, $3::jsonb, CURRENT_TIMESTAMP + INTERVAL '24 hours', CURRENT_TIMESTAMP)
+        ON CONFLICT (channel, external_user_id)
+        DO UPDATE SET
+          booking_context = EXCLUDED.booking_context,
+          booking_context_expires_at = EXCLUDED.booking_context_expires_at,
+          updated_at = CURRENT_TIMESTAMP;
+        `,
+        [
+          conversation.channel,
+          conversation.externalUserId,
+          JSON.stringify(completedBookingContext(details, bookingIntentId)),
+        ]
+      );
+    }
+
+    await client.query("COMMIT");
+    created = true;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    if (
+      bookingIntentId &&
+      error.code === "23505" &&
+      error.constraint === "bookings_booking_intent_id_key"
+    ) {
+      const existing = await findBookingByIntent(bookingIntentId, client);
+      if (existing) return bookingResult(existing, { recovered: true });
+    }
+    throw error;
+  } finally {
+    client.release();
   }
+
+  if (created) {
+    void pendingEmailSender(details).catch((emailError) => {
+      console.error(
+        "La reserva fue creada, pero no se pudo enviar su correo:",
+        emailError.message
+      );
+    });
+  }
+
+  return bookingResult(details);
 }
 
 export async function getBookingPaymentStatusService(id, publicToken) {
@@ -421,23 +482,30 @@ export async function getBookingPaymentStatusService(id, publicToken) {
   return toPublicPaymentStatus(details);
 }
 
-export async function reportBookingPaymentService(id, publicToken) {
-  const client = await pool.connect();
+async function reportBookingPayment({ id, publicToken, bookingIntentId }, dependencies = {}) {
+  const databasePool = dependencies.pool || pool;
+  const reportedEmailSender =
+    dependencies.sendPaymentReportedEmail || sendPaymentReportedEmail;
+  const client = await databasePool.connect();
   let shouldNotifyHotel = false;
+  let bookingId = id || null;
 
   try {
     await client.query("BEGIN");
 
-    const currentResult = await client.query(
-      `
-      SELECT *
-      FROM bookings
-      WHERE id = $1
-        AND public_token = $2
-      FOR UPDATE;
-      `,
-      [id, publicToken]
-    );
+    const currentResult = bookingIntentId
+      ? await client.query(
+          `SELECT * FROM bookings
+           WHERE booking_intent_id = $1::uuid
+           FOR UPDATE;`,
+          [bookingIntentId]
+        )
+      : await client.query(
+          `SELECT * FROM bookings
+           WHERE id = $1 AND public_token = $2
+           FOR UPDATE;`,
+          [id, publicToken]
+        );
 
     const currentBooking = currentResult.rows[0];
 
@@ -446,6 +514,8 @@ export async function reportBookingPaymentService(id, publicToken) {
       error.statusCode = 404;
       throw error;
     }
+
+    bookingId = currentBooking.id;
 
     if (
       ["rejected", "cancelled", "expired", "completed"].includes(
@@ -469,7 +539,7 @@ export async function reportBookingPaymentService(id, publicToken) {
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $1;
         `,
-        [id]
+        [bookingId]
       );
 
       await client.query(
@@ -487,7 +557,7 @@ export async function reportBookingPaymentService(id, publicToken) {
           LIMIT 1
         );
         `,
-        [id]
+        [bookingId]
       );
 
       shouldNotifyHotel = true;
@@ -501,10 +571,10 @@ export async function reportBookingPaymentService(id, publicToken) {
     client.release();
   }
 
-  const details = await getBookingDetailsById(id);
+  const details = await getBookingDetailsById(bookingId, databasePool);
 
   if (shouldNotifyHotel) {
-    void sendPaymentReportedEmail(details).catch((emailError) => {
+    void reportedEmailSender(details).catch((emailError) => {
       console.error(
         "El pago fue reportado, pero no se pudo enviar su correo:",
         emailError.message
@@ -513,6 +583,21 @@ export async function reportBookingPaymentService(id, publicToken) {
   }
 
   return toPublicPaymentStatus(details);
+}
+
+export async function reportBookingPaymentService(
+  id,
+  publicToken,
+  dependencies = {}
+) {
+  return reportBookingPayment({ id, publicToken }, dependencies);
+}
+
+export async function reportBookingPaymentByIntentService(
+  bookingIntentId,
+  dependencies = {}
+) {
+  return reportBookingPayment({ bookingIntentId }, dependencies);
 }
 
 export async function getAllBookingsService() {
@@ -549,7 +634,11 @@ export async function getAllBookingsService() {
   return result.rows;
 }
 
-export async function updateBookingStatusService(id, status) {
+export async function updateBookingStatusService(
+  id,
+  status,
+  dependencies = {}
+) {
   const allowedStatuses = [
     "pending",
     "pending_payment",
@@ -566,23 +655,114 @@ export async function updateBookingStatusService(id, status) {
     throw error;
   }
 
-  const currentDetails = await getBookingDetailsById(id);
+  const databasePool = dependencies.pool || pool;
+  const confirmedEmailSender =
+    dependencies.sendBookingConfirmedEmail || sendBookingConfirmedEmail;
+
+  if (status === "confirmed") {
+    const client = await databasePool.connect();
+    let transitioned = false;
+    let updatedDetails;
+
+    try {
+      await client.query("BEGIN");
+
+      const currentDetails = await getBookingDetailsById(id, client);
+      if (!currentDetails) {
+        await client.query("ROLLBACK");
+        return null;
+      }
+
+      if (currentDetails.status === "confirmed") {
+        await client.query("COMMIT");
+        return currentDetails;
+      }
+
+      if (
+        currentDetails.payment_provider === "culqi_link" &&
+        currentDetails.status !== "payment_reported"
+      ) {
+        const error = new Error(
+          "El huésped todavía no reportó el pago. Verifica el flujo antes de confirmar."
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const expectedStatus = currentDetails.status;
+      const transitionResult = await client.query(
+        `
+        UPDATE bookings
+        SET
+          status = 'confirmed',
+          payment_confirmed_at = COALESCE(payment_confirmed_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1::integer
+          AND status = $2::character varying
+        RETURNING *;
+        `,
+        [Number(id), expectedStatus]
+      );
+
+      transitioned = transitionResult.rows.length === 1;
+
+      if (!transitioned) {
+        const latest = await getBookingDetailsById(id, client);
+        if (latest?.status === "confirmed") {
+          await client.query("COMMIT");
+          return latest;
+        }
+
+        const error = new Error(
+          "La reserva cambió de estado y no puede confirmarse con esta operación."
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await client.query(
+        `
+        UPDATE payments
+        SET
+          status = 'paid',
+          paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = (
+          SELECT id
+          FROM payments
+          WHERE booking_id = $1::integer
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1
+        );
+        `,
+        [Number(id)]
+      );
+
+      updatedDetails = await getBookingDetailsById(id, client);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    if (transitioned && updatedDetails) {
+      void confirmedEmailSender(updatedDetails).catch((emailError) => {
+        console.error(
+          "La reserva fue confirmada, pero no se pudo enviar su correo:",
+          emailError.message
+        );
+      });
+    }
+
+    return updatedDetails;
+  }
+
+  const currentDetails = await getBookingDetailsById(id, databasePool);
 
   if (!currentDetails) {
     return null;
-  }
-
-  if (
-    status === "confirmed" &&
-    currentDetails.payment_provider === "culqi_link" &&
-    !["payment_reported", "confirmed"].includes(currentDetails.status)
-  ) {
-    const error = new Error(
-      "El huésped todavía no reportó el pago. Verifica el flujo antes de confirmar."
-    );
-
-    error.statusCode = 409;
-    throw error;
   }
 
   /*
@@ -609,7 +789,7 @@ export async function updateBookingStatusService(id, status) {
     RETURNING *;
   `;
 
-  const result = await pool.query(query, [
+  const result = await databasePool.query(query, [
     status,
     Number(id),
     status === "confirmed",
@@ -619,33 +799,9 @@ export async function updateBookingStatusService(id, status) {
     return null;
   }
 
-  // Cuando se confirma la reserva, registramos el pago como pagado.
-  if (status === "confirmed") {
-    await pool.query(
-      `
-      UPDATE payments
-      SET
-        status = 'paid',
-        paid_at = COALESCE(
-          paid_at,
-          CURRENT_TIMESTAMP
-        ),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = (
-        SELECT id
-        FROM payments
-        WHERE booking_id = $1::integer
-        ORDER BY created_at DESC, id DESC
-        LIMIT 1
-      );
-      `,
-      [Number(id)]
-    );
-  }
-
   // Si la reserva se rechaza o cancela, actualizamos el pago pendiente.
   if (["rejected", "cancelled"].includes(status)) {
-    await pool.query(
+    await databasePool.query(
       `
       UPDATE payments
       SET
@@ -660,26 +816,7 @@ export async function updateBookingStatusService(id, status) {
     );
   }
 
-  const updatedDetails = await getBookingDetailsById(id);
-
-  /*
-   * El correo se envía únicamente cuando la reserva pasa por primera vez
-   * al estado confirmed.
-   */
-  if (
-    status === "confirmed" &&
-    currentDetails.status !== "confirmed" &&
-    updatedDetails
-  ) {
-    void sendBookingConfirmedEmail(updatedDetails).catch(
-      (emailError) => {
-        console.error(
-          "La reserva fue confirmada, pero no se pudo enviar su correo:",
-          emailError.message
-        );
-      }
-    );
-  }
+  const updatedDetails = await getBookingDetailsById(id, databasePool);
 
   return updatedDetails || result.rows[0];
 }

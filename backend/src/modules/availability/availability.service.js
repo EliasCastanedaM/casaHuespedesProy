@@ -103,8 +103,8 @@ export function normalizeAvailabilityInput(input = {}) {
   };
 }
 
-export async function listRoomsForAvailabilityService() {
-  const result = await pool.query(`
+export async function listRoomsForAvailabilityService(db = pool) {
+  const result = await db.query(`
     SELECT
       id,
       name,
@@ -125,10 +125,10 @@ export async function listRoomsForAvailabilityService() {
   return result.rows;
 }
 
-export async function searchAvailableRoomsService(input = {}) {
+export async function searchAvailableRoomsService(input = {}, db = pool) {
   const normalized = normalizeAvailabilityInput(input);
 
-  const result = await pool.query(
+  const result = await db.query(
     `
     WITH requested_range AS (
       SELECT
@@ -233,11 +233,11 @@ export async function searchAvailableRoomsService(input = {}) {
   };
 }
 
-export async function checkAvailabilityService(input) {
+export async function checkAvailabilityService(input, db = pool) {
   const result = await searchAvailableRoomsService({
     ...input,
     available_only: false,
-  });
+  }, db);
   const room = result.rooms[0];
 
   if (!room) {
