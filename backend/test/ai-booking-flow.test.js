@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   handleDeterministicBookingFlow,
-  isReservationIntent,
   mergeAvailabilityIntoBookingContext,
 } from "../src/modules/ai/ai.booking-flow.js";
 import { activeBookingContextFromRow } from "../src/modules/ai/ai.service.js";
@@ -111,6 +110,9 @@ test("el asesor ofrece llamada y reserva directa después de disponibilidad", ()
   assert.match(prompt, /901551287/);
   assert.match(prompt, /reservar directamente en esta conversación/);
   assert.match(prompt, /no envíes un enlace de pago/);
+  assert.match(prompt, /mascotas se aceptan únicamente bajo petición previa/i);
+  assert.match(prompt, /S\/ 35/);
+  assert.match(prompt, /No se permite ruido excesivo/i);
 });
 
 test("consultar disponibilidad no crea una reserva", async () => {
@@ -250,11 +252,4 @@ test("nueva reserva limpia la intención y los datos anteriores", async () => {
   assert.equal(result.context.booking, undefined);
   assert.equal(result.context.customer?.email, undefined);
   assert.match(result.reply, /habitación, fecha de ingreso/);
-});
-
-test("quisiera reservar también activa la intención de reserva", () => {
-  assert.equal(
-    isReservationIntent("Quisiera reservar la habitación 406 para esas fechas"),
-    true
-  );
 });

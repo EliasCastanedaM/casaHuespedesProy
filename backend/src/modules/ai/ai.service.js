@@ -13,6 +13,7 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { buildHumanServiceRedirect, isAiServiceTime } from "./ai.schedule.js";
 import {
   handleDeterministicBookingFlow,
   isNewReservationIntent,
@@ -459,7 +460,20 @@ async function generateAiReplyInternal({
   externalUserId,
   message,
   history = [],
+  now = new Date(),
 }) {
+  // El asesor virtual solo opera en el horario nocturno configurado.
+  // Esta comprobación ocurre antes de Supabase, flujo de reservas y OpenAI,
+  // por lo que durante el día no se consumen tokens ni se ejecuta el bot.
+  if (!isAiServiceTime(now)) {
+    return {
+      reply: buildHumanServiceRedirect(channel),
+      responseId: null,
+      deterministic: true,
+      mode: "human_redirect",
+    };
+  }
+
   let bookingContext = await loadBookingContext(channel, externalUserId);
   const newReservation = isNewReservationIntent(message);
   if (newReservation || isReservationIntent(message)) {

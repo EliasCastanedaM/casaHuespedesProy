@@ -622,7 +622,7 @@ test("envía la respuesta al endpoint y formato correctos de cada canal", async 
     assert.equal(requests[1].body.recipient.id, "psid");
     assert.equal(
       requests[2].url,
-      "https://graph.instagram.com/v26.0/ig-account-id/messages"
+      "https://graph.facebook.com/v26.0/ig-account-id/messages"
     );
     assert.equal(requests[2].body.recipient.id, "igsid");
   } finally {
@@ -730,7 +730,7 @@ test("si falla una parte de Instagram conserva el outgoing completo y no repite 
           sleep: async () => {},
         })
       ),
-      /Instagram respondió 400/
+      /Meta respondió 400/
     );
 
     assert.equal(aiCalls, 1);

@@ -1,10 +1,5 @@
 import { env } from "../../config/env.js";
 import {
-  sendInstagramMetaReply,
-  sendManualInstagramMessage,
-  verifyInstagramSignature,
-} from "./instagram.transport.js";
-import {
   applyMetaStatusUpdates,
   listActiveHandoffs,
   listConversationMessages,
@@ -47,13 +42,6 @@ function conversationParams(req, res) {
 
 async function processInBackground(message) {
   try {
-    if (message.channel === "instagram") {
-      await processMetaMessage(message, {
-        sendReply: sendInstagramMetaReply,
-      });
-      return;
-    }
-
     await processMetaMessage(message);
   } catch (error) {
     console.error(
@@ -108,12 +96,7 @@ export function verifyWebhookController(req, res) {
 export async function receiveWebhookController(req, res, next) {
   try {
     const signature = req.header("x-hub-signature-256");
-    const instagramWebhook = req.body?.object === "instagram";
-    const signatureIsValid = instagramWebhook
-      ? verifyInstagramSignature(signature, req.rawBody)
-      : verifyMetaSignature(signature, req.rawBody);
-
-    if (!signatureIsValid) {
+    if (!verifyMetaSignature(signature, req.rawBody)) {
       return res.sendStatus(401);
     }
 
@@ -182,14 +165,11 @@ export async function sendManualMessageController(req, res, next) {
     if (!conversation) return;
 
     const message = typeof req.body?.message === "string" ? req.body.message : "";
-    const saved =
-      conversation.channel === "instagram"
-        ? await sendManualInstagramMessage(conversation.externalUserId, message)
-        : await sendManualMetaMessage(
-            conversation.channel,
-            conversation.externalUserId,
-            message
-          );
+    const saved = await sendManualMetaMessage(
+      conversation.channel,
+      conversation.externalUserId,
+      message
+    );
 
     return res.status(201).json({ success: true, data: saved });
   } catch (error) {

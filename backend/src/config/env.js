@@ -66,6 +66,9 @@ export const env = {
       500,
       { min: 100, max: 2_000 }
     ),
+    timeZone: cleanEnvValue(process.env.AI_SERVICE_TIMEZONE) || "America/Lima",
+    serviceStart: cleanEnvValue(process.env.AI_SERVICE_START) || "23:00",
+    serviceEnd: cleanEnvValue(process.env.AI_SERVICE_END) || "08:00",
   },
 
   hotel: {
@@ -77,7 +80,6 @@ export const env = {
   meta: {
     verifyToken: cleanEnvValue(process.env.META_VERIFY_TOKEN),
     appSecret: cleanEnvValue(process.env.META_APP_SECRET),
-    instagramAppSecret: cleanEnvValue(process.env.INSTAGRAM_APP_SECRET),
     graphApiVersion:
       cleanEnvValue(process.env.META_GRAPH_API_VERSION) || "v26.0",
     whatsappAccessToken: cleanEnvValue(

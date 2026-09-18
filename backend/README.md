@@ -131,3 +131,16 @@ conectar los canales sin interrumpir la web actual.
 
 - [Function calling](https://developers.openai.com/api/docs/guides/function-calling)
 - [Estado de conversación](https://developers.openai.com/api/docs/guides/conversation-state)
+
+## Horario del asesor IA
+
+El asesor virtual está limitado por defecto al horario nocturno de Casa Huéspedes Pimentel:
+
+- `AI_SERVICE_TIMEZONE=America/Lima`
+- `AI_SERVICE_START=23:00`
+- `AI_SERVICE_END=08:00`
+
+El rango es inclusivo al inicio y exclusivo al final: a las 23:00 se activa la IA y a las 08:00 pasa a atención humana. Fuera del horario IA, `/api/ai/chat` y los mensajes de texto de WhatsApp/Facebook/Instagram reciben una derivación al equipo humano y no se ejecutan ni el flujo de reservas ni una llamada a OpenAI.
+
+Las reglas confirmadas incluidas en el prompt indican además que las mascotas requieren petición previa, su aceptación no puede ser confirmada automáticamente por la IA, el cargo es de S/ 35 si son aprobadas y no se permite ruido excesivo.
+
