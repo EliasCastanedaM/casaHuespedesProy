@@ -4,6 +4,7 @@ import { pool } from "../../config/db.js";
 import { generateAiReply } from "../ai/ai.service.js";
 import {
   sendInstagramMessageParts,
+  sendInstagramMetaReply,
   splitInstagramMessage,
 } from "./instagram.transport.js";
 
@@ -822,7 +823,7 @@ export async function sendMetaReply(message, reply) {
     return sendFacebook(message.externalUserId, reply);
   }
   if (message.channel === "instagram") {
-    return sendInstagram(message.externalUserId, reply);
+    return sendInstagramMetaReply(message, reply);
   }
   throw new Error("Canal de Meta no reconocido: " + message.channel);
 }
