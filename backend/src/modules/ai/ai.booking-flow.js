@@ -69,7 +69,7 @@ export function isReservationIntent(message) {
   const text = normalizedText(message);
 
   return [
-    /\b(?:quiero|deseo|necesito|prefiero|voy a)\s+(?:hacer\s+)?(?:la\s+)?(?:reserva|reservar|pagar)\b/,
+    /\b(?:quiero|quisiera|deseo|necesito|prefiero|voy a)\s+(?:hacer\s+)?(?:la\s+)?(?:reserva|reservar|pagar)\b/,
     /\bme gustaria\s+(?:hacer\s+)?(?:la\s+)?(?:reserva|reservar|pagar)\b/,
     /\b(?:reservame|separame|apartame)\b/,
     /\bquiero\s+(?:la|habitacion)\s*\d{3}\b/,
