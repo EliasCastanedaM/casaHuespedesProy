@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   handleDeterministicBookingFlow,
+  isReservationIntent,
   mergeAvailabilityIntoBookingContext,
 } from "../src/modules/ai/ai.booking-flow.js";
 import { activeBookingContextFromRow } from "../src/modules/ai/ai.service.js";
@@ -252,4 +253,11 @@ test("nueva reserva limpia la intención y los datos anteriores", async () => {
   assert.equal(result.context.booking, undefined);
   assert.equal(result.context.customer?.email, undefined);
   assert.match(result.reply, /habitación, fecha de ingreso/);
+});
+
+test("quisiera reservar también activa la intención de reserva", () => {
+  assert.equal(
+    isReservationIntent("Quisiera reservar la habitación 406 para esas fechas"),
+    true
+  );
 });
