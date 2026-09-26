@@ -8,6 +8,12 @@ export async function getRooms() {
   return response.data.data;
 }
 
+// Devuelve las categorías comerciales visibles en la web.
+export async function getRoomCategories() {
+  const response = await api.get("/rooms/categories");
+  return response.data.data;
+}
+
 // Alias para compatibilidad con otros componentes
 export async function getAllRooms() {
   return await getRooms();

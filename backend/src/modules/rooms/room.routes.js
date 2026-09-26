@@ -7,6 +7,7 @@ import {
 
 import {
   getPublicRoomsController,
+  getPublicRoomCategoriesController,
   getAllRoomsController,
   getRoomByIdController,
   createRoomController,
@@ -23,6 +24,7 @@ import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 const router = Router();
 
 router.get("/", getPublicRoomsController);
+router.get("/categories", getPublicRoomCategoriesController);
 router.get("/admin", requireAdminAuth, getAllRoomsController);
 router.get("/:id", getRoomByIdController);
 
