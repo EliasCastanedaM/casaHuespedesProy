@@ -1,13 +1,8 @@
+import { Link } from "react-router-dom";
 import "./CategoryCard.css";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1400&q=85";
-
-function formatPrice(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number) || number <= 0) return "Consultar";
-  return `S/ ${number.toFixed(0)}`;
-}
 
 export default function CategoryCard({ category }) {
   const quantity = Number(
@@ -15,9 +10,6 @@ export default function CategoryCard({ category }) {
   );
   const capacity = Number(category.capacity ?? 1);
   const imageUrl = category.image_url || FALLBACK_IMAGE;
-  const whatsappText = encodeURIComponent(
-    `Hola, quisiera consultar disponibilidad para una habitación ${category.name} en Casa Huéspedes Pimentel.`
-  );
 
   return (
     <article
@@ -48,23 +40,16 @@ export default function CategoryCard({ category }) {
 
           <p>{category.description}</p>
 
-          <div className="category-card-price">
-            <strong>{formatPrice(category.price_per_night)}</strong>
-            <span>por noche</span>
-          </div>
-
           <p className="category-card-note">
             Imagen referencial de una habitación de esta categoría.
           </p>
 
-          <a
+          <Link
             className="category-card-action"
-            href={`https://wa.me/51901551287?text=${whatsappText}`}
-            target="_blank"
-            rel="noreferrer"
+            to={`/disponibilidad?category=${encodeURIComponent(category.slug)}`}
           >
             Consultar disponibilidad
-          </a>
+          </Link>
         </div>
       </div>
     </article>
