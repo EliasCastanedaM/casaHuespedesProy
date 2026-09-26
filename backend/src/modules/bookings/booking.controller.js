@@ -23,7 +23,6 @@ export async function checkAvailabilityController(req, res, next) {
 
     const result = await checkAvailabilityService({
       room_id,
-      category_slug,
       check_in,
       check_out,
       nights,
@@ -46,6 +45,7 @@ export async function createBookingController(req, res, next) {
       full_name,
       phone,
       room_id,
+      category_slug,
       check_in,
       check_out,
       nights,
