@@ -259,10 +259,10 @@ export default function PaymentResult() {
           <p className="hotel-eyebrow">Reserva no encontrada</p>
           <h1>No encontramos un pago pendiente</h1>
           <p>
-            Vuelve a elegir una habitación y registra la reserva para
+            Vuelve a consultar disponibilidad y elige una categoría para
             continuar con el pago.
           </p>
-          <Link to="/habitaciones" className="payment-primary-button">
+          <Link to="/disponibilidad" className="payment-primary-button">
             Ver habitaciones
           </Link>
         </section>
@@ -505,8 +505,8 @@ export default function PaymentResult() {
             <h2>Resumen</h2>
 
             <div className="payment-result-room">
-              <span>Habitación</span>
-              <strong>{room?.name || "Habitación seleccionada"}</strong>
+              <span>Categoría</span>
+              <strong>{room?.name || "Categoría seleccionada"}</strong>
             </div>
 
             <dl className="payment-result-status-list">
