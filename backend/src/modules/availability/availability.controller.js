@@ -2,6 +2,7 @@ import {
   listRoomsForAvailabilityService,
   searchAvailableRoomsService,
 } from "./availability.service.js";
+import { searchAvailableRoomCategoriesService } from "../rooms/roomCategory.service.js";
 
 export async function getAvailabilityController(req, res, next) {
   try {
@@ -24,6 +25,25 @@ export async function searchAvailabilityController(req, res, next) {
   try {
     const result = await searchAvailableRoomsService(req.body);
     return res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function searchCategoryAvailabilityController(req, res, next) {
+  try {
+    const result = await searchAvailableRoomCategoriesService(req.body);
+    return res.json({
+      success: true,
+      data: {
+        check_in: result.check_in,
+        check_out: result.check_out,
+        nights: result.nights,
+        guests_count: result.guests_count,
+        available_count: result.available_count,
+        categories: result.categories,
+      },
+    });
   } catch (error) {
     next(error);
   }
