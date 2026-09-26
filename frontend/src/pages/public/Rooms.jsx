@@ -73,7 +73,7 @@ export default function Rooms() {
                   Ver categorías
                 </a>
 
-                <Link to="/#disponibilidad" className="hotel-btn-light">
+                <Link to="/disponibilidad" className="hotel-btn-light">
                   Consultar disponibilidad
                 </Link>
               </div>
@@ -93,9 +93,9 @@ export default function Rooms() {
             <h2 className="hotel-title">Categorías de habitaciones</h2>
 
             <p className="hotel-section-description mt-4">
-              Consulta la capacidad, cantidad de habitaciones y el monto por
-              noche de cada categoría. La asignación del número físico de
-              habitación se realiza internamente por el hospedaje.
+              Conoce las categorías, su capacidad y la cantidad de habitaciones.
+              El precio se mostrará después de consultar disponibilidad para tus
+              fechas. La asignación del número físico se realiza internamente.
             </p>
           </div>
         </div>
@@ -154,14 +154,12 @@ export default function Rooms() {
                 </p>
               </div>
 
-              <a
-                href="https://wa.me/51901551287?text=Hola,%20quiero%20consultar%20disponibilidad%20por%20categoría%20en%20Casa%20Huéspedes%20Pimentel"
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                to="/disponibilidad"
                 className="shrink-0 rounded-full bg-gradient-to-r from-[#a87545] to-[#7b4a1f] px-7 py-4 text-sm font-black text-white shadow-lg transition hover:-translate-y-1"
               >
                 Consultar disponibilidad
-              </a>
+              </Link>
             </div>
           </div>
         )}
