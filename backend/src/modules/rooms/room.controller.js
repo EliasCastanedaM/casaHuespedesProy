@@ -13,6 +13,7 @@ import {
   deleteRoomImageService,
   deleteRoomVideoService,
 } from "./room.service.js";
+import { getPublicRoomCategoriesService } from "./roomCategory.service.js";
 
 function uploadBufferToCloudinary(file, options) {
   return new Promise((resolve, reject) => {
@@ -46,6 +47,15 @@ export async function getPublicRoomsController(req, res, next) {
   try {
     const rooms = await getPublicRoomsService();
     res.json({ success: true, data: rooms });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getPublicRoomCategoriesController(req, res, next) {
+  try {
+    const categories = await getPublicRoomCategoriesService();
+    res.json({ success: true, data: categories });
   } catch (error) {
     next(error);
   }
