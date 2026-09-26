@@ -10,6 +10,40 @@ function normalizedText(value) {
     .trim();
 }
 
+const CATEGORY_LABELS = {
+  matrimonial: "Matrimonial",
+  doble: "Doble",
+  triple: "Triple",
+  familiar: "Familiar",
+};
+
+function inferCategorySlug(room) {
+  if (!room) return null;
+
+  const explicit = normalizedText(
+    room.category_slug || room.category || room.room_type || ""
+  );
+  if (CATEGORY_LABELS[explicit]) return explicit;
+
+  const searchable = normalizedText(
+    `${room.name || ""} ${room.room_type || ""}`
+  );
+  return (
+    Object.keys(CATEGORY_LABELS).find((slug) =>
+      searchable.includes(slug)
+    ) || null
+  );
+}
+
+function categoryLabel(roomOrSlug) {
+  if (!roomOrSlug) return null;
+  const slug =
+    typeof roomOrSlug === "string"
+      ? normalizedText(roomOrSlug)
+      : inferCategorySlug(roomOrSlug);
+  return CATEGORY_LABELS[slug] || null;
+}
+
 function compactSpaces(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
@@ -55,13 +89,19 @@ function toIsoDateValue(value) {
   return String(value || "").match(/^\d{4}-\d{2}-\d{2}/)?.[0] || "";
 }
 
-function publicRoomOption(room) {
+function publicRoomOption(room, availabilityConfirmed = false) {
+  const categorySlug = inferCategorySlug(room);
+  const label = categoryLabel(categorySlug);
+
   return {
     id: Number(room.id),
-    name: room.name,
+    name: label ? `Habitación ${label}` : "Habitación",
     room_number: room.room_number || null,
+    category_slug: categorySlug,
+    category_name: label,
     capacity: Number(room.capacity),
     price_per_night: Number(room.price_per_night),
+    availability_confirmed: availabilityConfirmed,
   };
 }
 
@@ -73,6 +113,7 @@ export function isReservationIntent(message) {
     /\bme gustaria\s+(?:hacer\s+)?(?:la\s+)?(?:reserva|reservar|pagar)\b/,
     /\b(?:reservame|separame|apartame)\b/,
     /\bquiero\s+(?:la|habitacion)\s*\d{3}\b/,
+    /\b(?:quiero|quisiera|deseo|necesito|prefiero)\s+(?:una\s+)?(?:habitacion\s+)?(?:matrimonial|doble|triple|familiar)\b/,
   ].some((pattern) => pattern.test(text));
 }
 
@@ -237,6 +278,14 @@ function extractDates(message) {
 
 function extractRoomReference(message) {
   const text = normalizedText(message);
+
+  const category = Object.keys(CATEGORY_LABELS).find((slug) =>
+    new RegExp(`\\b${slug}\\b`).test(text)
+  );
+  if (category) return category;
+
+  // Se mantiene compatibilidad con mensajes antiguos que mencionen un número,
+  // pero el número nunca se muestra de vuelta al huésped.
   const labeled = text.match(
     /\b(?:habitacion|cuarto|room)\s*(?:numero|nro|n)?\s*[:#-]?\s*(\d{3})\b/
   )?.[1];
@@ -252,6 +301,12 @@ function extractRoomReference(message) {
 
 function roomMatches(room, reference) {
   if (!room || !reference) return false;
+
+  const normalizedReference = normalizedText(reference);
+  if (CATEGORY_LABELS[normalizedReference]) {
+    return inferCategorySlug(room) === normalizedReference;
+  }
+
   return (
     String(room.room_number || "") === String(reference) ||
     normalizedText(room.name).includes(String(reference))
@@ -265,14 +320,14 @@ async function resolveSelectedRoom(reference, context, listRooms) {
     ? context.available_rooms
     : [];
   const known = knownRooms.find((room) => roomMatches(room, reference));
-  if (known) return publicRoomOption(known);
+  if (known) return publicRoomOption(known, true);
 
   const rooms = await listRooms();
   const selected = rooms.find(
     (room) => room.status === "active" && roomMatches(room, reference)
   );
 
-  return selected ? publicRoomOption(selected) : null;
+  return selected ? publicRoomOption(selected, false) : null;
 }
 
 function mergeMessageData(
@@ -312,7 +367,7 @@ function mergeMessageData(
 
 function missingFields(context) {
   const missing = [];
-  if (!context.room?.id) missing.push("habitación");
+  if (!context.room?.id) missing.push("categoría de habitación");
   if (!context.check_in) missing.push("fecha de ingreso");
   if (!context.check_out && !context.nights) missing.push("fecha de salida");
   if (!context.guests_count) missing.push("cantidad de huéspedes");
@@ -324,16 +379,20 @@ function missingFields(context) {
 
 function missingDataReply(context, invalidRoomReference) {
   const missing = missingFields(context);
-  const knownRoomNumbers = (context.available_rooms || [])
-    .map((room) => room.room_number)
-    .filter(Boolean)
-    .join(", ");
+  const knownCategories = [
+    ...new Set(
+      (context.available_rooms || [])
+        .map((room) => categoryLabel(room))
+        .filter(Boolean)
+    ),
+  ].join(", ");
   const invalidRoomLine = invalidRoomReference
-    ? `No pude identificar la habitación ${invalidRoomReference}.\n`
+    ? "No pude identificar esa categoría de habitación.\n"
     : "";
-  const optionsLine = knownRoomNumbers && missing.includes("habitación")
-    ? `Opciones disponibles: ${knownRoomNumbers}.\n`
-    : "";
+  const optionsLine =
+    knownCategories && missing.includes("categoría de habitación")
+      ? `Categorías disponibles: ${knownCategories}.\n`
+      : "";
 
   return `${invalidRoomLine}${optionsLine}Para crear la pre-reserva me falta: ${missing.join(
     ", "
@@ -342,10 +401,15 @@ function missingDataReply(context, invalidRoomReference) {
 
 function createdBookingReply(result, paymentUrl) {
   const booking = result.booking;
+  const category =
+    categoryLabel(result.room) ||
+    categoryLabel({ name: booking.room_name }) ||
+    "Confirmada";
+
   return [
     "Tu pre-reserva fue creada correctamente.",
     `Código: ${booking.booking_code}`,
-    `Habitación: ${result.room?.name || booking.room_name || "-"}`,
+    `Categoría: ${category}`,
     `Ingreso: ${formatDate(toIsoDateValue(booking.check_in))}`,
     `Salida: ${formatDate(toIsoDateValue(booking.check_out))}`,
     `Huéspedes: ${Number(booking.guests_count)}`,
@@ -371,21 +435,31 @@ function minimalCompletedContext(result, intentId) {
 
 function availableAlternativesReply(result) {
   const rooms = result?.rooms || [];
-  if (rooms.length === 0) {
-    return "No hay otras habitaciones disponibles para esas fechas y cantidad de huéspedes.";
+  const counts = new Map();
+
+  for (const room of rooms) {
+    const label = categoryLabel(room);
+    if (!label) continue;
+    counts.set(label, Number(counts.get(label) || 0) + 1);
+  }
+
+  if (counts.size === 0) {
+    return "No hay otras categorías disponibles para esas fechas y cantidad de huéspedes.";
   }
 
   return [
-    "Alternativas disponibles ahora:",
-    ...rooms.map(
-      (room) =>
-        `- ${room.name}${room.room_number ? ` (${room.room_number})` : ""}: ${formatMoney(room.price_per_night)} por noche`
+    "Categorías disponibles ahora:",
+    ...[...counts.entries()].map(
+      ([label, quantity]) =>
+        `- ${label}: ${quantity} ${quantity === 1 ? "habitación disponible" : "habitaciones disponibles"}`
     ),
   ].join("\n");
 }
 
 export function mergeAvailabilityIntoBookingContext(context = {}, result) {
-  const availableRooms = (result?.rooms || []).map(publicRoomOption);
+  const availableRooms = (result?.rooms || []).map((room) =>
+    publicRoomOption(room, true)
+  );
   const selectedRoom = context.room?.id
     ? availableRooms.find((room) => room.id === Number(context.room.id)) || null
     : null;
@@ -499,6 +573,49 @@ export async function handleDeterministicBookingFlow({
     };
   }
 
+  // Si la categoría se eligió sin una consulta previa de disponibilidad,
+  // busca una unidad física libre de esa categoría. El número asignado queda
+  // exclusivamente en el backend y nunca se expone al huésped.
+  if (
+    nextContext.room?.category_slug &&
+    !nextContext.room.availability_confirmed
+  ) {
+    const categoryAvailability = await services.searchAvailableRooms({
+      check_in: nextContext.check_in,
+      check_out: nextContext.check_out || undefined,
+      nights: nextContext.check_out ? undefined : nextContext.nights,
+      guests_count: nextContext.guests_count,
+      check_in_time: nextContext.check_in_time || undefined,
+    });
+    const availableRooms = (categoryAvailability?.rooms || []).map((room) =>
+      publicRoomOption(room, true)
+    );
+    const matchingRoom = availableRooms.find(
+      (room) => room.category_slug === nextContext.room.category_slug
+    );
+
+    if (!matchingRoom) {
+      const refreshedContext = mergeAvailabilityIntoBookingContext(
+        { ...nextContext, room: null },
+        categoryAvailability
+      );
+      const requestedCategory =
+        categoryLabel(nextContext.room) || "solicitada";
+
+      return {
+        handled: true,
+        context: refreshedContext,
+        reply: `No quedan habitaciones disponibles en la categoría ${requestedCategory} para esas fechas.\nNo se creó ninguna reserva ni se generó un pago.\n${availableAlternativesReply(categoryAvailability)}\nIndica otra categoría o llama al ${hotelPhone}.`,
+      };
+    }
+
+    nextContext = {
+      ...nextContext,
+      room: matchingRoom,
+      available_rooms: availableRooms,
+    };
+  }
+
   const availabilityInput = {
     room_id: nextContext.room.id,
     check_in: nextContext.check_in,
@@ -525,7 +642,7 @@ export async function handleDeterministicBookingFlow({
     return {
       handled: true,
       context: refreshedContext,
-      reply: `${availability.reason || "La habitación seleccionada ya no está disponible."}\nNo se creó ninguna reserva ni se generó un pago.\n${availableAlternativesReply(alternatives)}\nIndica otra habitación o llama al ${hotelPhone}.`,
+      reply: `${availability.reason || "La categoría seleccionada ya no tiene disponibilidad."}\nNo se creó ninguna reserva ni se generó un pago.\n${availableAlternativesReply(alternatives)}\nIndica otra categoría o llama al ${hotelPhone}.`,
     };
   }
 
@@ -582,7 +699,7 @@ export async function handleDeterministicBookingFlow({
       return {
         handled: true,
         context: refreshedContext,
-        reply: `La habitación seleccionada ya no está disponible. No se creó ninguna reserva ni se generó un pago.\n${availableAlternativesReply(alternatives)}\nIndica otra habitación o llama al ${hotelPhone}.`,
+        reply: `La categoría seleccionada ya no tiene disponibilidad. No se creó ninguna reserva ni se generó un pago.\n${availableAlternativesReply(alternatives)}\nIndica otra categoría o llama al ${hotelPhone}.`,
       };
     }
 
