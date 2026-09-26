@@ -127,8 +127,6 @@ export async function getPublicRoomCategoryBySlugService(slug, db = pool) {
             jsonb_build_object(
               'id', media.id,
               'image_url', media.image_url,
-              'title', media.title,
-              'alt_text', media.alt_text,
               'is_main', media.is_main,
               'display_order', media.display_order
             )
@@ -138,8 +136,6 @@ export async function getPublicRoomCategoryBySlugService(slug, db = pool) {
             SELECT
               ri.id,
               ri.image_url,
-              ri.title,
-              ri.alt_text,
               ri.is_main,
               ri.display_order
             FROM room_images ri
@@ -158,7 +154,6 @@ export async function getPublicRoomCategoryBySlugService(slug, db = pool) {
             jsonb_build_object(
               'id', media.id,
               'video_url', media.video_url,
-              'title', media.title,
               'poster_url', media.poster_url,
               'is_main', media.is_main,
               'display_order', media.display_order
@@ -169,7 +164,6 @@ export async function getPublicRoomCategoryBySlugService(slug, db = pool) {
             SELECT
               rv.id,
               rv.video_url,
-              rv.title,
               rv.poster_url,
               rv.is_main,
               rv.display_order
