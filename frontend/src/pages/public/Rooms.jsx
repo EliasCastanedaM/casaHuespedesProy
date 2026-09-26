@@ -73,7 +73,7 @@ export default function Rooms() {
                   Ver categorías
                 </a>
 
-                <Link to="/disponibilidad" className="hotel-btn-light">
+                <Link to="/habitaciones#categorias" className="hotel-btn-light">
                   Consultar disponibilidad
                 </Link>
               </div>
