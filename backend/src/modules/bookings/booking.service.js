@@ -45,7 +45,7 @@ function normalizeBookingData(bookingData) {
 
 async function getRoomForBooking(roomId, db = pool) {
   const query = `
-    SELECT id, name, capacity, price_per_night, status
+    SELECT id, name, capacity, price_per_night, status, category_slug
     FROM rooms
     WHERE id = $1;
   `;
@@ -142,6 +142,8 @@ async function getBookingDetailsById(id, db = pool) {
       c.phone AS customer_phone,
       c.email AS customer_email,
       r.name AS room_name,
+      r.category_slug,
+      rc.name AS category_name,
       r.price_per_night,
       p.payment_provider,
       p.status AS payment_status,
@@ -151,6 +153,7 @@ async function getBookingDetailsById(id, db = pool) {
     FROM bookings b
     JOIN customers c ON c.id = b.customer_id
     JOIN rooms r ON r.id = b.room_id
+    LEFT JOIN room_categories rc ON rc.slug = r.category_slug
     LEFT JOIN LATERAL (
       SELECT payment.*
       FROM payments payment
@@ -250,7 +253,20 @@ async function findBookingByIntent(bookingIntentId, db = pool) {
   return getBookingDetailsById(result.rows[0].id, db);
 }
 
+function inferCategoryName(details) {
+  if (details?.category_name) return String(details.category_name);
+
+  const roomName = String(details?.room_name || "").toLowerCase();
+  if (roomName.includes("matrimonial")) return "Matrimonial";
+  if (roomName.includes("doble")) return "Doble";
+  if (roomName.includes("triple")) return "Triple";
+  if (roomName.includes("familiar")) return "Familiar";
+  return null;
+}
+
 function bookingResult(details, { recovered = false } = {}) {
+  const categoryName = inferCategoryName(details);
+
   return {
     mode: "booking",
     booking: details,
@@ -262,7 +278,9 @@ function bookingResult(details, { recovered = false } = {}) {
     },
     room: {
       id: details.room_id,
-      name: details.room_name,
+      name: categoryName ? `Habitación ${categoryName}` : "Habitación",
+      category: categoryName,
+      category_slug: details.category_slug || null,
       price_per_night: details.price_per_night,
     },
     public_token: details.public_token,
