@@ -4,8 +4,11 @@ import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import {
   listRoomsForAvailabilityService,
-  searchAvailableRoomsService,
 } from "../availability/availability.service.js";
+import {
+  getPublicRoomCategoriesService,
+  searchAvailableRoomCategoriesService,
+} from "../rooms/roomCategory.service.js";
 import {
   checkAvailabilityService,
   createBookingService,
@@ -47,7 +50,7 @@ const tools = [
     type: "function",
     name: "consultar_disponibilidad",
     description:
-      "Busca todas las habitaciones realmente disponibles para fechas y huéspedes concretos.",
+      "Busca la cantidad de habitaciones disponibles por categoría para fechas y huéspedes concretos.",
     strict: true,
     parameters: {
       type: "object",
@@ -75,7 +78,7 @@ const tools = [
     type: "function",
     name: "listar_habitaciones",
     description:
-      "Lista las habitaciones activas, sus precios, capacidad y características.",
+      "Lista las categorías de habitaciones, cantidades, capacidades y tarifas por temporada.",
     strict: true,
     parameters: {
       type: "object",
@@ -332,18 +335,24 @@ async function ensureDurableBookingIntent(
   }
 }
 
-function publicRoom(room) {
+function publicCategory(category) {
   return {
-    id: room.id,
-    name: room.name,
-    room_number: room.room_number,
-    room_type: room.room_type,
-    description: room.description,
-    capacity: Number(room.capacity),
-    price_per_night: Number(room.price_per_night),
-    floor_label: room.floor_label,
-    amenities: Array.isArray(room.amenities) ? room.amenities : [],
-    main_image_url: room.main_image_url,
+    slug: category.slug,
+    name: category.name,
+    total_quantity: Number(category.total_quantity || 0),
+    available_quantity:
+      category.available_quantity === undefined
+        ? undefined
+        : Number(category.available_quantity || 0),
+    capacity: Number(category.capacity || 1),
+    bed_description: category.bed_description || null,
+    description: category.description || null,
+    tariffs: {
+      low: Number(category.price_low || 0),
+      medium: Number(category.price_medium || 0),
+      high_or_holidays: Number(category.price_high || 0),
+    },
+    image_url: category.image_url || null,
   };
 }
 
@@ -352,12 +361,15 @@ async function executeTool(call, { onAvailability } = {}) {
     const args = JSON.parse(call.arguments || "{}");
 
     if (call.name === "consultar_disponibilidad") {
-      const result = await searchAvailableRoomsService({
+      const result = await searchAvailableRoomCategoriesService({
         check_in: args.check_in,
         check_out: args.check_out,
         guests_count: args.guests_count,
       });
 
+      // Guarda internamente las habitaciones físicas disponibles para que,
+      // si el huésped decide reservar, el backend pueda asignar una sin
+      // exponer su número en la conversación.
       await onAvailability?.(result);
 
       return JSON.stringify({
@@ -366,18 +378,18 @@ async function executeTool(call, { onAvailability } = {}) {
         check_out: result.check_out,
         nights: result.nights,
         available_count: result.available_count,
-        rooms: result.rooms.map(publicRoom),
+        categories: result.categories
+          .filter((category) => category.available_quantity > 0)
+          .map(publicCategory),
         reservation_created: false,
       });
     }
 
     if (call.name === "listar_habitaciones") {
-      const rooms = await listRoomsForAvailabilityService();
+      const categories = await getPublicRoomCategoriesService();
       return JSON.stringify({
         success: true,
-        rooms: rooms
-          .filter((room) => room.status === "active")
-          .map(publicRoom),
+        categories: categories.map(publicCategory),
       });
     }
 
@@ -490,8 +502,11 @@ async function generateAiReplyInternal({
     paymentUrl: env.culqiPaymentUrl,
     newIntentPrepared: newReservation,
     services: {
-      listRooms: listRoomsForAvailabilityService,
-      searchAvailableRooms: searchAvailableRoomsService,
+      listRooms: async () =>
+        (await listRoomsForAvailabilityService()).filter(
+          (room) => Boolean(room.category_slug)
+        ),
+      searchAvailableRooms: searchAvailableRoomCategoriesService,
       checkAvailability: checkAvailabilityService,
       createBooking: (bookingData, options = {}) =>
         createBookingService(bookingData, {
