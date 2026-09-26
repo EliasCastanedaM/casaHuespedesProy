@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://EliasCastanedaM.github.io/casa-huespedes-pimentelpag",
+  "homepage": "https://www.casahuespedespimentel.com",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
