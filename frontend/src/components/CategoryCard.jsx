@@ -48,19 +48,9 @@ export default function CategoryCard({ category }) {
 
           <p>{category.description}</p>
 
-          <div className="category-card-rates">
-            <div>
-              <small>Baja</small>
-              <strong>{formatPrice(category.price_low)}</strong>
-            </div>
-            <div>
-              <small>Media</small>
-              <strong>{formatPrice(category.price_medium)}</strong>
-            </div>
-            <div>
-              <small>Alta / feriados</small>
-              <strong>{formatPrice(category.price_high)}</strong>
-            </div>
+          <div className="category-card-price">
+            <strong>{formatPrice(category.price_per_night)}</strong>
+            <span>por noche</span>
           </div>
 
           <p className="category-card-note">
