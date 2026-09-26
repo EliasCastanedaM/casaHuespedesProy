@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /pago-resultado
+
+Sitemap: https://www.casahuespedespimentel.com/sitemap.xml
