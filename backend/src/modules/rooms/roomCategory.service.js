@@ -66,9 +66,12 @@ export async function searchAvailableRoomCategoriesService(
 ) {
   const availability = await searchAvailableRoomsService(input, db);
   const categories = await getPublicRoomCategoriesService(db);
+  const categorizedRooms = (availability.rooms || []).filter(
+    (room) => String(room.category_slug || "").trim()
+  );
   const availableByCategory = new Map();
 
-  for (const room of availability.rooms || []) {
+  for (const room of categorizedRooms) {
     const slug = String(room.category_slug || "").trim().toLowerCase();
     if (!slug) continue;
     availableByCategory.set(
@@ -92,6 +95,8 @@ export async function searchAvailableRoomCategoriesService(
 
   return {
     ...availability,
+    rooms: categorizedRooms,
+    available_count: categorizedRooms.length,
     categories: compatibleCategories,
     available_category_count: compatibleCategories.filter(
       (category) => category.available_quantity > 0
