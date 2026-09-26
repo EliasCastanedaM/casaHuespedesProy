@@ -1,6 +1,7 @@
 import {
   checkAvailabilityService,
   createBookingService,
+  createBookingByCategoryService,
   deleteBookingService,
   getBookingPaymentStatusService,
   getAllBookingsService,
@@ -22,6 +23,7 @@ export async function checkAvailabilityController(req, res, next) {
 
     const result = await checkAvailabilityService({
       room_id,
+      category_slug,
       check_in,
       check_out,
       nights,
@@ -70,10 +72,10 @@ export async function createBookingController(req, res, next) {
       });
     }
 
-    if (!room_id) {
+    if (!room_id && !category_slug) {
       return res.status(400).json({
         success: false,
-        message: "La habitación es obligatoria.",
+        message: "La categoría de habitación es obligatoria.",
       });
     }
 
@@ -98,7 +100,9 @@ export async function createBookingController(req, res, next) {
       });
     }
 
-    const result = await createBookingService(req.body);
+    const result = category_slug && !room_id
+      ? await createBookingByCategoryService(req.body)
+      : await createBookingService(req.body);
 
     if (result.mode === "inquiry") {
       return res.status(201).json({
