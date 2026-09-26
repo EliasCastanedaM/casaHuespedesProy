@@ -93,9 +93,9 @@ export default function Rooms() {
             <h2 className="hotel-title">Categorías de habitaciones</h2>
 
             <p className="hotel-section-description mt-4">
-              Consulta la capacidad, cantidad de habitaciones y tarifas
-              referenciales de cada categoría. La asignación del número físico
-              de habitación se realiza internamente por el hospedaje.
+              Consulta la capacidad, cantidad de habitaciones y el monto por
+              noche de cada categoría. La asignación del número físico de
+              habitación se realiza internamente por el hospedaje.
             </p>
           </div>
         </div>
