@@ -646,19 +646,6 @@ export async function handleDeterministicBookingFlow({
     };
   }
 
-  if (
-    nextContext.room?.category_slug &&
-    services.categoryPricingConfigured === false
-  ) {
-    const category = categoryLabel(nextContext.room) || "seleccionada";
-
-    return {
-      handled: true,
-      context: {},
-      reply: `Sí hay disponibilidad en la categoría ${category} para esas fechas. Para aplicar la tarifa correcta de temporada, el equipo debe confirmar primero si corresponde temporada baja, media o alta/feriado. No se creó una pre-reserva ni se generó un pago. Comunícate al ${hotelPhone} para finalizar la reserva.`,
-    };
-  }
-
   try {
     const result = await services.createBooking(
       {

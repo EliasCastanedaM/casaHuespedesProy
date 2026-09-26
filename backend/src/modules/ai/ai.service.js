@@ -78,7 +78,7 @@ const tools = [
     type: "function",
     name: "listar_habitaciones",
     description:
-      "Lista las categorías de habitaciones, cantidades, capacidades y tarifas por temporada.",
+      "Lista las categorías de habitaciones, cantidades, capacidades y el monto vigente por noche.",
     strict: true,
     parameters: {
       type: "object",
@@ -347,11 +347,7 @@ function publicCategory(category) {
     capacity: Number(category.capacity || 1),
     bed_description: category.bed_description || null,
     description: category.description || null,
-    tariffs: {
-      low: Number(category.price_low || 0),
-      medium: Number(category.price_medium || 0),
-      high_or_holidays: Number(category.price_high || 0),
-    },
+    price_per_night: Number(category.price_per_night || 0),
     image_url: category.image_url || null,
   };
 }
@@ -508,9 +504,6 @@ async function generateAiReplyInternal({
         ),
       searchAvailableRooms: searchAvailableRoomCategoriesService,
       checkAvailability: checkAvailabilityService,
-      // Las tarifas baja/media/alta ya están cargadas, pero todavía no existe
-      // un calendario oficial que indique qué temporada aplica a cada fecha.
-      categoryPricingConfigured: false,
       createBooking: (bookingData, options = {}) =>
         createBookingService(bookingData, {
           ...options,
