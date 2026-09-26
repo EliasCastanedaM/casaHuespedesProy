@@ -108,37 +108,27 @@
   line-height: 1.65;
 }
 
-.category-card-rates {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.category-card-price {
+  display: inline-flex;
+  align-items: baseline;
   gap: 9px;
   margin-top: 20px;
-}
-
-.category-card-rates > div {
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 16px;
-  background: rgba(26, 17, 11, 0.42);
+  padding: 13px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 18px;
+  background: rgba(26, 17, 11, 0.46);
   backdrop-filter: blur(10px);
 }
 
-.category-card-rates small,
-.category-card-rates strong {
-  display: block;
-}
-
-.category-card-rates small {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.64rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.category-card-rates strong {
-  margin-top: 4px;
-  font-size: 1.05rem;
+.category-card-price strong {
+  font-size: 1.45rem;
   font-weight: 900;
+}
+
+.category-card-price span {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
 .category-card-main .category-card-note {
@@ -175,20 +165,5 @@
 
   .category-card-content {
     padding: 20px;
-  }
-
-  .category-card-rates {
-    grid-template-columns: 1fr;
-  }
-
-  .category-card-rates > div {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .category-card-rates strong {
-    margin-top: 0;
   }
 }
