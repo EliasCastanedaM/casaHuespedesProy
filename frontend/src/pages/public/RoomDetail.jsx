@@ -108,14 +108,14 @@ export default function RoomDetail() {
           setSelectedMedia({
             type: "image",
             url: mainPhoto?.image_url || data.image_url || fallbackImage,
-            title: mainPhoto?.title || `Habitación ${data.name}`,
+            title: `Habitación ${data.name}`,
           });
           setActiveTab("photos");
         } else if (mainVideo) {
           setSelectedMedia({
             type: "video",
             url: mainVideo.video_url,
-            title: mainVideo.title || `Habitación ${data.name}`,
+            title: `Video referencial · Habitación ${data.name}`,
             poster: mainVideo.poster_url || fallbackImage,
           });
           setActiveTab("videos");
@@ -434,7 +434,6 @@ export default function RoomDetail() {
                             type: "image",
                             url: photo.image_url,
                             title:
-                              photo.title ||
                               `Habitación ${category.name}`,
                           })
                         }
@@ -443,9 +442,7 @@ export default function RoomDetail() {
                         <img
                           src={photo.image_url}
                           alt={
-                            photo.alt_text ||
-                            photo.title ||
-                            `Habitación ${category.name}`
+                            `Foto referencial · Habitación ${category.name}`
                           }
                           className="h-full w-full object-cover transition duration-300 hover:scale-105"
                         />
@@ -480,8 +477,7 @@ export default function RoomDetail() {
                           type: "video",
                           url: video.video_url,
                           title:
-                            video.title ||
-                            `Video referencial ${index + 1}`,
+                            `Video referencial ${index + 1} · ${category.name}`,
                           poster:
                             video.poster_url ||
                             category.image_url ||
