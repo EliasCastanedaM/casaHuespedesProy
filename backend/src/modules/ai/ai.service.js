@@ -503,8 +503,11 @@ async function generateAiReplyInternal({
     paymentUrl: env.culqiPaymentUrl,
     newIntentPrepared: newReservation,
     services: {
-      listRooms: listRoomsForAvailabilityService,
-      searchAvailableRooms: searchAvailableRoomsService,
+      listRooms: async () =>
+        (await listRoomsForAvailabilityService()).filter(
+          (room) => Boolean(room.category_slug)
+        ),
+      searchAvailableRooms: searchAvailableRoomCategoriesService,
       checkAvailability: checkAvailabilityService,
       createBooking: (bookingData, options = {}) =>
         createBookingService(bookingData, {
