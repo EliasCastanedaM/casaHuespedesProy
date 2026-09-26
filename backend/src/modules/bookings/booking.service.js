@@ -9,6 +9,7 @@ import {
 import {
   checkAvailabilityService,
   normalizeAvailabilityInput,
+  searchAvailableRoomsService,
 } from "../availability/availability.service.js";
 
 export { checkAvailabilityService };
@@ -486,6 +487,87 @@ export async function createBookingService(
   }
 
   return bookingResult(details);
+}
+
+export async function createBookingByCategoryService(
+  bookingData,
+  options = {},
+  dependencies = {}
+) {
+  const categorySlug = String(bookingData.category_slug || "")
+    .trim()
+    .toLowerCase();
+  const allowedCategories = new Set([
+    "matrimonial",
+    "doble",
+    "triple",
+    "familiar",
+  ]);
+
+  if (!allowedCategories.has(categorySlug)) {
+    const error = new Error("La categoría seleccionada no es válida.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const databasePool = dependencies.pool || pool;
+  const availabilitySearcher =
+    dependencies.searchAvailableRoomsService || searchAvailableRoomsService;
+
+  const availability = await availabilitySearcher(
+    {
+      check_in: bookingData.check_in,
+      check_out: bookingData.check_out,
+      nights: bookingData.nights,
+      check_in_time: bookingData.check_in_time,
+      guests_count: bookingData.guests_count,
+      available_only: true,
+    },
+    databasePool
+  );
+
+  const candidates = (availability.rooms || []).filter(
+    (room) =>
+      room.status === "active" &&
+      String(room.category_slug || "").toLowerCase() === categorySlug
+  );
+
+  if (candidates.length === 0) {
+    const error = new Error(
+      "Ya no quedan habitaciones disponibles en esta categoría para las fechas seleccionadas."
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  let lastConflict = null;
+
+  for (const candidate of candidates) {
+    try {
+      return await createBookingService(
+        {
+          ...bookingData,
+          room_id: candidate.id,
+        },
+        options,
+        dependencies
+      );
+    } catch (error) {
+      if (error.statusCode === 409) {
+        lastConflict = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  const error =
+    lastConflict ||
+    new Error(
+      "La disponibilidad cambió mientras registrábamos la reserva. Vuelve a consultar."
+    );
+  error.statusCode = 409;
+  throw error;
 }
 
 export async function getBookingPaymentStatusService(id, publicToken) {

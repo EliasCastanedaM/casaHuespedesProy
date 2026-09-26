@@ -14,6 +14,21 @@ export async function checkAvailability({ room_id, check_in, check_out }) {
   return response.data.data;
 }
 
+// Consulta disponibilidad comercial por categoría.
+export async function searchCategoryAvailability({
+  check_in,
+  check_out,
+  guests_count,
+}) {
+  const response = await api.post("/availability/categories", {
+    check_in,
+    check_out,
+    guests_count,
+  });
+
+  return response.data.data;
+}
+
 // Esta función crea una reserva pendiente de pago
 export async function createBooking(bookingData) {
   // Enviamos toda la información de reserva al backend

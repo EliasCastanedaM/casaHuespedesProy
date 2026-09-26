@@ -9,6 +9,7 @@ import InquiriesAdmin from "./pages/admin/InquiriesAdmin";
 import Home from "./pages/public/Home";
 import Rooms from "./pages/public/Rooms";
 import Booking from "./pages/public/Booking";
+import Availability from "./pages/public/Availability";
 import Services from "./pages/public/Services";
 import Gallery from "./pages/public/Gallery";
 import Tourism from "./pages/public/Tourism";
@@ -41,6 +42,7 @@ export default function App() {
             path="/habitaciones/:id"
             element={<Navigate to="/habitaciones" replace />}
           />
+          <Route path="/disponibilidad" element={<Availability />} />
           <Route path="/reservar" element={<Booking />} />
           <Route path="/servicios" element={<Services />} />
           <Route path="/galeria" element={<Gallery />} />
