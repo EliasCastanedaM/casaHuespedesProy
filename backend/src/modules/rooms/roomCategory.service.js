@@ -14,9 +14,7 @@ function publicCategoryRow(category) {
     capacity: Number(category.capacity || 1),
     mapped_quantity: Number(category.mapped_quantity || 0),
     active_quantity: Number(category.active_quantity || 0),
-    price_low: toNumber(category.price_low),
-    price_medium: toNumber(category.price_medium),
-    price_high: toNumber(category.price_high),
+    price_per_night: toNumber(category.price_per_night),
   };
 }
 
@@ -30,9 +28,7 @@ export async function getPublicRoomCategoriesService(db = pool) {
       rc.capacity,
       rc.bed_description,
       rc.description,
-      rc.price_low,
-      rc.price_medium,
-      rc.price_high,
+      rc.price_per_night,
       rc.image_url,
       rc.display_order,
       COUNT(r.id)::INTEGER AS mapped_quantity,
@@ -49,9 +45,7 @@ export async function getPublicRoomCategoriesService(db = pool) {
       rc.capacity,
       rc.bed_description,
       rc.description,
-      rc.price_low,
-      rc.price_medium,
-      rc.price_high,
+      rc.price_per_night,
       rc.image_url,
       rc.display_order
     ORDER BY rc.display_order ASC, rc.id ASC;
