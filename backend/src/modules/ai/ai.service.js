@@ -508,6 +508,9 @@ async function generateAiReplyInternal({
         ),
       searchAvailableRooms: searchAvailableRoomCategoriesService,
       checkAvailability: checkAvailabilityService,
+      // Las tarifas baja/media/alta ya están cargadas, pero todavía no existe
+      // un calendario oficial que indique qué temporada aplica a cada fecha.
+      categoryPricingConfigured: false,
       createBooking: (bookingData, options = {}) =>
         createBookingService(bookingData, {
           ...options,
