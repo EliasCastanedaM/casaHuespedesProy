@@ -14,6 +14,7 @@ const room407 = {
   id: 14,
   name: "Habitación 407",
   room_number: "407",
+  category_slug: "triple",
   capacity: 3,
   price_per_night: 218.91,
   status: "active",
@@ -22,6 +23,7 @@ const room205 = {
   id: 5,
   name: "Habitación 205",
   room_number: "205",
+  category_slug: "matrimonial",
   capacity: 2,
   price_per_night: 151.53,
   status: "active",
@@ -51,7 +53,7 @@ function bookingResult(input) {
       total_amount: 437.82,
     },
     customer: input.customer,
-    room: room407,
+    room: input.room_id === room205.id ? room205 : room407,
     public_token: "token-transitorio-no-persistido",
     payment_url: "valor-ignorado-del-servicio",
   };
@@ -114,6 +116,8 @@ test("el asesor ofrece llamada y reserva directa después de disponibilidad", ()
   assert.match(prompt, /mascotas se aceptan únicamente bajo petición previa/i);
   assert.match(prompt, /S\/ 35/);
   assert.match(prompt, /No se permite ruido excesivo/i);
+  assert.match(prompt, /Nunca menciones, muestres ni solicites números físicos/i);
+  assert.match(prompt, /cantidad disponible por categoría/i);
 });
 
 test("consultar disponibilidad no crea una reserva", async () => {
@@ -159,6 +163,8 @@ test("reutiliza lo conocido, revalida y crea una sola pending_payment", async ()
   assert.equal(completed.context.booking.status, "pending_payment");
   assert.match(completed.reply, /CHP-00081/);
   assert.match(completed.reply, /https:\/\/express\.culqi\.com\/pago\/prueba/);
+  assert.match(completed.reply, /Categoría: Triple/);
+  assert.doesNotMatch(completed.reply, /407/);
 });
 
 test("una reserva creada limpia PII, public_token y payment_url del contexto", async () => {
@@ -219,10 +225,10 @@ test("si la habitación deja de estar disponible devuelve alternativas reales", 
   });
   assert.equal(calls.bookings.length, 0);
   assert.equal(calls.searches.length, 1);
-  assert.match(result.reply, /Habitación 205/);
-  assert.match(result.reply, /S\/ 151\.53/);
+  assert.match(result.reply, /Matrimonial: 1 habitación disponible/);
+  assert.doesNotMatch(result.reply, /205|151\.53/);
   assert.doesNotMatch(result.reply, /express\.culqi\.com/);
-  assert.equal(result.context.available_rooms[0].room_number, "205");
+  assert.equal(result.context.available_rooms[0].category_slug, "matrimonial");
 });
 
 test("un contexto vencido no reutiliza datos antiguos", () => {
@@ -252,7 +258,7 @@ test("nueva reserva limpia la intención y los datos anteriores", async () => {
   assert.equal(result.context.intent_id, INTENT_ID);
   assert.equal(result.context.booking, undefined);
   assert.equal(result.context.customer?.email, undefined);
-  assert.match(result.reply, /habitación, fecha de ingreso/);
+  assert.match(result.reply, /categoría de habitación, fecha de ingreso/);
 });
 
 test("quisiera reservar también activa la intención de reserva", () => {
@@ -260,4 +266,20 @@ test("quisiera reservar también activa la intención de reserva", () => {
     isReservationIntent("Quisiera reservar la habitación 406 para esas fechas"),
     true
   );
+});
+
+test("una categoría también activa la intención y se asigna internamente", async () => {
+  const calls = emptyCalls();
+  const result = await flow({
+    message:
+      "Quiero una matrimonial. Ingreso: 10/10/2026; salida: 12/10/2026; 2 personas; Nombre: Ana Torres; correo: ana@example.com; celular: 987654321",
+    context: {},
+    services: successfulBookingServices(calls),
+  });
+
+  assert.equal(result.handled, true);
+  assert.equal(calls.bookings.length, 1);
+  assert.equal(calls.bookings[0].input.room_id, room205.id);
+  assert.match(result.reply, /Categoría: Matrimonial/);
+  assert.doesNotMatch(result.reply, /205/);
 });
