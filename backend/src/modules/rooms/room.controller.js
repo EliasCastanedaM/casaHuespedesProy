@@ -13,7 +13,10 @@ import {
   deleteRoomImageService,
   deleteRoomVideoService,
 } from "./room.service.js";
-import { getPublicRoomCategoriesService } from "./roomCategory.service.js";
+import {
+  getPublicRoomCategoriesService,
+  getPublicRoomCategoryBySlugService,
+} from "./roomCategory.service.js";
 
 function uploadBufferToCloudinary(file, options) {
   return new Promise((resolve, reject) => {
@@ -56,6 +59,23 @@ export async function getPublicRoomCategoriesController(req, res, next) {
   try {
     const categories = await getPublicRoomCategoriesService();
     res.json({ success: true, data: categories });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getPublicRoomCategoryBySlugController(req, res, next) {
+  try {
+    const category = await getPublicRoomCategoryBySlugService(req.params.slug);
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Categoría de habitación no encontrada",
+      });
+    }
+
+    return res.json({ success: true, data: category });
   } catch (error) {
     next(error);
   }

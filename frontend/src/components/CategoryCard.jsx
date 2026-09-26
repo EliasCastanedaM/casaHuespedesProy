@@ -46,9 +46,9 @@ export default function CategoryCard({ category }) {
 
           <Link
             className="category-card-action"
-            to={`/disponibilidad?category=${encodeURIComponent(category.slug)}`}
+            to={`/habitaciones/${encodeURIComponent(category.slug)}`}
           >
-            Consultar disponibilidad
+            Ver habitación
           </Link>
         </div>
       </div>

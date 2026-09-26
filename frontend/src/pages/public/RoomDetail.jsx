@@ -1,11 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getRoomById, getRooms } from "../../services/roomService";
+import { getRoomCategoryBySlug } from "../../services/roomService";
+import { searchCategoryAvailability } from "../../services/bookingService";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1400&auto=format&fit=crop";
 
-const BOOKING_DRAFT_KEY = "pimentelBookingDraft";
+const LEGACY_ROOM_TO_CATEGORY = {
+  101: "matrimonial",
+  205: "matrimonial",
+  304: "matrimonial",
+  305: "matrimonial",
+  505: "matrimonial",
+  201: "doble",
+  301: "doble",
+  202: "triple",
+  302: "triple",
+  303: "triple",
+  407: "triple",
+  203: "familiar",
+  405: "familiar",
+};
 
 function getLocalDateValue(date = new Date()) {
   const timezoneOffset = date.getTimezoneOffset() * 60 * 1000;
@@ -14,254 +29,23 @@ function getLocalDateValue(date = new Date()) {
     .split("T")[0];
 }
 
-const ROOM_DETAILS = {
-  101: {
-    name: "Habitación Matrimonial #101",
-    roomType: "Matrimonial",
-    floorLabel: "Primer piso",
-    bedType: "1 cama de dos plazas",
-    capacity: 2,
-    description:
-      "Habitación matrimonial ubicada en el primer piso, preparada para 2 personas y equipada con baño privado.",
-    locationDetail: "Ubicada en el primer piso.",
-    amenities: [
-      "Baño privado",
-      "Ducha con agua fría y caliente",
-      "Smart TV",
-      "Ventilador",
-      "Veladores",
-      "Ropero",
-    ],
-  },
-  201: {
-    name: "Habitación Doble #201",
-    roomType: "Doble",
-    floorLabel: "Segundo piso",
-    bedType: "2 camas de plaza y media",
-    capacity: 2,
-    description:
-      "Habitación doble ubicada en el segundo piso, con dos camas de plaza y media y capacidad para 2 personas.",
-    locationDetail: "Ubicada en el segundo piso.",
-    amenities: [
-      "Baño privado",
-      "Smart TV",
-      "Ventilador",
-      "Mesa de noche",
-      "Ropero",
-    ],
-  },
-  202: {
-    name: "Habitación Triple #202",
-    roomType: "Triple",
-    floorLabel: "Segundo piso",
-    bedType: "3 camas de plaza y media",
-    capacity: 3,
-    description:
-      "Habitación triple ubicada en el segundo piso, con tres camas de plaza y media y capacidad para 3 personas.",
-    locationDetail: "Ubicada en el segundo piso.",
-    amenities: ["Baño privado", "Smart TV", "Ventilador", "Ropero"],
-  },
-  203: {
-    name: "Habitación Familiar #203",
-    roomType: "Familiar",
-    floorLabel: "Segundo piso",
-    bedType: "2 camas de dos plazas y 3 camas de plaza y media",
-    capacity: 7,
-    description:
-      "Habitación familiar ubicada en el segundo piso. Cuenta con cinco camas y capacidad máxima para 7 personas.",
-    locationDetail: "Ubicada en el segundo piso.",
-    amenities: ["Baño privado", "Smart TV", "Ventiladores", "Ropero"],
-  },
-  205: {
-    name: "Habitación Matrimonial #205",
-    roomType: "Matrimonial",
-    floorLabel: "Segundo piso",
-    bedType: "1 cama de dos plazas",
-    capacity: 2,
-    description:
-      "Habitación matrimonial ubicada en el segundo piso, con una cama de dos plazas y capacidad para 2 personas.",
-    locationDetail: "Ubicada en el segundo piso.",
-    amenities: [
-      "Baño privado",
-      "Smart TV",
-      "Ventilador",
-      "Mesa de noche",
-      "Ropero",
-    ],
-  },
-  301: {
-    name: "Habitación Doble #301",
-    roomType: "Doble",
-    floorLabel: "Tercer piso",
-    bedType: "2 camas de plaza y media",
-    capacity: 2,
-    description:
-      "Habitación doble ubicada en el tercer piso, con dos camas de plaza y media y capacidad para 2 personas.",
-    locationDetail: "Ubicada en el tercer piso.",
-    amenities: [
-      "Baño privado",
-      "Smart TV",
-      "Ventilador",
-      "Mesa de noche",
-      "Ropero",
-    ],
-  },
-  302: {
-    name: "Habitación Triple #302",
-    roomType: "Triple",
-    floorLabel: "Tercer piso",
-    bedType: "3 camas de plaza y media",
-    capacity: 3,
-    description:
-      "Habitación triple ubicada en el tercer piso, con tres camas de plaza y media y capacidad para 3 personas.",
-    locationDetail: "Ubicada en el tercer piso.",
-    amenities: ["Baño privado", "Smart TV", "Ropero", "Velador"],
-  },
-  303: {
-    name: "Habitación Triple #303",
-    roomType: "Triple",
-    floorLabel: "Tercer piso",
-    bedType: "3 camas de plaza y media",
-    capacity: 3,
-    description:
-      "Habitación triple ubicada en el tercer piso, con tres camas de plaza y media y capacidad para 3 personas.",
-    locationDetail: "Ubicada en el tercer piso.",
-    amenities: ["Baño privado", "Smart TV", "Ventilador", "Ropero"],
-  },
-  304: {
-    name: "Habitación Matrimonial #304",
-    roomType: "Matrimonial",
-    floorLabel: "Tercer piso",
-    bedType: "1 cama de dos plazas",
-    capacity: 2,
-    description:
-      "Habitación matrimonial ubicada en el tercer piso, con una cama de dos plazas y capacidad para 2 personas.",
-    locationDetail: "Ubicada en el tercer piso.",
-    amenities: ["Baño privado", "Smart TV", "Ventilador"],
-  },
-  305: {
-    name: "Habitación Matrimonial #305",
-    roomType: "Matrimonial",
-    floorLabel: "Tercer piso",
-    bedType: "1 cama de dos plazas",
-    capacity: 2,
-    description:
-      "Habitación matrimonial ubicada en el tercer piso, con una cama de dos plazas y capacidad para 2 personas.",
-    locationDetail: "Ubicada en el tercer piso.",
-    amenities: [
-      "Baño privado",
-      "Smart TV",
-      "Ventilador",
-      "Velador",
-      "Ropero",
-    ],
-  },
-  405: {
-    name: "Habitación Familiar #405",
-    roomType: "Familiar",
-    floorLabel: "Terraza",
-    bedType: "1 cama de dos plazas y 3 camas de plaza y media",
-    capacity: 5,
-    description:
-      "Habitación familiar ubicada en la terraza, con cuatro camas y capacidad máxima para 5 personas.",
-    locationDetail: "Ubicada en la terraza.",
-    hasTerrace: true,
-    amenities: [
-      "Baño privado",
-      "Smart TV",
-      "Ropero",
-      "Velador",
-      "Ubicación en terraza",
-    ],
-  },
-  406: {
-    name: "Habitación Triple #406",
-    roomType: "Triple",
-    floorLabel: "Segundo piso",
-    bedType: "3 camas de plaza y media",
-    capacity: 3,
-    description:
-      "Habitación triple ubicada en el segundo piso, con tres camas de plaza y media y capacidad para 3 personas.",
-    locationDetail: "Ubicada en el segundo piso.",
-    amenities: ["Baño privado", "Smart TV", "Ventilador", "Ropero"],
-  },
-  407: {
-    name: "Habitación Triple #407",
-    roomType: "Triple",
-    floorLabel: "Segundo piso",
-    bedType: "3 camas de plaza y media",
-    capacity: 3,
-    description:
-      "Habitación triple ubicada en el segundo piso, con tres camas de plaza y media y capacidad para 3 personas.",
-    locationDetail: "Ubicada en el segundo piso.",
-    amenities: ["Baño privado", "Smart TV", "Ventilador", "Ropero"],
-  },
-  505: {
-    name: "Habitación Matrimonial #505",
-    roomType: "Matrimonial",
-    floorLabel: "Quinto piso",
-    bedType: "1 cama de dos plazas",
-    capacity: 2,
-    description:
-      "Habitación matrimonial ubicada en el quinto piso, con una cama de dos plazas y capacidad para 2 personas.",
-    locationDetail: "Ubicada en el quinto piso.",
-    amenities: ["Baño privado", "Smart TV", "Ropero", "Mesas de noche"],
-  },
-};
+function calculateNights(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return 0;
 
-function extractRoomNumber(room) {
-  if (room?.room_number) return String(room.room_number);
+  const [startYear, startMonth, startDay] = checkIn.split("-").map(Number);
+  const [endYear, endMonth, endDay] = checkOut.split("-").map(Number);
+  const start = Date.UTC(startYear, startMonth - 1, startDay);
+  const end = Date.UTC(endYear, endMonth - 1, endDay);
 
-  const match = String(room?.name || "").match(
-    /(?:#|hab(?:itaci[oó]n)?\.?\s*)?(101|201|202|203|205|301|302|303|304|305|405|407|406|505)\b/i
-  );
-
-  return match?.[1] || "";
+  return Math.max(0, (end - start) / 86_400_000);
 }
 
-function normalizeAmenities(value) {
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (!value || typeof value !== "string") return [];
-
-  try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) return parsed.filter(Boolean);
-  } catch {
-    // PostgreSQL puede devolver arreglos como texto.
-  }
-
-  return value
-    .replace(/^\{?|\}?$/g, "")
-    .split(",")
-    .map((item) => item.replace(/^"|"$/g, "").trim())
-    .filter(Boolean);
-}
-
-function createRoomView(roomNumber, databaseRoom = null) {
-  const details = ROOM_DETAILS[roomNumber];
-  const databaseAmenities = normalizeAmenities(databaseRoom?.amenities);
-
-  return {
-    ...databaseRoom,
-    id: databaseRoom?.id ?? null,
-    databaseId: databaseRoom?.id ?? null,
-    room_number: roomNumber,
-    name: details.name,
-    description: details.description,
-    room_type: details.roomType,
-    floor_label: details.floorLabel,
-    bed_type: details.bedType,
-    capacity: details.capacity,
-    amenities:
-      details.amenities.length > 0 ? details.amenities : databaseAmenities,
-    locationDetail: details.locationDetail,
-    hasTerrace: Boolean(details.hasTerrace),
-    main_image_url: databaseRoom?.main_image_url || fallbackImage,
-  };
+function formatMoney(value) {
+  return `S/ ${Number(value || 0).toFixed(0)}`;
 }
 
 function amenityIcon(amenity) {
-  const text = amenity.toLowerCase();
+  const text = String(amenity || "").toLowerCase();
 
   if (text.includes("terraza")) return "🌤️";
   if (text.includes("baño") || text.includes("ducha")) return "🚿";
@@ -276,166 +60,130 @@ function amenityIcon(amenity) {
 export default function RoomDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const normalizedParam = String(id || "").trim().toLowerCase();
+  const slug = LEGACY_ROOM_TO_CATEGORY[normalizedParam] || normalizedParam;
 
-  const [room, setRoom] = useState(null);
+  const [category, setCategory] = useState(null);
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [activeTab, setActiveTab] = useState("photos");
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [availabilityResult, setAvailabilityResult] = useState(null);
   const [error, setError] = useState("");
+  const [dateError, setDateError] = useState("");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
-  const [dateError, setDateError] = useState("");
 
   const today = getLocalDateValue();
+  const nights = useMemo(
+    () => calculateNights(checkIn, checkOut),
+    [checkIn, checkOut]
+  );
 
   useEffect(() => {
-    async function loadRoom() {
+    async function loadCategory() {
       try {
         setLoading(true);
         setError("");
 
-        let roomNumber = ROOM_DETAILS[id] ? String(id) : "";
-        let databaseRoom = null;
-
-        if (roomNumber) {
-          try {
-            const rooms = await getRooms();
-            const roomSummary = Array.isArray(rooms)
-              ? rooms.find(
-                  (candidate) => extractRoomNumber(candidate) === roomNumber
-                ) || null
-              : null;
-
-            // getRooms devuelve el resumen. Luego pedimos el detalle completo
-            // para recibir los arreglos images y videos desde Supabase.
-            databaseRoom = roomSummary?.id
-              ? await getRoomById(roomSummary.id)
-              : null;
-          } catch (roomsError) {
-            console.warn(
-              "No se pudo cargar la habitación desde la API; se usará la ficha local.",
-              roomsError
-            );
-          }
-        } else {
-          const roomById = await getRoomById(id);
-          roomNumber = extractRoomNumber(roomById);
-
-          if (!ROOM_DETAILS[roomNumber]) {
-            throw new Error("La habitación no pertenece al catálogo actualizado.");
-          }
-
-          databaseRoom = roomById;
+        if (!["matrimonial", "doble", "triple", "familiar"].includes(slug)) {
+          throw new Error("La categoría de habitación no existe.");
         }
 
-        const roomView = createRoomView(roomNumber, databaseRoom);
-        setRoom(roomView);
+        const data = await getRoomCategoryBySlug(slug);
+        setCategory(data);
 
-        const validImages = Array.isArray(roomView?.images)
-          ? roomView.images.filter((image) => image?.image_url)
+        const photos = Array.isArray(data?.images)
+          ? data.images.filter((photo) => photo?.image_url)
           : [];
-        const validVideos = Array.isArray(roomView?.videos)
-          ? roomView.videos.filter((video) => video?.video_url)
+        const videos = Array.isArray(data?.videos)
+          ? data.videos.filter((video) => video?.video_url)
           : [];
 
-        const mainImage = validImages.find((image) => image.is_main);
-        const firstImage = validImages[0];
-        const mainVideo = validVideos.find((video) => video.is_main);
-        const firstVideo = validVideos[0];
+        const mainPhoto = photos.find((photo) => photo.is_main) || photos[0];
+        const mainVideo = videos.find((video) => video.is_main) || videos[0];
 
-        // La portada inicia con una foto. Si no existe ninguna, usa el video.
-        if (mainImage || firstImage || roomView.main_image_url) {
+        if (mainPhoto || data?.image_url) {
           setSelectedMedia({
             type: "image",
-            url:
-              mainImage?.image_url ||
-              firstImage?.image_url ||
-              roomView.main_image_url ||
-              fallbackImage,
-            title:
-              mainImage?.title || firstImage?.title || roomView.name,
+            url: mainPhoto?.image_url || data.image_url || fallbackImage,
+            title: mainPhoto?.title || `Habitación ${data.name}`,
           });
           setActiveTab("photos");
-        } else if (mainVideo || firstVideo) {
+        } else if (mainVideo) {
           setSelectedMedia({
             type: "video",
-            url: mainVideo?.video_url || firstVideo?.video_url,
-            title:
-              mainVideo?.title || firstVideo?.title || "Video de la habitación",
-            poster: mainVideo?.poster_url || firstVideo?.poster_url || null,
+            url: mainVideo.video_url,
+            title: mainVideo.title || `Habitación ${data.name}`,
+            poster: mainVideo.poster_url || fallbackImage,
           });
           setActiveTab("videos");
         } else {
           setSelectedMedia({
             type: "image",
             url: fallbackImage,
-            title: roomView.name,
+            title: `Habitación ${data.name}`,
           });
-          setActiveTab("photos");
         }
       } catch (loadError) {
-        console.error("Error cargando habitación:", loadError);
+        console.error("Error cargando categoría:", loadError);
         setError(
-          loadError.message || "No se pudo cargar la habitación seleccionada."
+          loadError.response?.data?.message ||
+            loadError.message ||
+            "No se pudo cargar la categoría seleccionada."
         );
       } finally {
         setLoading(false);
       }
     }
 
-    loadRoom();
-  }, [id]);
+    loadCategory();
+  }, [slug]);
 
   const photos = useMemo(() => {
-    const databasePhotos = Array.isArray(room?.images)
-      ? room.images.filter((photo) => photo?.image_url)
+    const list = Array.isArray(category?.images)
+      ? category.images.filter((photo) => photo?.image_url)
       : [];
 
-    if (databasePhotos.length > 0) return databasePhotos;
+    if (list.length > 0) return list;
 
     return [
       {
-        id: "main-photo",
-        image_url: room?.main_image_url || fallbackImage,
+        id: "fallback-image",
+        image_url: category?.image_url || fallbackImage,
+        title: `Habitación ${category?.name || ""}`,
         is_main: true,
       },
     ];
-  }, [room]);
+  }, [category]);
 
-  const videos = Array.isArray(room?.videos)
-    ? room.videos.filter((video) => video?.video_url)
-    : [];
+  const categoryVideos = useMemo(() => {
+    const list = Array.isArray(category?.videos)
+      ? category.videos.filter((video) => video?.video_url)
+      : [];
+
+    if (list.length > 0) return list;
+
+    return [
+      {
+        id: "general-room-video",
+        video_url: "/videos/habitaciones.mp4",
+        title: "Video referencial de nuestras habitaciones",
+        poster_url: category?.image_url || fallbackImage,
+        is_main: true,
+      },
+    ];
+  }, [category]);
+
   const visiblePhotos = showAllPhotos ? photos : photos.slice(0, 12);
-
-  // Recupera las fechas si el usuario vuelve desde la página de reserva.
-  useEffect(() => {
-    if (!room?.databaseId) return;
-
-    try {
-      const storedDraft = JSON.parse(
-        sessionStorage.getItem(BOOKING_DRAFT_KEY) || "null"
-      );
-
-      if (
-        storedDraft &&
-        String(storedDraft.roomId) === String(room.databaseId)
-      ) {
-        setCheckIn(storedDraft.checkIn || "");
-        setCheckOut(storedDraft.checkOut || "");
-      }
-    } catch (storageError) {
-      console.warn("No se pudieron recuperar las fechas guardadas.", storageError);
-    }
-  }, [room?.databaseId]);
 
   function handleCheckInChange(event) {
     const nextCheckIn = event.target.value;
-
     setCheckIn(nextCheckIn);
     setDateError("");
+    setAvailabilityResult(null);
 
-    // Si la salida dejó de ser válida, se limpia para evitar una reserva errónea.
     if (checkOut && checkOut <= nextCheckIn) {
       setCheckOut("");
     }
@@ -444,9 +192,10 @@ export default function RoomDetail() {
   function handleCheckOutChange(event) {
     setCheckOut(event.target.value);
     setDateError("");
+    setAvailabilityResult(null);
   }
 
-  function handleContinueToBooking() {
+  async function handleCheckAvailability() {
     if (!checkIn || !checkOut) {
       setDateError("Selecciona la fecha de ingreso y la fecha de salida.");
       return;
@@ -459,30 +208,48 @@ export default function RoomDetail() {
       return;
     }
 
-    if (!room?.databaseId) {
-      setDateError(
-        "Esta habitación todavía no está habilitada para reserva online."
+    try {
+      setCheckingAvailability(true);
+      setDateError("");
+      setAvailabilityResult(null);
+
+      const response = await searchCategoryAvailability({
+        check_in: checkIn,
+        check_out: checkOut,
+        guests_count: 1,
+      });
+
+      const selectedCategory = (response.categories || []).find(
+        (item) => item.slug === category.slug
       );
-      return;
+
+      setAvailabilityResult({
+        available: Number(selectedCategory?.available_quantity || 0) > 0,
+        quantity: Number(selectedCategory?.available_quantity || 0),
+        price_per_night: Number(selectedCategory?.price_per_night || 0),
+        nights: Number(response.nights || nights),
+      });
+    } catch (availabilityError) {
+      console.error(
+        "Error consultando disponibilidad de categoría:",
+        availabilityError
+      );
+      setDateError(
+        availabilityError.response?.data?.message ||
+          availabilityError.message ||
+          "No se pudo consultar la disponibilidad."
+      );
+    } finally {
+      setCheckingAvailability(false);
     }
+  }
 
-    const bookingDraft = {
-      roomId: String(room.databaseId),
-      checkIn,
-      checkOut,
-      guestsCount: 1,
-    };
-
-    // Mantiene la información si el usuario actualiza o vuelve a la página.
-    sessionStorage.setItem(
-      BOOKING_DRAFT_KEY,
-      JSON.stringify(bookingDraft)
-    );
-
+  function handleContinueToBooking() {
     const params = new URLSearchParams({
-      roomId: String(room.databaseId),
+      category: category.slug,
       checkIn,
       checkOut,
+      guests: "1",
     });
 
     navigate(`/reservar?${params.toString()}`);
@@ -500,27 +267,37 @@ export default function RoomDetail() {
     );
   }
 
-  if (error || !room) {
+  if (error || !category) {
     return (
       <main className="bg-[#fbf7f0] min-h-[60vh]">
         <div className="max-w-7xl mx-auto px-4 py-12">
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-6">
-            {error || "Habitación no encontrada."}
+            {error || "Categoría no encontrada."}
           </div>
+          <Link
+            to="/habitaciones"
+            className="mt-5 inline-flex font-bold text-[#4b250f]"
+          >
+            ← Volver a habitaciones
+          </Link>
         </div>
       </main>
     );
   }
 
-  const whatsappUrl = `https://wa.me/51901551287?text=${encodeURIComponent(
-    `Hola, quiero consultar disponibilidad para la habitación ${room.room_number} de Casa Huéspedes Pimentel.`
-  )}`;
+  const amenities = Array.isArray(category.amenities)
+    ? category.amenities
+    : [];
+  const totalAmount = availabilityResult?.available
+    ? Number(availabilityResult.price_per_night || 0) *
+      Number(availabilityResult.nights || 0)
+    : 0;
 
   return (
     <main className="bg-[#fbf7f0]">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <Link
-          to="/#habitaciones"
+          to="/habitaciones"
           className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-[#4b250f]"
         >
           ← Volver a las habitaciones
@@ -530,33 +307,28 @@ export default function RoomDetail() {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-3xl md:text-4xl font-black text-[#2b2118]">
-                {room.name}
+                Habitación {category.name}
               </h1>
 
               <span className="rounded-full bg-[#efe2ce] px-4 py-2 text-sm font-black text-[#70401c]">
-                {room.room_type}
+                Categoría {category.name}
               </span>
             </div>
 
             <p className="mt-4 max-w-3xl text-base leading-relaxed text-gray-600">
-              {room.description}
+              {category.description}
             </p>
 
             <div className="mt-5 flex flex-wrap gap-3 text-sm text-gray-700">
               <span className="rounded-full border border-[#eadfce] bg-white px-4 py-2 font-bold">
-                📍 {room.floor_label}
+                👤 Hasta {category.capacity} persona(s)
               </span>
               <span className="rounded-full border border-[#eadfce] bg-white px-4 py-2 font-bold">
-                👤 Hasta {room.capacity} persona(s)
+                🛏️ {category.bed_description}
               </span>
               <span className="rounded-full border border-[#eadfce] bg-white px-4 py-2 font-bold">
-                🛏️ {room.bed_type}
+                🏨 {category.total_quantity} habitación(es) en esta categoría
               </span>
-              {room.hasTerrace && (
-                <span className="rounded-full bg-[#dfead8] px-4 py-2 font-black text-[#35562d]">
-                  🌤️ Ubicada en la terraza
-                </span>
-              )}
             </div>
 
             <div className="mt-7 grid lg:grid-cols-[minmax(0,1fr)_300px] gap-4">
@@ -567,24 +339,28 @@ export default function RoomDetail() {
                     controls
                     playsInline
                     className="h-[420px] w-full object-cover"
-                    poster={selectedMedia?.poster || room.main_image_url || photos[0]?.image_url}
+                    poster={
+                      selectedMedia.poster ||
+                      category.image_url ||
+                      photos[0]?.image_url
+                    }
                   />
                 ) : (
                   <img
                     src={selectedMedia?.url || fallbackImage}
-                    alt={selectedMedia?.title || room.name}
+                    alt={selectedMedia?.title || `Habitación ${category.name}`}
                     className="h-[420px] w-full object-cover"
                   />
                 )}
 
                 <div className="absolute bottom-4 left-4 rounded-full bg-black/65 px-4 py-2 text-sm font-bold text-white">
-                  Habitación {room.room_number}
+                  Imagen referencial · {category.name}
                 </div>
               </div>
 
               <aside className="rounded-3xl border border-[#eadfce] bg-white p-6">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a87545]">
-                  Ficha confirmada
+                  Categoría
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-[#2b2118]">
                   Información principal
@@ -592,140 +368,148 @@ export default function RoomDetail() {
 
                 <dl className="mt-6 space-y-5 text-sm">
                   <div>
-                    <dt className="text-gray-500">Número de habitación</dt>
-                    <dd className="mt-1 font-black text-[#2b2118]">
-                      #{room.room_number}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-gray-500">Ubicación</dt>
-                    <dd className="mt-1 font-black text-[#2b2118]">
-                      {room.locationDetail}
-                    </dd>
-                  </div>
-                  <div>
                     <dt className="text-gray-500">Tipo</dt>
                     <dd className="mt-1 font-black text-[#2b2118]">
-                      {room.room_type}
+                      {category.name}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-gray-500">Camas</dt>
+                    <dt className="text-gray-500">Distribución de camas</dt>
                     <dd className="mt-1 font-black text-[#2b2118]">
-                      {room.bed_type}
+                      {category.bed_description}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-gray-500">Capacidad máxima</dt>
                     <dd className="mt-1 font-black text-[#2b2118]">
-                      {room.capacity} persona(s)
+                      {category.capacity} persona(s)
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-500">Cantidad de habitaciones</dt>
+                    <dd className="mt-1 font-black text-[#2b2118]">
+                      {category.total_quantity}
                     </dd>
                   </div>
                 </dl>
               </aside>
             </div>
 
-            {(photos.length > 1 || videos.length > 0) && (
-              <section className="mt-8 rounded-3xl border border-[#eadfce] bg-white p-5">
-                <div className="flex gap-3 border-b border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("photos")}
-                    className={`px-4 py-3 font-bold ${
-                      activeTab === "photos"
-                        ? "border-b-2 border-[#b77a35] text-[#4b250f]"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    📷 Fotos ({photos.length})
-                  </button>
+            <section className="mt-8 rounded-3xl border border-[#eadfce] bg-white p-5">
+              <div className="flex gap-3 border-b border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("photos")}
+                  className={`px-4 py-3 font-bold ${
+                    activeTab === "photos"
+                      ? "border-b-2 border-[#b77a35] text-[#4b250f]"
+                      : "text-gray-500"
+                  }`}
+                >
+                  📷 Fotos ({photos.length})
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("videos")}
-                    className={`px-4 py-3 font-bold ${
-                      activeTab === "videos"
-                        ? "border-b-2 border-[#b77a35] text-[#4b250f]"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    🎥 Videos ({videos.length})
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("videos")}
+                  className={`px-4 py-3 font-bold ${
+                    activeTab === "videos"
+                      ? "border-b-2 border-[#b77a35] text-[#4b250f]"
+                      : "text-gray-500"
+                  }`}
+                >
+                  🎥 Videos ({categoryVideos.length})
+                </button>
+              </div>
 
-                {activeTab === "photos" && (
-                  <div className="mt-5">
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                      {visiblePhotos.map((photo) => (
-                        <button
-                          key={photo.id}
-                          type="button"
-                          onClick={() =>
-                            setSelectedMedia({
-                              type: "image",
-                              url: photo.image_url,
-                              title: photo.title || room.name,
-                            })
-                          }
-                          className="h-32 overflow-hidden rounded-2xl bg-gray-100"
-                        >
-                          <img
-                            src={photo.image_url}
-                            alt={photo.alt_text || photo.title || room.name}
-                            className="h-full w-full object-cover transition duration-300 hover:scale-105"
-                          />
-                        </button>
-                      ))}
-                    </div>
-
-                    {photos.length > 12 && (
-                      <div className="mt-5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setShowAllPhotos((value) => !value)}
-                          className="rounded-xl border border-[#eadfce] px-5 py-3 font-bold text-[#4b250f] hover:bg-[#fbf7f0]"
-                        >
-                          {showAllPhotos
-                            ? "Ver menos fotos"
-                            : `Ver todas las fotos (${photos.length})`}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === "videos" && (
-                  <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    {videos.map((video, index) => (
+              {activeTab === "photos" && (
+                <div className="mt-5">
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    {visiblePhotos.map((photo) => (
                       <button
-                        key={video.id}
+                        key={photo.id}
                         type="button"
                         onClick={() =>
                           setSelectedMedia({
-                            type: "video",
-                            url: video.video_url,
-                            title: video.title || `Video ${index + 1}`,
-                            poster: video.poster_url || room.main_image_url,
+                            type: "image",
+                            url: photo.image_url,
+                            title:
+                              photo.title ||
+                              `Habitación ${category.name}`,
                           })
                         }
-                        className="relative h-48 overflow-hidden rounded-2xl bg-black text-left"
+                        className="h-32 overflow-hidden rounded-2xl bg-gray-100"
                       >
-                        <video
-                          src={video.video_url}
-                          poster={video.poster_url || room.main_image_url}
-                          className="h-full w-full object-cover opacity-75"
-                          muted
-                          preload="metadata"
+                        <img
+                          src={photo.image_url}
+                          alt={
+                            photo.alt_text ||
+                            photo.title ||
+                            `Habitación ${category.name}`
+                          }
+                          className="h-full w-full object-cover transition duration-300 hover:scale-105"
                         />
-                        <span className="absolute inset-0 grid place-items-center text-4xl text-white">
-                          ▶
-                        </span>
                       </button>
                     ))}
                   </div>
-                )}
-              </section>
-            )}
+
+                  {photos.length > 12 && (
+                    <div className="mt-5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowAllPhotos((value) => !value)}
+                        className="rounded-xl border border-[#eadfce] px-5 py-3 font-bold text-[#4b250f] hover:bg-[#fbf7f0]"
+                      >
+                        {showAllPhotos
+                          ? "Ver menos fotos"
+                          : `Ver todas las fotos (${photos.length})`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "videos" && (
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {categoryVideos.map((video, index) => (
+                    <button
+                      key={video.id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedMedia({
+                          type: "video",
+                          url: video.video_url,
+                          title:
+                            video.title ||
+                            `Video referencial ${index + 1}`,
+                          poster:
+                            video.poster_url ||
+                            category.image_url ||
+                            fallbackImage,
+                        })
+                      }
+                      className="relative h-48 overflow-hidden rounded-2xl bg-black text-left"
+                    >
+                      <video
+                        src={video.video_url}
+                        poster={video.poster_url || category.image_url}
+                        className="h-full w-full object-cover opacity-75"
+                        muted
+                        preload="metadata"
+                      />
+                      <span className="absolute inset-0 grid place-items-center text-4xl text-white">
+                        ▶
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <p className="mt-4 text-xs font-bold text-gray-500">
+                Las fotos y videos son referenciales de habitaciones
+                pertenecientes a esta categoría.
+              </p>
+            </section>
 
             <div className="mt-8 grid gap-5 md:grid-cols-2">
               <section className="rounded-3xl border border-[#eadfce] bg-white p-6">
@@ -735,23 +519,27 @@ export default function RoomDetail() {
 
                 <div className="mt-5 space-y-4">
                   <div className="rounded-2xl border border-[#eadfce] bg-[#fbf7f0] p-4">
-                    <p className="text-sm text-gray-500">Piso o ubicación</p>
+                    <p className="text-sm text-gray-500">Categoría</p>
                     <p className="mt-1 font-black text-[#2b2118]">
-                      {room.floor_label}
+                      {category.name}
                     </p>
                   </div>
 
                   <div className="rounded-2xl border border-[#eadfce] bg-[#fbf7f0] p-4">
-                    <p className="text-sm text-gray-500">Distribución de camas</p>
+                    <p className="text-sm text-gray-500">
+                      Distribución de camas
+                    </p>
                     <p className="mt-1 font-black text-[#2b2118]">
-                      {room.bed_type}
+                      {category.bed_description}
                     </p>
                   </div>
 
                   <div className="rounded-2xl border border-[#eadfce] bg-[#fbf7f0] p-4">
-                    <p className="text-sm text-gray-500">Número de huéspedes</p>
+                    <p className="text-sm text-gray-500">
+                      Número de huéspedes
+                    </p>
                     <p className="mt-1 font-black text-[#2b2118]">
-                      Hasta {room.capacity} persona(s)
+                      Hasta {category.capacity} persona(s)
                     </p>
                   </div>
                 </div>
@@ -763,7 +551,10 @@ export default function RoomDetail() {
                 </h2>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {room.amenities.map((amenity) => (
+                  {(amenities.length > 0
+                    ? amenities
+                    : ["Baño privado", "Smart TV", "WiFi"]
+                  ).map((amenity) => (
                     <div
                       key={amenity}
                       className="flex items-center gap-3 rounded-xl border border-[#eadfce] bg-[#fbf7f0] px-3 py-3 text-sm text-gray-700"
@@ -773,6 +564,11 @@ export default function RoomDetail() {
                     </div>
                   ))}
                 </div>
+
+                <p className="mt-4 text-xs text-gray-500">
+                  El equipamiento mostrado es referencial y puede variar entre
+                  habitaciones de la misma categoría.
+                </p>
               </section>
             </div>
           </div>
@@ -783,34 +579,28 @@ export default function RoomDetail() {
                 Consulta de disponibilidad
               </p>
               <h2 className="mt-2 text-2xl font-black text-[#2b2118]">
-                Habitación {room.room_number}
+                Habitación {category.name}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-gray-600">
-                Selecciona tus fechas o consulta directamente al hospedaje. Los
-                precios no se muestran públicamente.
+                Selecciona tus fechas. El precio se mostrará únicamente
+                después de comprobar que esta categoría tiene disponibilidad.
               </p>
 
               <div className="mt-5 space-y-3 border-y border-[#eadfce] py-5 text-sm">
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-500">Tipo</span>
-                  <span className="font-black">{room.room_type}</span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-gray-500">Ubicación</span>
-                  <span className="text-right font-black">
-                    {room.floor_label}
-                  </span>
+                  <span className="text-gray-500">Categoría</span>
+                  <span className="font-black">{category.name}</span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-gray-500">Camas</span>
                   <span className="max-w-[190px] text-right font-black">
-                    {room.bed_type}
+                    {category.bed_description}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-gray-500">Capacidad</span>
                   <span className="font-black">
-                    {room.capacity} persona(s)
+                    {category.capacity} persona(s)
                   </span>
                 </div>
               </div>
@@ -852,49 +642,90 @@ export default function RoomDetail() {
                 </p>
               )}
 
-              {room.databaseId ? (
-                <button
-                  type="button"
-                  onClick={handleContinueToBooking}
-                  className="mt-6 flex w-full items-center justify-center rounded-xl bg-[#8b5427] px-6 py-4 font-black text-white transition hover:bg-[#633817] focus:outline-none focus:ring-2 focus:ring-[#8b5427] focus:ring-offset-2"
-                >
-                  Consultar disponibilidad
-                </button>
-              ) : (
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-6 flex w-full items-center justify-center rounded-xl bg-[#8b5427] px-6 py-4 font-black text-white transition hover:bg-[#633817] focus:outline-none focus:ring-2 focus:ring-[#8b5427] focus:ring-offset-2"
-                >
-                  Consultar por WhatsApp
-                </a>
-              )}
+              <button
+                type="button"
+                onClick={handleCheckAvailability}
+                disabled={checkingAvailability}
+                className="mt-6 flex w-full items-center justify-center rounded-xl bg-[#8b5427] px-6 py-4 font-black text-white transition hover:bg-[#633817] disabled:cursor-wait disabled:opacity-60"
+              >
+                {checkingAvailability
+                  ? "Consultando..."
+                  : "Consultar disponibilidad"}
+              </button>
 
-              {!room.databaseId && (
-                <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">
-                  Esta ficha ya está visible, pero la habitación todavía debe
-                  habilitarse en Supabase para usar la reserva en línea.
-                </p>
+              {availabilityResult && (
+                <div
+                  className={`mt-5 rounded-2xl border p-5 ${
+                    availabilityResult.available
+                      ? "border-emerald-200 bg-emerald-50"
+                      : "border-amber-200 bg-amber-50"
+                  }`}
+                >
+                  {availabilityResult.available ? (
+                    <>
+                      <p className="font-black text-emerald-800">
+                        Sí hay disponibilidad
+                      </p>
+                      <p className="mt-1 text-sm text-emerald-700">
+                        {availabilityResult.quantity}{" "}
+                        {availabilityResult.quantity === 1
+                          ? "habitación disponible"
+                          : "habitaciones disponibles"}{" "}
+                        en esta categoría.
+                      </p>
+
+                      <div className="mt-4 border-t border-emerald-200 pt-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-sm text-gray-600">
+                            Precio por noche
+                          </span>
+                          <strong className="text-xl text-[#2b2118]">
+                            {formatMoney(
+                              availabilityResult.price_per_night
+                            )}
+                          </strong>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-4">
+                          <span className="text-sm text-gray-600">
+                            Total · {availabilityResult.nights} noche(s)
+                          </span>
+                          <strong className="text-xl text-[#2b2118]">
+                            {formatMoney(totalAmount)}
+                          </strong>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleContinueToBooking}
+                        className="mt-5 flex w-full items-center justify-center rounded-xl bg-[#2b2118] px-5 py-3 font-black text-white transition hover:bg-[#4b250f]"
+                      >
+                        Reservar esta categoría
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-black text-amber-800">
+                        Sin disponibilidad para estas fechas
+                      </p>
+                      <p className="mt-1 text-sm text-amber-700">
+                        Prueba con otras fechas o revisa otra categoría.
+                      </p>
+                    </>
+                  )}
+                </div>
               )}
             </div>
 
             <div className="mt-5 rounded-3xl border border-[#eadfce] bg-[#f4eadc] p-6">
               <h3 className="font-black text-[#2b2118]">
-                ¿Necesitas más información?
+                Información importante
               </h3>
-              <p className="mt-1 text-sm text-gray-600">
-                Consulta directamente por la habitación {room.room_number}.
+              <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                La habitación física se asignará internamente según
+                disponibilidad. Las imágenes son referenciales de la categoría
+                seleccionada.
               </p>
-
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex rounded-xl border border-[#d7c3a8] bg-white px-5 py-3 font-bold text-[#4b250f] transition hover:bg-[#fbf7f0]"
-              >
-                Contactar al hospedaje
-              </a>
             </div>
           </aside>
         </section>

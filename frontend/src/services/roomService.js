@@ -14,6 +14,11 @@ export async function getRoomCategories() {
   return response.data.data;
 }
 
+export async function getRoomCategoryBySlug(slug) {
+  const response = await api.get(`/rooms/categories/${slug}`);
+  return response.data.data;
+}
+
 // Alias para compatibilidad con otros componentes
 export async function getAllRooms() {
   return await getRooms();
