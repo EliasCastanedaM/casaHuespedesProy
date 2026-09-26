@@ -4,7 +4,6 @@ import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import {
   listRoomsForAvailabilityService,
-  searchAvailableRoomsService,
 } from "../availability/availability.service.js";
 import {
   getPublicRoomCategoriesService,
