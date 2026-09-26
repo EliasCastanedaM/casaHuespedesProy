@@ -116,6 +116,7 @@ export async function listRoomsForAvailabilityService(db = pool) {
       room_number,
       floor_label,
       room_type,
+      category_slug,
       amenities,
       'idle' AS availability_status
     FROM rooms
@@ -146,6 +147,7 @@ export async function searchAvailableRoomsService(input = {}, db = pool) {
       r.room_number,
       r.floor_label,
       r.room_type,
+      r.category_slug,
       r.amenities,
       CASE
         WHEN r.status <> 'active' THEN 'blocked'
