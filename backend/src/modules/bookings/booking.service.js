@@ -267,9 +267,15 @@ function inferCategoryName(details) {
 function bookingResult(details, { recovered = false } = {}) {
   const categoryName = inferCategoryName(details);
 
+  const publicBooking = {
+    ...details,
+    room_name: categoryName ? `Habitación ${categoryName}` : "Habitación",
+    category_name: categoryName,
+  };
+
   return {
     mode: "booking",
-    booking: details,
+    booking: publicBooking,
     customer: {
       id: details.customer_id,
       full_name: details.customer_name,
