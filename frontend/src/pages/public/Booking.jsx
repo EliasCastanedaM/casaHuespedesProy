@@ -1,18 +1,16 @@
 import "./Home.css";
 import "./Booking.css";
+
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { getRoomById } from "../../services/roomService";
-import {
-  checkAvailability,
-  createBooking,
-} from "../../services/bookingService";
+import { getRoomCategories } from "../../services/roomService";
+import { createBooking } from "../../services/bookingService";
 
 const BOOKING_DRAFT_KEY = "pimentelBookingDraft";
 const PAYMENT_SESSION_KEY = "pimentelPendingPayment";
 
-function readStoredBookingDraft(roomId) {
-  if (!roomId) return null;
+function readStoredBookingDraft(categorySlug) {
+  if (!categorySlug) return null;
 
   try {
     const storedDraft = JSON.parse(
@@ -21,7 +19,7 @@ function readStoredBookingDraft(roomId) {
 
     if (
       storedDraft &&
-      String(storedDraft.roomId) === String(roomId)
+      String(storedDraft.categorySlug) === String(categorySlug)
     ) {
       return storedDraft;
     }
@@ -47,7 +45,7 @@ function calculateNights(checkIn, checkOut) {
   const [endYear, endMonth, endDay] = checkOut.split("-").map(Number);
   const start = Date.UTC(startYear, startMonth - 1, startDay);
   const end = Date.UTC(endYear, endMonth - 1, endDay);
-  const difference = (end - start) / (1000 * 60 * 60 * 24);
+  const difference = (end - start) / 86_400_000;
 
   return difference > 0 ? difference : 0;
 }
@@ -59,26 +57,31 @@ function formatMoney(value) {
 export default function Booking() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const roomId = searchParams.get("roomId");
+  const categorySlug = String(searchParams.get("category") || "")
+    .trim()
+    .toLowerCase();
   const checkInFromUrl =
     searchParams.get("checkIn") || searchParams.get("check_in") || "";
   const checkOutFromUrl =
     searchParams.get("checkOut") || searchParams.get("check_out") || "";
+  const guestsFromUrl = Number(searchParams.get("guests") || 0);
   const today = getLocalDateValue();
 
-  const [room, setRoom] = useState(null);
-  const [loadingRoom, setLoadingRoom] = useState(true);
+  const [category, setCategory] = useState(null);
+  const [loadingCategory, setLoadingCategory] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const [formData, setFormData] = useState(() => {
-    const storedDraft = readStoredBookingDraft(roomId);
+    const storedDraft = readStoredBookingDraft(categorySlug);
 
     return {
       check_in: checkInFromUrl || storedDraft?.checkIn || "",
       check_out: checkOutFromUrl || storedDraft?.checkOut || "",
-      guests_count: Number(storedDraft?.guestsCount || 1),
+      guests_count: Number(
+        guestsFromUrl || storedDraft?.guestsCount || 1
+      ),
       special_requests: "",
       customer: {
         full_name: "",
@@ -91,42 +94,58 @@ export default function Booking() {
   });
 
   useEffect(() => {
-    async function loadSelectedRoom() {
+    async function loadSelectedCategory() {
       try {
         setError("");
 
-        if (!roomId) {
-          setError("No se seleccionó ninguna habitación.");
+        if (!categorySlug) {
+          setError(
+            "Primero consulta disponibilidad y selecciona una categoría."
+          );
           return;
         }
 
-        const data = await getRoomById(roomId);
-        setRoom(data);
+        const categories = await getRoomCategories();
+        const selected = (Array.isArray(categories) ? categories : []).find(
+          (item) => String(item.slug).toLowerCase() === categorySlug
+        );
+
+        if (!selected) {
+          setError("La categoría seleccionada no está disponible.");
+          return;
+        }
+
+        setCategory(selected);
       } catch (loadError) {
-        console.error("Error cargando habitación para reserva:", loadError);
-        setError("No se pudo cargar la habitación seleccionada.");
+        console.error("Error cargando categoría para reserva:", loadError);
+        setError("No se pudo cargar la categoría seleccionada.");
       } finally {
-        setLoadingRoom(false);
+        setLoadingCategory(false);
       }
     }
 
-    loadSelectedRoom();
-  }, [roomId]);
+    loadSelectedCategory();
+  }, [categorySlug]);
 
   useEffect(() => {
-    if (!roomId || (!formData.check_in && !formData.check_out)) return;
+    if (
+      !categorySlug ||
+      (!formData.check_in && !formData.check_out)
+    ) {
+      return;
+    }
 
     sessionStorage.setItem(
       BOOKING_DRAFT_KEY,
       JSON.stringify({
-        roomId: String(roomId),
+        categorySlug,
         checkIn: formData.check_in,
         checkOut: formData.check_out,
         guestsCount: Number(formData.guests_count || 1),
       })
     );
   }, [
-    roomId,
+    categorySlug,
     formData.check_in,
     formData.check_out,
     formData.guests_count,
@@ -137,8 +156,8 @@ export default function Booking() {
     [formData.check_in, formData.check_out]
   );
 
-  const totalAmount = room
-    ? nights * Number(room.price_per_night || 0)
+  const totalAmount = category
+    ? nights * Number(category.price_per_night || 0)
     : 0;
 
   function handleChange(event) {
@@ -147,7 +166,7 @@ export default function Booking() {
     setFormData((previous) => {
       const nextFormData = {
         ...previous,
-        [name]: value,
+        [name]: name === "guests_count" ? Number(value) : value,
       };
 
       if (
@@ -182,8 +201,8 @@ export default function Booking() {
       setError("");
       setSuccess("");
 
-      if (!room) {
-        setError("No hay una habitación seleccionada.");
+      if (!category) {
+        setError("No hay una categoría seleccionada.");
         return;
       }
 
@@ -196,10 +215,10 @@ export default function Booking() {
 
       if (
         Number(formData.guests_count) < 1 ||
-        Number(formData.guests_count) > Number(room.capacity)
+        Number(formData.guests_count) > Number(category.capacity)
       ) {
         setError(
-          "La cantidad de huéspedes supera la capacidad de la habitación."
+          "La cantidad de huéspedes supera la capacidad de esta categoría."
         );
         return;
       }
@@ -215,27 +234,13 @@ export default function Booking() {
 
       if (totalAmount <= 0) {
         setError(
-          "Esta habitación todavía no tiene un precio configurado. Comunícate con el hospedaje."
-        );
-        return;
-      }
-
-      const availability = await checkAvailability({
-        room_id: Number(room.id),
-        check_in: formData.check_in,
-        check_out: formData.check_out,
-      });
-
-      if (!availability.available) {
-        setError(
-          availability.reason ||
-            "La habitación no está disponible en esas fechas."
+          "Esta categoría todavía no tiene un precio configurado. Comunícate con el hospedaje."
         );
         return;
       }
 
       const result = await createBooking({
-        room_id: Number(room.id),
+        category_slug: category.slug,
         check_in: formData.check_in,
         check_out: formData.check_out,
         guests_count: Number(formData.guests_count),
@@ -283,29 +288,45 @@ export default function Booking() {
     }
   }
 
+  const availabilityBackUrl = `/disponibilidad?category=${encodeURIComponent(
+    categorySlug
+  )}&checkIn=${encodeURIComponent(
+    formData.check_in
+  )}&checkOut=${encodeURIComponent(
+    formData.check_out
+  )}&guests=${encodeURIComponent(formData.guests_count)}`;
+
   return (
     <main className="booking-page">
       <div className="booking-container">
         <div className="booking-header">
           <p className="hotel-eyebrow">Reserva online</p>
-          <h1>Solicita tu reserva</h1>
+          <h1>Completa tu reserva</h1>
           <p>
-            Completa tus datos y revisa el monto. En el siguiente paso podrás
-            pagar de forma segura utilizando el enlace oficial de Culqi.
+            Elegiste una categoría disponible. Completa tus datos y revisa el
+            monto antes de continuar al pago.
           </p>
         </div>
 
-        {loadingRoom && (
+        {loadingCategory && (
           <div className="booking-loading-card">
-            Cargando habitación...
+            Cargando categoría...
           </div>
         )}
 
-        {!loadingRoom && error && !room && (
-          <div className="booking-error-card">{error}</div>
+        {!loadingCategory && error && !category && (
+          <div className="booking-error-card">
+            <p>{error}</p>
+            <Link
+              to="/disponibilidad"
+              className="booking-back-link"
+            >
+              Consultar disponibilidad
+            </Link>
+          </div>
         )}
 
-        {!loadingRoom && room && (
+        {!loadingCategory && category && (
           <div className="booking-layout">
             <form onSubmit={handleSubmit} className="booking-form-card">
               <section className="booking-section">
@@ -357,14 +378,14 @@ export default function Booking() {
                   type="number"
                   name="guests_count"
                   min="1"
-                  max={room.capacity}
+                  max={category.capacity}
                   value={formData.guests_count}
                   onChange={handleChange}
                   className="booking-input"
                   required
                 />
                 <p className="booking-help-text">
-                  Capacidad máxima: {room.capacity} persona(s)
+                  Capacidad máxima: {category.capacity} persona(s)
                 </p>
               </section>
 
@@ -482,8 +503,8 @@ export default function Booking() {
                 <div>
                   <strong>El pago se realiza en el siguiente paso</strong>
                   <p>
-                    Primero registraremos la reserva. Después verás el monto
-                    exacto, el botón de Culqi y las instrucciones.
+                    El sistema asignará internamente una habitación disponible
+                    de esta categoría. El número físico no modifica tu precio.
                   </p>
                 </div>
               </div>
@@ -515,8 +536,8 @@ export default function Booking() {
               <h2 className="booking-summary-title">Resumen</h2>
 
               <div className="booking-summary-room">
-                <p>Habitación</p>
-                <h3>{room.name}</h3>
+                <p>Categoría</p>
+                <h3>{category.name}</h3>
               </div>
 
               <div className="booking-summary-list">
@@ -530,7 +551,7 @@ export default function Booking() {
                 </div>
                 <div className="booking-summary-row">
                   <span>Precio por noche</span>
-                  <strong>{formatMoney(room.price_per_night)}</strong>
+                  <strong>{formatMoney(category.price_per_night)}</strong>
                 </div>
                 <div className="booking-summary-row">
                   <span>Noches</span>
@@ -559,10 +580,10 @@ export default function Booking() {
               </div>
 
               <Link
-                to={`/habitaciones/${room.id}`}
+                to={availabilityBackUrl}
                 className="booking-back-link"
               >
-                Volver al detalle
+                Volver a disponibilidad
               </Link>
             </aside>
           </div>
