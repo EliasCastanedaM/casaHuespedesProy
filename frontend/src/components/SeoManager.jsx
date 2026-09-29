@@ -32,9 +32,10 @@ const pageMetadata = {
       "Conoce en fotos y videos las habitaciones, espacios y experiencias de Casa Huéspedes Pimentel, cerca de la playa.",
   },
   "/turismo": {
-    title: "Qué hacer en Pimentel | Turismo, playa y gastronomía",
+    title:
+      "Pimentel, Perú: qué hacer y lugares turísticos | Casa Huéspedes Pimentel",
     description:
-      "Descubre qué hacer en Pimentel: playa, muelle, gastronomía y atractivos de Lambayeque durante tu estadía en Casa Huéspedes Pimentel.",
+      "Guía de Pimentel, Lambayeque: qué hacer, Playa de Pimentel, muelle, caballitos de totora, gastronomía y museos cercanos para planificar tu visita.",
   },
   "/contacto": {
     title: "Contacto y ubicación | Casa Huéspedes Pimentel",
@@ -105,6 +106,79 @@ function ensureCanonical(href) {
   canonical.setAttribute("href", href);
 }
 
+function setRouteJsonLd(pathname) {
+  const scriptId = "route-seo-jsonld";
+  let script = document.getElementById(scriptId);
+
+  if (pathname !== "/turismo") {
+    script?.remove();
+    return;
+  }
+
+  const tourismUrl = `${SITE_URL}/turismo`;
+  const data = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Casa Huéspedes Pimentel",
+            item: SITE_URL,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Pimentel, Perú: qué hacer y lugares turísticos",
+            item: tourismUrl,
+          },
+        ],
+      },
+      {
+        "@type": "TouristDestination",
+        "@id": `${tourismUrl}#pimentel`,
+        name: "Pimentel, Lambayeque, Perú",
+        url: tourismUrl,
+        description:
+          "Guía para conocer Pimentel, sus playas, muelle, tradición pesquera, gastronomía y atractivos cercanos en Lambayeque.",
+        containedInPlace: {
+          "@type": "AdministrativeArea",
+          name: "Lambayeque, Perú",
+        },
+        includesAttraction: [
+          {
+            "@type": "TouristAttraction",
+            name: "Muelle de Pimentel",
+          },
+          {
+            "@type": "TouristAttraction",
+            name: "Playa de Pimentel",
+          },
+          {
+            "@type": "TouristAttraction",
+            name: "Caballitos de Totora",
+          },
+          {
+            "@type": "TouristAttraction",
+            name: "Malecón de Pimentel",
+          },
+        ],
+      },
+    ],
+  };
+
+  if (!script) {
+    script = document.createElement("script");
+    script.id = scriptId;
+    script.type = "application/ld+json";
+    document.head.appendChild(script);
+  }
+
+  script.textContent = JSON.stringify(data);
+}
+
 export default function SeoManager() {
   const location = useLocation();
 
@@ -148,6 +222,7 @@ export default function SeoManager() {
     ensureMeta("name", "twitter:image", DEFAULT_IMAGE);
 
     ensureCanonical(canonicalUrl);
+    setRouteJsonLd(pathname);
   }, [location.pathname]);
 
   return null;
