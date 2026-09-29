@@ -1091,12 +1091,12 @@ export default function Tourism() {
               </p>
 
               <h1 className="mt-5 max-w-4xl font-serif text-5xl leading-[1.02] tracking-[-0.035em] text-white sm:text-6xl lg:text-[82px]">
-                Conoce Pimentel
+                Pimentel, Perú: qué hacer y qué conocer
               </h1>
 
               <p className="mt-7 max-w-2xl text-base leading-8 text-white/85 sm:text-lg">
-                Tradición, historia, mar y gastronomía en uno de los
-                balnearios más representativos de Lambayeque.
+                Guía para descubrir Pimentel, Lambayeque: playa, muelle,
+                caballitos de totora, gastronomía y experiencias frente al mar.
               </p>
 
               <div className="mt-9 flex flex-col gap-4 sm:flex-row">
@@ -1173,13 +1173,14 @@ export default function Tourism() {
             </span>
 
             <h2 className="mt-5 font-serif text-4xl leading-[1.05] text-[#2b1d12] sm:text-5xl lg:text-6xl">
-              Lugares, tradiciones y sabores
+              Qué hacer en Pimentel: lugares, tradición y gastronomía
             </h2>
 
             <p className="mx-auto mt-6 max-w-3xl text-base leading-8 text-[#6c5b50] sm:text-lg">
-              Después de conocer Pimentel en video, descubre sus
-              principales atractivos y algunas de las especialidades más
-              representativas de la gastronomía lambayecana.
+              Si estás planeando un viaje a Pimentel, aquí encontrarás ideas
+              para recorrer su playa, conocer el muelle, acercarte a la
+              tradición de los caballitos de totora y descubrir sabores y
+              espacios culturales de Lambayeque.
             </p>
 
             <a
@@ -1198,6 +1199,78 @@ export default function Tourism() {
                 <path d="m6 9 6 6 6-6" />
               </svg>
             </a>
+          </div>
+        </section>
+
+        {/* GUÍA SEO / PLANIFICACIÓN */}
+        <section
+          id="que-hacer-en-pimentel"
+          className="scroll-mt-24 bg-[#fbf7ef] px-5 pb-20 sm:pb-24 md:px-8"
+        >
+          <div className="mx-auto max-w-7xl">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <article className="rounded-[28px] border border-[#dfcfbb] bg-white p-7 shadow-[0_18px_45px_rgba(43,29,18,0.06)] sm:p-9">
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#a87545]">
+                  Imperdible
+                </span>
+                <h3 className="mt-3 font-serif text-3xl text-[#2b1d12]">
+                  Visita el Muelle de Pimentel
+                </h3>
+                <p className="mt-4 text-base leading-8 text-[#6c5b50]">
+                  El muelle es uno de los símbolos más reconocibles de Pimentel
+                  y un punto ideal para contemplar el océano, caminar junto al
+                  mar y disfrutar el paisaje costero.
+                </p>
+              </article>
+
+              <article className="rounded-[28px] border border-[#dfcfbb] bg-white p-7 shadow-[0_18px_45px_rgba(43,29,18,0.06)] sm:p-9">
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#a87545]">
+                  Mar y descanso
+                </span>
+                <h3 className="mt-3 font-serif text-3xl text-[#2b1d12]">
+                  Recorre la Playa de Pimentel
+                </h3>
+                <p className="mt-4 text-base leading-8 text-[#6c5b50]">
+                  La playa permite disfrutar caminatas, atardeceres y el
+                  ambiente del balneario. También es un buen punto de partida
+                  para conocer el malecón y la vida local frente al mar.
+                </p>
+              </article>
+
+              <article className="rounded-[28px] border border-[#dfcfbb] bg-white p-7 shadow-[0_18px_45px_rgba(43,29,18,0.06)] sm:p-9">
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#a87545]">
+                  Tradición
+                </span>
+                <h3 className="mt-3 font-serif text-3xl text-[#2b1d12]">
+                  Conoce los caballitos de totora
+                </h3>
+                <p className="mt-4 text-base leading-8 text-[#6c5b50]">
+                  Estas embarcaciones artesanales forman parte de la tradición
+                  pesquera de la costa norte y ayudan a entender la relación
+                  histórica entre Pimentel y el mar.
+                </p>
+              </article>
+
+              <article className="rounded-[28px] border border-[#dfcfbb] bg-white p-7 shadow-[0_18px_45px_rgba(43,29,18,0.06)] sm:p-9">
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#a87545]">
+                  Dónde hospedarse
+                </span>
+                <h3 className="mt-3 font-serif text-3xl text-[#2b1d12]">
+                  Hospedaje en Pimentel cerca del mar
+                </h3>
+                <p className="mt-4 text-base leading-8 text-[#6c5b50]">
+                  Si buscas alojamiento para tu visita, revisa las categorías de
+                  Casa Huéspedes Pimentel y consulta disponibilidad según tus
+                  fechas y número de huéspedes.
+                </p>
+                <Link
+                  to="/habitaciones"
+                  className="mt-6 inline-flex items-center justify-center rounded-full bg-[#2b1d12] px-6 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-0.5 hover:bg-[#a87545]"
+                >
+                  Ver habitaciones en Pimentel
+                </Link>
+              </article>
+            </div>
           </div>
         </section>
 
