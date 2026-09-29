@@ -8,6 +8,7 @@ import {
 import {
   getPublicRoomCategoriesController,
   getPublicRoomCategoryBySlugController,
+  updateRoomCategoryController,
   getAllRoomsController,
   getRoomByIdController,
   createRoomController,
@@ -26,6 +27,11 @@ const router = Router();
 router.get("/", requireAdminAuth, getAllRoomsController);
 router.get("/categories", getPublicRoomCategoriesController);
 router.get("/categories/:slug", getPublicRoomCategoryBySlugController);
+router.put(
+  "/categories/:slug",
+  requireAdminAuth,
+  updateRoomCategoryController
+);
 router.get("/admin", requireAdminAuth, getAllRoomsController);
 router.get("/:id", requireAdminAuth, getRoomByIdController);
 
