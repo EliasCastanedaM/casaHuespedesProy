@@ -17,6 +17,7 @@ const LEGACY_ROOM_TO_CATEGORY = {
   202: "triple",
   302: "triple",
   303: "triple",
+  406: "triple",
   407: "triple",
   203: "familiar",
   405: "familiar",
