@@ -526,7 +526,7 @@ export default function RoomsAdmin() {
 
   const summaryCards = [
     {
-      title: "Total habitaciones",
+      title: "Unidades físicas",
       value: stats.totalRooms,
       helper: "Registradas",
       icon: "🛏️",
@@ -534,7 +534,7 @@ export default function RoomsAdmin() {
     {
       title: "Activas",
       value: stats.activeRooms,
-      helper: "Visibles en la web",
+      helper: "Disponibles para asignación",
       icon: "✅",
     },
     {
@@ -744,8 +744,8 @@ export default function RoomsAdmin() {
               </select>
 
               <p className="text-xs text-[#6f6258] mt-2">
-                Activa: aparece en la web. Inactiva o mantenimiento: no debería
-                reservarse.
+                Activa: puede asignarse a reservas. Inactiva o mantenimiento:
+                queda fuera del stock disponible.
               </p>
             </div>
 
@@ -922,7 +922,7 @@ export default function RoomsAdmin() {
                               </p>
 
                               <p className="text-xs text-[#9d9187] mt-1 font-bold">
-                                Habitación #{room.id}
+                                ID interno #{room.id} · N.º {room.room_number || "sin número"}
                               </p>
 
                               <p className="text-sm text-[#6f6258] line-clamp-2 mt-2 max-w-xl">
