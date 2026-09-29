@@ -46,6 +46,7 @@ export default function RoomsAdmin() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingCategorySlug, setSavingCategorySlug] = useState(null);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -278,6 +279,58 @@ export default function RoomsAdmin() {
       setError(backendMessage || "No se pudo guardar la habitación.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  function handleCategoryFieldChange(slug, field, value) {
+    setCategories((current) =>
+      current.map((category) =>
+        category.slug === slug
+          ? {
+              ...category,
+              [field]: value,
+            }
+          : category
+      )
+    );
+  }
+
+  async function handleCategorySave(category) {
+    try {
+      setSavingCategorySlug(category.slug);
+      setError("");
+      setSuccess("");
+
+      const capacity = Number(category.capacity);
+      const pricePerNight = Number(category.price_per_night);
+
+      if (!Number.isInteger(capacity) || capacity < 1) {
+        setError("La capacidad de la categoría debe ser mayor a cero.");
+        return;
+      }
+
+      if (!Number.isFinite(pricePerNight) || pricePerNight < 0) {
+        setError("El precio de la categoría no puede ser negativo.");
+        return;
+      }
+
+      await api.put(`/rooms/categories/${category.slug}`, {
+        capacity,
+        price_per_night: pricePerNight,
+      });
+
+      setSuccess(
+        `Categoría ${category.name} actualizada. Sus unidades físicas quedaron sincronizadas.`
+      );
+      await loadRooms();
+    } catch (err) {
+      console.error("Error actualizando categoría:", err);
+      setError(
+        err.response?.data?.message ||
+          "No se pudo actualizar la categoría."
+      );
+    } finally {
+      setSavingCategorySlug(null);
     }
   }
 
@@ -618,6 +671,88 @@ export default function RoomsAdmin() {
             />
           ))}
         </div>
+
+        {/* CATEGORÍAS COMERCIALES */}
+        <section className="bg-white rounded-[1.5rem] border border-[#eadfce] p-6 mt-6 shadow-sm">
+          <div>
+            <p className="uppercase tracking-[0.2em] text-[11px] font-black text-[#a87545]">
+              Inventario comercial
+            </p>
+            <h2 className="font-serif text-3xl leading-none tracking-[-0.035em] text-[#2d261f] mt-2">
+              Categorías
+            </h2>
+            <p className="text-[#6f6258] text-sm mt-2 leading-relaxed">
+              Precio y capacidad se definen aquí una sola vez. El total se
+              calcula automáticamente según las unidades físicas asignadas.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
+            {categories.map((category) => (
+              <article
+                key={category.slug}
+                className="rounded-2xl border border-[#eadfce] bg-[#fbf7ef] p-5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.16em] font-black text-[#a87545]">
+                      Categoría
+                    </p>
+                    <h3 className="text-xl font-black text-[#2d261f] mt-1">
+                      {category.name}
+                    </h3>
+                  </div>
+                  <span className="rounded-full bg-white border border-[#eadfce] px-3 py-1 text-xs font-black text-[#6f6258]">
+                    {Number(category.total_quantity || 0)} unidad(es)
+                  </span>
+                </div>
+
+                <label className="admin-label mt-5">Capacidad máxima</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={category.capacity}
+                  onChange={(event) =>
+                    handleCategoryFieldChange(
+                      category.slug,
+                      "capacity",
+                      event.target.value
+                    )
+                  }
+                  className="admin-input"
+                />
+
+                <label className="admin-label mt-4">Precio por noche</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={category.price_per_night ?? ""}
+                  onChange={(event) =>
+                    handleCategoryFieldChange(
+                      category.slug,
+                      "price_per_night",
+                      event.target.value
+                    )
+                  }
+                  className="admin-input"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => handleCategorySave(category)}
+                  disabled={savingCategorySlug === category.slug}
+                  className="mt-5 w-full bg-[#a87545] text-white px-4 py-3 rounded-xl text-sm font-black hover:bg-[#8f623a] transition disabled:opacity-60"
+                >
+                  {savingCategorySlug === category.slug
+                    ? "Guardando..."
+                    : "Guardar categoría"}
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
 
         {/* FORMULARIO */}
         <form
