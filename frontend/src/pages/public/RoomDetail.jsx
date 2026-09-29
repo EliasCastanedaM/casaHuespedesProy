@@ -74,6 +74,7 @@ export default function RoomDetail() {
   const [dateError, setDateError] = useState("");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
+  const [guestsCount, setGuestsCount] = useState(1);
 
   const today = getLocalDateValue();
   const nights = useMemo(
@@ -195,6 +196,12 @@ export default function RoomDetail() {
     setAvailabilityResult(null);
   }
 
+  function handleGuestsChange(event) {
+    setGuestsCount(Number(event.target.value || 1));
+    setDateError("");
+    setAvailabilityResult(null);
+  }
+
   async function handleCheckAvailability() {
     if (!checkIn || !checkOut) {
       setDateError("Selecciona la fecha de ingreso y la fecha de salida.");
@@ -208,6 +215,17 @@ export default function RoomDetail() {
       return;
     }
 
+    if (
+      !Number.isInteger(Number(guestsCount)) ||
+      Number(guestsCount) < 1 ||
+      Number(guestsCount) > Number(category.capacity)
+    ) {
+      setDateError(
+        `Selecciona entre 1 y ${category.capacity} huésped(es) para esta categoría.`
+      );
+      return;
+    }
+
     try {
       setCheckingAvailability(true);
       setDateError("");
@@ -216,7 +234,7 @@ export default function RoomDetail() {
       const response = await searchCategoryAvailability({
         check_in: checkIn,
         check_out: checkOut,
-        guests_count: 1,
+        guests_count: Number(guestsCount),
       });
 
       const selectedCategory = (response.categories || []).find(
@@ -249,7 +267,7 @@ export default function RoomDetail() {
       category: category.slug,
       checkIn,
       checkOut,
-      guests: "1",
+      guests: String(guestsCount),
     });
 
     navigate(`/reservar?${params.toString()}`);
@@ -626,6 +644,23 @@ export default function RoomDetail() {
                     onChange={handleCheckOutChange}
                     className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-3 text-sm"
                   />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="text-sm font-bold text-gray-600">
+                    Huéspedes
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={category.capacity}
+                    value={guestsCount}
+                    onChange={handleGuestsChange}
+                    className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-3 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Máximo {category.capacity} persona(s) en esta categoría.
+                  </p>
                 </div>
               </div>
 
