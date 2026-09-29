@@ -22,7 +22,7 @@ export default api;
 
 export async function getRooms() {
   try {
-    const response = await api.get("/rooms");
+    const response = await api.get("/rooms/admin");
     return response.data.data;
   } catch (error) {
     throw new Error(
