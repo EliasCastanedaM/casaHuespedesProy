@@ -24,11 +24,11 @@ import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 
 const router = Router();
 
-router.get("/", getPublicRoomsController);
+router.get("/", requireAdminAuth, getAllRoomsController);
 router.get("/categories", getPublicRoomCategoriesController);
 router.get("/categories/:slug", getPublicRoomCategoryBySlugController);
 router.get("/admin", requireAdminAuth, getAllRoomsController);
-router.get("/:id", getRoomByIdController);
+router.get("/:id", requireAdminAuth, getRoomByIdController);
 
 // Una sola foto que reemplaza la portada actual.
 router.post(
