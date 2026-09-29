@@ -111,10 +111,11 @@ export async function createRoomController(req, res, next) {
   try {
     const roomData = req.body;
 
-    if (!roomData.name || roomData.price_per_night === undefined) {
+    if (!roomData.name || !roomData.category_slug) {
       return res.status(400).json({
         success: false,
-        message: "El nombre y el precio por noche son obligatorios",
+        message:
+          "El nombre interno y la categoría son obligatorios para crear una habitación.",
       });
     }
 
