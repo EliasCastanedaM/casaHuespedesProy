@@ -71,7 +71,9 @@ export default function BookingsAdmin() {
     return bookings.filter((booking) => {
       const text = `${booking.booking_code || ""} ${booking.customer_name || ""} ${
         booking.customer_phone || ""
-      } ${booking.room_name || ""}`.toLowerCase();
+      } ${booking.category_name || ""} ${
+        booking.assigned_room_name || booking.room_name || ""
+      }`.toLowerCase();
 
       const matchesSearch = text.includes(search.toLowerCase());
 
@@ -169,7 +171,8 @@ export default function BookingsAdmin() {
       "Cliente",
       "Celular",
       "Correo",
-      "Habitacion",
+      "Categoria",
+      "Habitacion asignada",
       "Ingreso",
       "Salida",
       "Hora",
@@ -188,7 +191,8 @@ export default function BookingsAdmin() {
       booking.customer_name || "",
       booking.customer_phone || "",
       booking.customer_email || "",
-      booking.room_name || "",
+      booking.category_name || booking.category_slug || "",
+      booking.assigned_room_name || booking.room_name || "",
       booking.check_in || "",
       booking.check_out || "",
       booking.check_in_time || "",
@@ -316,7 +320,7 @@ export default function BookingsAdmin() {
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar por cliente, celular, código o habitación..."
+              placeholder="Buscar por cliente, celular, código, categoría o habitación interna..."
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-gold"
             />
 
@@ -367,7 +371,7 @@ export default function BookingsAdmin() {
                   <tr>
                     <th className="text-left p-4">Código</th>
                     <th className="text-left p-4">Cliente</th>
-                    <th className="text-left p-4">Habitación</th>
+                    <th className="text-left p-4">Categoría / asignación</th>
                     <th className="text-left p-4">Fechas</th>
                     <th className="text-left p-4">Total</th>
                     <th className="text-left p-4">Estado</th>
@@ -406,7 +410,15 @@ export default function BookingsAdmin() {
 
                       <td className="p-4">
                         <p className="font-black text-slate-800">
-                          {booking.room_name}
+                          {booking.category_name ||
+                            booking.category_slug ||
+                            "Categoría no identificada"}
+                        </p>
+                        <p className="text-slate-500 mt-1">
+                          Asignación interna:{" "}
+                          {booking.assigned_room_name ||
+                            booking.room_name ||
+                            "-"}
                         </p>
                         <p className="text-slate-500 mt-1">
                           Huéspedes: {booking.guests_count}
