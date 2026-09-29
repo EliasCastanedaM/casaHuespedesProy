@@ -123,6 +123,8 @@ export default function Home() {
         "
         videoSrc="/videos/pimentel.mp4"
         poster="https://www.caminoincamachu.com/wp-content/uploads/2024/03/playa-pimentel-1.jpg"
+        ctaLink="/turismo"
+        ctaText="Ver guía de Pimentel"
       />
 
       {/* POR QUÉ HOSPEDARSE */}
@@ -272,6 +274,8 @@ function StoryVideoSection({
   videoSrc,
   poster,
   reverse = false,
+  ctaLink = "",
+  ctaText = "",
 }) {
   return (
     <section
@@ -285,6 +289,15 @@ function StoryVideoSection({
         <h2 className="hotel-title hotel-story-title">{title}</h2>
 
         <p>{description}</p>
+
+        {ctaLink && ctaText && (
+          <Link
+            to={ctaLink}
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-[#2b1d12] px-5 py-3 text-xs font-black uppercase tracking-[0.12em] text-white transition hover:-translate-y-0.5 hover:bg-[#a87545]"
+          >
+            {ctaText}
+          </Link>
+        )}
       </div>
 
       <div className="hotel-video-frame">
