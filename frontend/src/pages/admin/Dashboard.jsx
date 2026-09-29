@@ -291,9 +291,18 @@ export default function Dashboard() {
                             </p>
 
                             <p className="text-[#6f6258] text-sm mt-1">
-                              {booking.room_name || "Habitación"} ·{" "}
-                              {formatDate(booking.check_in)} · {booking.nights}{" "}
+                              {booking.category_name ||
+                                booking.category_slug ||
+                                "Categoría"}{" "}
+                              · {formatDate(booking.check_in)} · {booking.nights}{" "}
                               noche(s)
+                            </p>
+
+                            <p className="text-[#9d9187] text-xs mt-1">
+                              Asignación interna:{" "}
+                              {booking.assigned_room_name ||
+                                booking.room_name ||
+                                "-"}
                             </p>
                           </div>
 
