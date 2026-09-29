@@ -38,7 +38,7 @@ export async function createBooking(bookingData) {
   } catch (error) {
     throw new Error(
       error.response?.data?.message ||
-        "La habitación no está disponible para esas fechas. Elige otra fecha u otra habitación."
+        "La categoría seleccionada ya no tiene disponibilidad para esas fechas. Elige otra fecha u otra categoría."
     );
   }
 }
