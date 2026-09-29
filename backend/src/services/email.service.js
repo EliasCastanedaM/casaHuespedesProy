@@ -96,15 +96,27 @@ function emailShell(title, content) {
   `;
 }
 
-function bookingSummary(details) {
+function bookingSummary(details, { internal = false } = {}) {
+  const categoryName =
+    details.category_name ||
+    String(details.room_name || "").replace(/^Habitación\s+/i, "") ||
+    "Categoría seleccionada";
+
+  const internalAssignment = internal && details.assigned_room_name
+    ? `<p style="margin:0 0 10px;"><strong>Asignación interna:</strong> ${escapeHtml(
+        details.assigned_room_name
+      )}</p>`
+    : "";
+
   return `
     <div style="background:#fbf7ef;border:1px solid #eadfce;border-radius:16px;padding:18px;margin:20px 0;">
       <p style="margin:0 0 10px;"><strong>Código:</strong> ${escapeHtml(
         details.booking_code
       )}</p>
-      <p style="margin:0 0 10px;"><strong>Habitación:</strong> ${escapeHtml(
-        details.room_name
+      <p style="margin:0 0 10px;"><strong>Categoría:</strong> ${escapeHtml(
+        categoryName
       )}</p>
+      ${internalAssignment}
       <p style="margin:0 0 10px;"><strong>Ingreso:</strong> ${escapeHtml(
         formatDate(details.check_in)
       )}</p>
@@ -243,7 +255,7 @@ export async function sendBookingPendingEmails(details) {
       Se registró una nueva solicitud de reserva pendiente de pago.
     </p>
 
-    ${bookingSummary(details)}
+    ${bookingSummary(details, { internal: true })}
 
     <div style="background:#fbf7ef;border:1px solid #eadfce;border-radius:16px;padding:18px;">
       <p style="margin:0 0 10px;"><strong>Cliente:</strong> ${escapeHtml(
@@ -279,7 +291,7 @@ export async function sendPaymentReportedEmail(details) {
       CulqiPanel antes de confirmar la reserva.
     </p>
 
-    ${bookingSummary(details)}
+    ${bookingSummary(details, { internal: true })}
 
     <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:16px;padding:18px;">
       <p style="margin:0 0 10px;"><strong>Cliente:</strong> ${escapeHtml(
