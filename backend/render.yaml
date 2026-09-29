@@ -17,7 +17,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URLS
-        value: https://casa-huespedes-proy.vercel.app
+        value: https://www.casahuespedespimentel.com,https://casahuespedespimentel.com,https://casa-huespedes-proy.vercel.app
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
@@ -45,4 +45,4 @@ services:
       - key: HOTEL_NAME
         value: Casa Huéspedes Pimentel
       - key: HOTEL_WEBSITE
-        value: https://casa-huespedes-proy.vercel.app/
+        value: https://www.casahuespedespimentel.com/
