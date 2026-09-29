@@ -16,6 +16,7 @@ import {
 import {
   getPublicRoomCategoriesService,
   getPublicRoomCategoryBySlugService,
+  updateRoomCategoryService,
 } from "./roomCategory.service.js";
 
 function uploadBufferToCloudinary(file, options) {
@@ -78,6 +79,30 @@ export async function getPublicRoomCategoryBySlugController(req, res, next) {
     return res.json({ success: true, data: category });
   } catch (error) {
     next(error);
+  }
+}
+
+export async function updateRoomCategoryController(req, res, next) {
+  try {
+    const category = await updateRoomCategoryService(
+      req.params.slug,
+      req.body
+    );
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Categoría de habitación no encontrada",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Categoría actualizada correctamente",
+      data: category,
+    });
+  } catch (error) {
+    return next(error);
   }
 }
 
