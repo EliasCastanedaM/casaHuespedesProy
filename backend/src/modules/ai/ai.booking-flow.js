@@ -21,7 +21,7 @@ function inferCategorySlug(room) {
   if (!room) return null;
 
   const explicit = normalizedText(
-    room.category_slug || room.category || room.room_type || ""
+    room.category_slug || room.slug || room.category || room.room_type || ""
   );
   if (CATEGORY_LABELS[explicit]) return explicit;
 
@@ -434,34 +434,41 @@ function minimalCompletedContext(result, intentId) {
 }
 
 function availableAlternativesReply(result) {
-  const rooms = result?.rooms || [];
-  const counts = new Map();
+  const categories = (result?.categories || []).filter(
+    (category) => Number(category.available_quantity || 0) > 0
+  );
 
-  for (const room of rooms) {
-    const label = categoryLabel(room);
-    if (!label) continue;
-    counts.set(label, Number(counts.get(label) || 0) + 1);
-  }
-
-  if (counts.size === 0) {
+  if (categories.length === 0) {
     return "No hay otras categorías disponibles para esas fechas y cantidad de huéspedes.";
   }
 
   return [
     "Categorías disponibles ahora:",
-    ...[...counts.entries()].map(
-      ([label, quantity]) =>
-        `- ${label}: ${quantity} ${quantity === 1 ? "habitación disponible" : "habitaciones disponibles"}`
-    ),
+    ...categories.map((category) => {
+      const quantity = Number(category.available_quantity || 0);
+      return `- ${category.name}: ${quantity} ${quantity === 1 ? "habitación disponible" : "habitaciones disponibles"}`;
+    }),
   ].join("\n");
 }
 
 export function mergeAvailabilityIntoBookingContext(context = {}, result) {
-  const availableRooms = (result?.rooms || []).map((room) =>
-    publicRoomOption(room, true)
-  );
-  const selectedRoom = context.room?.id
-    ? availableRooms.find((room) => room.id === Number(context.room.id)) || null
+  const availableRooms = (result?.categories || [])
+    .filter((category) => Number(category.available_quantity || 0) > 0)
+    .map((category) =>
+      publicRoomOption(
+        {
+          ...category,
+          category_slug: category.slug,
+        },
+        true
+      )
+    );
+
+  const selectedCategorySlug = inferCategorySlug(context.room);
+  const selectedRoom = selectedCategorySlug
+    ? availableRooms.find(
+        (room) => room.category_slug === selectedCategorySlug
+      ) || null
     : null;
 
   return {
@@ -573,83 +580,53 @@ export async function handleDeterministicBookingFlow({
     };
   }
 
-  // Si la categoría se eligió sin una consulta previa de disponibilidad,
-  // busca una unidad física libre de esa categoría. El número asignado queda
-  // exclusivamente en el backend y nunca se expone al huésped.
-  if (
-    nextContext.room?.category_slug &&
-    !nextContext.room.availability_confirmed
-  ) {
-    const categoryAvailability = await services.searchAvailableRooms({
-      check_in: nextContext.check_in,
-      check_out: nextContext.check_out || undefined,
-      nights: nextContext.check_out ? undefined : nextContext.nights,
-      guests_count: nextContext.guests_count,
-      check_in_time: nextContext.check_in_time || undefined,
-    });
-    const availableRooms = (categoryAvailability?.rooms || []).map((room) =>
-      publicRoomOption(room, true)
-    );
-    const matchingRoom = availableRooms.find(
-      (room) => room.category_slug === nextContext.room.category_slug
-    );
-
-    if (!matchingRoom) {
-      const refreshedContext = mergeAvailabilityIntoBookingContext(
-        { ...nextContext, room: null },
-        categoryAvailability
-      );
-      const requestedCategory =
-        categoryLabel(nextContext.room) || "solicitada";
-
-      return {
-        handled: true,
-        context: refreshedContext,
-        reply: `No quedan habitaciones disponibles en la categoría ${requestedCategory} para esas fechas.\nNo se creó ninguna reserva ni se generó un pago.\n${availableAlternativesReply(categoryAvailability)}\nIndica otra categoría o llama al ${hotelPhone}.`,
-      };
-    }
-
-    nextContext = {
-      ...nextContext,
-      room: matchingRoom,
-      available_rooms: availableRooms,
-    };
-  }
-
-  const availabilityInput = {
-    room_id: nextContext.room.id,
+  // Revalida stock a nivel de categoría justo antes de crear la reserva.
+  // La unidad física se elige únicamente dentro del servicio de reservas.
+  const categoryAvailability = await services.searchAvailableRooms({
     check_in: nextContext.check_in,
     check_out: nextContext.check_out || undefined,
     nights: nextContext.check_out ? undefined : nextContext.nights,
     guests_count: nextContext.guests_count,
     check_in_time: nextContext.check_in_time || undefined,
-  };
+  });
 
-  const availability = await services.checkAvailability(availabilityInput);
-  if (!availability.available) {
-    const alternatives = await services.searchAvailableRooms({
-      check_in: nextContext.check_in,
-      check_out: nextContext.check_out || undefined,
-      nights: nextContext.check_out ? undefined : nextContext.nights,
-      guests_count: nextContext.guests_count,
-      check_in_time: nextContext.check_in_time || undefined,
-    });
+  const requestedCategorySlug = inferCategorySlug(nextContext.room);
+  const matchingCategory = (categoryAvailability?.categories || []).find(
+    (category) =>
+      String(category.slug || "").toLowerCase() === requestedCategorySlug &&
+      Number(category.available_quantity || 0) > 0
+  );
+
+  if (!matchingCategory) {
     const refreshedContext = mergeAvailabilityIntoBookingContext(
       { ...nextContext, room: null },
-      alternatives
+      categoryAvailability
     );
+    const requestedCategory =
+      categoryLabel(nextContext.room) || "solicitada";
 
     return {
       handled: true,
       context: refreshedContext,
-      reply: `${availability.reason || "La categoría seleccionada ya no tiene disponibilidad."}\nNo se creó ninguna reserva ni se generó un pago.\n${availableAlternativesReply(alternatives)}\nIndica otra categoría o llama al ${hotelPhone}.`,
+      reply: `No quedan habitaciones disponibles en la categoría ${requestedCategory} para esas fechas.\nNo se creó ninguna reserva ni se generó un pago.\n${availableAlternativesReply(categoryAvailability)}\nIndica otra categoría o llama al ${hotelPhone}.`,
     };
   }
+
+  nextContext = {
+    ...nextContext,
+    room: publicRoomOption(
+      {
+        ...matchingCategory,
+        category_slug: matchingCategory.slug,
+      },
+      true
+    ),
+  };
 
   try {
     const result = await services.createBooking(
       {
-        room_id: nextContext.room.id,
+        category_slug: nextContext.room.category_slug,
         check_in: nextContext.check_in,
         check_out: nextContext.check_out || undefined,
         nights: nextContext.check_out ? undefined : nextContext.nights,
