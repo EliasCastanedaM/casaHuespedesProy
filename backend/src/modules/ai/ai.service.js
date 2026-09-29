@@ -3,9 +3,6 @@ import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import {
-  listRoomsForAvailabilityService,
-} from "../availability/availability.service.js";
-import {
   getPublicRoomCategoriesService,
   searchAvailableRoomCategoriesService,
 } from "../rooms/roomCategory.service.js";
@@ -496,10 +493,7 @@ async function generateAiReplyInternal({
     paymentUrl: env.culqiPaymentUrl,
     newIntentPrepared: newReservation,
     services: {
-      listRooms: async () =>
-        (await listRoomsForAvailabilityService()).filter(
-          (room) => Boolean(room.category_slug)
-        ),
+      listCategories: getPublicRoomCategoriesService,
       searchAvailableRooms: searchAvailableRoomCategoriesService,
       createBooking: (bookingData, options = {}) =>
         createBookingByCategoryService(bookingData, {

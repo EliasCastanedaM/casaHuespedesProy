@@ -10,24 +10,6 @@ import { buildHotelAssistantPrompt } from "../src/modules/ai/ai.prompt.js";
 
 const PAYMENT_URL = "https://express.culqi.com/pago/prueba";
 const INTENT_ID = "11111111-1111-4111-8111-111111111111";
-const room407 = {
-  id: 14,
-  name: "Habitación 407",
-  room_number: "407",
-  category_slug: "triple",
-  capacity: 3,
-  price_per_night: 218.91,
-  status: "active",
-};
-const room205 = {
-  id: 5,
-  name: "Habitación 205",
-  room_number: "205",
-  category_slug: "matrimonial",
-  capacity: 2,
-  price_per_night: 151.53,
-  status: "active",
-};
 const categoryTriple = {
   id: 3,
   slug: "triple",
@@ -71,7 +53,7 @@ function bookingResult(input) {
       total_amount: 437.82,
     },
     customer: input.customer,
-    room:
+    category:
       input.category_slug === "matrimonial"
         ? categoryMatrimonial
         : categoryTriple,
@@ -82,7 +64,7 @@ function bookingResult(input) {
 
 function successfulBookingServices(calls) {
   return {
-    listRooms: async () => [room407, room205],
+    listCategories: async () => [categoryTriple, categoryMatrimonial],
     searchAvailableRooms: async (input) => {
       calls.searches.push(input);
       return {
@@ -151,7 +133,7 @@ test("consultar disponibilidad no crea una reserva", async () => {
 test("la intención incompleta pide los faltantes juntos y conserva la intención", async () => {
   const calls = emptyCalls();
   const result = await flow({
-    message: "Quiero la 407",
+    message: "Quiero la Triple",
     context: availabilityContext(),
     services: successfulBookingServices(calls),
   });
@@ -165,7 +147,7 @@ test("la intención incompleta pide los faltantes juntos y conserva la intenció
 test("reutiliza lo conocido, revalida y crea una sola pending_payment", async () => {
   const calls = emptyCalls();
   const services = successfulBookingServices(calls);
-  const started = await flow({ message: "Quiero la 407", context: availabilityContext(), services });
+  const started = await flow({ message: "Quiero la Triple", context: availabilityContext(), services });
   const completed = await flow({
     message: "Nombre: Ana Torres; correo: ana@example.com; celular: 987654321; DNI: 12345678; hora de ingreso: 15:30; solicitud especial: cuna",
     context: started.context,
@@ -187,7 +169,7 @@ test("reutiliza lo conocido, revalida y crea una sola pending_payment", async ()
 test("una reserva creada limpia PII, public_token y payment_url del contexto", async () => {
   const calls = emptyCalls();
   const result = await flow({
-    message: "Quiero la 407. Nombre: Ana Torres; correo: ana@example.com; celular: 987654321",
+    message: "Quiero la Triple. Nombre: Ana Torres; correo: ana@example.com; celular: 987654321",
     context: availabilityContext(),
     services: successfulBookingServices(calls),
   });
@@ -203,7 +185,7 @@ test("no entrega CULQI_PAYMENT_URL cuando la creación falla", async () => {
   const services = successfulBookingServices(calls);
   services.createBooking = async () => { throw new Error("Fallo interno."); };
   const result = await flow({
-    message: "Quiero la 407. Nombre: Ana Torres; correo: ana@example.com; celular: 987654321",
+    message: "Quiero la Triple. Nombre: Ana Torres; correo: ana@example.com; celular: 987654321",
     context: availabilityContext(),
     services,
   });
@@ -241,7 +223,7 @@ test("si la categoría deja de estar disponible devuelve alternativas reales", a
     };
   };
   const result = await flow({
-    message: "Quiero la 407. Nombre: Ana Torres; correo: ana@example.com; celular: 987654321",
+    message: "Quiero la Triple. Nombre: Ana Torres; correo: ana@example.com; celular: 987654321",
     context: availabilityContext(),
     services,
   });
@@ -250,12 +232,23 @@ test("si la categoría deja de estar disponible devuelve alternativas reales", a
   assert.match(result.reply, /Matrimonial: 1 habitación disponible/);
   assert.doesNotMatch(result.reply, /205|151\.53/);
   assert.doesNotMatch(result.reply, /express\.culqi\.com/);
-  assert.equal(result.context.available_rooms[0].category_slug, "matrimonial");
+  assert.equal(
+    result.context.available_categories[0].category_slug,
+    "matrimonial"
+  );
 });
 
 test("un contexto vencido no reutiliza datos antiguos", () => {
   const old = {
-    booking_context: { customer: { email: "antiguo@example.com" }, room: room407 },
+    booking_context: {
+      customer: { email: "antiguo@example.com" },
+      room: {
+        id: 14,
+        name: "Habitación Triple #407",
+        room_number: "407",
+        category_slug: "triple",
+      },
+    },
     booking_context_expires_at: "2026-09-15T10:00:00.000Z",
   };
   assert.deepEqual(activeBookingContextFromRow(old, Date.parse("2026-09-15T10:00:01.000Z")), {});
@@ -304,4 +297,22 @@ test("una categoría también activa la intención y se asigna internamente", as
   assert.equal(calls.bookings[0].input.category_slug, "matrimonial");
   assert.match(result.reply, /Categoría: Matrimonial/);
   assert.doesNotMatch(result.reply, /205/);
+});
+
+test("un número físico nunca se acepta ni se repite al huésped", async () => {
+  const calls = emptyCalls();
+  const result = await flow({
+    message: "Quiero la habitación 407",
+    context: availabilityContext(),
+    services: successfulBookingServices(calls),
+  });
+
+  assert.equal(result.handled, true);
+  assert.match(result.reply, /reservas se realizan por categoría/i);
+  assert.doesNotMatch(result.reply, /407/);
+  assert.equal(calls.bookings.length, 0);
+  assert.doesNotMatch(
+    JSON.stringify(result.context),
+    /room_number|assigned_room|Habitación 407/i
+  );
 });

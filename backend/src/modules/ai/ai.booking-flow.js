@@ -17,16 +17,16 @@ const CATEGORY_LABELS = {
   familiar: "Familiar",
 };
 
-function inferCategorySlug(room) {
-  if (!room) return null;
+function inferCategorySlug(category) {
+  if (!category) return null;
 
   const explicit = normalizedText(
-    room.category_slug || room.slug || room.category || room.room_type || ""
+    category.category_slug || category.slug || category.category || ""
   );
   if (CATEGORY_LABELS[explicit]) return explicit;
 
   const searchable = normalizedText(
-    `${room.name || ""} ${room.room_type || ""}`
+    `${category.name || ""} ${category.category_name || ""}`
   );
   return (
     Object.keys(CATEGORY_LABELS).find((slug) =>
@@ -89,19 +89,48 @@ function toIsoDateValue(value) {
   return String(value || "").match(/^\d{4}-\d{2}-\d{2}/)?.[0] || "";
 }
 
-function publicRoomOption(room, availabilityConfirmed = false) {
-  const categorySlug = inferCategorySlug(room);
+function publicCategoryOption(category, availabilityConfirmed = false) {
+  const categorySlug = inferCategorySlug(category);
   const label = categoryLabel(categorySlug);
 
   return {
-    id: Number(room.id),
-    name: label ? `Habitación ${label}` : "Habitación",
-    room_number: room.room_number || null,
+    slug: categorySlug,
+    name: label,
     category_slug: categorySlug,
     category_name: label,
-    capacity: Number(room.capacity),
-    price_per_night: Number(room.price_per_night),
+    capacity: Number(category.capacity),
+    price_per_night: Number(category.price_per_night),
+    available_quantity:
+      category.available_quantity === undefined
+        ? undefined
+        : Number(category.available_quantity || 0),
     availability_confirmed: availabilityConfirmed,
+  };
+}
+
+function normalizeCategoryContext(context = {}) {
+  const legacyCategory = context.category || context.room || null;
+  const legacyAvailable =
+    context.available_categories || context.available_rooms || [];
+  const { room: _room, available_rooms: _availableRooms, ...safeContext } =
+    context;
+
+  return {
+    ...safeContext,
+    category: legacyCategory
+      ? publicCategoryOption(
+          legacyCategory,
+          Boolean(legacyCategory.availability_confirmed)
+        )
+      : null,
+    available_categories: Array.isArray(legacyAvailable)
+      ? legacyAvailable.map((category) =>
+          publicCategoryOption(
+            category,
+            Boolean(category.availability_confirmed)
+          )
+        )
+      : [],
   };
 }
 
@@ -112,8 +141,8 @@ export function isReservationIntent(message) {
     /\b(?:quiero|quisiera|deseo|necesito|prefiero|voy a)\s+(?:hacer\s+)?(?:la\s+)?(?:reserva|reservar|pagar)\b/,
     /\bme gustaria\s+(?:hacer\s+)?(?:la\s+)?(?:reserva|reservar|pagar)\b/,
     /\b(?:reservame|separame|apartame)\b/,
-    /\bquiero\s+(?:la|habitacion)\s*\d{3}\b/,
-    /\b(?:quiero|quisiera|deseo|necesito|prefiero)\s+(?:una\s+)?(?:habitacion\s+)?(?:matrimonial|doble|triple|familiar)\b/,
+    /\bquiero\s+(?:(?:la\s+)?habitacion\s+)?\d{3}\b/,
+    /\b(?:quiero|quisiera|deseo|necesito|prefiero)\s+(?:(?:una|la)\s+)?(?:habitacion\s+)?(?:matrimonial|doble|triple|familiar)\b/,
   ].some((pattern) => pattern.test(text));
 }
 
@@ -193,7 +222,8 @@ function extractFullName(message, allowUnlabeled = true) {
   for (const line of lines) {
     if (
       !/@|\d/.test(line) &&
-      !/^(?:correo|email|telefono|teléfono|celular|whatsapp|habitacion|habitación|ingreso|entrada|salida|check)/i.test(line)
+      !/^(?:correo|email|telefono|teléfono|celular|whatsapp|habitacion|habitación|ingreso|entrada|salida|check)/i.test(line) &&
+      !/\b(?:quiero|quisiera|deseo|reservar|matrimonial|doble|triple|familiar)\b/i.test(line)
     ) {
       const candidate = cleanNameCandidate(line);
       if (candidate) return candidate;
@@ -276,7 +306,7 @@ function extractDates(message) {
   };
 }
 
-function extractRoomReference(message) {
+function extractCategoryReference(message) {
   const text = normalizedText(message);
 
   const category = Object.keys(CATEGORY_LABELS).find((slug) =>
@@ -284,50 +314,47 @@ function extractRoomReference(message) {
   );
   if (category) return category;
 
-  // Se mantiene compatibilidad con mensajes antiguos que mencionen un número,
-  // pero el número nunca se muestra de vuelta al huésped.
-  const labeled = text.match(
-    /\b(?:habitacion|cuarto|room)\s*(?:numero|nro|n)?\s*[:#-]?\s*(\d{3})\b/
-  )?.[1];
-  if (labeled) return labeled;
-
-  const wanted = text.match(
-    /\bquiero\s+(?:(?:reservar|pagar)\s+)?(?:la\s+)?(\d{3})\b/
-  )?.[1];
-  if (wanted) return wanted;
-
-  return /^\d{3}$/.test(text) ? text : null;
-}
-
-function roomMatches(room, reference) {
-  if (!room || !reference) return false;
-
-  const normalizedReference = normalizedText(reference);
-  if (CATEGORY_LABELS[normalizedReference]) {
-    return inferCategorySlug(room) === normalizedReference;
+  if (
+    /\b(?:habitacion|cuarto|room)\s*(?:numero|nro|n)?\s*[:#-]?\s*\d{3}\b/.test(
+      text
+    ) || /^\d{3}$/.test(text)
+  ) {
+    return "__physical_room__";
   }
 
+  return null;
+}
+
+function categoryMatches(category, reference) {
+  if (!category || !reference || reference === "__physical_room__") {
+    return false;
+  }
+
+  const normalizedReference = normalizedText(reference);
   return (
-    String(room.room_number || "") === String(reference) ||
-    normalizedText(room.name).includes(String(reference))
+    Boolean(CATEGORY_LABELS[normalizedReference]) &&
+    inferCategorySlug(category) === normalizedReference
   );
 }
 
-async function resolveSelectedRoom(reference, context, listRooms) {
-  if (!reference) return context.room || null;
+async function resolveSelectedCategory(reference, context, listCategories) {
+  if (!reference) return context.category || null;
+  if (reference === "__physical_room__") return null;
 
-  const knownRooms = Array.isArray(context.available_rooms)
-    ? context.available_rooms
+  const knownCategories = Array.isArray(context.available_categories)
+    ? context.available_categories
     : [];
-  const known = knownRooms.find((room) => roomMatches(room, reference));
-  if (known) return publicRoomOption(known, true);
+  const known = knownCategories.find((category) =>
+    categoryMatches(category, reference)
+  );
+  if (known) return publicCategoryOption(known, true);
 
-  const rooms = await listRooms();
-  const selected = rooms.find(
-    (room) => room.status === "active" && roomMatches(room, reference)
+  const categories = await listCategories();
+  const selected = categories.find(
+    (category) => categoryMatches(category, reference)
   );
 
-  return selected ? publicRoomOption(selected, false) : null;
+  return selected ? publicCategoryOption(selected, false) : null;
 }
 
 function mergeMessageData(
@@ -367,7 +394,7 @@ function mergeMessageData(
 
 function missingFields(context) {
   const missing = [];
-  if (!context.room?.id) missing.push("categoría de habitación");
+  if (!context.category?.category_slug) missing.push("categoría de habitación");
   if (!context.check_in) missing.push("fecha de ingreso");
   if (!context.check_out && !context.nights) missing.push("fecha de salida");
   if (!context.guests_count) missing.push("cantidad de huéspedes");
@@ -377,24 +404,27 @@ function missingFields(context) {
   return missing;
 }
 
-function missingDataReply(context, invalidRoomReference) {
+function missingDataReply(context, invalidCategoryReference) {
   const missing = missingFields(context);
   const knownCategories = [
     ...new Set(
-      (context.available_rooms || [])
-        .map((room) => categoryLabel(room))
+      (context.available_categories || [])
+        .map((category) => categoryLabel(category))
         .filter(Boolean)
     ),
   ].join(", ");
-  const invalidRoomLine = invalidRoomReference
-    ? "No pude identificar esa categoría de habitación.\n"
-    : "";
+  const invalidCategoryLine =
+    invalidCategoryReference === "__physical_room__"
+      ? "Las reservas se realizan por categoría, no por número físico de habitación.\n"
+      : invalidCategoryReference
+        ? "No pude identificar esa categoría de habitación.\n"
+        : "";
   const optionsLine =
     knownCategories && missing.includes("categoría de habitación")
       ? `Categorías disponibles: ${knownCategories}.\n`
       : "";
 
-  return `${invalidRoomLine}${optionsLine}Para crear la pre-reserva me falta: ${missing.join(
+  return `${invalidCategoryLine}${optionsLine}Para crear la pre-reserva me falta: ${missing.join(
     ", "
   )}.\nEnvíame todos esos datos juntos en un solo mensaje. No envíes datos de tarjeta.`;
 }
@@ -402,8 +432,8 @@ function missingDataReply(context, invalidRoomReference) {
 function createdBookingReply(result, paymentUrl) {
   const booking = result.booking;
   const category =
-    categoryLabel(result.room) ||
-    categoryLabel({ name: booking.room_name }) ||
+    categoryLabel(result.category || result.room) ||
+    categoryLabel({ name: booking.category_name }) ||
     "Confirmada";
 
   return [
@@ -452,10 +482,11 @@ function availableAlternativesReply(result) {
 }
 
 export function mergeAvailabilityIntoBookingContext(context = {}, result) {
-  const availableRooms = (result?.categories || [])
+  const safeContext = normalizeCategoryContext(context);
+  const availableCategories = (result?.categories || [])
     .filter((category) => Number(category.available_quantity || 0) > 0)
     .map((category) =>
-      publicRoomOption(
+      publicCategoryOption(
         {
           ...category,
           category_slug: category.slug,
@@ -464,21 +495,21 @@ export function mergeAvailabilityIntoBookingContext(context = {}, result) {
       )
     );
 
-  const selectedCategorySlug = inferCategorySlug(context.room);
-  const selectedRoom = selectedCategorySlug
-    ? availableRooms.find(
-        (room) => room.category_slug === selectedCategorySlug
+  const selectedCategorySlug = inferCategorySlug(safeContext.category);
+  const selectedCategory = selectedCategorySlug
+    ? availableCategories.find(
+        (category) => category.category_slug === selectedCategorySlug
       ) || null
     : null;
 
   return {
-    ...context,
-    check_in: result?.check_in || context.check_in || null,
-    check_out: result?.check_out || context.check_out || null,
-    nights: result?.nights || context.nights || null,
-    guests_count: result?.guests_count || context.guests_count || null,
-    room: selectedRoom,
-    available_rooms: availableRooms,
+    ...safeContext,
+    check_in: result?.check_in || safeContext.check_in || null,
+    check_out: result?.check_out || safeContext.check_out || null,
+    nights: result?.nights || safeContext.nights || null,
+    guests_count: result?.guests_count || safeContext.guests_count || null,
+    category: selectedCategory,
+    available_categories: availableCategories,
   };
 }
 
@@ -491,24 +522,31 @@ export async function handleDeterministicBookingFlow({
   createIntentId = randomUUID,
   newIntentPrepared = false,
 }) {
-  if (isPaymentReportedMessage(message)) {
-    let nextContext = context;
+  const safeInitialContext = normalizeCategoryContext(context);
 
-    if (context.intent_id && context.booking?.status !== "payment_reported") {
+  if (isPaymentReportedMessage(message)) {
+    let nextContext = safeInitialContext;
+
+    if (
+      safeInitialContext.intent_id &&
+      safeInitialContext.booking?.status !== "payment_reported"
+    ) {
       try {
-        const reported = await services.reportPayment(context.intent_id);
+        const reported = await services.reportPayment(
+          safeInitialContext.intent_id
+        );
         nextContext = {
-          ...context,
+          ...safeInitialContext,
           state: "payment_reported",
           booking: {
-            ...context.booking,
+            ...safeInitialContext.booking,
             status: reported?.status || "payment_reported",
           },
         };
       } catch {
         return {
           handled: true,
-          context,
+          context: safeInitialContext,
           reply: `El equipo verificará tu pago manualmente. Si necesitas ayuda, llama al ${hotelPhone}. Tu reserva aún no está confirmada.`,
         };
       }
@@ -517,14 +555,15 @@ export async function handleDeterministicBookingFlow({
     return {
       handled: true,
       context: nextContext,
-      reply: context.booking?.booking_code
-        ? `Gracias. El equipo verificará el pago de la pre-reserva ${context.booking.booking_code}. La reserva todavía no está confirmada; recibirás el correo cuando el personal la confirme manualmente.`
+      reply: safeInitialContext.booking?.booking_code
+        ? `Gracias. El equipo verificará el pago de la pre-reserva ${safeInitialContext.booking.booking_code}. La reserva todavía no está confirmada; recibirás el correo cuando el personal la confirme manualmente.`
         : `Gracias. El equipo verificará el pago manualmente. Si reservaste por otro medio, comparte tu código de reserva o llama al ${hotelPhone}.`,
     };
   }
 
   const startsNewReservation = isNewReservationIntent(message);
-  const baseContext = startsNewReservation && !newIntentPrepared ? {} : context;
+  const baseContext =
+    startsNewReservation && !newIntentPrepared ? {} : safeInitialContext;
   const intent = startsNewReservation || isReservationIntent(message);
 
   if (!baseContext.active && !intent) {
@@ -560,13 +599,13 @@ export async function handleDeterministicBookingFlow({
     state: "draft",
     intent_id: nextContext.intent_id || createIntentId(),
   };
-  const roomReference = extractRoomReference(message);
-  const selectedRoom = await resolveSelectedRoom(
-    roomReference,
+  const categoryReference = extractCategoryReference(message);
+  const selectedCategory = await resolveSelectedCategory(
+    categoryReference,
     nextContext,
-    services.listRooms
+    services.listCategories
   );
-  nextContext = { ...nextContext, room: selectedRoom };
+  nextContext = { ...nextContext, category: selectedCategory };
 
   const missing = missingFields(nextContext);
   if (missing.length > 0) {
@@ -575,7 +614,7 @@ export async function handleDeterministicBookingFlow({
       context: nextContext,
       reply: missingDataReply(
         nextContext,
-        roomReference && !selectedRoom ? roomReference : null
+        categoryReference && !selectedCategory ? categoryReference : null
       ),
     };
   }
@@ -590,7 +629,7 @@ export async function handleDeterministicBookingFlow({
     check_in_time: nextContext.check_in_time || undefined,
   });
 
-  const requestedCategorySlug = inferCategorySlug(nextContext.room);
+  const requestedCategorySlug = inferCategorySlug(nextContext.category);
   const matchingCategory = (categoryAvailability?.categories || []).find(
     (category) =>
       String(category.slug || "").toLowerCase() === requestedCategorySlug &&
@@ -599,11 +638,11 @@ export async function handleDeterministicBookingFlow({
 
   if (!matchingCategory) {
     const refreshedContext = mergeAvailabilityIntoBookingContext(
-      { ...nextContext, room: null },
+      { ...nextContext, category: null },
       categoryAvailability
     );
     const requestedCategory =
-      categoryLabel(nextContext.room) || "solicitada";
+      categoryLabel(nextContext.category) || "solicitada";
 
     return {
       handled: true,
@@ -614,7 +653,7 @@ export async function handleDeterministicBookingFlow({
 
   nextContext = {
     ...nextContext,
-    room: publicRoomOption(
+    category: publicCategoryOption(
       {
         ...matchingCategory,
         category_slug: matchingCategory.slug,
@@ -626,7 +665,7 @@ export async function handleDeterministicBookingFlow({
   try {
     const result = await services.createBooking(
       {
-        category_slug: nextContext.room.category_slug,
+        category_slug: nextContext.category.category_slug,
         check_in: nextContext.check_in,
         check_out: nextContext.check_out || undefined,
         nights: nextContext.check_out ? undefined : nextContext.nights,
@@ -669,7 +708,7 @@ export async function handleDeterministicBookingFlow({
         check_in_time: nextContext.check_in_time || undefined,
       });
       const refreshedContext = mergeAvailabilityIntoBookingContext(
-        { ...nextContext, room: null },
+        { ...nextContext, category: null },
         alternatives
       );
 
