@@ -29,10 +29,25 @@ const statusStyles = {
 
 function formatDate(value) {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString("es-PE", {
+
+  const text = String(value).trim();
+
+  // PostgreSQL DATE llega como AAAA-MM-DD. new Date("AAAA-MM-DD") lo
+  // interpreta como UTC y en Perú puede mostrarse como el día anterior.
+  const dateOnlyMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return `${day}/${month}/${year}`;
+  }
+
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleDateString("es-PE", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    timeZone: "America/Lima",
   });
 }
 
