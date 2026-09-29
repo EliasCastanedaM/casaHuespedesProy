@@ -72,7 +72,7 @@ export async function createBookingController(req, res, next) {
       });
     }
 
-    if (!room_id && !category_slug) {
+    if (!category_slug) {
       return res.status(400).json({
         success: false,
         message: "La categoría de habitación es obligatoria.",
@@ -100,9 +100,12 @@ export async function createBookingController(req, res, next) {
       });
     }
 
-    const result = category_slug && !room_id
-      ? await createBookingByCategoryService(req.body)
-      : await createBookingService(req.body);
+    // El huésped siempre reserva una categoría. La habitación física se
+    // asigna internamente dentro del servicio de reservas.
+    const result = await createBookingByCategoryService({
+      ...req.body,
+      room_id: undefined,
+    });
 
     if (result.mode === "inquiry") {
       return res.status(201).json({
