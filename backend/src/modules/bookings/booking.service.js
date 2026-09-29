@@ -299,10 +299,26 @@ function inferCategoryName(details) {
 function bookingResult(details, { recovered = false } = {}) {
   const categoryName = inferCategoryName(details);
 
+  // La respuesta pública nunca expone la habitación física asignada.
+  // room_id, room_number y assigned_room_* son exclusivamente operativos.
   const publicBooking = {
-    ...details,
-    room_name: categoryName ? `Habitación ${categoryName}` : "Habitación",
+    id: details.id,
+    booking_code: details.booking_code,
+    check_in: details.check_in,
+    check_out: details.check_out,
+    check_in_time: details.check_in_time,
+    guests_count: details.guests_count,
+    nights: details.nights,
+    total_amount: details.total_amount,
+    status: details.status,
+    source: details.source,
+    special_requests: details.special_requests,
+    category_slug: details.category_slug || null,
     category_name: categoryName,
+    room_name: categoryName ? `Habitación ${categoryName}` : "Habitación",
+    unit_price: details.unit_price ?? details.price_per_night,
+    created_at: details.created_at,
+    payment_status: details.payment_status,
   };
 
   return {
