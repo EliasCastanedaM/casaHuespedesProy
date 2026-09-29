@@ -7,30 +7,67 @@ import {
   reportBookingPaymentService,
   updateBookingStatusService,
 } from "./booking.service.js";
+import { searchAvailableRoomCategoriesService } from "../rooms/roomCategory.service.js";
 
-// Verifica disponibilidad de habitación
+// Verifica disponibilidad comercial por categoría.
+// El huésped nunca selecciona ni conoce el room_id físico.
 export async function checkAvailabilityController(req, res, next) {
   try {
-    const { room_id, check_in, check_out, nights, check_in_time } = req.body;
-
-    if (!room_id || !check_in || (!check_out && !nights)) {
-      return res.status(400).json({
-        success: false,
-        message: "Habitación, fecha de ingreso y noches son obligatorias.",
-      });
-    }
-
-    const result = await checkAvailabilityService({
-      room_id,
+    const {
+      category_slug,
       check_in,
       check_out,
       nights,
       check_in_time,
+      guests_count,
+    } = req.body;
+
+    const normalizedCategorySlug = String(category_slug || "")
+      .trim()
+      .toLowerCase();
+
+    if (!normalizedCategorySlug || !check_in || (!check_out && !nights)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Categoría, fecha de ingreso y fecha de salida o noches son obligatorias.",
+      });
+    }
+
+    const result = await searchAvailableRoomCategoriesService({
+      check_in,
+      check_out,
+      nights,
+      check_in_time,
+      guests_count: guests_count || 1,
     });
+
+    const category = (result.categories || []).find(
+      (item) => String(item.slug || "").toLowerCase() === normalizedCategorySlug
+    );
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "La categoría seleccionada no existe o no admite esa cantidad de huéspedes.",
+      });
+    }
 
     return res.json({
       success: true,
-      data: result,
+      data: {
+        category_slug: category.slug,
+        category_name: category.name,
+        check_in: result.check_in,
+        check_out: result.check_out,
+        nights: result.nights,
+        guests_count: result.guests_count,
+        total_quantity: Number(category.active_quantity || category.total_quantity || 0),
+        available_quantity: Number(category.available_quantity || 0),
+        occupied_quantity: Number(category.occupied_quantity || 0),
+        available: Number(category.available_quantity || 0) > 0,
+        price_per_night: category.price_per_night,
+      },
     });
   } catch (error) {
     next(error);
