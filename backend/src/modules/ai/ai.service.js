@@ -10,8 +10,7 @@ import {
   searchAvailableRoomCategoriesService,
 } from "../rooms/roomCategory.service.js";
 import {
-  checkAvailabilityService,
-  createBookingService,
+  createBookingByCategoryService,
   getBookingByIntentService,
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
@@ -363,9 +362,8 @@ async function executeTool(call, { onAvailability } = {}) {
         guests_count: args.guests_count,
       });
 
-      // Guarda internamente las habitaciones físicas disponibles para que,
-      // si el huésped decide reservar, el backend pueda asignar una sin
-      // exponer su número en la conversación.
+      // Guarda únicamente el stock por categoría. La unidad física no se
+      // asigna hasta el momento de crear la reserva.
       await onAvailability?.(result);
 
       return JSON.stringify({
@@ -503,9 +501,8 @@ async function generateAiReplyInternal({
           (room) => Boolean(room.category_slug)
         ),
       searchAvailableRooms: searchAvailableRoomCategoriesService,
-      checkAvailability: checkAvailabilityService,
       createBooking: (bookingData, options = {}) =>
-        createBookingService(bookingData, {
+        createBookingByCategoryService(bookingData, {
           ...options,
           conversation: { channel, externalUserId },
         }),
