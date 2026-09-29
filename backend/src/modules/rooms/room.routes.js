@@ -6,7 +6,6 @@ import {
 } from "../../middlewares/uploads/uploadRoomMedia.js";
 
 import {
-  getPublicRoomsController,
   getPublicRoomCategoriesController,
   getPublicRoomCategoryBySlugController,
   getAllRoomsController,
