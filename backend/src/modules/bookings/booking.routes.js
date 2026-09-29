@@ -17,7 +17,7 @@ import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 // Creamos router de reservas
 const router = Router();
 
-// Ruta para validar disponibilidad de una habitación
+// Ruta pública para validar disponibilidad de una categoría
 router.post("/check-availability", checkAvailabilityController);
 
 // Ruta para crear una reserva
