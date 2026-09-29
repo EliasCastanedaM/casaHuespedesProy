@@ -9,6 +9,7 @@ import {
 const INTENT_ID = "22222222-2222-4222-8222-222222222222";
 const bookingInput = {
   room_id: 14,
+  category_slug: "triple",
   check_in: "2026-10-10",
   check_out: "2026-10-12",
   guests_count: 2,
@@ -27,7 +28,19 @@ function cloneState(state) {
 
 function createBookingPool({ failPayment = false } = {}) {
   let state = {
-    rooms: [{ id: 14, name: "Habitación 407", capacity: 3, price_per_night: 218.91, status: "active" }],
+    rooms: [{
+      id: 14,
+      name: "Habitación Triple #407",
+      room_number: "407",
+      category_slug: "triple",
+      category_name: "Triple",
+      category_capacity: 3,
+      category_price_per_night: 218.91,
+      category_is_active: true,
+      capacity: 3,
+      price_per_night: 218.91,
+      status: "active",
+    }],
     customers: [],
     bookings: [],
     payments: [],
@@ -50,7 +63,12 @@ function createBookingPool({ failPayment = false } = {}) {
       customer_phone: customer?.phone,
       customer_email: customer?.email,
       room_name: room?.name,
-      price_per_night: room?.price_per_night,
+      assigned_room_name: room?.name,
+      assigned_room_number: room?.room_number,
+      category_slug: booking.category_slug || room?.category_slug,
+      category_name: room?.category_name || "Triple",
+      unit_price: booking.unit_price,
+      price_per_night: booking.unit_price || room?.price_per_night,
       payment_provider: payment?.payment_provider,
       payment_status: payment?.status,
       payment_url: payment?.payment_url,
@@ -125,11 +143,22 @@ function createBookingPool({ failPayment = false } = {}) {
           }
           if (normalized.startsWith("insert into bookings")) {
             const booking = {
-              id: source.nextBookingId++, customer_id: params[0], room_id: Number(params[1]),
-              check_in: params[2], check_out: params[3], check_in_time: params[4],
-              guests_count: Number(params[5]), nights: Number(params[6]),
-              total_amount: Number(params[7]), status: "pending_payment", source: "web",
-              special_requests: params[8], public_token: params[9], booking_intent_id: params[10],
+              id: source.nextBookingId++,
+              customer_id: params[0],
+              room_id: Number(params[1]),
+              category_slug: params[2],
+              unit_price: Number(params[3]),
+              check_in: params[4],
+              check_out: params[5],
+              check_in_time: params[6],
+              guests_count: Number(params[7]),
+              nights: Number(params[8]),
+              total_amount: Number(params[9]),
+              status: "pending_payment",
+              source: "web",
+              special_requests: params[10],
+              public_token: params[11],
+              booking_intent_id: params[12],
             };
             source.bookings.push(booking);
             return { rows: [{ ...booking }] };
