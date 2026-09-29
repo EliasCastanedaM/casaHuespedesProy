@@ -28,6 +28,24 @@ const room205 = {
   price_per_night: 151.53,
   status: "active",
 };
+const categoryTriple = {
+  id: 3,
+  slug: "triple",
+  name: "Triple",
+  category_slug: "triple",
+  capacity: 3,
+  price_per_night: 218.91,
+  available_quantity: 1,
+};
+const categoryMatrimonial = {
+  id: 1,
+  slug: "matrimonial",
+  name: "Matrimonial",
+  category_slug: "matrimonial",
+  capacity: 2,
+  price_per_night: 151.53,
+  available_quantity: 1,
+};
 
 function availabilityContext() {
   return mergeAvailabilityIntoBookingContext({}, {
@@ -35,7 +53,7 @@ function availabilityContext() {
     check_out: "2026-10-12",
     nights: 2,
     guests_count: 2,
-    rooms: [room407],
+    categories: [categoryTriple],
   });
 }
 
@@ -53,7 +71,10 @@ function bookingResult(input) {
       total_amount: 437.82,
     },
     customer: input.customer,
-    room: input.room_id === room205.id ? room205 : room407,
+    room:
+      input.category_slug === "matrimonial"
+        ? categoryMatrimonial
+        : categoryTriple,
     public_token: "token-transitorio-no-persistido",
     payment_url: "valor-ignorado-del-servicio",
   };
@@ -68,12 +89,8 @@ function successfulBookingServices(calls) {
         ...input,
         check_out: input.check_out || "2026-10-12",
         nights: 2,
-        rooms: [room205],
+        categories: [categoryTriple, categoryMatrimonial],
       };
-    },
-    checkAvailability: async (input) => {
-      calls.availability.push(input);
-      return { available: true, reason: "Habitación disponible." };
     },
     createBooking: async (input, options) => {
       calls.bookings.push({ input, options });
@@ -154,9 +171,9 @@ test("reutiliza lo conocido, revalida y crea una sola pending_payment", async ()
     context: started.context,
     services,
   });
-  assert.equal(calls.availability.length, 1);
+  assert.equal(calls.searches.length, 1);
   assert.equal(calls.bookings.length, 1);
-  assert.equal(calls.bookings[0].input.room_id, 14);
+  assert.equal(calls.bookings[0].input.category_slug, "triple");
   assert.equal(calls.bookings[0].input.check_in, "2026-10-10");
   assert.equal(calls.bookings[0].input.guests_count, 2);
   assert.equal(calls.bookings[0].options.bookingIntentId, INTENT_ID);
@@ -211,12 +228,17 @@ test("ya pagué usa la intención durable, solo reporta y repetir es idempotente
   assert.equal(calls.paymentReports.length, 1);
 });
 
-test("si la habitación deja de estar disponible devuelve alternativas reales", async () => {
+test("si la categoría deja de estar disponible devuelve alternativas reales", async () => {
   const calls = emptyCalls();
   const services = successfulBookingServices(calls);
-  services.checkAvailability = async (input) => {
-    calls.availability.push(input);
-    return { available: false, reason: "La habitación tiene una reserva." };
+  services.searchAvailableRooms = async (input) => {
+    calls.searches.push(input);
+    return {
+      ...input,
+      check_out: input.check_out || "2026-10-12",
+      nights: 2,
+      categories: [categoryMatrimonial],
+    };
   };
   const result = await flow({
     message: "Quiero la 407. Nombre: Ana Torres; correo: ana@example.com; celular: 987654321",
@@ -279,7 +301,7 @@ test("una categoría también activa la intención y se asigna internamente", as
 
   assert.equal(result.handled, true);
   assert.equal(calls.bookings.length, 1);
-  assert.equal(calls.bookings[0].input.room_id, room205.id);
+  assert.equal(calls.bookings[0].input.category_slug, "matrimonial");
   assert.match(result.reply, /Categoría: Matrimonial/);
   assert.doesNotMatch(result.reply, /205/);
 });
