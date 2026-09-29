@@ -58,16 +58,17 @@ export async function searchAvailableRoomCategoriesService(
   input = {},
   db = pool
 ) {
+  // La disponibilidad comercial se calcula por categoría, pero la ocupación
+  // real continúa respaldada por las habitaciones físicas y sus reservas.
+  // Los detalles de esas unidades no se devuelven al huésped.
   const availability = await searchAvailableRoomsService(input, db);
   const categories = await getPublicRoomCategoriesService(db);
-  const categorizedRooms = (availability.rooms || []).filter(
-    (room) => String(room.category_slug || "").trim()
-  );
   const availableByCategory = new Map();
 
-  for (const room of categorizedRooms) {
+  for (const room of availability.rooms || []) {
     const slug = String(room.category_slug || "").trim().toLowerCase();
     if (!slug) continue;
+
     availableByCategory.set(
       slug,
       Number(availableByCategory.get(slug) || 0) + 1
@@ -80,17 +81,29 @@ export async function searchAvailableRoomCategoriesService(
         !availability.guests_count ||
         Number(category.capacity) >= Number(availability.guests_count)
     )
-    .map((category) => ({
-      ...category,
-      available_quantity: Number(
+    .map((category) => {
+      const availableQuantity = Number(
         availableByCategory.get(category.slug) || 0
-      ),
-    }));
+      );
+      const activeQuantity = Number(category.active_quantity || 0);
+
+      return {
+        ...category,
+        available_quantity: availableQuantity,
+        occupied_quantity: Math.max(0, activeQuantity - availableQuantity),
+        is_available: availableQuantity > 0,
+      };
+    });
 
   return {
-    ...availability,
-    rooms: categorizedRooms,
-    available_count: categorizedRooms.length,
+    check_in: availability.check_in,
+    check_out: availability.check_out,
+    nights: availability.nights,
+    guests_count: availability.guests_count,
+    available_count: compatibleCategories.reduce(
+      (total, category) => total + Number(category.available_quantity || 0),
+      0
+    ),
     categories: compatibleCategories,
     available_category_count: compatibleCategories.filter(
       (category) => category.available_quantity > 0
