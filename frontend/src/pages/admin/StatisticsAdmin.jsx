@@ -193,19 +193,18 @@ export default function StatisticsAdmin() {
       .filter((item) => item.count > 0);
   }, [data.bookings]);
 
-  const roomRanking = useMemo(() => {
+  const categoryRanking = useMemo(() => {
     const rankingMap = {};
 
     data.bookings.forEach((booking) => {
-      const roomName =
-        booking.room_name ||
-        data.rooms.find((room) => Number(room.id) === Number(booking.room_id))
-          ?.name ||
-        "Habitación no identificada";
+      const categoryName =
+        booking.category_name ||
+        booking.category_slug ||
+        "Categoría no identificada";
 
-      if (!rankingMap[roomName]) {
-        rankingMap[roomName] = {
-          roomName,
+      if (!rankingMap[categoryName]) {
+        rankingMap[categoryName] = {
+          categoryName,
           bookings: 0,
           amount: 0,
           confirmedAmount: 0,
@@ -213,11 +212,11 @@ export default function StatisticsAdmin() {
         };
       }
 
-      rankingMap[roomName].bookings += 1;
-      rankingMap[roomName].amount += Number(booking.total_amount || 0);
+      rankingMap[categoryName].bookings += 1;
+      rankingMap[categoryName].amount += Number(booking.total_amount || 0);
 
       if (booking.status === "confirmed") {
-        rankingMap[roomName].confirmedAmount += Number(
+        rankingMap[categoryName].confirmedAmount += Number(
           booking.total_amount || 0
         );
       }
@@ -227,7 +226,9 @@ export default function StatisticsAdmin() {
           booking.status
         )
       ) {
-        rankingMap[roomName].pendingAmount += Number(booking.total_amount || 0);
+        rankingMap[categoryName].pendingAmount += Number(
+          booking.total_amount || 0
+        );
       }
     });
 
@@ -235,14 +236,14 @@ export default function StatisticsAdmin() {
       if (b.bookings !== a.bookings) return b.bookings - a.bookings;
       return b.amount - a.amount;
     });
-  }, [data.bookings, data.rooms]);
+  }, [data.bookings]);
 
-  const topBookedRoom = roomRanking[0];
+  const topBookedCategory = categoryRanking[0];
 
-  const topRevenueRoom = useMemo(() => {
-    if (roomRanking.length === 0) return null;
-    return [...roomRanking].sort((a, b) => b.amount - a.amount)[0];
-  }, [roomRanking]);
+  const topRevenueCategory = useMemo(() => {
+    if (categoryRanking.length === 0) return null;
+    return [...categoryRanking].sort((a, b) => b.amount - a.amount)[0];
+  }, [categoryRanking]);
 
   const customerRanking = useMemo(() => {
     const customerMap = {};
@@ -345,12 +346,20 @@ export default function StatisticsAdmin() {
   }, [monthlySummary]);
 
   const roomsWithoutBookings = useMemo(() => {
-    const bookedRoomNames = new Set(
-      data.bookings.map((booking) => booking.room_name).filter(Boolean)
+    const assignedRoomNames = new Set(
+      data.bookings
+        .map(
+          (booking) =>
+            booking.assigned_room_name ||
+            data.rooms.find(
+              (room) => Number(room.id) === Number(booking.room_id)
+            )?.name
+        )
+        .filter(Boolean)
     );
 
     return data.rooms
-      .filter((room) => !bookedRoomNames.has(room.name))
+      .filter((room) => !assignedRoomNames.has(room.name))
       .map((room) => room.name)
       .slice(0, 6);
   }, [data.bookings, data.rooms]);
@@ -360,7 +369,9 @@ export default function StatisticsAdmin() {
       codigo: booking.booking_code || booking.id,
       cliente: booking.customer_name || "",
       telefono: booking.customer_phone || booking.phone || "",
-      habitacion: booking.room_name || "",
+      categoria: booking.category_name || booking.category_slug || "",
+      habitacion_asignada:
+        booking.assigned_room_name || booking.room_name || "",
       fecha_ingreso: booking.check_in || "",
       fecha_salida: booking.check_out || "",
       noches: booking.nights || "",
@@ -401,17 +412,17 @@ export default function StatisticsAdmin() {
     exportToCsv("habitaciones_casa_huespedes.csv", rows);
   }
 
-  function handleExportRoomRanking() {
-    const rows = roomRanking.map((room, index) => ({
+  function handleExportCategoryRanking() {
+    const rows = categoryRanking.map((category, index) => ({
       ranking: index + 1,
-      habitacion: room.roomName,
-      reservas: room.bookings,
-      total_registrado: room.amount,
-      total_confirmado: room.confirmedAmount,
-      total_pendiente: room.pendingAmount,
+      categoria: category.categoryName,
+      reservas: category.bookings,
+      total_registrado: category.amount,
+      total_confirmado: category.confirmedAmount,
+      total_pendiente: category.pendingAmount,
     }));
 
-    exportToCsv("ranking_habitaciones_casa_huespedes.csv", rows);
+    exportToCsv("ranking_categorias_casa_huespedes.csv", rows);
   }
 
   const mainMetrics = [
@@ -628,10 +639,10 @@ export default function StatisticsAdmin() {
             <div className="grid lg:grid-cols-3 gap-5 mt-6">
               <InsightCard
                 eyebrow="Mayor demanda"
-                title={topBookedRoom?.roomName || "Sin información"}
+                title={topBookedCategory?.categoryName || "Sin información"}
                 description={
-                  topBookedRoom
-                    ? `${topBookedRoom.bookings} reserva(s) registradas`
+                  topBookedCategory
+                    ? `${topBookedCategory.bookings} reserva(s) registradas`
                     : "Aún no hay reservas suficientes."
                 }
                 icon="🏆"
@@ -639,10 +650,10 @@ export default function StatisticsAdmin() {
 
               <InsightCard
                 eyebrow="Mayor ingreso"
-                title={topRevenueRoom?.roomName || "Sin información"}
+                title={topRevenueCategory?.categoryName || "Sin información"}
                 description={
-                  topRevenueRoom
-                    ? `${formatMoney(topRevenueRoom.amount)} registrados`
+                  topRevenueCategory
+                    ? `${formatMoney(topRevenueCategory.amount)} registrados`
                     : "Aún no hay reservas suficientes."
                 }
                 icon="💰"
@@ -782,30 +793,30 @@ export default function StatisticsAdmin() {
                 <div className="p-6 border-b border-[#eadfce] flex items-center justify-between gap-4">
                   <div>
                     <p className="uppercase tracking-[0.2em] text-[11px] font-black text-[#a87545]">
-                      Habitaciones
+                      Categorías
                     </p>
 
                     <h2 className="font-serif text-3xl leading-none tracking-[-0.035em] text-[#2d261f] mt-2">
-                      Ranking de habitaciones
+                      Ranking de categorías
                     </h2>
 
                     <p className="text-[#6f6258] text-sm mt-2">
-                      Compara reservas y montos generados por habitación.
+                      Compara reservas y montos generados por categoría.
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={handleExportRoomRanking}
+                    onClick={handleExportCategoryRanking}
                     className="shrink-0 bg-[#fbf7ef] border border-[#eadfce] text-[#2d261f] px-4 py-2.5 rounded-xl font-black text-sm hover:bg-[#f7f1e8]"
                   >
                     Exportar
                   </button>
                 </div>
 
-                {roomRanking.length === 0 ? (
+                {categoryRanking.length === 0 ? (
                   <div className="p-8">
-                    <EmptyBlock text="Aún no hay habitaciones reservadas." />
+                    <EmptyBlock text="Aún no hay categorías con reservas." />
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -813,7 +824,7 @@ export default function StatisticsAdmin() {
                       <thead className="bg-[#fbf7ef] text-[#6f6258]">
                         <tr>
                           <th className="text-left px-5 py-4">#</th>
-                          <th className="text-left px-5 py-4">Habitación</th>
+                          <th className="text-left px-5 py-4">Categoría</th>
                           <th className="text-left px-5 py-4">Reservas</th>
                           <th className="text-left px-5 py-4">Total</th>
                           <th className="text-left px-5 py-4">Confirmado</th>
@@ -821,9 +832,9 @@ export default function StatisticsAdmin() {
                       </thead>
 
                       <tbody>
-                        {roomRanking.slice(0, 8).map((room, index) => (
+                        {categoryRanking.slice(0, 8).map((category, index) => (
                           <tr
-                            key={room.roomName}
+                            key={category.categoryName}
                             className="border-t border-[#eadfce] hover:bg-[#fbf7ef]"
                           >
                             <td className="px-5 py-4 font-black text-[#2d261f]">
@@ -831,19 +842,19 @@ export default function StatisticsAdmin() {
                             </td>
 
                             <td className="px-5 py-4 font-black text-[#2d261f]">
-                              {room.roomName}
+                              {category.categoryName}
                             </td>
 
                             <td className="px-5 py-4 text-[#6f6258] font-bold">
-                              {room.bookings} reserva(s)
+                              {category.bookings} reserva(s)
                             </td>
 
                             <td className="px-5 py-4 font-black text-[#2d261f]">
-                              {formatMoney(room.amount)}
+                              {formatMoney(category.amount)}
                             </td>
 
                             <td className="px-5 py-4 font-black text-[#166534]">
-                              {formatMoney(room.confirmedAmount)}
+                              {formatMoney(category.confirmedAmount)}
                             </td>
                           </tr>
                         ))}
@@ -913,17 +924,17 @@ export default function StatisticsAdmin() {
               </p>
 
               <h2 className="font-serif text-3xl leading-none tracking-[-0.035em] text-[#2d261f] mt-2">
-                Habitaciones sin movimiento
+                Unidades físicas sin asignaciones registradas
               </h2>
 
               <p className="text-[#6f6258] text-sm mt-2">
-                Habitaciones que todavía no aparecen en reservas registradas.
-                Sirve para revisar precio, foto o descripción.
+                Habitaciones físicas que todavía no han sido asignadas internamente en reservas.
+                Esta sección es operativa y no cambia la oferta comercial por categorías.
               </p>
 
               {roomsWithoutBookings.length === 0 ? (
                 <div className="mt-6 rounded-2xl bg-[#f0fdf4] border border-[#bbf7d0] text-[#166534] p-5 font-bold">
-                  Todas las habitaciones tienen movimiento registrado o aún no
+                  Todas las unidades físicas ya aparecen en alguna asignación o aún no
                   hay suficiente data para comparar.
                 </div>
               ) : (
