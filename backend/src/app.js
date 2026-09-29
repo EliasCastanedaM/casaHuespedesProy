@@ -25,6 +25,11 @@ import availabilityRoutes from "./routes/availability.routes.js";
 
 const app = express();
 
+const officialFrontendOrigins = new Set([
+  "https://www.casahuespedespimentel.com",
+  "https://casahuespedespimentel.com",
+]);
+
 // Render funciona detrás de un proxy. Así el límite usa la IP real del cliente.
 app.set("trust proxy", 1);
 
@@ -34,7 +39,7 @@ app.use(
   cors({
     origin(origin, callback) {
       // Las llamadas servidor-a-servidor no envían la cabecera Origin.
-      if (!origin || env.frontendUrls.includes(origin)) {
+      if (!origin || env.frontendUrls.includes(origin) || officialFrontendOrigins.has(origin)) {
         callback(null, true);
         return;
       }
