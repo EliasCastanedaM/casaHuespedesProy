@@ -23,6 +23,9 @@ function normalizeBookingData(bookingData) {
     document_number: bookingData.document_number,
   };
 
+  const categorySlug =
+    String(bookingData.category_slug || "").trim().toLowerCase() || null;
+
   const stay = normalizeAvailabilityInput({
     room_id: bookingData.room_id,
     check_in: bookingData.check_in,
@@ -34,6 +37,7 @@ function normalizeBookingData(bookingData) {
 
   return {
     room_id: stay.room_id,
+    category_slug: categorySlug,
     check_in: stay.check_in,
     check_out: stay.check_out,
     check_in_time: stay.check_in_time,
@@ -46,9 +50,22 @@ function normalizeBookingData(bookingData) {
 
 async function getRoomForBooking(roomId, db = pool) {
   const query = `
-    SELECT id, name, capacity, price_per_night, status, category_slug
-    FROM rooms
-    WHERE id = $1;
+    SELECT
+      r.id,
+      r.name,
+      r.room_number,
+      r.capacity,
+      r.price_per_night,
+      r.status,
+      r.category_slug,
+      rc.name AS category_name,
+      rc.capacity AS category_capacity,
+      rc.price_per_night AS category_price_per_night,
+      rc.is_active AS category_is_active
+    FROM rooms r
+    LEFT JOIN room_categories rc
+      ON rc.slug = r.category_slug
+    WHERE r.id = $1;
   `;
 
   const result = await db.query(query, [roomId]);
@@ -143,9 +160,12 @@ async function getBookingDetailsById(id, db = pool) {
       c.phone AS customer_phone,
       c.email AS customer_email,
       r.name AS room_name,
-      r.category_slug,
+      r.name AS assigned_room_name,
+      r.room_number AS assigned_room_number,
+      COALESCE(b.category_slug, r.category_slug) AS category_slug,
       rc.name AS category_name,
-      r.price_per_night,
+      COALESCE(b.unit_price, rc.price_per_night, r.price_per_night) AS price_per_night,
+      b.unit_price,
       p.payment_provider,
       p.status AS payment_status,
       p.payment_url,
@@ -154,7 +174,8 @@ async function getBookingDetailsById(id, db = pool) {
     FROM bookings b
     JOIN customers c ON c.id = b.customer_id
     JOIN rooms r ON r.id = b.room_id
-    LEFT JOIN room_categories rc ON rc.slug = r.category_slug
+    LEFT JOIN room_categories rc
+      ON rc.slug = COALESCE(b.category_slug, r.category_slug)
     LEFT JOIN LATERAL (
       SELECT payment.*
       FROM payments payment
@@ -203,15 +224,23 @@ function validateBookingRequest({ customer, room, guests_count, nights }) {
 
   if (!room || room.status !== "active") {
     const error = new Error(
-      "La habitación seleccionada no está disponible para reservar."
+      "No hay una unidad activa disponible para la categoría seleccionada."
     );
     error.statusCode = room ? 400 : 404;
     throw error;
   }
 
-  if (Number(guests_count) > Number(room.capacity)) {
+  if (room.category_is_active === false) {
+    const error = new Error("La categoría seleccionada no está activa.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const capacity = Number(room.category_capacity || room.capacity || 0);
+
+  if (Number(guests_count) > capacity) {
     const error = new Error(
-      "La habitación seleccionada no está disponible para esa cantidad de huéspedes."
+      "La categoría seleccionada no admite esa cantidad de huéspedes."
     );
     error.statusCode = 400;
     throw error;
@@ -257,7 +286,9 @@ async function findBookingByIntent(bookingIntentId, db = pool) {
 function inferCategoryName(details) {
   if (details?.category_name) return String(details.category_name);
 
-  const roomName = String(details?.room_name || "").toLowerCase();
+  const roomName = String(
+    details?.assigned_room_name || details?.room_name || ""
+  ).toLowerCase();
   if (roomName.includes("matrimonial")) return "Matrimonial";
   if (roomName.includes("doble")) return "Doble";
   if (roomName.includes("triple")) return "Triple";
@@ -284,7 +315,6 @@ function bookingResult(details, { recovered = false } = {}) {
       email: details.customer_email,
     },
     room: {
-      id: details.room_id,
       name: categoryName ? `Habitación ${categoryName}` : "Habitación",
       category: categoryName,
       category_slug: details.category_slug || null,
@@ -308,6 +338,7 @@ export async function createBookingService(
 ) {
   const {
     room_id,
+    category_slug,
     check_in,
     check_out,
     check_in_time,
@@ -351,6 +382,20 @@ export async function createBookingService(
     const room = await getRoomForBooking(room_id, client);
     validateBookingRequest({ customer, room, guests_count, nights });
 
+    const effectiveCategorySlug =
+      category_slug || String(room.category_slug || "").trim().toLowerCase();
+
+    if (
+      category_slug &&
+      String(room.category_slug || "").trim().toLowerCase() !== category_slug
+    ) {
+      const error = new Error(
+        "La unidad asignada ya no pertenece a la categoría seleccionada."
+      );
+      error.statusCode = 409;
+      throw error;
+    }
+
     const availability = await availabilityChecker(
       {
         room_id,
@@ -378,10 +423,14 @@ export async function createBookingService(
       ? await updateCustomer(existingCustomer.id, customer, client)
       : await createCustomer(customer, client);
 
-    const totalAmount = Number(room.price_per_night || 0) * Number(nights);
+    const unitPrice = Number(
+      room.category_price_per_night || room.price_per_night || 0
+    );
+    const totalAmount = unitPrice * Number(nights);
+
     if (totalAmount <= 0) {
       const error = new Error(
-        "La habitación todavía no tiene un precio configurado. Comunícate con el hospedaje."
+        "La categoría todavía no tiene un precio configurado. Comunícate con el hospedaje."
       );
       error.statusCode = 400;
       throw error;
@@ -390,19 +439,22 @@ export async function createBookingService(
     const insertResult = await client.query(
       `
       INSERT INTO bookings (
-        customer_id, room_id, check_in, check_out, check_in_time,
+        customer_id, room_id, category_slug, unit_price,
+        check_in, check_out, check_in_time,
         guests_count, nights, total_amount, status, source,
         special_requests, public_token, booking_intent_id
       )
       VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8,
-        'pending_payment', 'web', $9, $10, $11::uuid
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        'pending_payment', 'web', $11, $12, $13::uuid
       )
       RETURNING *;
       `,
       [
         existingCustomer.id,
         room_id,
+        effectiveCategorySlug || null,
+        unitPrice,
         check_in,
         check_out,
         check_in_time,
@@ -547,6 +599,7 @@ export async function createBookingByCategoryService(
       return await createBookingService(
         {
           ...bookingData,
+          category_slug: categorySlug,
           room_id: candidate.id,
         },
         options,
@@ -715,8 +768,13 @@ export async function getAllBookingsService() {
       c.email AS customer_email,
       c.document_type,
       c.document_number,
+      rc.name AS category_name,
+      COALESCE(b.category_slug, r.category_slug) AS category_slug,
+      r.name AS assigned_room_name,
+      r.room_number AS assigned_room_number,
       r.name AS room_name,
-      r.price_per_night,
+      COALESCE(b.unit_price, rc.price_per_night, r.price_per_night) AS price_per_night,
+      b.unit_price,
       p.payment_provider,
       p.status AS payment_status,
       p.payment_url,
@@ -725,6 +783,8 @@ export async function getAllBookingsService() {
     FROM bookings b
     JOIN customers c ON c.id = b.customer_id
     JOIN rooms r ON r.id = b.room_id
+    LEFT JOIN room_categories rc
+      ON rc.slug = COALESCE(b.category_slug, r.category_slug)
     LEFT JOIN LATERAL (
       SELECT payment.*
       FROM payments payment
