@@ -104,8 +104,6 @@ export async function createRoomService(roomData) {
   const {
     name,
     description,
-    capacity,
-    price_per_night,
     status,
     main_image_url,
     room_number,
@@ -117,7 +115,40 @@ export async function createRoomService(roomData) {
     room_size_m2,
     amenities,
     display_order,
+    category_slug,
   } = roomData;
+
+  const normalizedCategory =
+    String(category_slug || "").trim().toLowerCase() || null;
+
+  let category = null;
+
+  if (normalizedCategory) {
+    const categoryResult = await pool.query(
+      `
+      SELECT slug, capacity, price_per_night
+      FROM room_categories
+      WHERE slug = $1 AND is_active = TRUE
+      LIMIT 1;
+      `,
+      [normalizedCategory]
+    );
+
+    category = categoryResult.rows[0];
+
+    if (!category) {
+      const error = new Error("La categoría seleccionada no es válida.");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  const capacity = category
+    ? Number(category.capacity)
+    : Number(roomData.capacity || 1);
+  const pricePerNight = category
+    ? Number(category.price_per_night || 0)
+    : Number(roomData.price_per_night || 0);
 
   const query = `
     INSERT INTO rooms (
@@ -135,17 +166,21 @@ export async function createRoomService(roomData) {
       view_type,
       room_size_m2,
       amenities,
-      display_order
+      display_order,
+      category_slug
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15)
+    VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8,
+      $9, $10, $11, $12, $13, $14::jsonb, $15, $16
+    )
     RETURNING *;
   `;
 
   const values = [
     name,
     description || null,
-    capacity || 1,
-    price_per_night || 0,
+    capacity,
+    pricePerNight,
     status || "active",
     main_image_url || null,
     room_number || null,
@@ -157,6 +192,7 @@ export async function createRoomService(roomData) {
     room_size_m2 || null,
     JSON.stringify(Array.isArray(amenities) ? amenities : []),
     Number(display_order || 0),
+    normalizedCategory,
   ];
 
   const result = await pool.query(query, values);
@@ -164,23 +200,91 @@ export async function createRoomService(roomData) {
 }
 
 export async function updateRoomService(id, roomData) {
-  const {
-    name,
-    description,
-    capacity,
-    price_per_night,
-    status,
-    main_image_url,
-    room_number,
-    floor_number,
-    floor_label,
-    room_type,
-    bed_type,
-    view_type,
-    room_size_m2,
-    amenities,
-    display_order,
-  } = roomData;
+  const currentResult = await pool.query(
+    "SELECT * FROM rooms WHERE id = $1 LIMIT 1;",
+    [id]
+  );
+  const current = currentResult.rows[0];
+
+  if (!current) return null;
+
+  const has = (key) =>
+    Object.prototype.hasOwnProperty.call(roomData, key);
+
+  const categorySlug = has("category_slug")
+    ? String(roomData.category_slug || "").trim().toLowerCase() || null
+    : current.category_slug;
+
+  let canonicalCapacity = current.capacity;
+  let canonicalPrice = current.price_per_night;
+
+  if (categorySlug) {
+    const categoryResult = await pool.query(
+      `
+      SELECT slug, capacity, price_per_night
+      FROM room_categories
+      WHERE slug = $1 AND is_active = TRUE
+      LIMIT 1;
+      `,
+      [categorySlug]
+    );
+    const category = categoryResult.rows[0];
+
+    if (!category) {
+      const error = new Error("La categoría seleccionada no es válida.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    canonicalCapacity = Number(category.capacity);
+    canonicalPrice = Number(category.price_per_night || 0);
+  } else {
+    if (has("capacity")) canonicalCapacity = Number(roomData.capacity || 1);
+    if (has("price_per_night")) {
+      canonicalPrice = Number(roomData.price_per_night || 0);
+    }
+  }
+
+  const next = {
+    name: has("name") ? roomData.name : current.name,
+    description: has("description")
+      ? roomData.description
+      : current.description,
+    capacity: canonicalCapacity,
+    price_per_night: canonicalPrice,
+    status: has("status") ? roomData.status : current.status,
+    main_image_url: has("main_image_url")
+      ? roomData.main_image_url
+      : current.main_image_url,
+    room_number: has("room_number")
+      ? roomData.room_number
+      : current.room_number,
+    floor_number: has("floor_number")
+      ? roomData.floor_number
+      : current.floor_number,
+    floor_label: has("floor_label")
+      ? roomData.floor_label
+      : current.floor_label,
+    room_type: has("room_type")
+      ? roomData.room_type
+      : current.room_type,
+    bed_type: has("bed_type")
+      ? roomData.bed_type
+      : current.bed_type,
+    view_type: has("view_type")
+      ? roomData.view_type
+      : current.view_type,
+    room_size_m2: has("room_size_m2")
+      ? roomData.room_size_m2
+      : current.room_size_m2,
+    amenities: has("amenities")
+      ? roomData.amenities
+      : current.amenities,
+    display_order: has("display_order")
+      ? roomData.display_order
+      : current.display_order,
+    category_slug: categorySlug,
+  };
 
   const query = `
     UPDATE rooms
@@ -200,27 +304,29 @@ export async function updateRoomService(id, roomData) {
       room_size_m2 = $13,
       amenities = $14::jsonb,
       display_order = $15,
+      category_slug = $16,
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $16
+    WHERE id = $17
     RETURNING *;
   `;
 
   const values = [
-    name,
-    description || null,
-    capacity || 1,
-    price_per_night || 0,
-    status || "active",
-    main_image_url || null,
-    room_number || null,
-    floor_number || null,
-    floor_label || null,
-    room_type || null,
-    bed_type || null,
-    view_type || null,
-    room_size_m2 || null,
-    JSON.stringify(Array.isArray(amenities) ? amenities : []),
-    Number(display_order || 0),
+    next.name,
+    next.description || null,
+    Number(next.capacity || 1),
+    Number(next.price_per_night || 0),
+    next.status || "active",
+    next.main_image_url || null,
+    next.room_number || null,
+    next.floor_number || null,
+    next.floor_label || null,
+    next.room_type || null,
+    next.bed_type || null,
+    next.view_type || null,
+    next.room_size_m2 || null,
+    JSON.stringify(Array.isArray(next.amenities) ? next.amenities : []),
+    Number(next.display_order || 0),
+    next.category_slug,
     id,
   ];
 
