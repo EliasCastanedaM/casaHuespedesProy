@@ -9,6 +9,7 @@ const statusLabels = {
   confirmed: "Confirmada",
   rejected: "Rechazada",
   cancelled: "Cancelada",
+  expired: "Expirada",
   completed: "Finalizada",
 };
 
@@ -19,6 +20,7 @@ const statusStyles = {
   confirmed: "bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]",
   rejected: "bg-[#fef2f2] text-[#991b1b] border-[#fecaca]",
   cancelled: "bg-[#fef2f2] text-[#991b1b] border-[#fecaca]",
+  expired: "bg-[#f8fafc] text-[#475569] border-[#e2e8f0]",
   completed: "bg-[#f8fafc] text-[#475569] border-[#e2e8f0]",
 };
 

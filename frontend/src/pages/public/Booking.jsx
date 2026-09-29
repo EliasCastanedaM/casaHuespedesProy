@@ -262,7 +262,7 @@ export default function Booking() {
       const paymentData = {
         booking: result.data.booking,
         customer: result.data.customer,
-        room: result.data.room,
+        category: result.data.category || result.data.room,
         publicToken: result.data.public_token,
         paymentUrl: result.data.payment_url,
       };

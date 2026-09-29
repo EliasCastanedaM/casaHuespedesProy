@@ -68,7 +68,7 @@ export default function PaymentResult() {
   const booking = paymentData?.booking;
   const bookingId = booking?.id;
   const customer = paymentData?.customer;
-  const room = paymentData?.room;
+  const category = paymentData?.category || paymentData?.room;
   const publicToken = paymentData?.publicToken;
   const paymentUrl =
     statusData?.payment_url ||
@@ -506,7 +506,11 @@ export default function PaymentResult() {
 
             <div className="payment-result-room">
               <span>Categoría</span>
-              <strong>{room?.name || "Categoría seleccionada"}</strong>
+              <strong>
+                {category?.name ||
+                  booking?.category_name ||
+                  "Categoría seleccionada"}
+              </strong>
             </div>
 
             <dl className="payment-result-status-list">

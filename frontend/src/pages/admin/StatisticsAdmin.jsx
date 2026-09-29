@@ -9,6 +9,7 @@ const statusLabels = {
   confirmed: "Confirmada",
   rejected: "Rechazada",
   cancelled: "Cancelada",
+  expired: "Expirada",
   completed: "Finalizada",
 };
 
@@ -119,7 +120,7 @@ export default function StatisticsAdmin() {
     );
 
     const cancelledBookings = data.bookings.filter((booking) =>
-      ["cancelled", "rejected"].includes(booking.status)
+      ["cancelled", "rejected", "expired"].includes(booking.status)
     );
 
     const completedBookings = data.bookings.filter(
@@ -175,6 +176,7 @@ export default function StatisticsAdmin() {
       "completed",
       "cancelled",
       "rejected",
+      "expired",
     ];
 
     return statusOrder

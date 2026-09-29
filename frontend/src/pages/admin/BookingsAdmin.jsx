@@ -12,6 +12,7 @@ const statusLabels = {
   confirmed: "Confirmada",
   rejected: "Rechazada",
   cancelled: "Cancelada",
+  expired: "Expirada",
   completed: "Finalizada",
 };
 
@@ -22,6 +23,7 @@ const statusStyles = {
   confirmed: "bg-green-100 text-green-800",
   rejected: "bg-red-100 text-red-800",
   cancelled: "bg-slate-200 text-slate-700",
+  expired: "bg-slate-200 text-slate-700",
   completed: "bg-blue-100 text-blue-800",
 };
 
@@ -338,6 +340,7 @@ export default function BookingsAdmin() {
               <option value="confirmed">Confirmada</option>
               <option value="rejected">Rechazada</option>
               <option value="cancelled">Cancelada</option>
+              <option value="expired">Expirada</option>
               <option value="completed">Finalizada</option>
             </select>
           </div>

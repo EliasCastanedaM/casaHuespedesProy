@@ -145,8 +145,8 @@ export default function ScheduleAdmin() {
   async function handleCreateBlock(event) {
     event.preventDefault();
 
-    if (!blockForm.room_id || !blockForm.blocked_date) {
-      setError("Selecciona habitación y fecha para crear el bloqueo.");
+    if (!blockForm.blocked_date) {
+      setError("Selecciona una fecha para crear el bloqueo.");
       return;
     }
 
@@ -156,7 +156,7 @@ export default function ScheduleAdmin() {
       setMessage("");
 
       await createBlockedSlot({
-        room_id: Number(blockForm.room_id),
+        room_id: blockForm.room_id ? Number(blockForm.room_id) : null,
         blocked_date: blockForm.blocked_date,
         blocked_time:
           blockForm.block_type === "day" ? null : blockForm.blocked_time,
@@ -421,14 +421,14 @@ export default function ScheduleAdmin() {
                     </h2>
 
                     <p className="text-[#6f6258] text-sm mt-2 leading-relaxed">
-                      Bloquea una habitación por día completo o por una hora
-                      específica.
+                      Bloquea una habitación específica o todas las habitaciones
+                      por día completo o por una hora concreta.
                     </p>
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4 mt-6">
                     <div className="sm:col-span-2">
-                      <label className="admin-label">Habitación</label>
+                      <label className="admin-label">Alcance</label>
 
                       <select
                         name="room_id"
@@ -436,7 +436,7 @@ export default function ScheduleAdmin() {
                         onChange={handleBlockChange}
                         className="admin-input"
                       >
-                        <option value="">Seleccionar habitación</option>
+                        <option value="">Todas las habitaciones (bloqueo global)</option>
 
                         {rooms.map((room) => (
                           <option key={room.id} value={room.id}>
@@ -551,7 +551,9 @@ export default function ScheduleAdmin() {
                               className="border-b border-[#eadfce] hover:bg-[#fbf7ef] transition"
                             >
                               <td className="px-5 py-4 font-black text-[#2d261f]">
-                                {slot.room_name || `Habitación ${slot.room_id}`}
+                                {slot.room_id
+                                  ? slot.room_name || `Habitación ${slot.room_id}`
+                                  : "Todas las habitaciones"}
                               </td>
 
                               <td className="px-5 py-4">
