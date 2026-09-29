@@ -48,9 +48,15 @@ export async function getCustomerByIdService(id) {
   const bookingsQuery = `
     SELECT
       b.*,
+      COALESCE(b.category_slug, r.category_slug) AS category_slug,
+      rc.name AS category_name,
+      r.name AS assigned_room_name,
+      r.room_number AS assigned_room_number,
       r.name AS room_name
     FROM bookings b
     JOIN rooms r ON r.id = b.room_id
+    LEFT JOIN room_categories rc
+      ON rc.slug = COALESCE(b.category_slug, r.category_slug)
     WHERE b.customer_id = $1
     ORDER BY b.created_at DESC;
   `;
