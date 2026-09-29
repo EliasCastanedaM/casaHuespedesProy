@@ -28,6 +28,7 @@ const app = express();
 const officialFrontendOrigins = new Set([
   "https://www.casahuespedespimentel.com",
   "https://casahuespedespimentel.com",
+  "https://casa-huespedes-proy.vercel.app",
 ]);
 
 // Render funciona detrás de un proxy. Así el límite usa la IP real del cliente.

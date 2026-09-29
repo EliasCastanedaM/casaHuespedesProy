@@ -21,10 +21,18 @@ export async function createBlockedSlotController(req, res, next) {
   try {
     const { room_id, blocked_date, blocked_time, block_type } = req.body;
 
-    if (!room_id) {
+    const normalizedRoomId =
+      room_id === null || room_id === undefined || room_id === ""
+        ? null
+        : Number(room_id);
+
+    if (
+      normalizedRoomId !== null &&
+      (!Number.isInteger(normalizedRoomId) || normalizedRoomId < 1)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "La habitación es obligatoria.",
+        message: "La habitación indicada no es válida.",
       });
     }
 
@@ -43,7 +51,7 @@ export async function createBlockedSlotController(req, res, next) {
     }
 
     const blockedSlot = await createBlockedSlotService({
-      room_id,
+      room_id: normalizedRoomId,
       blocked_date,
       blocked_time,
       block_type,

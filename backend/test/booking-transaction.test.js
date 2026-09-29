@@ -114,7 +114,7 @@ function createBookingPool({ failPayment = false } = {}) {
             const row = details(source, params[0]);
             return { rows: row ? [row] : [] };
           }
-          if (normalized.includes("from rooms") && normalized.includes("where id = $1")) {
+          if (normalized.includes("from rooms r") && normalized.includes("where r.id = $1")) {
             const room = source.rooms.find((item) => item.id === Number(params[0]));
             return { rows: room ? [{ ...room }] : [] };
           }
@@ -155,10 +155,10 @@ function createBookingPool({ failPayment = false } = {}) {
               nights: Number(params[8]),
               total_amount: Number(params[9]),
               status: "pending_payment",
-              source: "web",
-              special_requests: params[10],
-              public_token: params[11],
-              booking_intent_id: params[12],
+              source: params[10],
+              special_requests: params[11],
+              public_token: params[12],
+              booking_intent_id: params[13],
             };
             source.bookings.push(booking);
             return { rows: [{ ...booking }] };
@@ -267,7 +267,7 @@ test("un retry después de reinicio recupera el booking existente", async () => 
     createDependencies(fakePool, emails)
   );
   assert.equal(recovered.recovered, true);
-  assert.equal(recovered.booking.booking_intent_id, INTENT_ID);
+  assert.equal(fakePool.snapshot().bookings[0].booking_intent_id, INTENT_ID);
   assert.equal(fakePool.snapshot().bookings.length, 1);
   assert.equal(emails.length, 1);
 });

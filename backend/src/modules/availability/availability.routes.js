@@ -4,14 +4,15 @@ import {
   searchAvailabilityController,
   searchCategoryAvailabilityController,
 } from "./availability.controller.js";
+import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 
 const router = Router();
 
-// Compatible con el frontend actual: devuelve un arreglo de habitaciones.
-router.get("/", getAvailabilityController);
+// Compatibilidad operativa: conserva las rutas físicas, pero únicamente para
+// usuarios administrativos. La web pública trabaja con /categories.
+router.get("/", requireAdminAuth, getAvailabilityController);
 
-// Endpoint estructurado para el asesor y futuras búsquedas del frontend.
-router.post("/search", searchAvailabilityController);
+router.post("/search", requireAdminAuth, searchAvailabilityController);
 
 // Disponibilidad comercial agrupada por Matrimonial, Doble, Triple y Familiar.
 router.post("/categories", searchCategoryAvailabilityController);

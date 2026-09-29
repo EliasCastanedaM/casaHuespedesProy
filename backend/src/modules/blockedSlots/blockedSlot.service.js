@@ -11,7 +11,9 @@ export async function getBlockedSlotsService() {
       bs.block_type,
       bs.reason,
       bs.created_at,
-      r.name AS room_name
+      r.name AS room_name,
+      r.room_number,
+      r.category_slug
     FROM blocked_slots bs
     LEFT JOIN rooms r ON r.id = bs.room_id
     ORDER BY bs.blocked_date DESC, bs.blocked_time ASC;
@@ -43,7 +45,7 @@ export async function createBlockedSlotService(blockedSlotData) {
     RETURNING *;
     `,
     [
-      room_id || null,
+      room_id === null || room_id === undefined ? null : Number(room_id),
       blocked_date,
       block_type === "day" ? null : blocked_time,
       block_type || "time",

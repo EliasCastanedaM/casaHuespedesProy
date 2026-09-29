@@ -24,7 +24,7 @@ export async function getPublicRoomCategoriesService(db = pool) {
       rc.id,
       rc.slug,
       rc.name,
-      rc.total_quantity,
+      COUNT(r.id)::INTEGER AS total_quantity,
       rc.capacity,
       rc.bed_description,
       rc.description,
@@ -41,7 +41,6 @@ export async function getPublicRoomCategoriesService(db = pool) {
       rc.id,
       rc.slug,
       rc.name,
-      rc.total_quantity,
       rc.capacity,
       rc.bed_description,
       rc.description,
@@ -202,7 +201,11 @@ export async function getPublicRoomCategoryBySlugService(slug, db = pool) {
       rc.id,
       rc.slug,
       rc.name,
-      rc.total_quantity,
+      (
+        SELECT COUNT(*)::INTEGER
+        FROM rooms inventory_room
+        WHERE inventory_room.category_slug = rc.slug
+      ) AS total_quantity,
       rc.capacity,
       rc.bed_description,
       rc.description,

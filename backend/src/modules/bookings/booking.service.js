@@ -9,7 +9,6 @@ import {
 import {
   checkAvailabilityService,
   normalizeAvailabilityInput,
-  searchAvailableRoomsService,
 } from "../availability/availability.service.js";
 
 export { checkAvailabilityService };
@@ -204,6 +203,8 @@ function toPublicPaymentStatus(details) {
     payment_reported_at: details.payment_reported_at,
     payment_confirmed_at: details.payment_confirmed_at,
     total_amount: details.total_amount,
+    category_slug: details.category_slug || null,
+    category_name: inferCategoryName(details),
   };
 }
 
@@ -298,6 +299,11 @@ function inferCategoryName(details) {
 
 function bookingResult(details, { recovered = false } = {}) {
   const categoryName = inferCategoryName(details);
+  const publicCategory = {
+    slug: details.category_slug || null,
+    name: categoryName,
+    price_per_night: details.price_per_night,
+  };
 
   // La respuesta pública nunca expone la habitación física asignada.
   // room_id, room_number y assigned_room_* son exclusivamente operativos.
@@ -315,7 +321,6 @@ function bookingResult(details, { recovered = false } = {}) {
     special_requests: details.special_requests,
     category_slug: details.category_slug || null,
     category_name: categoryName,
-    room_name: categoryName ? `Habitación ${categoryName}` : "Habitación",
     unit_price: details.unit_price ?? details.price_per_night,
     created_at: details.created_at,
     payment_status: details.payment_status,
@@ -325,11 +330,13 @@ function bookingResult(details, { recovered = false } = {}) {
     mode: "booking",
     booking: publicBooking,
     customer: {
-      id: details.customer_id,
       full_name: details.customer_name,
       phone: details.customer_phone,
       email: details.customer_email,
     },
+    category: publicCategory,
+    // Alias transitorio para clientes desplegados antes de la migración. Solo
+    // contiene datos comerciales de categoría, nunca la unidad física.
     room: {
       name: categoryName ? `Habitación ${categoryName}` : "Habitación",
       category: categoryName,
@@ -347,22 +354,155 @@ export async function getBookingByIntentService(bookingIntentId) {
   return details ? bookingResult(details, { recovered: true }) : null;
 }
 
-export async function createBookingService(
+async function lockAndValidateRoom({
+  client,
+  roomId,
+  categorySlug,
+  normalized,
+  availabilityChecker,
+}) {
+  await client.query(
+    "SELECT pg_advisory_xact_lock(481516, $1::integer);",
+    [Number(roomId)]
+  );
+
+  const room = await getRoomForBooking(roomId, client);
+  validateBookingRequest({
+    customer: normalized.customer,
+    room,
+    guests_count: normalized.guests_count,
+    nights: normalized.nights,
+  });
+
+  if (
+    categorySlug &&
+    String(room.category_slug || "").trim().toLowerCase() !== categorySlug
+  ) {
+    const error = new Error(
+      "La unidad asignada ya no pertenece a la categoría seleccionada."
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const availability = await availabilityChecker(
+    {
+      room_id: roomId,
+      check_in: normalized.check_in,
+      check_out: normalized.check_out,
+      nights: normalized.nights,
+      check_in_time: normalized.check_in_time,
+      guests_count: normalized.guests_count,
+    },
+    client
+  );
+
+  return availability.available ? room : null;
+}
+
+async function selectSpecificRoom({
+  client,
+  normalized,
+  availabilityChecker,
+}) {
+  if (!normalized.room_id) {
+    const error = new Error("La habitación interna es obligatoria.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const room = await lockAndValidateRoom({
+    client,
+    roomId: normalized.room_id,
+    categorySlug: normalized.category_slug,
+    normalized,
+    availabilityChecker,
+  });
+
+  if (!room) {
+    const error = new Error(
+      "La habitación tiene una reserva o bloqueo que cruza esas fechas."
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return room;
+}
+
+async function selectRoomByCategory({
+  client,
+  normalized,
+  availabilityChecker,
+}) {
+  await client.query(
+    "SELECT pg_advisory_xact_lock(481515, hashtext($1));",
+    [normalized.category_slug]
+  );
+
+  const categoryResult = await client.query(
+    `
+    SELECT slug, name, capacity, price_per_night, is_active
+    FROM room_categories
+    WHERE slug = $1
+      AND is_active = TRUE
+    LIMIT 1;
+    `,
+    [normalized.category_slug]
+  );
+  const category = categoryResult.rows[0];
+
+  if (!category) {
+    const error = new Error("La categoría seleccionada no es válida.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (Number(normalized.guests_count) > Number(category.capacity)) {
+    const error = new Error(
+      "La categoría seleccionada no admite esa cantidad de huéspedes."
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const candidateResult = await client.query(
+    `
+    SELECT id
+    FROM rooms
+    WHERE category_slug = $1
+      AND status = 'active'
+    ORDER BY COALESCE(display_order, 9999), id;
+    `,
+    [normalized.category_slug]
+  );
+
+  for (const candidate of candidateResult.rows) {
+    const room = await lockAndValidateRoom({
+      client,
+      roomId: candidate.id,
+      categorySlug: normalized.category_slug,
+      normalized,
+      availabilityChecker,
+    });
+
+    if (room) return room;
+  }
+
+  const error = new Error(
+    "Ya no quedan habitaciones disponibles en esta categoría para las fechas seleccionadas."
+  );
+  error.statusCode = 409;
+  throw error;
+}
+
+async function createBookingTransaction(
   bookingData,
-  options = {},
-  dependencies = {}
+  options,
+  dependencies,
+  roomSelector
 ) {
-  const {
-    room_id,
-    category_slug,
-    check_in,
-    check_out,
-    check_in_time,
-    guests_count,
-    nights,
-    special_requests,
-    customer,
-  } = normalizeBookingData(bookingData);
+  const normalized = normalizeBookingData(bookingData);
   const bookingIntentId = options.bookingIntentId || null;
   const conversation = options.conversation || null;
   const databasePool = dependencies.pool || pool;
@@ -390,59 +530,30 @@ export async function createBookingService(
       }
     }
 
-    await client.query(
-      "SELECT pg_advisory_xact_lock(481516, $1::integer);",
-      [Number(room_id)]
-    );
-
-    const room = await getRoomForBooking(room_id, client);
-    validateBookingRequest({ customer, room, guests_count, nights });
+    const room = await roomSelector({
+      client,
+      normalized,
+      availabilityChecker,
+    });
 
     const effectiveCategorySlug =
-      category_slug || String(room.category_slug || "").trim().toLowerCase();
-
-    if (
-      category_slug &&
-      String(room.category_slug || "").trim().toLowerCase() !== category_slug
-    ) {
-      const error = new Error(
-        "La unidad asignada ya no pertenece a la categoría seleccionada."
-      );
-      error.statusCode = 409;
-      throw error;
-    }
-
-    const availability = await availabilityChecker(
-      {
-        room_id,
-        check_in,
-        check_out,
-        nights,
-        check_in_time,
-      },
-      client
-    );
-
-    if (!availability.available) {
-      const error = new Error(availability.reason);
-      error.statusCode = 409;
-      throw error;
-    }
+      normalized.category_slug ||
+      String(room.category_slug || "").trim().toLowerCase();
 
     let existingCustomer = await findCustomerByPhoneOrEmail(
-      customer.phone,
-      customer.email,
+      normalized.customer.phone,
+      normalized.customer.email,
       client
     );
 
     existingCustomer = existingCustomer
-      ? await updateCustomer(existingCustomer.id, customer, client)
-      : await createCustomer(customer, client);
+      ? await updateCustomer(existingCustomer.id, normalized.customer, client)
+      : await createCustomer(normalized.customer, client);
 
     const unitPrice = Number(
       room.category_price_per_night || room.price_per_night || 0
     );
-    const totalAmount = unitPrice * Number(nights);
+    const totalAmount = unitPrice * Number(normalized.nights);
 
     if (totalAmount <= 0) {
       const error = new Error(
@@ -462,22 +573,23 @@ export async function createBookingService(
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        'pending_payment', 'web', $11, $12, $13::uuid
+        'pending_payment', $11, $12, $13, $14::uuid
       )
       RETURNING *;
       `,
       [
         existingCustomer.id,
-        room_id,
+        room.id,
         effectiveCategorySlug || null,
         unitPrice,
-        check_in,
-        check_out,
-        check_in_time,
-        guests_count,
-        nights,
+        normalized.check_in,
+        normalized.check_out,
+        normalized.check_in_time,
+        normalized.guests_count,
+        normalized.nights,
         totalAmount,
-        special_requests,
+        options.source || conversation?.channel || bookingData.source || "web",
+        normalized.special_requests,
         randomUUID(),
         bookingIntentId,
       ]
@@ -557,6 +669,19 @@ export async function createBookingService(
   return bookingResult(details);
 }
 
+export async function createBookingService(
+  bookingData,
+  options = {},
+  dependencies = {}
+) {
+  return createBookingTransaction(
+    bookingData,
+    options,
+    dependencies,
+    selectSpecificRoom
+  );
+}
+
 export async function createBookingByCategoryService(
   bookingData,
   options = {},
@@ -578,65 +703,16 @@ export async function createBookingByCategoryService(
     throw error;
   }
 
-  const databasePool = dependencies.pool || pool;
-  const availabilitySearcher =
-    dependencies.searchAvailableRoomsService || searchAvailableRoomsService;
-
-  const availability = await availabilitySearcher(
+  return createBookingTransaction(
     {
-      check_in: bookingData.check_in,
-      check_out: bookingData.check_out,
-      nights: bookingData.nights,
-      check_in_time: bookingData.check_in_time,
-      guests_count: bookingData.guests_count,
-      available_only: true,
+      ...bookingData,
+      category_slug: categorySlug,
+      room_id: undefined,
     },
-    databasePool
+    options,
+    dependencies,
+    selectRoomByCategory
   );
-
-  const candidates = (availability.rooms || []).filter(
-    (room) =>
-      room.status === "active" &&
-      String(room.category_slug || "").toLowerCase() === categorySlug
-  );
-
-  if (candidates.length === 0) {
-    const error = new Error(
-      "Ya no quedan habitaciones disponibles en esta categoría para las fechas seleccionadas."
-    );
-    error.statusCode = 409;
-    throw error;
-  }
-
-  let lastConflict = null;
-
-  for (const candidate of candidates) {
-    try {
-      return await createBookingService(
-        {
-          ...bookingData,
-          category_slug: categorySlug,
-          room_id: candidate.id,
-        },
-        options,
-        dependencies
-      );
-    } catch (error) {
-      if (error.statusCode === 409) {
-        lastConflict = error;
-        continue;
-      }
-      throw error;
-    }
-  }
-
-  const error =
-    lastConflict ||
-    new Error(
-      "La disponibilidad cambió mientras registrábamos la reserva. Vuelve a consultar."
-    );
-  error.statusCode = 409;
-  throw error;
 }
 
 export async function getBookingPaymentStatusService(id, publicToken) {
@@ -828,6 +904,7 @@ export async function updateBookingStatusService(
     "confirmed",
     "rejected",
     "cancelled",
+    "expired",
     "completed",
   ];
 
@@ -982,7 +1059,7 @@ export async function updateBookingStatusService(
   }
 
   // Si la reserva se rechaza o cancela, actualizamos el pago pendiente.
-  if (["rejected", "cancelled"].includes(status)) {
+  if (["rejected", "cancelled", "expired"].includes(status)) {
     await databasePool.query(
       `
       UPDATE payments

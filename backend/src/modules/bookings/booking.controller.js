@@ -62,9 +62,11 @@ export async function checkAvailabilityController(req, res, next) {
         check_out: result.check_out,
         nights: result.nights,
         guests_count: result.guests_count,
-        total_quantity: Number(category.active_quantity || category.total_quantity || 0),
+        total_quantity: Number(category.total_quantity || 0),
+        active_quantity: Number(category.active_quantity || 0),
         available_quantity: Number(category.available_quantity || 0),
         occupied_quantity: Number(category.occupied_quantity || 0),
+        is_available: Number(category.available_quantity || 0) > 0,
         available: Number(category.available_quantity || 0) > 0,
         price_per_night: category.price_per_night,
       },
@@ -80,7 +82,6 @@ export async function createBookingController(req, res, next) {
     const {
       full_name,
       phone,
-      room_id,
       category_slug,
       check_in,
       check_out,
@@ -139,8 +140,22 @@ export async function createBookingController(req, res, next) {
     // El huésped siempre reserva una categoría. La habitación física se
     // asigna internamente dentro del servicio de reservas.
     const result = await createBookingByCategoryService({
-      ...req.body,
-      room_id: undefined,
+      category_slug,
+      check_in,
+      check_out,
+      nights,
+      check_in_time: req.body.check_in_time,
+      guests_count,
+      special_requests: req.body.special_requests,
+      customer: {
+        full_name: finalFullName,
+        phone: finalPhone,
+        email: finalEmail,
+        document_type:
+          customer?.document_type || req.body.document_type || "DNI",
+        document_number:
+          customer?.document_number || req.body.document_number || "",
+      },
     });
 
     if (result.mode === "inquiry") {
