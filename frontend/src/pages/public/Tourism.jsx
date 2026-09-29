@@ -100,7 +100,8 @@ const gallerySections = [
       },
       {
         id: "muelle-pimentel",
-        src: "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkyVc-k19HTUQmi1tKH5DgssSPDkMj3Uy2pcSssbkcRFwPJSnwSDdDYhrWMB4W5Qm-kkATZtmCIsIAErtAM9RAAQQleDstOFad9u_zqKtEHM3PfsmUcH2NYup897_Tj8jNZ4ubS=s1360-w1360-h1020-rw",
+        src: "https://consultasenlinea.mincetur.gob.pe/fichaInventario/foto.aspx?cod=554048",
+        fallbackSrc: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Muelle%20De%20Pimentel.jpg?width=1400",
         alt: "Muelle histórico de Pimentel frente al océano Pacífico",
         title: "Muelle de Pimentel",
         category: "Historia",
@@ -680,6 +681,49 @@ function SocialDock() {
 }
 
 /* =========================================================
+   IMAGEN SEGURA PARA TARJETAS DE TURISMO
+
+   Algunos proveedores externos bloquean hotlinking o cambian sus URLs.
+   Esta capa evita mostrar el icono roto/alt sobre la tarjeta y usa una
+   segunda fuente o un fallback visual si la imagen deja de responder.
+========================================================= */
+
+function TourismCardImage({ image }) {
+  const [sourceIndex, setSourceIndex] = useState(0);
+
+  const sources = [image.src, image.fallbackSrc, imagenPortadaPimentel].filter(
+    (source, index, items) => source && items.indexOf(source) === index
+  );
+
+  const currentSource = sources[sourceIndex];
+
+  if (!currentSource) {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#eee3d4] to-[#d8c2a8] px-8 text-center">
+        <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#a87545]">
+          Imagen temporalmente no disponible
+        </span>
+
+        <strong className="mt-3 font-serif text-2xl text-[#2b1d12]">
+          {image.title}
+        </strong>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={currentSource}
+      alt={image.alt}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setSourceIndex((index) => index + 1)}
+      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+    />
+  );
+}
+
+/* =========================================================
    TARJETA DE TURISMO
 ========================================================= */
 
@@ -687,24 +731,7 @@ function TourismCard({ image }) {
   return (
     <article className="group overflow-hidden rounded-[26px] border border-[#eadfce] bg-white shadow-[0_18px_45px_rgba(43,29,18,0.08)] transition duration-300 hover:-translate-y-2 hover:shadow-[0_25px_55px_rgba(43,29,18,0.15)]">
       <div className="relative h-[390px] overflow-hidden bg-[#e9ddce] sm:h-[430px]">
-        {image.src ? (
-          <img
-            src={image.src}
-            alt={image.alt}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#eee3d4] to-[#d8c2a8] px-8 text-center">
-            <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#a87545]">
-              Agrega el link de la fotografía
-            </span>
-
-            <strong className="mt-3 font-serif text-2xl text-[#2b1d12]">
-              {image.title}
-            </strong>
-          </div>
-        )}
+        <TourismCardImage image={image} />
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#1c1009]/95 via-[#1c1009]/20 to-transparent" />
 
