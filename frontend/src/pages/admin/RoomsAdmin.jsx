@@ -43,6 +43,7 @@ function getMediaType(media) {
 
 export default function RoomsAdmin() {
   const [rooms, setRooms] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -68,6 +69,7 @@ export default function RoomsAdmin() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    category_slug: "",
     capacity: 1,
     price_per_night: "",
     status: "active",
@@ -79,9 +81,19 @@ export default function RoomsAdmin() {
       setLoading(true);
       setError("");
 
-      const response = await api.get("/rooms/admin");
+      const [roomsResponse, categoriesResponse] = await Promise.all([
+        api.get("/rooms/admin"),
+        api.get("/rooms/categories"),
+      ]);
 
-      setRooms(Array.isArray(response.data.data) ? response.data.data : []);
+      setRooms(
+        Array.isArray(roomsResponse.data.data) ? roomsResponse.data.data : []
+      );
+      setCategories(
+        Array.isArray(categoriesResponse.data.data)
+          ? categoriesResponse.data.data
+          : []
+      );
     } catch (err) {
       console.error("Error cargando habitaciones:", err);
       setError("No se pudieron cargar las habitaciones.");
@@ -95,10 +107,22 @@ export default function RoomsAdmin() {
 
     async function loadInitialRooms() {
       try {
-        const response = await api.get("/rooms/admin");
+        const [roomsResponse, categoriesResponse] = await Promise.all([
+          api.get("/rooms/admin"),
+          api.get("/rooms/categories"),
+        ]);
 
         if (!cancelled) {
-          setRooms(Array.isArray(response.data.data) ? response.data.data : []);
+          setRooms(
+            Array.isArray(roomsResponse.data.data)
+              ? roomsResponse.data.data
+              : []
+          );
+          setCategories(
+            Array.isArray(categoriesResponse.data.data)
+              ? categoriesResponse.data.data
+              : []
+          );
         }
       } catch (err) {
         console.error("Error cargando habitaciones:", err);
@@ -123,10 +147,25 @@ export default function RoomsAdmin() {
   function handleChange(event) {
     const { name, value } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      if (name === "category_slug") {
+        const category = categories.find((item) => item.slug === value);
+
+        return {
+          ...prev,
+          category_slug: value,
+          capacity: category ? Number(category.capacity || 1) : prev.capacity,
+          price_per_night: category
+            ? Number(category.price_per_night || 0)
+            : prev.price_per_night,
+        };
+      }
+
+      return {
+        ...prev,
+        [name]: value,
+      };
+    });
   }
 
   function resetForm() {
@@ -135,6 +174,7 @@ export default function RoomsAdmin() {
     setFormData({
       name: "",
       description: "",
+      category_slug: "",
       capacity: 1,
       price_per_night: "",
       status: "active",
@@ -151,6 +191,7 @@ export default function RoomsAdmin() {
     setFormData({
       name: room.name || "",
       description: room.description || "",
+      category_slug: room.category_slug || "",
       capacity: room.capacity || 1,
       price_per_night: room.price_per_night || "",
       status: room.status || "active",
@@ -179,21 +220,39 @@ export default function RoomsAdmin() {
         return;
       }
 
-      if (!formData.price_per_night || Number(formData.price_per_night) < 0) {
-        setError("El precio por noche es obligatorio y no puede ser negativo.");
+      if (!editingRoomId && !formData.category_slug) {
+        setError(
+          "Selecciona una categoría. Las nuevas habitaciones deben pertenecer al inventario de una categoría."
+        );
         return;
       }
 
-      if (!formData.capacity || Number(formData.capacity) < 1) {
-        setError("La capacidad debe ser como mínimo 1 persona.");
+      if (
+        !formData.category_slug &&
+        (!formData.price_per_night || Number(formData.price_per_night) < 0)
+      ) {
+        setError(
+          "Las habitaciones sin categoría necesitan un precio interno válido."
+        );
+        return;
+      }
+
+      if (
+        !formData.category_slug &&
+        (!formData.capacity || Number(formData.capacity) < 1)
+      ) {
+        setError(
+          "Las habitaciones sin categoría necesitan una capacidad interna válida."
+        );
         return;
       }
 
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim() || null,
+        category_slug: formData.category_slug || null,
         capacity: Number(formData.capacity),
-        price_per_night: Number(formData.price_per_night),
+        price_per_night: Number(formData.price_per_night || 0),
         status: formData.status,
       };
 
@@ -458,7 +517,8 @@ export default function RoomsAdmin() {
       const matchesSearch =
         !term ||
         String(room.name || "").toLowerCase().includes(term) ||
-        String(room.description || "").toLowerCase().includes(term);
+        String(room.description || "").toLowerCase().includes(term) ||
+        String(room.category_slug || "").toLowerCase().includes(term);
 
       return matchesStatus && matchesSearch;
     });
@@ -517,8 +577,8 @@ export default function RoomsAdmin() {
               </h1>
 
               <p className="text-white/75 leading-relaxed mt-4 max-w-2xl">
-                Crea, edita y administra las habitaciones que se muestran en la
-                web pública del hospedaje.
+                Administra las unidades físicas internas y asígnalas a una
+                categoría. La web pública vende categorías, no números de habitación.
               </p>
             </div>
 
@@ -575,8 +635,9 @@ export default function RoomsAdmin() {
               </h2>
 
               <p className="text-[#6f6258] text-sm mt-2 leading-relaxed">
-                Las habitaciones activas aparecen en la web y pueden ser
-                seleccionadas por los huéspedes.
+                Cada unidad física pertenece a una categoría. El precio y la
+                capacidad comercial se heredan de esa categoría; el huésped
+                nunca elige el número físico.
               </p>
             </div>
 
@@ -602,7 +663,32 @@ export default function RoomsAdmin() {
             </div>
 
             <div>
-              <label className="admin-label">Capacidad</label>
+              <label className="admin-label">Categoría</label>
+
+              <select
+                name="category_slug"
+                value={formData.category_slug}
+                onChange={handleChange}
+                className="admin-input"
+              >
+                <option value="">
+                  Sin asignar · no entra al inventario público
+                </option>
+                {categories.map((category) => (
+                  <option key={category.slug} value={category.slug}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+
+              <p className="text-xs text-[#6f6258] mt-2">
+                Al asignar una categoría, esta unidad suma 1 al total de esa
+                categoría y usa su precio y capacidad.
+              </p>
+            </div>
+
+            <div>
+              <label className="admin-label">Capacidad comercial</label>
 
               <input
                 type="number"
@@ -610,8 +696,15 @@ export default function RoomsAdmin() {
                 min="1"
                 value={formData.capacity}
                 onChange={handleChange}
+                readOnly={Boolean(formData.category_slug)}
                 className="admin-input"
               />
+
+              {formData.category_slug && (
+                <p className="text-xs text-[#6f6258] mt-2">
+                  Se sincroniza automáticamente desde la categoría.
+                </p>
+              )}
             </div>
 
             <div>
@@ -624,9 +717,16 @@ export default function RoomsAdmin() {
                 step="0.01"
                 value={formData.price_per_night}
                 onChange={handleChange}
+                readOnly={Boolean(formData.category_slug)}
                 placeholder="120.00"
                 className="admin-input"
               />
+
+              {formData.category_slug && (
+                <p className="text-xs text-[#6f6258] mt-2">
+                  Se sincroniza automáticamente desde la categoría.
+                </p>
+              )}
             </div>
 
             <div>
@@ -776,8 +876,8 @@ export default function RoomsAdmin() {
                 </h2>
 
                 <p className="text-[#6f6258] text-sm mt-2">
-                  Gestiona disponibilidad, precios, imágenes y estado de cada
-                  habitación.
+                  Gestiona la categoría, imágenes, estado y asignación interna
+                  de cada unidad física.
                 </p>
               </div>
 
@@ -785,7 +885,8 @@ export default function RoomsAdmin() {
                 <table className="w-full text-sm">
                   <thead className="bg-[#2b1d12] text-white">
                     <tr>
-                      <th className="text-left px-5 py-4">Habitación</th>
+                      <th className="text-left px-5 py-4">Habitación física</th>
+                      <th className="text-left px-5 py-4">Categoría</th>
                       <th className="text-left px-5 py-4">Capacidad</th>
                       <th className="text-left px-5 py-4">Precio</th>
                       <th className="text-left px-5 py-4">Estado</th>
@@ -838,6 +939,23 @@ export default function RoomsAdmin() {
                               </div>
                             </div>
                           </div>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span
+                            className={
+                              room.category_slug
+                                ? "inline-flex rounded-full border bg-[#f0fdf4] border-[#bbf7d0] text-[#166534] px-3 py-1 font-black"
+                                : "inline-flex rounded-full border bg-amber-50 border-amber-200 text-amber-800 px-3 py-1 font-black"
+                            }
+                          >
+                            {categories.find(
+                              (category) =>
+                                category.slug === room.category_slug
+                            )?.name ||
+                              room.category_slug ||
+                              "Sin asignar"}
+                          </span>
                         </td>
 
                         <td className="px-5 py-4">
