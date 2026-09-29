@@ -1,6 +1,5 @@
 import {
   checkAvailabilityService,
-  createBookingService,
   createBookingByCategoryService,
   deleteBookingService,
   getBookingPaymentStatusService,
