@@ -54,6 +54,87 @@ export async function getPublicRoomCategoriesService(db = pool) {
   return result.rows.map(publicCategoryRow);
 }
 
+export async function updateRoomCategoryService(
+  slug,
+  categoryData = {},
+  db = pool
+) {
+  const normalizedSlug = String(slug || "").trim().toLowerCase();
+  const currentResult = await db.query(
+    `
+    SELECT *
+    FROM room_categories
+    WHERE slug = $1
+    LIMIT 1;
+    `,
+    [normalizedSlug]
+  );
+  const current = currentResult.rows[0];
+
+  if (!current) return null;
+
+  const has = (key) =>
+    Object.prototype.hasOwnProperty.call(categoryData, key);
+
+  const capacity = has("capacity")
+    ? Number(categoryData.capacity)
+    : Number(current.capacity);
+  const pricePerNight = has("price_per_night")
+    ? Number(categoryData.price_per_night)
+    : Number(current.price_per_night || 0);
+
+  if (!Number.isInteger(capacity) || capacity < 1 || capacity > 30) {
+    const error = new Error(
+      "La capacidad de la categoría debe estar entre 1 y 30."
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!Number.isFinite(pricePerNight) || pricePerNight < 0) {
+    const error = new Error(
+      "El precio de la categoría no puede ser negativo."
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const result = await db.query(
+    `
+    UPDATE room_categories
+    SET
+      capacity = $1,
+      price_per_night = $2,
+      bed_description = $3,
+      description = $4,
+      image_url = $5,
+      is_active = $6,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE slug = $7
+    RETURNING *;
+    `,
+    [
+      capacity,
+      pricePerNight,
+      has("bed_description")
+        ? categoryData.bed_description || null
+        : current.bed_description,
+      has("description")
+        ? categoryData.description || null
+        : current.description,
+      has("image_url")
+        ? categoryData.image_url || null
+        : current.image_url,
+      has("is_active")
+        ? Boolean(categoryData.is_active)
+        : current.is_active,
+      normalizedSlug,
+    ]
+  );
+
+  return publicCategoryRow(result.rows[0]);
+}
+
 export async function searchAvailableRoomCategoriesService(
   input = {},
   db = pool
