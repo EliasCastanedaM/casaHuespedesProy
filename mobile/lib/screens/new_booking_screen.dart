@@ -37,7 +37,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
 
   String get _stayLabel => _stayType == 'until_time'
       ? 'Hasta las $_checkOutTimeText'
-      : 'Día completo';
+      : 'Día entero';
 
   @override
   void initState() {
@@ -273,7 +273,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
     final resultTime = asText(result['check_out_time']);
     final resultStayLabel = resultStayType == 'until_time'
         ? 'Hasta las ${resultTime.length >= 5 ? resultTime.substring(0, 5) : resultTime}'
-        : 'Día completo';
+        : 'Día entero';
 
     await showDialog<void>(
       context: context,
@@ -414,7 +414,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                         ButtonSegment(
                           value: 'full_day',
                           icon: Icon(Icons.calendar_view_day_rounded),
-                          label: Text('Día completo'),
+                          label: Text('Día entero'),
                         ),
                         ButtonSegment(
                           value: 'until_time',
