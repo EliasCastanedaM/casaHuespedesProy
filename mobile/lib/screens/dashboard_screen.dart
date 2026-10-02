@@ -68,16 +68,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: brandBrown,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.hotel_rounded,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: 58,
+                    height: 58,
                     color: Colors.white,
+                    padding: const EdgeInsets.all(4),
+                    child: Image.network(
+                      'https://www.casahuespedespimentel.com/img/brand/logo-casa-huespedes.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.hotel_rounded,
+                        color: brandBrown,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
