@@ -101,7 +101,7 @@ export async function cancelMobileBookingController(req, res, next) {
 
     return res.json({
       success: true,
-      message: "Reserva eliminada de la operación activa.",
+      message: "Reserva eliminada definitivamente.",
       data,
     });
   } catch (error) {
