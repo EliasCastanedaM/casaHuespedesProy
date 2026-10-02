@@ -60,7 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userName = String(widget.user['name'] ?? 'Recepción');
+    final userName = asText(widget.user['name'] ?? 'Recepción');
 
     return SafeArea(
       child: RefreshIndicator(
@@ -316,7 +316,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          String(row['name'] ?? ''),
+                          asText(row['name'] ?? ''),
                           style: const TextStyle(
                             color: brandBrown,
                             fontWeight: FontWeight.w800,
@@ -418,7 +418,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
-                      String(row['room_number'] ?? '-'),
+                      asText(row['room_number'] ?? '-'),
                       style: const TextStyle(
                         color: brandBrown,
                         fontWeight: FontWeight.w900,
@@ -431,7 +431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          String(row['customer_name'] ?? ''),
+                          asText(row['customer_name'] ?? ''),
                           style: const TextStyle(
                             color: brandBrown,
                             fontWeight: FontWeight.w900,
@@ -439,7 +439,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          String(row['category_name'] ?? '') +
+                          asText(row['category_name'] ?? '') +
                               ' · ' +
                               shortDate(row['check_in']),
                           style: TextStyle(
@@ -599,7 +599,7 @@ class _MonthlyBars extends StatelessWidget {
           final item = Map<String, dynamic>.from(items[index]);
           final value = values[index];
           final height = 24 + (100 * value / maxValue);
-          final month = String(item['month_start'] ?? '');
+          final month = asText(item['month_start'] ?? '');
           final label = month.length >= 7 ? month.substring(5, 7) : month;
 
           return Expanded(
