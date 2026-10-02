@@ -132,13 +132,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                 color: brandSand,
                                 borderRadius: BorderRadius.circular(17),
                               ),
-                              child: Text(
-                                asText(booking['room_number'] ?? '-'),
-                                style: const TextStyle(
-                                  color: brandBrown,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w900,
-                                ),
+                              child: const Icon(
+                                Icons.hotel_class_rounded,
+                                color: brandCopper,
                               ),
                             ),
                             const SizedBox(width: 12),
