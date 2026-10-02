@@ -50,15 +50,11 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
-      - name: Prepare official Casa Huespedes icon
+      - name: Prepare approved Casa Huespedes icon
         working-directory: mobile
         run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
           mkdir -p assets
-          curl -fsSL "https://www.casahuespedespimentel.com/img/brand/logo-casa-huespedes.png"             -o assets/logo-casa-huespedes.png
-          convert assets/logo-casa-huespedes.png             -gravity West -crop "38%x100%+0+0" +repage -trim             -resize 760x760             assets/logo-emblem.png
-          convert -size 1024x1024 xc:"#062B4A"             assets/logo-emblem.png -gravity center -composite             assets/app_icon.png
+          base64 -d assets/app_icon.b64 > assets/app_icon.jpg
           dart run flutter_launcher_icons
 
       - name: Analyze
