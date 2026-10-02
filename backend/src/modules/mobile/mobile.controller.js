@@ -2,12 +2,38 @@ import {
   createMobileBookingService,
   getMobileBookingsService,
   getMobileDashboardService,
+  getMobileCategoriesService,
   getMobileRoomsService,
 } from "./mobile.service.js";
 
 export async function getMobileDashboardController(req, res, next) {
   try {
     const data = await getMobileDashboardService();
+    return res.json({ success: true, data });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+
+export async function getMobileCategoriesController(req, res, next) {
+  try {
+    const { check_in, check_out, nights, guests_count } = req.query;
+
+    if (!check_in || (!check_out && !nights)) {
+      return res.status(400).json({
+        success: false,
+        message: "Indica fecha de ingreso y fecha de salida o noches.",
+      });
+    }
+
+    const data = await getMobileCategoriesService({
+      check_in,
+      check_out,
+      nights,
+      guests_count: guests_count || 1,
+    });
+
     return res.json({ success: true, data });
   } catch (error) {
     return next(error);
@@ -44,7 +70,7 @@ export async function createMobileBookingController(req, res, next) {
 
     return res.status(201).json({
       success: true,
-      message: "Habitación reservada correctamente.",
+      message: "Categoría reservada correctamente.",
       data: booking,
     });
   } catch (error) {
