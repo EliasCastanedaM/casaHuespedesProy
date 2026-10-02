@@ -21,9 +21,23 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
   DateTime _checkIn = DateTime.now();
   int _nights = 1;
   int _guests = 2;
+  String _stayType = 'full_day';
+  TimeOfDay _checkOutTime = const TimeOfDay(hour: 18, minute: 0);
   bool _loading = true;
   String? _error;
   List<dynamic> _categories = [];
+
+  int get _availabilityNights => _stayType == 'until_time' ? 1 : _nights;
+
+  String get _checkOutTimeText {
+    final hour = _checkOutTime.hour.toString().padLeft(2, '0');
+    final minute = _checkOutTime.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String get _stayLabel => _stayType == 'until_time'
+      ? 'Hasta las $_checkOutTimeText'
+      : 'Día completo';
 
   @override
   void initState() {
@@ -40,7 +54,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
     try {
       final data = await widget.api.getCategories(
         checkIn: isoDate(_checkIn),
-        nights: _nights,
+        nights: _availabilityNights,
         guests: _guests,
       );
       if (!mounted) return;
@@ -65,6 +79,24 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
     );
     if (picked == null) return;
     setState(() => _checkIn = picked);
+    await _loadCategories();
+  }
+
+  Future<void> _pickCheckOutTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _checkOutTime,
+      helpText: '¿Hasta qué hora se reserva?',
+      cancelText: 'Cancelar',
+      confirmText: 'Aceptar',
+    );
+    if (picked == null) return;
+    setState(() => _checkOutTime = picked);
+  }
+
+  Future<void> _changeStayType(String value) async {
+    if (value == _stayType) return;
+    setState(() => _stayType = value);
     await _loadCategories();
   }
 
@@ -114,8 +146,11 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                 final booking = await widget.api.createBooking({
                   'category_slug': category['slug'],
                   'check_in': isoDate(_checkIn),
-                  'nights': _nights,
+                  'nights': _availabilityNights,
                   'guests_count': _guests,
+                  'stay_type': _stayType,
+                  if (_stayType == 'until_time')
+                    'check_out_time': _checkOutTimeText,
                   'customer': {
                     'full_name': name,
                     'phone': phone,
@@ -153,9 +188,16 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                           ),
                           const SizedBox(height: 8),
                           _SummaryRow(
-                            label: 'Noches',
-                            value: _nights.toString(),
+                            label: 'Tipo',
+                            value: _stayLabel,
                           ),
+                          if (_stayType == 'full_day') ...[
+                            const SizedBox(height: 8),
+                            _SummaryRow(
+                              label: 'Noches',
+                              value: _nights.toString(),
+                            ),
+                          ],
                           const SizedBox(height: 8),
                           _SummaryRow(
                             label: 'Total',
@@ -227,6 +269,12 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
 
     if (result == null || !mounted) return;
 
+    final resultStayType = asText(result['stay_type']);
+    final resultTime = asText(result['check_out_time']);
+    final resultStayLabel = resultStayType == 'until_time'
+        ? 'Hasta las ${resultTime.length >= 5 ? resultTime.substring(0, 5) : resultTime}'
+        : 'Día completo';
+
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -250,10 +298,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              shortDate(result['check_in']) +
-                  ' · ' +
-                  asInt(result['nights']).toString() +
-                  ' noche(s)',
+              shortDate(result['check_in']) + ' · ' + resultStayLabel,
             ),
             const SizedBox(height: 6),
             Text(
@@ -308,7 +353,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Elige fechas y después una categoría. La habitación física se asigna automáticamente.',
+              'Elige la fecha, modalidad y categoría. La habitación física se asigna automáticamente.',
               style: TextStyle(
                 color: Colors.brown.shade400,
                 fontWeight: FontWeight.w600,
@@ -350,13 +395,80 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                     ),
                   ),
                   const Divider(height: 28),
-                  _CounterRow(
-                    icon: Icons.nights_stay_outlined,
-                    label: 'Noches',
-                    value: _nights,
-                    onMinus: () => _changeNights(-1),
-                    onPlus: () => _changeNights(1),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Modalidad de reserva',
+                      style: TextStyle(
+                        color: Colors.brown.shade400,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: 'full_day',
+                          icon: Icon(Icons.calendar_view_day_rounded),
+                          label: Text('Día completo'),
+                        ),
+                        ButtonSegment(
+                          value: 'until_time',
+                          icon: Icon(Icons.schedule_rounded),
+                          label: Text('Hasta una hora'),
+                        ),
+                      ],
+                      selected: {_stayType},
+                      onSelectionChanged: (selection) {
+                        _changeStayType(selection.first);
+                      },
+                    ),
+                  ),
+                  const Divider(height: 28),
+                  if (_stayType == 'full_day')
+                    _CounterRow(
+                      icon: Icons.nights_stay_outlined,
+                      label: 'Noches',
+                      value: _nights,
+                      onMinus: () => _changeNights(-1),
+                      onPlus: () => _changeNights(1),
+                    )
+                  else
+                    InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: _pickCheckOutTime,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.schedule_rounded,
+                              color: brandCopper,
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Hora límite',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                            Text(
+                              _checkOutTimeText,
+                              style: const TextStyle(
+                                color: brandBrown,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                      ),
+                    ),
                   const Divider(height: 28),
                   _CounterRow(
                     icon: Icons.people_outline_rounded,
@@ -380,7 +492,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                     borderRadius: BorderRadius.circular(99),
                   ),
                   child: Text(
-                    availableCount.toString() + ' disponibles',
+                    '$availableCount disponibles',
                     style: const TextStyle(
                       color: brandGreen,
                       fontWeight: FontWeight.w900,
@@ -422,6 +534,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _CategoryCard(
                     category: category,
+                    stayType: _stayType,
                     onReserve: category['is_available'] == true
                         ? () => _reserve(category)
                         : null,
@@ -491,10 +604,12 @@ class _CounterRow extends StatelessWidget {
 class _CategoryCard extends StatelessWidget {
   const _CategoryCard({
     required this.category,
+    required this.stayType,
     required this.onReserve,
   });
 
   final Map<String, dynamic> category;
+  final String stayType;
   final VoidCallback? onReserve;
 
   @override
@@ -502,6 +617,7 @@ class _CategoryCard extends StatelessWidget {
     final available = category['is_available'] == true;
     final imageUrl = asText(category['image_url']);
     final availableQuantity = asInt(category['available_quantity']);
+    final unitLabel = stayType == 'until_time' ? ' / reserva' : ' / noche';
 
     return CasaCard(
       padding: EdgeInsets.zero,
@@ -539,7 +655,7 @@ class _CategoryCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        money(category['price_per_night']) + ' / noche',
+                        money(category['price_per_night']) + unitLabel,
                         style: const TextStyle(
                           color: brandCopper,
                           fontWeight: FontWeight.w900,
@@ -569,9 +685,8 @@ class _CategoryCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           available
-                              ? availableQuantity.toString() +
-                                  ' disponible(s) para estas fechas'
-                              : 'Sin disponibilidad para estas fechas',
+                              ? '$availableQuantity disponible(s) para esta reserva'
+                              : 'Sin disponibilidad para esta reserva',
                           style: TextStyle(
                             color: available ? brandGreen : brandRed,
                             fontWeight: FontWeight.w800,
@@ -585,7 +700,7 @@ class _CategoryCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Total ' + money(category['total_amount']),
+                          'Total ${money(category['total_amount'])}',
                           style: const TextStyle(
                             color: brandBrown,
                             fontSize: 18,
