@@ -183,7 +183,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                       const SizedBox(height: 18),
                       Text(
                         'Reservar habitación ' +
-                            String(room['room_number'] ?? ''),
+                            asText(room['room_number'] ?? ''),
                         style: const TextStyle(
                           color: brandBrown,
                           fontSize: 23,
@@ -192,7 +192,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        String(room['category_name'] ?? '') +
+                        asText(room['category_name'] ?? '') +
                             ' · ' +
                             _nights.toString() +
                             (_nights == 1 ? ' noche' : ' noches') +
@@ -278,7 +278,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        final roomNumber = String(booking['room_number'] ?? '');
+        final roomNumber = asText(booking['room_number'] ?? '');
         return AlertDialog(
           icon: const Icon(
             Icons.check_circle_rounded,
@@ -317,7 +317,7 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                String(booking['booking_code'] ?? ''),
+                asText(booking['booking_code'] ?? ''),
                 style: TextStyle(
                   color: Colors.brown.shade400,
                   fontWeight: FontWeight.w800,
@@ -565,7 +565,7 @@ class _RoomCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final available = room['is_available'] == true;
-    final imageUrl = String(room['image_url'] ?? '');
+    final imageUrl = asText(room['image_url'] ?? '');
 
     return CasaCard(
       padding: EdgeInsets.zero,
@@ -601,7 +601,7 @@ class _RoomCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Text(
-                      String(room['room_number'] ?? '-'),
+                      asText(room['room_number'] ?? '-'),
                       style: const TextStyle(
                         color: brandBrown,
                         fontSize: 18,
@@ -615,7 +615,7 @@ class _RoomCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          String(room['category_name'] ?? ''),
+                          asText(room['category_name'] ?? ''),
                           style: const TextStyle(
                             color: brandBrown,
                             fontSize: 16,
@@ -634,7 +634,7 @@ class _RoomCard extends StatelessWidget {
                         Text(
                           available
                               ? 'Total ' + money(room['total_amount'])
-                              : String(
+                              : asText(
                                   room['availability_reason'] ??
                                       'No disponible',
                                 ),
