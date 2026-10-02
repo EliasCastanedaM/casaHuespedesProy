@@ -11,7 +11,8 @@ function normalizedText(value) {
 }
 
 const CATEGORY_LABELS = {
-  matrimonial: "Matrimonial",
+  matrimonial: "Matrimonial Estándar",
+  "matrimonial-ejecutiva": "Matrimonial Ejecutiva",
   doble: "Doble",
   triple: "Triple",
   familiar: "Familiar",
@@ -28,6 +29,17 @@ function inferCategorySlug(category) {
   const searchable = normalizedText(
     `${category.name || ""} ${category.category_name || ""}`
   );
+
+  if (searchable.includes("matrimonial ejecutiva")) {
+    return "matrimonial-ejecutiva";
+  }
+  if (
+    searchable.includes("matrimonial estandar") ||
+    searchable === "matrimonial"
+  ) {
+    return "matrimonial";
+  }
+
   return (
     Object.keys(CATEGORY_LABELS).find((slug) =>
       searchable.includes(slug)
@@ -308,6 +320,14 @@ function extractDates(message) {
 
 function extractCategoryReference(message) {
   const text = normalizedText(message);
+
+  if (/\bmatrimonial\s+ejecutiva\b/.test(text)) {
+    return "matrimonial-ejecutiva";
+  }
+
+  if (/\bmatrimonial\s+(?:estandar|standard)\b/.test(text)) {
+    return "matrimonial";
+  }
 
   const category = Object.keys(CATEGORY_LABELS).find((slug) =>
     new RegExp(`\\b${slug}\\b`).test(text)
