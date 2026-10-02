@@ -290,7 +290,10 @@ function inferCategoryName(details) {
   const roomName = String(
     details?.assigned_room_name || details?.room_name || ""
   ).toLowerCase();
-  if (roomName.includes("matrimonial")) return "Matrimonial";
+  if (roomName.includes("matrimonial ejecutiva")) {
+    return "Matrimonial Ejecutiva";
+  }
+  if (roomName.includes("matrimonial")) return "Matrimonial Estándar";
   if (roomName.includes("doble")) return "Doble";
   if (roomName.includes("triple")) return "Triple";
   if (roomName.includes("familiar")) return "Familiar";
@@ -692,6 +695,7 @@ export async function createBookingByCategoryService(
     .toLowerCase();
   const allowedCategories = new Set([
     "matrimonial",
+    "matrimonial-ejecutiva",
     "doble",
     "triple",
     "familiar",
