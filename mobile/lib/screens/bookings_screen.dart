@@ -115,6 +115,14 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 final customer = Map<String, dynamic>.from(
                   booking['customer'] ?? {},
                 );
+                final stayType = asText(booking['stay_type'] ?? 'full_day');
+                final checkOutTime = asText(booking['check_out_time']);
+                final stayLabel = stayType == 'until_time'
+                    ? 'Hasta las ' +
+                        (checkOutTime.length >= 5
+                            ? checkOutTime.substring(0, 5)
+                            : checkOutTime)
+                    : 'Día completo';
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -160,6 +168,15 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    stayLabel,
+                                    style: const TextStyle(
+                                      color: brandCopper,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -179,8 +196,14 @@ class _BookingsScreenState extends State<BookingsScreen> {
                             ),
                             Expanded(
                               child: _Info(
-                                label: 'Salida',
-                                value: shortDate(booking['check_out']),
+                                label: stayType == 'until_time'
+                                    ? 'Hora límite'
+                                    : 'Salida',
+                                value: stayType == 'until_time'
+                                    ? (checkOutTime.length >= 5
+                                        ? checkOutTime.substring(0, 5)
+                                        : checkOutTime)
+                                    : shortDate(booking['check_out']),
                               ),
                             ),
                             Expanded(
