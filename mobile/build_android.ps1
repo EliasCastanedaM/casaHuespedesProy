@@ -33,8 +33,13 @@ if ($ManifestText -notmatch "android.permission.INTERNET") {
 
 Set-Location $ProjectRoot
 
+$IconBase64 = Join-Path $ProjectRoot "assets\app_icon.b64"
+$IconFile = Join-Path $ProjectRoot "assets\app_icon.jpg"
+[IO.File]::WriteAllBytes($IconFile, [Convert]::FromBase64String((Get-Content $IconBase64 -Raw)))
+
 Write-Host "Descargando dependencias..."
 flutter pub get
+dart run flutter_launcher_icons
 
 Write-Host "Analizando el proyecto..."
 flutter analyze
