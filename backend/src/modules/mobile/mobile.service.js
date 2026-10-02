@@ -4,6 +4,7 @@ import {
   normalizeAvailabilityInput,
   searchAvailableRoomsService,
 } from "../availability/availability.service.js";
+import { searchAvailableRoomCategoriesService } from "../rooms/roomCategory.service.js";
 
 const BLOCKING_BOOKING_STATUSES = [
   "pending",
@@ -44,9 +45,6 @@ function publicBookingRow(row) {
     created_at: row.created_at,
     category_slug: row.category_slug,
     category_name: row.category_name,
-    room_id: row.room_id,
-    room_number: row.room_number,
-    room_name: row.room_name,
     customer: {
       id: row.customer_id,
       full_name: row.customer_name,
@@ -279,8 +277,47 @@ export async function getMobileDashboardService(db = pool) {
       guests_count: Number(row.guests_count || 0),
       total_amount: toNumber(row.total_amount),
       customer_name: row.customer_name,
-      room_number: row.room_number,
       category_name: row.category_name,
+    })),
+  };
+}
+
+export async function getMobileCategoriesService(input = {}, db = pool) {
+  const availability = await searchAvailableRoomCategoriesService(
+    {
+      check_in: input.check_in,
+      check_out: input.check_out,
+      nights: input.nights,
+      guests_count: input.guests_count,
+      available_only: true,
+    },
+    db
+  );
+
+  return {
+    check_in: availability.check_in,
+    check_out: availability.check_out,
+    nights: Number(availability.nights || 0),
+    guests_count: Number(availability.guests_count || 0),
+    available_category_count: Number(
+      availability.available_category_count || 0
+    ),
+    categories: (availability.categories || []).map((category) => ({
+      slug: category.slug,
+      name: category.name,
+      capacity: Number(category.capacity || 0),
+      bed_description: category.bed_description,
+      description: category.description,
+      price_per_night: toNumber(category.price_per_night),
+      total_amount:
+        toNumber(category.price_per_night) *
+        Number(availability.nights || 0),
+      image_url: category.image_url,
+      total_quantity: Number(category.total_quantity || 0),
+      active_quantity: Number(category.active_quantity || 0),
+      available_quantity: Number(category.available_quantity || 0),
+      occupied_quantity: Number(category.occupied_quantity || 0),
+      is_available: Boolean(category.is_available),
     })),
   };
 }
@@ -354,6 +391,9 @@ export async function createMobileBookingService(input = {}, db = pool) {
   const documentNumber = cleanText(
     customerInput.document_number || input.document_number
   );
+  const categorySlug = String(input.category_slug || "")
+    .trim()
+    .toLowerCase();
 
   if (!fullName || !phone) {
     const error = new Error(
@@ -363,88 +403,101 @@ export async function createMobileBookingService(input = {}, db = pool) {
     throw error;
   }
 
+  if (!categorySlug) {
+    const error = new Error("Selecciona una categoría.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const normalized = normalizeAvailabilityInput({
-    room_id: input.room_id,
     check_in: input.check_in,
     check_out: input.check_out,
     nights: input.nights,
     guests_count: input.guests_count || 1,
   });
 
-  if (!normalized.room_id) {
-    const error = new Error("Selecciona una habitación.");
-    error.statusCode = 400;
-    throw error;
-  }
-
   const client = await db.connect();
 
   try {
     await client.query("BEGIN");
 
+    // Serializa las asignaciones dentro de la misma categoría para evitar
+    // que dos dispositivos tomen la misma última unidad disponible.
     await client.query(
-      "SELECT pg_advisory_xact_lock(481516, $1::integer);",
-      [normalized.room_id]
+      "SELECT pg_advisory_xact_lock(481515, hashtext($1));",
+      [categorySlug]
     );
 
-    const roomResult = await client.query(
+    const categoryResult = await client.query(
       `
       SELECT
-        r.id,
-        r.name,
-        r.room_number,
-        r.status,
-        r.capacity,
-        r.category_slug,
-        r.price_per_night,
-        rc.name AS category_name,
-        rc.price_per_night AS category_price_per_night,
-        rc.is_active AS category_is_active
-      FROM rooms r
-      LEFT JOIN room_categories rc
-        ON rc.slug = r.category_slug
-      WHERE r.id = $1
-      FOR UPDATE OF r;
+        slug,
+        name,
+        capacity,
+        price_per_night,
+        is_active
+      FROM room_categories
+      WHERE slug = $1
+        AND is_active = TRUE
+      LIMIT 1;
       `,
-      [normalized.room_id]
+      [categorySlug]
     );
 
-    const room = roomResult.rows[0];
+    const category = categoryResult.rows[0];
 
-    if (!room || room.status !== "active") {
-      const error = new Error("La habitación seleccionada no está activa.");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    if (room.category_is_active === false) {
-      const error = new Error("La categoría de esta habitación no está activa.");
+    if (!category) {
+      const error = new Error("La categoría seleccionada no está activa.");
       error.statusCode = 400;
       throw error;
     }
 
-    if (Number(normalized.guests_count) > Number(room.capacity || 0)) {
+    if (Number(normalized.guests_count) > Number(category.capacity || 0)) {
       const error = new Error(
-        "La cantidad de huéspedes supera la capacidad de la habitación."
+        "La cantidad de huéspedes supera la capacidad de esta categoría."
       );
       error.statusCode = 400;
       throw error;
     }
 
-    const availability = await checkAvailabilityService(
-      {
-        room_id: normalized.room_id,
-        check_in: normalized.check_in,
-        check_out: normalized.check_out,
-        guests_count: normalized.guests_count,
-      },
-      client
+    const candidatesResult = await client.query(
+      `
+      SELECT id
+      FROM rooms
+      WHERE category_slug = $1
+        AND status = 'active'
+      ORDER BY COALESCE(display_order, 9999), id;
+      `,
+      [categorySlug]
     );
 
-    if (!availability.available) {
+    let assignedRoomId = null;
+
+    for (const candidate of candidatesResult.rows) {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(481516, $1::integer);",
+        [candidate.id]
+      );
+
+      const availability = await checkAvailabilityService(
+        {
+          room_id: candidate.id,
+          check_in: normalized.check_in,
+          check_out: normalized.check_out,
+          guests_count: normalized.guests_count,
+        },
+        client
+      );
+
+      if (availability.available) {
+        assignedRoomId = candidate.id;
+        break;
+      }
+    }
+
+    if (!assignedRoomId) {
       const error = new Error(
-        availability.reason ||
-          "La habitación ya no está disponible para esas fechas."
+        "No hay disponibilidad en esta categoría para las fechas seleccionadas."
       );
       error.statusCode = 409;
       throw error;
@@ -508,14 +561,12 @@ export async function createMobileBookingService(input = {}, db = pool) {
       customer = insertedCustomer.rows[0];
     }
 
-    const unitPrice = toNumber(
-      room.category_price_per_night ?? room.price_per_night
-    );
+    const unitPrice = toNumber(category.price_per_night);
     const totalAmount = unitPrice * Number(normalized.nights);
 
     if (unitPrice <= 0) {
       const error = new Error(
-        "La habitación no tiene un precio configurado."
+        "La categoría no tiene un precio configurado."
       );
       error.statusCode = 400;
       throw error;
@@ -546,8 +597,8 @@ export async function createMobileBookingService(input = {}, db = pool) {
       `,
       [
         customer.id,
-        room.id,
-        room.category_slug,
+        assignedRoomId,
+        category.slug,
         unitPrice,
         normalized.check_in,
         normalized.check_out,
@@ -578,15 +629,12 @@ export async function createMobileBookingService(input = {}, db = pool) {
         c.full_name AS customer_name,
         c.phone AS customer_phone,
         c.email AS customer_email,
-        r.room_number,
-        r.name AS room_name,
         rc.name AS category_name,
-        COALESCE(b.category_slug, r.category_slug) AS category_slug
+        b.category_slug
       FROM bookings b
       JOIN customers c ON c.id = b.customer_id
-      JOIN rooms r ON r.id = b.room_id
       LEFT JOIN room_categories rc
-        ON rc.slug = COALESCE(b.category_slug, r.category_slug)
+        ON rc.slug = b.category_slug
       WHERE b.id = $1
       LIMIT 1;
       `,
