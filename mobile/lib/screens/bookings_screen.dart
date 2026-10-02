@@ -68,8 +68,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
         ),
         title: const Text('¿Eliminar reserva?'),
         content: Text(
-          'Se quitará de las reservas activas y la categoría volverá a quedar disponible. '
-          'El registro se conservará como cancelado para mantener el historial.',
+          'La reserva se eliminará definitivamente de la base de datos y la categoría volverá a quedar disponible. '
+          'Esta acción no se puede deshacer.',
           style: TextStyle(
             color: Colors.brown.shade500,
             height: 1.4,
@@ -100,7 +100,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Reserva eliminada y disponibilidad liberada.'),
+          content: Text('Reserva eliminada definitivamente y disponibilidad liberada.'),
         ),
       );
 
