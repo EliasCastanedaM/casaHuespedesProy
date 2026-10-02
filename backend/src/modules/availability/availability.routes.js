@@ -14,7 +14,7 @@ router.get("/", requireAdminAuth, getAvailabilityController);
 
 router.post("/search", requireAdminAuth, searchAvailabilityController);
 
-// Disponibilidad comercial agrupada por Matrimonial, Doble, Triple y Familiar.
+// Disponibilidad comercial agrupada por las categorías activas configuradas en la base.
 router.post("/categories", searchCategoryAvailabilityController);
 
 export default router;
