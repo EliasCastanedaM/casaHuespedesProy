@@ -24,7 +24,7 @@ class _CasaHuespedesMobileAppState extends State<CasaHuespedesMobileApp> {
 
   void _handleLoggedIn(Map<String, dynamic> session) {
     setState(() {
-      _token = String(session['token'] ?? '');
+      _token = asText(session['token'] ?? '');
       _user = Map<String, dynamic>.from(session['user'] ?? {});
     });
   }
