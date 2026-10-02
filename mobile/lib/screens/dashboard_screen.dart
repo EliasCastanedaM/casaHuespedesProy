@@ -589,7 +589,7 @@ class _MonthlyBars extends StatelessWidget {
     final values = items
         .map((item) => asInt(Map<String, dynamic>.from(item)['bookings']))
         .toList();
-    final maxValue = math.max(1, values.fold<int>(0, math.max));
+    final maxValue = values.fold<int>(1, (current, value) => value > current ? value : current);
 
     return SizedBox(
       height: 170,
