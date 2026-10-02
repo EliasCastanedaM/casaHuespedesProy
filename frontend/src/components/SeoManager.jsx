@@ -9,12 +9,12 @@ const pageMetadata = {
     title:
       "Casa Huéspedes Pimentel | Hospedaje cerca de la playa en Pimentel",
     description:
-      "Casa Huéspedes Pimentel: hospedaje en Pimentel, Lambayeque, cerca de la playa. Habitaciones matrimoniales, dobles, triples y familiares.",
+      "Casa Huéspedes Pimentel: hospedaje en Pimentel, Lambayeque, cerca de la playa. Habitaciones matrimoniales estándar y ejecutivas, dobles, triples y familiares.",
   },
   "/habitaciones": {
     title: "Habitaciones en Pimentel | Casa Huéspedes Pimentel",
     description:
-      "Conoce nuestras habitaciones matrimoniales, dobles, triples y familiares en Pimentel. Consulta disponibilidad para tus fechas.",
+      "Conoce nuestras habitaciones matrimoniales estándar y ejecutivas, dobles, triples y familiares en Pimentel. Consulta disponibilidad para tus fechas.",
   },
   "/reservar": {
     title: "Reservar hospedaje en Pimentel | Casa Huéspedes Pimentel",
