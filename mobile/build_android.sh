@@ -31,8 +31,12 @@ PY
 
 cd "$PROJECT_ROOT"
 
+mkdir -p assets
+base64 -d assets/app_icon.b64 > assets/app_icon.jpg
+
 echo "Descargando dependencias..."
 flutter pub get
+dart run flutter_launcher_icons
 
 echo "Analizando el proyecto..."
 flutter analyze
