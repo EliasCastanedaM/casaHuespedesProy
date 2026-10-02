@@ -20,6 +20,17 @@ if (Test-Path $AndroidTarget) {
 Copy-Item $AndroidSource $AndroidTarget -Recurse -Force
 Remove-Item $TempRoot -Recurse -Force
 
+$Manifest = Join-Path $AndroidTarget "app\src\main\AndroidManifest.xml"
+$ManifestText = Get-Content $Manifest -Raw
+if ($ManifestText -notmatch "android.permission.INTERNET") {
+    $Permissions = @"
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+"@
+    $ManifestText = $ManifestText -replace "(<manifest[^>]*>)", "`$1`r`n$Permissions"
+    Set-Content $Manifest $ManifestText -Encoding UTF8
+}
+
 Set-Location $ProjectRoot
 
 Write-Host "Descargando dependencias..."
