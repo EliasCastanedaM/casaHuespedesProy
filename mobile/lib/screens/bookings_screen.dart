@@ -7,9 +7,11 @@ class BookingsScreen extends StatefulWidget {
   const BookingsScreen({
     super.key,
     required this.api,
+    required this.onBookingChanged,
   });
 
   final ApiService api;
+  final VoidCallback onBookingChanged;
 
   @override
   State<BookingsScreen> createState() => _BookingsScreenState();
@@ -49,6 +51,65 @@ class _BookingsScreenState extends State<BookingsScreen> {
           _loading = false;
         });
       }
+    }
+  }
+
+  Future<void> _cancelBooking(Map<String, dynamic> booking) async {
+    final bookingId = asInt(booking['id']);
+    final bookingCode = asText(booking['booking_code']);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.delete_outline_rounded,
+          color: brandRed,
+          size: 46,
+        ),
+        title: const Text('¿Eliminar reserva?'),
+        content: Text(
+          'Se quitará de las reservas activas y la categoría volverá a quedar disponible. '
+          'El registro se conservará como cancelado para mantener el historial.',
+          style: TextStyle(
+            color: Colors.brown.shade500,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('No eliminar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: brandRed),
+            child: const Text('Sí, eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await widget.api.cancelBooking(
+        bookingId: bookingId,
+        bookingCode: bookingCode,
+      );
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Reserva eliminada y disponibilidad liberada.'),
+        ),
+      );
+
+      widget.onBookingChanged();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     }
   }
 
@@ -240,6 +301,25 @@ class _BookingsScreenState extends State<BookingsScreen> {
                             ),
                           ],
                         ),
+                        if (asText(booking['source']) == 'mobile') ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _cancelBooking(booking),
+                              icon: const Icon(Icons.delete_outline_rounded),
+                              label: const Text('Eliminar reserva'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: brandRed,
+                                side: const BorderSide(color: brandRed),
+                                minimumSize: const Size.fromHeight(48),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
