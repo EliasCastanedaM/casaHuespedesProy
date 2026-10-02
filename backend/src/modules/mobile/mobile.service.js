@@ -725,22 +725,18 @@ export async function cancelMobileBookingService(
 
   const result = await db.query(
     `
-    UPDATE bookings
-    SET
-      status = 'cancelled',
-      updated_at = CURRENT_TIMESTAMP
+    DELETE FROM bookings
     WHERE id = $1
       AND booking_code = $2
       AND source = 'mobile'
-      AND status NOT IN ('cancelled', 'rejected', 'expired')
-    RETURNING id, booking_code, status, source, category_slug;
+    RETURNING id, booking_code, source, category_slug;
     `,
     [bookingId, bookingCode]
   );
 
   if (!result.rows[0]) {
     const error = new Error(
-      "No se encontró una reserva móvil activa que se pueda eliminar."
+      "No se encontró una reserva creada desde la app que se pueda eliminar."
     );
     error.statusCode = 404;
     throw error;
