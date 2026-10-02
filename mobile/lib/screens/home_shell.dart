@@ -31,6 +31,13 @@ class _HomeShellState extends State<HomeShell> {
     });
   }
 
+  void _bookingChanged() {
+    setState(() {
+      _revision += 1;
+      _index = 2;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
@@ -47,6 +54,7 @@ class _HomeShellState extends State<HomeShell> {
       BookingsScreen(
         key: ValueKey('bookings-' + _revision.toString()),
         api: widget.api,
+        onBookingChanged: _bookingChanged,
       ),
     ];
 
