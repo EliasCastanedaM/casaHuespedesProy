@@ -21,11 +21,12 @@ const days = [
 function formatDate(value) {
   if (!value) return "-";
 
-  return new Date(value).toLocaleDateString("es-PE", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (!match) return String(value);
+
+  const [, year, month, day] = match;
+  return `${day}/${month}/${year}`;
 }
 
 export default function ScheduleAdmin() {
