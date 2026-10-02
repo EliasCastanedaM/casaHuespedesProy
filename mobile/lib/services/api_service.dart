@@ -106,14 +106,14 @@ class ApiService {
     return Map<String, dynamic>.from(response['data'] ?? {});
   }
 
-  Future<Map<String, dynamic>> getRooms({
+  Future<Map<String, dynamic>> getCategories({
     required String checkIn,
     required int nights,
     required int guests,
   }) async {
     final response = await _request(
       'GET',
-      '/mobile/rooms',
+      '/mobile/categories',
       query: {
         'check_in': checkIn,
         'nights': nights,
