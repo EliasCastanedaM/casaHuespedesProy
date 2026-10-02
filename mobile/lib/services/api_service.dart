@@ -145,4 +145,15 @@ class ApiService {
 
     return List<dynamic>.from(response['data'] ?? []);
   }
+
+  Future<void> cancelBooking({
+    required int bookingId,
+    required String bookingCode,
+  }) async {
+    await _request(
+      'DELETE',
+      '/mobile/bookings/' + bookingId.toString(),
+      body: {'booking_code': bookingCode},
+    );
+  }
 }
