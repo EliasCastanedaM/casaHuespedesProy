@@ -699,6 +699,7 @@ export async function getMobileBookingsService(
     JOIN rooms r ON r.id = b.room_id
     LEFT JOIN room_categories rc
       ON rc.slug = COALESCE(b.category_slug, r.category_slug)
+    WHERE b.status <> 'cancelled'
     ORDER BY b.check_in DESC, b.created_at DESC, b.id DESC
     LIMIT $1;
     `,
@@ -706,4 +707,44 @@ export async function getMobileBookingsService(
   );
 
   return result.rows.map(publicBookingRow);
+}
+
+
+export async function cancelMobileBookingService(
+  { booking_id, booking_code } = {},
+  db = pool
+) {
+  const bookingId = Number(booking_id);
+  const bookingCode = cleanText(booking_code);
+
+  if (!Number.isInteger(bookingId) || bookingId <= 0 || !bookingCode) {
+    const error = new Error("La reserva indicada no es válida.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const result = await db.query(
+    `
+    UPDATE bookings
+    SET
+      status = 'cancelled',
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1
+      AND booking_code = $2
+      AND source = 'mobile'
+      AND status NOT IN ('cancelled', 'rejected', 'expired')
+    RETURNING id, booking_code, status, source, category_slug;
+    `,
+    [bookingId, bookingCode]
+  );
+
+  if (!result.rows[0]) {
+    const error = new Error(
+      "No se encontró una reserva móvil activa que se pueda eliminar."
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return result.rows[0];
 }
