@@ -133,7 +133,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                 borderRadius: BorderRadius.circular(17),
                               ),
                               child: Text(
-                                String(booking['room_number'] ?? '-'),
+                                asText(booking['room_number'] ?? '-'),
                                 style: const TextStyle(
                                   color: brandBrown,
                                   fontSize: 17,
@@ -147,7 +147,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    String(
+                                    asText(
                                       customer['full_name'] ?? 'Huésped',
                                     ),
                                     style: const TextStyle(
@@ -158,7 +158,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                   ),
                                   const SizedBox(height: 3),
                                   Text(
-                                    String(booking['category_name'] ?? ''),
+                                    asText(booking['category_name'] ?? ''),
                                     style: TextStyle(
                                       color: Colors.brown.shade400,
                                       fontWeight: FontWeight.w700,
@@ -167,7 +167,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                 ],
                               ),
                             ),
-                            StatusPill(String(booking['status'] ?? '')),
+                            StatusPill(asText(booking['status'] ?? '')),
                           ],
                         ),
                         const SizedBox(height: 14),
@@ -205,14 +205,14 @@ class _BookingsScreenState extends State<BookingsScreen> {
                             ),
                             const SizedBox(width: 7),
                             Text(
-                              String(customer['phone'] ?? '-'),
+                              asText(customer['phone'] ?? '-'),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                             const Spacer(),
                             Text(
-                              String(booking['booking_code'] ?? ''),
+                              asText(booking['booking_code'] ?? ''),
                               style: TextStyle(
                                 color: Colors.brown.shade400,
                                 fontSize: 12,
