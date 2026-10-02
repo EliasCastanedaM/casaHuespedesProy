@@ -253,7 +253,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Estado de habitaciones',
+                    'Estado del inventario',
                     style: TextStyle(
                       color: brandBrown,
                       fontWeight: FontWeight.w900,
@@ -289,7 +289,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       const SizedBox(height: 24),
       const SectionTitle(
         'Ocupación por categoría',
-        subtitle: 'Habitaciones ocupadas en este momento.',
+        subtitle: 'Disponibilidad agrupada por categoría.',
       ),
       const SizedBox(height: 12),
       CasaCard(
@@ -411,12 +411,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: brandSand,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(
-                      asText(row['room_number'] ?? '-'),
-                      style: const TextStyle(
-                        color: brandBrown,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    child: const Icon(
+                      Icons.hotel_class_rounded,
+                      color: brandCopper,
                     ),
                   ),
                   const SizedBox(width: 12),
