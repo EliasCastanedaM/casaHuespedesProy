@@ -69,14 +69,14 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
   }
 
   Future<void> _changeNights(int delta) async {
-    final next = (_nights + delta).clamp(1, 60);
+    final next = (_nights + delta).clamp(1, 60).toInt();
     if (next == _nights) return;
     setState(() => _nights = next);
     await _loadCategories();
   }
 
   Future<void> _changeGuests(int delta) async {
-    final next = (_guests + delta).clamp(1, 30);
+    final next = (_guests + delta).clamp(1, 30).toInt();
     if (next == _guests) return;
     setState(() => _guests = next);
     await _loadCategories();
