@@ -45,6 +45,8 @@ function publicBookingRow(row) {
     created_at: row.created_at,
     category_slug: row.category_slug,
     category_name: row.category_name,
+    stay_type: row.stay_type || "full_day",
+    check_out_time: row.check_out_time || null,
     customer: {
       id: row.customer_id,
       full_name: row.customer_name,
@@ -394,6 +396,10 @@ export async function createMobileBookingService(input = {}, db = pool) {
   const categorySlug = String(input.category_slug || "")
     .trim()
     .toLowerCase();
+  const stayType = String(input.stay_type || "full_day")
+    .trim()
+    .toLowerCase();
+  const checkOutTime = cleanText(input.check_out_time);
 
   if (!fullName || !phone) {
     const error = new Error(
@@ -405,6 +411,21 @@ export async function createMobileBookingService(input = {}, db = pool) {
 
   if (!categorySlug) {
     const error = new Error("Selecciona una categoría.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["full_day", "until_time"].includes(stayType)) {
+    const error = new Error("El tipo de estadía no es válido.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (
+    stayType === "until_time" &&
+    !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(String(checkOutTime || ""))
+  ) {
+    const error = new Error("Selecciona una hora de salida válida.");
     error.statusCode = 400;
     throw error;
   }
@@ -587,11 +608,13 @@ export async function createMobileBookingService(input = {}, db = pool) {
         status,
         source,
         special_requests,
-        payment_status
+        payment_status,
+        stay_type,
+        check_out_time
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9,
-        'confirmed', 'mobile', $10, NULL
+        'confirmed', 'mobile', $10, NULL, $11, $12
       )
       RETURNING *;
       `,
@@ -606,6 +629,8 @@ export async function createMobileBookingService(input = {}, db = pool) {
         normalized.nights,
         totalAmount,
         cleanText(input.special_requests),
+        stayType,
+        stayType === "until_time" ? checkOutTime : null,
       ]
     );
 
