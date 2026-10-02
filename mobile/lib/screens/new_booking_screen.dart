@@ -18,251 +18,204 @@ class NewBookingScreen extends StatefulWidget {
 }
 
 class _NewBookingScreenState extends State<NewBookingScreen> {
-  DateTime _checkIn = DateUtils.dateOnly(DateTime.now());
+  DateTime _checkIn = DateTime.now();
   int _nights = 1;
-  int _guests = 1;
+  int _guests = 2;
   bool _loading = true;
   String? _error;
-  List<dynamic> _rooms = [];
+  List<dynamic> _categories = [];
 
   @override
   void initState() {
     super.initState();
-    _loadRooms();
+    _loadCategories();
   }
 
-  Future<void> _loadRooms() async {
+  Future<void> _loadCategories() async {
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      final data = await widget.api.getRooms(
+      final data = await widget.api.getCategories(
         checkIn: isoDate(_checkIn),
         nights: _nights,
         guests: _guests,
       );
-
       if (!mounted) return;
       setState(() {
-        _rooms = List<dynamic>.from(data['rooms'] ?? []);
+        _categories = List<dynamic>.from(data['categories'] ?? []);
       });
     } on ApiException catch (error) {
       if (!mounted) return;
-      setState(() {
-        _error = error.message;
-        _rooms = [];
-      });
+      setState(() => _error = error.message);
     } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _pickDate() async {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final selected = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
-      initialDate: _checkIn.isBefore(today) ? today : _checkIn,
-      firstDate: today,
-      lastDate: today.add(const Duration(days: 730)),
-      helpText: 'Fecha de ingreso',
-      cancelText: 'Cancelar',
-      confirmText: 'Elegir',
+      initialDate: _checkIn,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      locale: const Locale('es', 'PE'),
     );
-
-    if (selected == null || !mounted) return;
-
-    setState(() {
-      _checkIn = DateUtils.dateOnly(selected);
-    });
-    await _loadRooms();
+    if (picked == null) return;
+    setState(() => _checkIn = picked);
+    await _loadCategories();
   }
 
   Future<void> _changeNights(int delta) async {
-    final next = (_nights + delta).clamp(1, 60).toInt();
+    final next = (_nights + delta).clamp(1, 60);
     if (next == _nights) return;
-    setState(() {
-      _nights = next;
-    });
-    await _loadRooms();
+    setState(() => _nights = next);
+    await _loadCategories();
   }
 
   Future<void> _changeGuests(int delta) async {
-    final next = (_guests + delta).clamp(1, 5).toInt();
+    final next = (_guests + delta).clamp(1, 30);
     if (next == _guests) return;
-    setState(() {
-      _guests = next;
-    });
-    await _loadRooms();
+    setState(() => _guests = next);
+    await _loadCategories();
   }
 
-  Future<void> _reserve(Map<String, dynamic> room) async {
+  Future<void> _reserve(Map<String, dynamic> category) async {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
-    final emailController = TextEditingController();
-    bool submitting = false;
+    bool saving = false;
     String? formError;
 
-    final booking = await showModalBottomSheet<Map<String, dynamic>>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: brandCream,
-      builder: (sheetContext) {
+      barrierDismissible: false,
+      builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setSheetState) {
+          builder: (context, setDialogState) {
             Future<void> submit() async {
-              if (nameController.text.trim().isEmpty ||
-                  phoneController.text.trim().isEmpty) {
-                setSheetState(() {
-                  formError = 'Nombre y celular son obligatorios.';
+              final name = nameController.text.trim();
+              final phone = phoneController.text.trim();
+
+              if (name.isEmpty || phone.isEmpty) {
+                setDialogState(() {
+                  formError = 'Ingresa nombre y celular del huésped.';
                 });
                 return;
               }
 
-              setSheetState(() {
-                submitting = true;
+              setDialogState(() {
+                saving = true;
                 formError = null;
               });
 
               try {
-                final result = await widget.api.createBooking({
-                  'room_id': room['id'],
+                final booking = await widget.api.createBooking({
+                  'category_slug': category['slug'],
                   'check_in': isoDate(_checkIn),
                   'nights': _nights,
                   'guests_count': _guests,
                   'customer': {
-                    'full_name': nameController.text.trim(),
-                    'phone': phoneController.text.trim(),
-                    'email': emailController.text.trim(),
+                    'full_name': name,
+                    'phone': phone,
                   },
                 });
 
-                if (!sheetContext.mounted) return;
-                Navigator.of(sheetContext).pop(result);
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop(booking);
               } on ApiException catch (error) {
-                setSheetState(() {
+                setDialogState(() {
+                  saving = false;
                   formError = error.message;
-                  submitting = false;
-                });
-              } catch (_) {
-                setSheetState(() {
-                  formError = 'No se pudo registrar la reserva.';
-                  submitting = false;
                 });
               }
             }
 
-            return SafeArea(
-              top: false,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 16,
-                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 48,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: brandSand,
-                            borderRadius: BorderRadius.circular(99),
+            return AlertDialog(
+              title: Text(asText(category['name'])),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: brandSand,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          _SummaryRow(
+                            label: 'Ingreso',
+                            value: shortDate(isoDate(_checkIn)),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          _SummaryRow(
+                            label: 'Noches',
+                            value: _nights.toString(),
+                          ),
+                          const SizedBox(height: 8),
+                          _SummaryRow(
+                            label: 'Total',
+                            value: money(category['total_amount']),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 18),
+                    ),
+                    const SizedBox(height: 18),
+                    TextField(
+                      controller: nameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del huésped',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Celular',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                    ),
+                    if (formError != null) ...[
+                      const SizedBox(height: 12),
                       Text(
-                        'Reservar habitación ' +
-                            asText(room['room_number'] ?? ''),
+                        formError!,
                         style: const TextStyle(
-                          color: brandBrown,
-                          fontSize: 23,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        asText(room['category_name'] ?? '') +
-                            ' · ' +
-                            _nights.toString() +
-                            (_nights == 1 ? ' noche' : ' noches') +
-                            ' · ' +
-                            money(room['total_amount']),
-                        style: TextStyle(
-                          color: Colors.brown.shade400,
+                          color: brandRed,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: nameController,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre del huésped',
-                          prefixIcon: Icon(Icons.person_outline_rounded),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          labelText: 'Celular',
-                          prefixIcon: Icon(Icons.phone_outlined),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Correo (opcional)',
-                          prefixIcon: Icon(Icons.mail_outline_rounded),
-                        ),
-                      ),
-                      if (formError != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          formError!,
-                          style: const TextStyle(
-                            color: brandRed,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 18),
-                      FilledButton.icon(
-                        onPressed: submitting ? null : submit,
-                        icon: submitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.check_circle_outline_rounded),
-                        label: Text(
-                          submitting
-                              ? 'Reservando...'
-                              : 'CONFIRMAR RESERVA',
-                        ),
-                      ),
                     ],
-                  ),
+                  ],
                 ),
               ),
+              actions: [
+                TextButton(
+                  onPressed: saving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: saving ? null : submit,
+                  child: saving
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Confirmar reserva'),
+                ),
+              ],
             );
           },
         );
@@ -271,68 +224,61 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
 
     nameController.dispose();
     phoneController.dispose();
-    emailController.dispose();
 
-    if (booking == null || !mounted) return;
+    if (result == null || !mounted) return;
 
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        final roomNumber = asText(booking['room_number'] ?? '');
-        return AlertDialog(
-          icon: const Icon(
-            Icons.check_circle_rounded,
-            color: brandGreen,
-            size: 54,
-          ),
-          title: const Text(
-            'Habitación reservada',
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Habitación ' + roomNumber,
-                style: const TextStyle(
-                  color: brandBrown,
-                  fontSize: 19,
-                  fontWeight: FontWeight.w900,
-                ),
+      builder: (context) => AlertDialog(
+        icon: const Icon(
+          Icons.check_circle_rounded,
+          color: brandGreen,
+          size: 54,
+        ),
+        title: const Text('Reserva confirmada'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              asText(result['category_name'] ?? category['name']),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: brandBrown,
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
               ),
-              const SizedBox(height: 8),
-              Text(
-                shortDate(booking['check_in']) +
-                    ' al ' +
-                    shortDate(booking['check_out']),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              shortDate(result['check_in']) +
+                  ' · ' +
+                  asInt(result['nights']).toString() +
+                  ' noche(s)',
+            ),
+            const SizedBox(height: 6),
+            Text(
+              money(result['total_amount']),
+              style: const TextStyle(
+                color: brandGreen,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
               ),
-              const SizedBox(height: 4),
-              Text(
-                money(booking['total_amount']),
-                style: const TextStyle(
-                  color: brandGreen,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                asText(booking['booking_code'] ?? ''),
-                style: TextStyle(
-                  color: Colors.brown.shade400,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Listo'),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'El sistema asignó internamente una habitación disponible de esta categoría.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.brown.shade400),
             ),
           ],
-        );
-      },
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Listo'),
+          ),
+        ],
+      ),
     );
 
     if (!mounted) return;
@@ -341,14 +287,14 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final availableCount = _rooms.where((item) {
-      final room = Map<String, dynamic>.from(item);
-      return room['is_available'] == true;
+    final availableCount = _categories.where((item) {
+      final category = Map<String, dynamic>.from(item);
+      return category['is_available'] == true;
     }).length;
 
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: _loadRooms,
+        onRefresh: _loadCategories,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
           children: [
@@ -362,10 +308,11 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Elige fechas y toca la habitación que quieres reservar.',
+              'Elige fechas y después una categoría. La habitación física se asigna automáticamente.',
               style: TextStyle(
                 color: Colors.brown.shade400,
                 fontWeight: FontWeight.w600,
+                height: 1.35,
               ),
             ),
             const SizedBox(height: 18),
@@ -397,7 +344,6 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                               fontWeight: FontWeight.w900,
                             ),
                           ),
-                          const SizedBox(width: 6),
                           const Icon(Icons.chevron_right_rounded),
                         ],
                       ),
@@ -425,20 +371,16 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
             const SizedBox(height: 22),
             Row(
               children: [
-                const Expanded(
-                  child: SectionTitle('Habitaciones'),
-                ),
+                const Expanded(child: SectionTitle('Categorías')),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: brandGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(99),
                   ),
                   child: Text(
-                    availableCount.toString() + ' libres',
+                    availableCount.toString() + ' disponibles',
                     style: const TextStyle(
                       color: brandGreen,
                       fontWeight: FontWeight.w900,
@@ -467,28 +409,21 @@ class _NewBookingScreenState extends State<NewBookingScreen> {
                     ),
                     const SizedBox(height: 12),
                     FilledButton(
-                      onPressed: _loadRooms,
+                      onPressed: _loadCategories,
                       child: const Text('Reintentar'),
                     ),
                   ],
                 ),
               )
-            else if (_rooms.isEmpty)
-              const CasaCard(
-                child: Text(
-                  'No hay habitaciones compatibles con esa cantidad de huéspedes.',
-                  textAlign: TextAlign.center,
-                ),
-              )
             else
-              ..._rooms.map((item) {
-                final room = Map<String, dynamic>.from(item);
+              ..._categories.map((item) {
+                final category = Map<String, dynamic>.from(item);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _RoomCard(
-                    room: room,
-                    onReserve: room['is_available'] == true
-                        ? () => _reserve(room)
+                  child: _CategoryCard(
+                    category: category,
+                    onReserve: category['is_available'] == true
+                        ? () => _reserve(category)
                         : null,
                   ),
                 );
@@ -553,109 +488,119 @@ class _CounterRow extends StatelessWidget {
   }
 }
 
-class _RoomCard extends StatelessWidget {
-  const _RoomCard({
-    required this.room,
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard({
+    required this.category,
     required this.onReserve,
   });
 
-  final Map<String, dynamic> room;
+  final Map<String, dynamic> category;
   final VoidCallback? onReserve;
 
   @override
   Widget build(BuildContext context) {
-    final available = room['is_available'] == true;
-    final imageUrl = asText(room['image_url'] ?? '');
+    final available = category['is_available'] == true;
+    final imageUrl = asText(category['image_url']);
+    final availableQuantity = asInt(category['available_quantity']);
 
     return CasaCard(
       padding: EdgeInsets.zero,
       child: Opacity(
-        opacity: available ? 1 : 0.62,
+        opacity: available ? 1 : 0.6,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (imageUrl.isNotEmpty)
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(23),
-                ),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(23)),
                 child: Image.network(
                   imageUrl,
-                  height: 145,
+                  height: 150,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+              padding: const EdgeInsets.all(17),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: available
-                          ? brandSand
-                          : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Text(
-                      asText(room['room_number'] ?? '-'),
-                      style: const TextStyle(
-                        color: brandBrown,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 13),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          asText(room['category_name'] ?? ''),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          asText(category['name']),
                           style: const TextStyle(
                             color: brandBrown,
-                            fontSize: 16,
+                            fontSize: 19,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          money(room['price_per_night']) + ' / noche',
-                          style: TextStyle(
-                            color: Colors.brown.shade400,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      ),
+                      Text(
+                        money(category['price_per_night']) + ' / noche',
+                        style: const TextStyle(
+                          color: brandCopper,
+                          fontWeight: FontWeight.w900,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    asText(category['bed_description']),
+                    style: TextStyle(
+                      color: Colors.brown.shade400,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        available
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.event_busy_rounded,
+                        color: available ? brandGreen : brandRed,
+                        size: 19,
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
                           available
-                              ? 'Total ' + money(room['total_amount'])
-                              : asText(
-                                  room['availability_reason'] ??
-                                      'No disponible',
-                                ),
-                          maxLines: 2,
+                              ? availableQuantity.toString() +
+                                  ' disponible(s) para estas fechas'
+                              : 'Sin disponibilidad para estas fechas',
                           style: TextStyle(
                             color: available ? brandGreen : brandRed,
-                            fontSize: 12,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  FilledButton(
-                    onPressed: onReserve,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(92, 46),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                    ),
-                    child: Text(available ? 'Reservar' : 'Ocupada'),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Total ' + money(category['total_amount']),
+                          style: const TextStyle(
+                            color: brandBrown,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      FilledButton(
+                        onPressed: onReserve,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(110, 48),
+                        ),
+                        child: Text(available ? 'Reservar' : 'No disponible'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -663,6 +608,37 @@ class _RoomCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Colors.brown.shade400,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: brandBrown,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }
