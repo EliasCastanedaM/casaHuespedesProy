@@ -30,7 +30,7 @@ class ApiService {
     final uri = base.replace(
       path: base.path + path,
       queryParameters: query?.map(
-        (key, value) => MapEntry(key, String.valueOf(value)),
+        (key, value) => MapEntry(key, value.toString()),
       ),
     );
 
@@ -68,7 +68,7 @@ class ApiService {
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ApiException(
-          String(payload['message'] ?? 'No se pudo completar la operación.'),
+          (payload['message'] ?? 'No se pudo completar la operación.').toString(),
           statusCode: response.statusCode,
         );
       }
@@ -97,7 +97,7 @@ class ApiService {
     );
 
     final data = Map<String, dynamic>.from(response['data'] ?? {});
-    token = String(data['token'] ?? '');
+    token = (data['token'] ?? '').toString();
     return data;
   }
 
