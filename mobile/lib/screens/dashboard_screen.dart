@@ -75,8 +75,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     height: 58,
                     color: Colors.white,
                     padding: const EdgeInsets.all(4),
-                    child: Image.network(
-                      'https://www.casahuespedespimentel.com/img/brand/logo-casa-huespedes.png',
+                    child: Image.asset(
+                      'assets/app_icon.jpg',
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.hotel_rounded,
