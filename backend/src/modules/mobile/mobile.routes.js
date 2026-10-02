@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 import {
   createMobileBookingController,
   getMobileBookingsController,
@@ -9,7 +8,6 @@ import {
 
 const router = Router();
 
-router.use(requireAdminAuth);
 
 router.get("/dashboard", getMobileDashboardController);
 router.get("/rooms", getMobileRoomsController);
