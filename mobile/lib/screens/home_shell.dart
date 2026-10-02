@@ -11,12 +11,10 @@ class HomeShell extends StatefulWidget {
     super.key,
     required this.api,
     required this.user,
-    required this.onLogout,
   });
 
   final ApiService api;
   final Map<String, dynamic> user;
-  final VoidCallback onLogout;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -40,7 +38,6 @@ class _HomeShellState extends State<HomeShell> {
         key: ValueKey('dashboard-' + _revision.toString()),
         api: widget.api,
         user: widget.user,
-        onLogout: widget.onLogout,
       ),
       NewBookingScreen(
         key: ValueKey('booking-' + _revision.toString()),
