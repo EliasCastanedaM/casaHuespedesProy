@@ -1,5 +1,6 @@
 import {
   createMobileBookingService,
+  cancelMobileBookingService,
   getMobileBookingsService,
   getMobileDashboardService,
   getMobileCategoriesService,
@@ -85,6 +86,24 @@ export async function getMobileBookingsController(req, res, next) {
     });
 
     return res.json({ success: true, data });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+
+export async function cancelMobileBookingController(req, res, next) {
+  try {
+    const data = await cancelMobileBookingService({
+      booking_id: req.params.id,
+      booking_code: req.body?.booking_code,
+    });
+
+    return res.json({
+      success: true,
+      message: "Reserva eliminada de la operación activa.",
+      data,
+    });
   } catch (error) {
     return next(error);
   }
