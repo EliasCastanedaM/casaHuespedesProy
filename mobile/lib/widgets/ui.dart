@@ -7,14 +7,16 @@ const Color brandSand = Color(0xFFEDE0CF);
 const Color brandGreen = Color(0xFF2E7D61);
 const Color brandRed = Color(0xFFB84A4A);
 
+String asText(dynamic value) => value?.toString() ?? '';
+
 double asDouble(dynamic value) {
   if (value is num) return value.toDouble();
-  return double.tryParse(String(value ?? '')) ?? 0;
+  return double.tryParse(asText(value)) ?? 0;
 }
 
 int asInt(dynamic value) {
   if (value is num) return value.toInt();
-  return int.tryParse(String(value ?? '')) ?? 0;
+  return int.tryParse(asText(value)) ?? 0;
 }
 
 String money(dynamic value) {
@@ -22,7 +24,7 @@ String money(dynamic value) {
 }
 
 String shortDate(dynamic value) {
-  final text = String(value ?? '');
+  final text = asText(value);
   if (text.length < 10) return text;
   final parts = text.substring(0, 10).split('-');
   if (parts.length != 3) return text;
