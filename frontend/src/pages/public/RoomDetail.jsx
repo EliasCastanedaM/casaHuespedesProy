@@ -7,11 +7,11 @@ const fallbackImage =
   "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1400&auto=format&fit=crop";
 
 const LEGACY_ROOM_TO_CATEGORY = {
-  101: "matrimonial",
+  101: "matrimonial-ejecutiva",
   205: "matrimonial",
-  304: "matrimonial",
+  304: "matrimonial-ejecutiva",
   305: "matrimonial",
-  505: "matrimonial",
+  505: "matrimonial-ejecutiva",
   201: "doble",
   301: "doble",
   202: "triple",
@@ -89,7 +89,15 @@ export default function RoomDetail() {
         setLoading(true);
         setError("");
 
-        if (!["matrimonial", "doble", "triple", "familiar"].includes(slug)) {
+        if (
+          ![
+            "matrimonial",
+            "matrimonial-ejecutiva",
+            "doble",
+            "triple",
+            "familiar",
+          ].includes(slug)
+        ) {
           throw new Error("La categoría de habitación no existe.");
         }
 
