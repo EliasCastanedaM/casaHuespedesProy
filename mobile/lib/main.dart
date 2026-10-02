@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'screens/home_shell.dart';
-import 'screens/login_screen.dart';
 import 'services/api_service.dart';
 import 'widgets/ui.dart';
 
@@ -10,31 +9,8 @@ void main() {
   runApp(const CasaHuespedesMobileApp());
 }
 
-class CasaHuespedesMobileApp extends StatefulWidget {
+class CasaHuespedesMobileApp extends StatelessWidget {
   const CasaHuespedesMobileApp({super.key});
-
-  @override
-  State<CasaHuespedesMobileApp> createState() =>
-      _CasaHuespedesMobileAppState();
-}
-
-class _CasaHuespedesMobileAppState extends State<CasaHuespedesMobileApp> {
-  String? _token;
-  Map<String, dynamic>? _user;
-
-  void _handleLoggedIn(Map<String, dynamic> session) {
-    setState(() {
-      _token = asText(session['token'] ?? '');
-      _user = Map<String, dynamic>.from(session['user'] ?? {});
-    });
-  }
-
-  void _logout() {
-    setState(() {
-      _token = null;
-      _user = null;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,13 +76,10 @@ class _CasaHuespedesMobileAppState extends State<CasaHuespedesMobileApp> {
           ),
         ),
       ),
-      home: _token == null
-          ? LoginScreen(onLoggedIn: _handleLoggedIn)
-          : HomeShell(
-              api: ApiService(token: _token),
-              user: _user ?? const {},
-              onLogout: _logout,
-            ),
+      home: HomeShell(
+        api: ApiService(),
+        user: const {'name': 'Recepción'},
+      ),
     );
   }
 }
