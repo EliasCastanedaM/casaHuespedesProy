@@ -10,12 +10,10 @@ class DashboardScreen extends StatefulWidget {
     super.key,
     required this.api,
     required this.user,
-    required this.onLogout,
   });
 
   final ApiService api;
   final Map<String, dynamic> user;
-  final VoidCallback onLogout;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -105,11 +103,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Cerrar sesión',
-                  onPressed: widget.onLogout,
-                  icon: const Icon(Icons.logout_rounded),
-                ),
+                const SizedBox(width: 4),
               ],
             ),
             const SizedBox(height: 22),
