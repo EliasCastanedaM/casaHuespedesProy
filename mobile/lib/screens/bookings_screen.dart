@@ -183,7 +183,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                         (checkOutTime.length >= 5
                             ? checkOutTime.substring(0, 5)
                             : checkOutTime)
-                    : 'Día completo';
+                    : 'Día entero';
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
