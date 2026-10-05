@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { ArrowUpRight, BedDouble, Users } from "lucide-react";
+import TiltSurface from "./TiltSurface";
 import "./CategoryCard.css";
 
 const FALLBACK_IMAGE =
@@ -12,54 +14,63 @@ export default function CategoryCard({ category, index = 0 }) {
   const imageUrl = category.image_url || FALLBACK_IMAGE;
 
   return (
-    <article className="category-card">
-      <div
-        className="category-card-image"
-        style={{ backgroundImage: `url("${imageUrl}")` }}
-        aria-hidden="true"
-      />
-      <div className="category-card-overlay" />
-      <div className="category-card-glow" aria-hidden="true" />
+    <TiltSurface className="category-card category-card-future" maxTilt={4.5}>
+      <article className="category-card-inner">
+        <div
+          className="category-card-image"
+          style={{ backgroundImage: `url("${imageUrl}")` }}
+          aria-hidden="true"
+        />
+        <div className="category-card-overlay" />
+        <div className="category-card-glow" aria-hidden="true" />
+        <div className="category-card-scanline" aria-hidden="true" />
 
-      <div className="category-card-content">
-        <div className="category-card-top">
-          <span className="category-card-kicker">
-            {String(index + 1).padStart(2, "0")} · Categoría
-          </span>
-          <span className="category-card-stock">
-            {quantity} {quantity === 1 ? "habitación" : "habitaciones"}
-          </span>
-        </div>
-
-        <div className="category-card-main">
-          <h3>{category.name}</h3>
-
-          <div className="category-card-meta">
-            <span>
-              Hasta {capacity} {capacity === 1 ? "persona" : "personas"}
+        <div className="category-card-content">
+          <div className="category-card-top">
+            <span className="category-card-kicker">
+              {String(index + 1).padStart(2, "0")} · Categoría
             </span>
-            {category.bed_description && (
-              <span>{category.bed_description}</span>
-            )}
+            <span className="category-card-stock">
+              {quantity} {quantity === 1 ? "habitación" : "habitaciones"}
+            </span>
           </div>
 
-          <p>{category.description}</p>
+          <div className="category-card-main">
+            <div className="category-card-capacity">
+              <span>
+                <Users size={14} />
+                Hasta {capacity} {capacity === 1 ? "persona" : "personas"}
+              </span>
+            </div>
 
-          <p className="category-card-note">
-            Imagen referencial de una habitación de esta categoría.
-          </p>
+            <h3>{category.name}</h3>
 
-          <Link
-            className="category-card-action"
-            to={`/habitaciones/${encodeURIComponent(category.slug)}`}
-          >
-            <span>Ver habitación</span>
-            <span className="category-card-action-icon" aria-hidden="true">
-              ↗
-            </span>
-          </Link>
+            <p>{category.description}</p>
+
+            <div className="category-card-bed">
+              <BedDouble size={15} />
+              <span>{category.bed_description || "Distribución cómoda"}</span>
+            </div>
+
+            <div className="category-card-bottom">
+              <span className="category-card-note">
+                Imagen referencial de esta categoría
+              </span>
+
+              <Link
+                className="category-card-action"
+                to={`/habitaciones/${encodeURIComponent(category.slug)}`}
+                aria-label={`Ver habitación ${category.name}`}
+              >
+                <span>Ver habitación</span>
+                <span className="category-card-action-icon" aria-hidden="true">
+                  <ArrowUpRight size={17} />
+                </span>
+              </Link>
+            </div>
+          </div>
         </div>
-      </div>
-    </article>
+      </article>
+    </TiltSurface>
   );
 }
