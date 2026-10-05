@@ -1,151 +1,143 @@
 import { Link } from "react-router-dom";
+import {
+  ArrowUpRight,
+  Clock3,
+  Mail,
+  MapPin,
+  Phone,
+  Waves,
+} from "lucide-react";
+import "./Footer.css";
 
 export default function Footer() {
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="bg-[#2b1d12] text-white">
-      <div className="max-w-7xl mx-auto px-5 md:px-8 py-12">
-        <div className="grid md:grid-cols-[1.2fr_0.8fr_0.8fr_1fr] gap-10">
-          {/* Marca */}
-          <div>
-            <a
-              href="/#inicio"
-              aria-label="Ir al inicio de Casa Huéspedes Pimentel"
-              className="inline-flex flex-col items-start group"
-            >
+    <footer className="future-footer">
+      <div className="future-footer-glow future-footer-glow-one" />
+      <div className="future-footer-glow future-footer-glow-two" />
+
+      <div className="future-footer-shell">
+        <div className="future-footer-top">
+          <div className="future-footer-brand">
+            <Link to="/#inicio" className="future-footer-logo-link">
               <img
                 src="/img/brand/logo-casa-huespedes.png"
                 alt="Casa Huéspedes Pimentel"
-                className="w-[150px] h-auto object-contain group-hover:-translate-y-0.5 transition"
               />
+            </Link>
 
-              <span className="text-sm text-white/60 tracking-[0.18em] uppercase mt-2">
-                Pimentel
-              </span>
-            </a>
+            <p className="future-footer-kicker">Pimentel · Lambayeque · Perú</p>
 
-            <p className="text-sm text-white/65 leading-relaxed mt-5 max-w-sm">
-              Hospedaje cómodo para descansar cerca al mar, visitar Pimentel y
-              disfrutar una estadía tranquila en Lambayeque.
+            <h2>
+              Más que una estadía,
+              <span>una experiencia junto al mar.</span>
+            </h2>
+
+            <p className="future-footer-description">
+              Habitaciones cómodas, atención cercana y una ubicación ideal para
+              descubrir Pimentel con calma.
             </p>
+
+            <div className="future-footer-actions">
+              <Link to="/habitaciones">
+                Ver habitaciones
+                <ArrowUpRight size={16} />
+              </Link>
+
+              <a
+                href="https://wa.me/51901551287?text=Hola,%20quiero%20consultar%20disponibilidad%20en%20Casa%20Huéspedes%20Pimentel"
+                target="_blank"
+                rel="noreferrer"
+              >
+                WhatsApp
+                <ArrowUpRight size={16} />
+              </a>
+            </div>
           </div>
 
-          {/* Navegación */}
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-[0.25em] text-[#d9b48f] mb-5">
-              Navegación
-            </h3>
-
-            <ul className="space-y-3 text-sm text-white/70">
-              <li>
-                <a href="/#inicio" className="hover:text-[#d9b48f] transition">
-                  Inicio
-                </a>
-              </li>
-
-              <li>
-                <Link
-                  to="/habitaciones"
-                  className="hover:text-[#d9b48f] transition"
-                >
-                  Habitaciones
-                </Link>
-              </li>
-
-              <li>
-                <Link
-                  to="/habitaciones"
-                  className="hover:text-[#d9b48f] transition"
-                >
-                  Reservas
-                </Link>
-              </li>
-
-       
-            </ul>
-          </div>
-
-          {/* Experiencias */}
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-[0.25em] text-[#d9b48f] mb-5">
-              Experiencias
-            </h3>
-
-            <ul className="space-y-3 text-sm text-white/70">
-              <li>
-                <Link
-                  to="/turismo#inicio-turismo"
-                  className="hover:text-[#d9b48f] transition"
-                >
-                  Conoce Pimentel
-                </Link>
-              </li>
-
-             
-            </ul>
-          </div>
-
-          {/* Contacto */}
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-[0.25em] text-[#d9b48f] mb-5">
-              Contacto
-            </h3>
-
-            <div className="space-y-3 text-sm text-white/70">
-              <p>📍 Calle José Quiñones 237 — Pimentel</p>
-              <p>📞 +51 901 551 287</p>
-              <p>🕘 Atención 24 horas</p>
-              <p>🌊 Pimentel, Lambayeque, Perú</p>
+          <div className="future-footer-side">
+            <div className="future-footer-contact-card">
+              <div className="future-footer-contact-icon">
+                <MapPin size={20} />
+              </div>
+              <div>
+                <span>Ubicación</span>
+                <strong>Calle José Quiñones 237</strong>
+                <small>Pimentel, Lambayeque</small>
+              </div>
             </div>
 
-            <a
-              href="https://wa.me/51901551287?text=Hola,%20quiero%20consultar%20disponibilidad%20en%20Casa%20Huéspedes%20Pimentel"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex mt-6 bg-[#a87545] text-white px-5 py-3 rounded-lg font-black text-sm hover:bg-[#8f623a] transition"
-            >
-              Consultar por WhatsApp
-            </a>
+            <div className="future-footer-contact-grid">
+              <a href="tel:+51901551287">
+                <Phone size={18} />
+                <span>
+                  <small>Teléfono</small>
+                  <strong>+51 901 551 287</strong>
+                </span>
+              </a>
+
+              <a href="mailto:casadehuespedespimentel2023@gmail.com">
+                <Mail size={18} />
+                <span>
+                  <small>Correo</small>
+                  <strong>Escríbenos</strong>
+                </span>
+              </a>
+
+              <div>
+                <Clock3 size={18} />
+                <span>
+                  <small>Atención</small>
+                  <strong>24 horas</strong>
+                </span>
+              </div>
+
+              <div>
+                <Waves size={18} />
+                <span>
+                  <small>Destino</small>
+                  <strong>Pimentel</strong>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <p className="text-xs text-white/45">
-            © {new Date().getFullYear()} Casa Huéspedes Pimentel. Todos los
-            derechos reservados.
-          </p>
-
-          <div className="flex flex-col items-start gap-3 md:items-end">
-            <nav
-              aria-label="Información legal"
-              className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-white/45 md:justify-end"
-            >
-              <Link
-                to="/politica-privacidad"
-                className="hover:text-[#d9b48f] transition"
-              >
-                Política de privacidad
-              </Link>
-              <Link
-                to="/terminos-y-condiciones"
-                className="hover:text-[#d9b48f] transition"
-              >
-                Términos y condiciones
-              </Link>
-              <Link
-                to="/eliminacion-datos"
-                className="hover:text-[#d9b48f] transition"
-              >
-                Eliminación de datos
-              </Link>
-            </nav>
-
-            <Link
-              to="/admin/login"
-              className="text-xs text-white/35 hover:text-[#d9b48f] transition"
-            >
-              Acceso interno
-            </Link>
+        <div className="future-footer-nav">
+          <div>
+            <span>Navegación</span>
+            <Link to="/#inicio">Inicio</Link>
+            <Link to="/habitaciones">Habitaciones</Link>
+            <Link to="/galeria">Galería</Link>
+            <Link to="/contacto">Contacto</Link>
           </div>
+
+          <div>
+            <span>Experiencia</span>
+            <Link to="/turismo#inicio-turismo">Conoce Pimentel</Link>
+            <Link to="/#como-llegar">Cómo llegar</Link>
+            <Link to="/habitaciones">Reservar</Link>
+          </div>
+
+          <div>
+            <span>Legal</span>
+            <Link to="/politica-privacidad">Privacidad</Link>
+            <Link to="/terminos-y-condiciones">Términos</Link>
+            <Link to="/eliminacion-datos">Eliminación de datos</Link>
+          </div>
+        </div>
+
+        <div className="future-footer-wordmark" aria-hidden="true">
+          PIMENTEL
+        </div>
+
+        <div className="future-footer-bottom">
+          <p>© {year} Casa Huéspedes Pimentel.</p>
+
+          <p>Confort · mar · experiencias · Pimentel</p>
+
+          <Link to="/admin/login">Acceso interno</Link>
         </div>
       </div>
     </footer>
