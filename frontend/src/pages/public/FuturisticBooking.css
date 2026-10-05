@@ -1,0 +1,462 @@
+/* =========================================================
+   BOOKING + PAYMENT · FUTURISTIC WARM LUXURY
+========================================================= */
+
+.future-booking-page,
+.future-payment-page {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 8% 3%, rgba(209, 157, 94, 0.14), transparent 27%),
+    radial-gradient(circle at 92% 18%, rgba(71, 42, 21, 0.08), transparent 24%),
+    linear-gradient(180deg, #fbf7ef 0%, #f7efe4 100%);
+}
+
+.future-booking-page::before,
+.future-payment-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.24;
+  background-image:
+    linear-gradient(rgba(168,117,69,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,117,69,.05) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(to bottom, #000, transparent 82%);
+}
+
+.future-booking-page > *,
+.future-payment-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.future-booking-header {
+  max-width: 880px;
+  margin-bottom: 42px;
+}
+
+.future-booking-header h1 {
+  font-size: clamp(52px, 6vw, 84px);
+  line-height: 0.92;
+}
+
+.future-booking-header h1 span {
+  display: block;
+  color: #a87545;
+}
+
+.future-booking-progress {
+  display: grid;
+  grid-template-columns: auto minmax(50px, 1fr) auto minmax(50px, 1fr) auto;
+  align-items: center;
+  width: min(760px, 100%);
+  margin-top: 30px;
+  list-style: none;
+}
+
+.future-booking-progress li:not(.future-booking-progress-line) {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #938579;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.future-booking-progress li:not(.future-booking-progress-line) > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #d8cbbb;
+  border-radius: 50%;
+  background: rgba(255,255,255,.78);
+  color: #8d7c6f;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10px;
+  box-shadow: 0 7px 18px rgba(43,29,18,.05);
+}
+
+.future-booking-progress li.is-active,
+.future-booking-progress li.is-complete {
+  color: #2b1d12;
+}
+
+.future-booking-progress li.is-active > span {
+  border-color: #a87545;
+  color: #8b5427;
+  box-shadow:
+    0 0 0 5px rgba(168,117,69,.1),
+    0 10px 22px rgba(43,29,18,.06);
+}
+
+.future-booking-progress li.is-complete > span {
+  border-color: #2b1d12;
+  color: #fff;
+  background: #2b1d12;
+}
+
+.future-booking-progress-line {
+  height: 1px;
+  margin: 0 14px;
+  background:
+    linear-gradient(90deg, rgba(168,117,69,.5), rgba(168,117,69,.12));
+}
+
+.future-booking-page .booking-layout {
+  gap: 32px;
+}
+
+.future-booking-page .booking-form-card,
+.future-booking-summary,
+.future-payment-action-card,
+.future-payment-summary {
+  border: 1px solid rgba(168,117,69,.18);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.92), rgba(249,243,235,.8));
+  box-shadow:
+    0 24px 65px rgba(43,29,18,.09),
+    inset 0 1px rgba(255,255,255,.92);
+  backdrop-filter: blur(18px);
+}
+
+.future-booking-page .booking-form-card {
+  position: relative;
+  overflow: hidden;
+  padding: 34px;
+}
+
+.future-booking-page .booking-form-card::after {
+  content: "";
+  position: absolute;
+  right: -140px;
+  top: -120px;
+  width: 330px;
+  height: 330px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(205,149,83,.14), transparent 68%);
+  pointer-events: none;
+}
+
+.future-booking-page .booking-section {
+  position: relative;
+  z-index: 1;
+}
+
+.future-booking-page .booking-section h2 {
+  font-size: 32px;
+}
+
+.future-booking-page .booking-input,
+.future-booking-page .booking-select,
+.future-booking-page .booking-textarea {
+  border-color: rgba(168,117,69,.18);
+  background:
+    linear-gradient(145deg, rgba(251,247,240,.92), rgba(247,238,226,.72));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.85);
+}
+
+.future-booking-page .booking-input:focus,
+.future-booking-page .booking-select:focus,
+.future-booking-page .booking-textarea:focus {
+  border-color: #a87545;
+  background: #fff;
+  box-shadow:
+    0 0 0 4px rgba(168,117,69,.11),
+    0 10px 22px rgba(43,29,18,.05);
+}
+
+.future-booking-page .booking-next-step-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(168,117,69,.22);
+  background:
+    radial-gradient(circle at 95% 10%, rgba(204,149,84,.16), transparent 35%),
+    linear-gradient(145deg, #f8efe2, #fffaf3);
+}
+
+.future-booking-page .booking-submit-button {
+  min-height: 56px;
+  border: 1px solid rgba(255,255,255,.14);
+  background:
+    linear-gradient(135deg, #b87a3b 0%, #8c5427 48%, #4d2f1a 100%);
+  box-shadow:
+    0 16px 35px rgba(140,84,39,.22),
+    inset 0 1px rgba(255,255,255,.16);
+}
+
+.future-booking-page .booking-submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 22px 46px rgba(140,84,39,.28),
+    0 0 0 5px rgba(168,117,69,.06);
+}
+
+.future-booking-summary {
+  overflow: hidden;
+}
+
+.future-booking-summary-kicker {
+  color: #a87545;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.future-booking-summary-image {
+  position: relative;
+  height: 205px;
+  margin-top: 20px;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #eadfce;
+}
+
+.future-booking-summary-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(28,16,8,.55), transparent 48%);
+}
+
+.future-booking-summary-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform 850ms cubic-bezier(.22,1,.36,1);
+}
+
+.future-booking-summary:hover .future-booking-summary-image img {
+  transform: scale(1.055);
+}
+
+.future-booking-summary-image span {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  z-index: 2;
+  color: rgba(255,255,255,.88);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.future-booking-summary .booking-summary-room {
+  background:
+    linear-gradient(145deg, #f8f1e7, #fff);
+}
+
+.future-booking-summary .booking-summary-total {
+  border-top-color: rgba(168,117,69,.16);
+}
+
+.future-booking-summary .booking-summary-total-row strong {
+  color: #9c6230;
+  text-shadow: 0 0 22px rgba(168,117,69,.12);
+}
+
+/* PAYMENT */
+
+.future-payment-page {
+  min-height: 100vh;
+}
+
+.future-payment-header {
+  position: relative;
+  overflow: hidden;
+  max-width: 900px;
+  padding: 0 120px 0 0;
+}
+
+.future-payment-header h1 {
+  max-width: 830px;
+  font-size: clamp(50px, 6vw, 78px);
+}
+
+.future-payment-status-orb {
+  position: absolute;
+  right: 10px;
+  top: 14px;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 1px solid rgba(168,117,69,.2);
+  background:
+    radial-gradient(circle, rgba(209,157,94,.12), transparent 60%);
+  animation: paymentOrbRotate 10s linear infinite;
+}
+
+.future-payment-status-orb span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b6793c;
+  box-shadow: 0 0 12px rgba(182,121,60,.4);
+}
+
+.future-payment-status-orb span:nth-child(1) {
+  left: 50%;
+  top: -4px;
+}
+
+.future-payment-status-orb span:nth-child(2) {
+  right: 2px;
+  bottom: 17px;
+}
+
+.future-payment-status-orb span:nth-child(3) {
+  left: 10px;
+  bottom: 8px;
+}
+
+@keyframes paymentOrbRotate {
+  to { transform: rotate(360deg); }
+}
+
+.future-payment-page .payment-progress {
+  margin-top: 38px;
+}
+
+.future-payment-action-card,
+.future-payment-summary {
+  border-radius: 32px;
+}
+
+.future-payment-action-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.future-payment-action-card::before {
+  content: "";
+  position: absolute;
+  right: -120px;
+  top: -130px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(213,161,95,.14), transparent 68%);
+  pointer-events: none;
+}
+
+.future-payment-page .payment-amount-box {
+  border-color: rgba(168,117,69,.28);
+  background:
+    radial-gradient(circle at 90% 10%, rgba(211,161,95,.14), transparent 30%),
+    linear-gradient(135deg, #fffaf3, #f4e8d7);
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.9),
+    0 16px 34px rgba(43,29,18,.06);
+}
+
+.future-payment-page .payment-amount-value {
+  color: #8e5427;
+  text-shadow: 0 0 26px rgba(168,117,69,.12);
+}
+
+.future-payment-page .payment-flow-step {
+  border-top-color: rgba(168,117,69,.14);
+}
+
+.future-payment-page .payment-flow-step.is-important {
+  border-color: rgba(168,117,69,.24);
+  background:
+    radial-gradient(circle at 95% 10%, rgba(212,161,95,.11), transparent 32%),
+    #fffaf3;
+}
+
+.future-payment-page .payment-flow-number {
+  box-shadow:
+    0 10px 22px rgba(43,29,18,.13),
+    inset 0 1px rgba(255,255,255,.14);
+}
+
+.future-payment-page .payment-primary-button {
+  background:
+    linear-gradient(135deg, #c98d4c, #7a4724);
+}
+
+.future-payment-page .payment-secondary-button {
+  background:
+    linear-gradient(135deg, #2f8b59, #17623c);
+}
+
+.future-payment-summary {
+  overflow: hidden;
+}
+
+.future-payment-summary::before {
+  content: "";
+  position: absolute;
+  right: -90px;
+  top: -100px;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(211,161,95,.13), transparent 68%);
+  pointer-events: none;
+}
+
+.future-payment-page .payment-waiting-pulse {
+  animation: futurePaymentPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes futurePaymentPulse {
+  50% {
+    box-shadow: 0 0 0 12px rgba(37,99,235,.06);
+    transform: scale(.94);
+  }
+}
+
+@media (max-width: 760px) {
+  .future-booking-progress {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .future-booking-progress-line {
+    display: none;
+  }
+
+  .future-booking-progress li:not(.future-booking-progress-line) {
+    flex-direction: column;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .future-booking-page .booking-form-card {
+    padding: 22px;
+  }
+
+  .future-payment-header {
+    padding-right: 0;
+  }
+
+  .future-payment-status-orb {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .future-booking-summary-image img,
+  .future-payment-status-orb,
+  .future-payment-page .payment-waiting-pulse {
+    animation: none;
+    transition: none;
+  }
+}
