@@ -52,12 +52,12 @@ export default function Footer() {
               </li>
 
               <li>
-                <a
-                  href="/#disponibilidad"
+                <Link
+                  to="/habitaciones"
                   className="hover:text-[#d9b48f] transition"
                 >
                   Reservas
-                </a>
+                </Link>
               </li>
 
        
