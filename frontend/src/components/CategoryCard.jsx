@@ -6,7 +6,7 @@ import "./CategoryCard.css";
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1400&q=85";
 
-export default function CategoryCard({ category, index = 0 }) {
+export default function CategoryCard({ category, index = 0, bookingQuery = "" }) {
   const quantity = Number(
     category.total_quantity ?? category.mapped_quantity ?? 0
   );
@@ -59,7 +59,7 @@ export default function CategoryCard({ category, index = 0 }) {
 
               <Link
                 className="category-card-action"
-                to={`/habitaciones/${encodeURIComponent(category.slug)}`}
+                to={`/habitaciones/${encodeURIComponent(category.slug)}${bookingQuery ? `?${bookingQuery}` : ""}`}
                 aria-label={`Ver habitación ${category.name}`}
               >
                 <span>Ver habitación</span>
