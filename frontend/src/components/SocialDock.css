@@ -1,0 +1,50 @@
+.future-social-dock {
+  border-color: rgba(168,117,69,.22) !important;
+  background:
+    linear-gradient(135deg, rgba(255,252,246,.92), rgba(245,234,219,.84)) !important;
+  box-shadow:
+    0 18px 45px rgba(43,29,18,.16),
+    inset 0 1px rgba(255,255,255,.95) !important;
+  backdrop-filter: blur(22px) saturate(1.15) !important;
+}
+
+.future-social-link {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 7px 18px rgba(43,29,18,.15);
+  transition:
+    transform .24s cubic-bezier(.22,1,.36,1),
+    background .24s ease,
+    box-shadow .24s ease !important;
+}
+
+.future-social-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.4), transparent 40%);
+  transition: opacity .2s ease;
+}
+
+.future-social-link:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 11px 24px rgba(43,29,18,.22);
+}
+
+.future-social-link:hover::after {
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  .future-social-link:hover {
+    transform: translateX(3px) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .future-social-link {
+    transition: none !important;
+  }
+}
