@@ -1,0 +1,1184 @@
+/* =========================================================
+   CASA HUÉSPEDES PIMENTEL · FUTURISTIC WARM LUXURY CONCEPT
+   Rama experimental: ui/futuristic-warm-luxury
+========================================================= */
+
+.future-home {
+  --future-ink: #24170f;
+  --future-espresso: #2b1d12;
+  --future-brown: #4d2f1a;
+  --future-copper: #a87545;
+  --future-gold: #d3a15f;
+  --future-gold-light: #f0ca8f;
+  --future-cream: #fbf7ef;
+  --future-sand: #efe4d4;
+  --future-line: rgba(168, 117, 69, 0.22);
+  overflow: clip;
+  background:
+    radial-gradient(circle at 12% 2%, rgba(211, 161, 95, 0.12), transparent 24%),
+    var(--future-cream);
+}
+
+.future-hero {
+  --pointer-x: 72%;
+  --pointer-y: 28%;
+  position: relative;
+  min-height: min(860px, calc(100vh - 24px));
+  padding: clamp(96px, 11vw, 145px) 0 152px;
+  overflow: hidden;
+  color: #fff;
+  background: #21140d;
+  isolation: isolate;
+}
+
+.future-hero::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  z-index: 6;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 34px;
+  pointer-events: none;
+}
+
+.future-hero-video {
+  position: absolute;
+  inset: 0;
+  z-index: -5;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.03);
+  filter: saturate(0.94) contrast(1.03) brightness(0.78);
+  animation: futureHeroDrift 18s ease-in-out infinite alternate;
+}
+
+@keyframes futureHeroDrift {
+  from {
+    transform: scale(1.03) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.09) translate3d(-1.2%, -0.7%, 0);
+  }
+}
+
+.future-hero-veil {
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  background:
+    linear-gradient(90deg, rgba(18, 9, 4, 0.94) 0%, rgba(28, 15, 7, 0.78) 36%, rgba(26, 14, 8, 0.38) 68%, rgba(17, 9, 4, 0.56) 100%),
+    linear-gradient(0deg, rgba(21, 12, 6, 0.94) 0%, transparent 42%, rgba(16, 8, 3, 0.3) 100%);
+}
+
+.future-hero-pointer-glow {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(
+      circle 440px at var(--pointer-x) var(--pointer-y),
+      rgba(235, 180, 106, 0.20),
+      transparent 72%
+    );
+  transition: background 120ms linear;
+  pointer-events: none;
+}
+
+.future-orb {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.future-orb-one {
+  right: 7%;
+  top: 10%;
+  width: 330px;
+  height: 330px;
+  background: rgba(213, 151, 76, 0.22);
+  animation: futureFloatOne 8s ease-in-out infinite alternate;
+}
+
+.future-orb-two {
+  left: 36%;
+  bottom: 9%;
+  width: 250px;
+  height: 250px;
+  background: rgba(255, 222, 173, 0.12);
+  animation: futureFloatTwo 10s ease-in-out infinite alternate;
+}
+
+@keyframes futureFloatOne {
+  to { transform: translate3d(-35px, 34px, 0) scale(1.12); }
+}
+
+@keyframes futureFloatTwo {
+  to { transform: translate3d(20px, -30px, 0) scale(0.9); }
+}
+
+.future-hero-shell,
+.future-section-shell,
+.future-benefits-shell {
+  width: min(1380px, calc(100% - 56px));
+  margin: 0 auto;
+}
+
+.future-hero-shell {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.58fr);
+  align-items: center;
+  gap: clamp(36px, 7vw, 104px);
+}
+
+.future-hero-copy {
+  max-width: 810px;
+}
+
+.future-live-pill {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 22px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  backdrop-filter: blur(14px);
+}
+
+.future-live-dot {
+  position: relative;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--future-gold-light);
+  box-shadow: 0 0 0 5px rgba(240, 202, 143, 0.1);
+}
+
+.future-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 1px solid rgba(240, 202, 143, 0.5);
+  border-radius: 50%;
+  animation: futurePulse 1.8s ease-out infinite;
+}
+
+@keyframes futurePulse {
+  0% { transform: scale(0.65); opacity: 1; }
+  100% { transform: scale(1.65); opacity: 0; }
+}
+
+.future-kicker {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 0;
+  color: var(--future-gold-light);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.future-kicker > span {
+  width: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--future-gold-light));
+}
+
+.future-hero-copy h1 {
+  max-width: 900px;
+  margin: 24px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(58px, 7vw, 112px);
+  font-weight: 500;
+  line-height: 0.88;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+
+.future-hero-copy h1 > span {
+  display: block;
+  margin-top: 6px;
+  color: #efbd78;
+  text-shadow: 0 0 38px rgba(217, 161, 92, 0.18);
+}
+
+.future-hero-description {
+  max-width: 640px;
+  margin: 28px 0 0;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: clamp(16px, 1.25vw, 19px);
+  line-height: 1.7;
+}
+
+.future-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.future-primary-action,
+.future-secondary-action {
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  border-radius: 999px;
+  padding: 0 10px 0 22px;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    background 220ms ease,
+    border-color 220ms ease;
+}
+
+.future-primary-action {
+  color: #2a180d;
+  background: linear-gradient(135deg, #f2d092 0%, #dba45d 55%, #b97834 100%);
+  box-shadow:
+    0 14px 34px rgba(181, 113, 42, 0.28),
+    inset 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.future-primary-action > span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(65, 34, 12, 0.82);
+  color: #fff;
+  transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.future-primary-action:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 20px 48px rgba(181, 113, 42, 0.38),
+    0 0 0 5px rgba(234, 187, 119, 0.07);
+}
+
+.future-primary-action:hover > span {
+  transform: rotate(40deg);
+}
+
+.future-secondary-action {
+  padding: 0 22px;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(14px);
+}
+
+.future-secondary-action:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.54);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.future-trust-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 30px;
+}
+
+.future-trust-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(22, 12, 6, 0.28);
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 10px;
+  font-weight: 800;
+  backdrop-filter: blur(10px);
+}
+
+.future-destination-wrap {
+  justify-self: end;
+  width: min(100%, 330px);
+  transform: translateY(14px);
+}
+
+.future-destination-card {
+  min-height: 430px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 30px 80px rgba(11, 6, 3, 0.48),
+    0 0 0 7px rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(16px);
+}
+
+.future-destination-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 0 45px rgba(229, 174, 102, 0.08);
+}
+
+.future-destination-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.future-destination-card:hover img {
+  transform: scale(1.06);
+}
+
+.future-destination-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(18, 9, 4, 0.03), rgba(18, 9, 4, 0.86)),
+    linear-gradient(90deg, rgba(18, 9, 4, 0.24), transparent);
+}
+
+.future-destination-content {
+  position: absolute;
+  inset: auto 18px 18px;
+  z-index: 4;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.future-destination-content span {
+  color: var(--future-gold-light);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.future-destination-content h2 {
+  margin: 5px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 42px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.future-destination-content p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.future-destination-content > a {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  transition:
+    transform 260ms ease,
+    background 260ms ease;
+}
+
+.future-destination-content > a:hover {
+  transform: rotate(42deg);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.future-booking-dock-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  z-index: 10;
+  width: min(1440px, calc(100% - 64px));
+  transform: translateX(-50%);
+}
+
+.future-booking-dock {
+  display: grid;
+  grid-template-columns:
+    minmax(160px, 1fr)
+    minmax(160px, 1fr)
+    minmax(135px, 0.75fr)
+    minmax(185px, 1.15fr)
+    minmax(220px, 1.35fr)
+    minmax(170px, 0.85fr);
+  align-items: stretch;
+  padding: 9px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.23);
+  border-radius: 30px;
+  background:
+    linear-gradient(135deg, rgba(54, 33, 19, 0.82), rgba(29, 16, 9, 0.72));
+  box-shadow:
+    0 30px 80px rgba(14, 7, 3, 0.38),
+    inset 0 1px rgba(255, 255, 255, 0.11);
+  backdrop-filter: blur(26px) saturate(1.15);
+}
+
+.future-booking-dock > label,
+.future-booking-note {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 15px;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.future-booking-dock > label > span:last-child,
+.future-booking-note > span {
+  min-width: 0;
+}
+
+.future-booking-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 12px;
+  color: #f2c98b;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.future-booking-dock small {
+  display: block;
+  margin-bottom: 3px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.future-booking-dock input,
+.future-booking-dock select {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #fff;
+  color-scheme: dark;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.future-booking-dock select option {
+  color: #2b1d12;
+  background: #fff;
+}
+
+.future-booking-category strong {
+  display: block;
+  overflow: hidden;
+  color: #fff;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.future-booking-dock > button {
+  min-height: 54px;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+  margin: 2px 4px;
+  padding: 0 8px 0 18px;
+  border: 0;
+  border-radius: 999px;
+  color: #301d0f;
+  background: linear-gradient(135deg, #f3cf91, #d79b50);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 12px 28px rgba(199, 133, 57, 0.25),
+    inset 0 1px rgba(255, 255, 255, 0.55);
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.future-booking-dock > button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 17px 34px rgba(199, 133, 57, 0.34);
+}
+
+.future-search-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(54, 30, 14, 0.86);
+}
+
+.future-booking-note {
+  border-right: 0;
+  color: #ebc98e;
+}
+
+.future-booking-note > svg {
+  flex: 0 0 auto;
+}
+
+.future-booking-note > span {
+  color: #fff;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.future-booking-note small {
+  margin: 2px 0 0;
+  line-height: 1.35;
+}
+
+.future-benefits {
+  position: relative;
+  z-index: 3;
+  border-bottom: 1px solid rgba(168, 117, 69, 0.13);
+  background:
+    radial-gradient(circle at 95% 0%, rgba(208, 157, 94, 0.1), transparent 28%),
+    #fbf7ef;
+}
+
+.future-benefits-shell {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 27px 0;
+}
+
+.future-benefits-shell > .scroll-reveal {
+  border-right: 1px solid rgba(168, 117, 69, 0.18);
+}
+
+.future-benefits-shell > .scroll-reveal:last-child {
+  border-right: 0;
+}
+
+.future-benefits article {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 7px clamp(14px, 2vw, 28px);
+}
+
+.future-benefit-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border-radius: 16px;
+  color: #8a5628;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(239, 225, 206, 0.7));
+  border: 1px solid rgba(168, 117, 69, 0.16);
+  box-shadow: 0 10px 24px rgba(77, 47, 26, 0.07);
+}
+
+.future-benefits h3 {
+  margin: 0;
+  color: #342116;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.future-benefits p {
+  margin: 4px 0 0;
+  color: #8a7a6d;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.future-featured-rooms {
+  position: relative;
+  padding: clamp(72px, 9vw, 120px) 0 clamp(80px, 9vw, 130px);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 5% 90%, rgba(216, 174, 123, 0.16), transparent 30%),
+    linear-gradient(180deg, #fbf7ef 0%, #f7efe3 100%);
+}
+
+.future-featured-rooms::before {
+  content: "";
+  position: absolute;
+  right: -7%;
+  top: 4%;
+  width: 420px;
+  height: 420px;
+  opacity: 0.12;
+  background:
+    radial-gradient(ellipse at center, rgba(136, 91, 48, 0.4), transparent 64%);
+  filter: blur(12px);
+}
+
+.future-section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
+  align-items: end;
+  gap: 60px;
+}
+
+.future-section-kicker {
+  margin: 0 0 13px;
+  color: #a16d3d;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.future-section-heading h2 {
+  margin: 0;
+  color: #2b1d12;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(42px, 5.3vw, 76px);
+  font-weight: 500;
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+}
+
+.future-section-heading-copy {
+  padding-bottom: 6px;
+}
+
+.future-section-heading-copy > p {
+  margin: 0;
+  color: #736356;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.future-section-heading-copy > a {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 17px;
+  color: #70441f;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.future-section-heading-copy > a svg {
+  transition: transform 260ms ease;
+}
+
+.future-section-heading-copy > a:hover svg {
+  transform: translate(3px, -3px);
+}
+
+.future-room-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 38px;
+}
+
+.future-room-card {
+  min-height: 430px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 26px;
+  background: #2a1c12;
+  box-shadow:
+    0 20px 48px rgba(66, 39, 19, 0.13),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.future-room-card:hover {
+  box-shadow:
+    0 30px 65px rgba(66, 39, 19, 0.22),
+    0 0 0 5px rgba(201, 148, 83, 0.05);
+}
+
+.future-room-card > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.02);
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.future-room-card:hover > img {
+  transform: scale(1.08);
+}
+
+.future-room-card-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(19, 10, 5, 0.06) 20%, rgba(24, 13, 7, 0.28) 48%, rgba(21, 11, 5, 0.96) 100%);
+}
+
+.future-room-card-top {
+  position: absolute;
+  inset: 14px 14px auto;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.future-room-card-top > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(33, 18, 9, 0.46);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 9px;
+  font-weight: 850;
+  backdrop-filter: blur(10px);
+}
+
+.future-room-index {
+  color: rgba(255, 255, 255, 0.62);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.future-room-card-content {
+  position: absolute;
+  inset: auto 18px 18px;
+  z-index: 4;
+  color: #fff;
+}
+
+.future-room-card-content h3 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(26px, 2.3vw, 36px);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+.future-room-card-content > p {
+  display: -webkit-box;
+  margin: 10px 0 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 11px;
+  line-height: 1.48;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.future-room-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.future-room-card-footer > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 9px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.future-room-card-footer > a {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  transition:
+    transform 260ms ease,
+    background 260ms ease;
+}
+
+.future-room-card-footer > a:hover {
+  transform: rotate(42deg);
+  background: #b77b3d;
+}
+
+.future-room-skeleton {
+  min-height: 430px;
+  border-radius: 26px;
+  background:
+    linear-gradient(
+      110deg,
+      #e9dece 8%,
+      #f4ecdf 18%,
+      #e9dece 33%
+    );
+  background-size: 200% 100%;
+  animation: futureSkeleton 1.5s linear infinite;
+}
+
+@keyframes futureSkeleton {
+  to { background-position-x: -200%; }
+}
+
+.future-services-strip {
+  position: relative;
+  overflow: hidden;
+}
+
+.future-services-strip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(215, 169, 110, 0.05), transparent);
+}
+
+.future-testimonial {
+  position: relative;
+  overflow: hidden;
+}
+
+.future-testimonial-sparkle {
+  position: absolute;
+  right: 28px;
+  top: 28px;
+  color: #b57c43;
+  opacity: 0.55;
+  animation: futureSparkle 3s ease-in-out infinite;
+}
+
+@keyframes futureSparkle {
+  50% {
+    transform: rotate(22deg) scale(1.18);
+    opacity: 0.95;
+  }
+}
+
+.future-extra-card {
+  transition:
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 320ms ease;
+}
+
+.future-extra-card:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 25px 60px rgba(43, 29, 18, 0.16);
+}
+
+.future-cta .hotel-cta-card {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(31, 18, 10, 0.58);
+  box-shadow: 0 30px 70px rgba(16, 8, 4, 0.28);
+  backdrop-filter: blur(18px);
+}
+
+/* -------- Existing sections get a calmer futuristic treatment -------- */
+
+.future-home .hotel-story-section {
+  position: relative;
+}
+
+.future-home .hotel-video-frame,
+.future-home .hotel-extra-card,
+.future-home #como-llegar article {
+  border-color: rgba(168, 117, 69, 0.18);
+  box-shadow:
+    0 20px 50px rgba(43, 29, 18, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.45) inset;
+}
+
+.future-home .hotel-video-frame:hover video {
+  transform: scale(1.02);
+}
+
+.future-home .hotel-video-frame video {
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* -------- Responsive -------- */
+
+@media (max-width: 1240px) {
+  .future-booking-dock {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .future-booking-dock > button {
+    grid-column: span 2;
+  }
+
+  .future-booking-note {
+    grid-column: span 2;
+  }
+
+  .future-room-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .future-hero {
+    min-height: 970px;
+    padding-top: 104px;
+    padding-bottom: 250px;
+  }
+
+  .future-hero-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .future-destination-wrap {
+    display: none;
+  }
+
+  .future-hero-copy {
+    max-width: 760px;
+  }
+
+  .future-hero-copy h1 {
+    max-width: 760px;
+  }
+
+  .future-booking-dock-wrap {
+    bottom: 24px;
+  }
+
+  .future-booking-dock {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .future-booking-dock > button,
+  .future-booking-note {
+    grid-column: span 1;
+  }
+
+  .future-benefits-shell {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .future-benefits-shell > .scroll-reveal:nth-child(2) {
+    border-right: 0;
+  }
+
+  .future-benefits-shell > .scroll-reveal:nth-child(-n + 2) {
+    border-bottom: 1px solid rgba(168, 117, 69, 0.16);
+  }
+
+  .future-section-heading {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .future-section-heading-copy {
+    max-width: 700px;
+  }
+}
+
+@media (max-width: 720px) {
+  .future-hero {
+    min-height: 1020px;
+    padding: 96px 0 355px;
+  }
+
+  .future-hero::before {
+    inset: 8px;
+    border-radius: 24px;
+  }
+
+  .future-hero-shell,
+  .future-section-shell,
+  .future-benefits-shell {
+    width: min(100% - 30px, 1380px);
+  }
+
+  .future-hero-copy h1 {
+    font-size: clamp(52px, 17vw, 76px);
+  }
+
+  .future-hero-description {
+    font-size: 15px;
+  }
+
+  .future-hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+    max-width: 360px;
+  }
+
+  .future-primary-action,
+  .future-secondary-action {
+    width: 100%;
+  }
+
+  .future-trust-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 300px;
+  }
+
+  .future-booking-dock-wrap {
+    width: min(100% - 20px, 620px);
+  }
+
+  .future-booking-dock {
+    grid-template-columns: 1fr 1fr;
+    border-radius: 24px;
+  }
+
+  .future-booking-dock > label,
+  .future-booking-note {
+    padding: 9px 10px;
+  }
+
+  .future-booking-category,
+  .future-booking-dock > button,
+  .future-booking-note {
+    grid-column: 1 / -1;
+  }
+
+  .future-booking-dock > button {
+    margin: 4px;
+  }
+
+  .future-benefits-shell {
+    grid-template-columns: 1fr;
+    padding: 14px 0;
+  }
+
+  .future-benefits-shell > .scroll-reveal {
+    border-right: 0;
+    border-bottom: 1px solid rgba(168, 117, 69, 0.13);
+  }
+
+  .future-benefits-shell > .scroll-reveal:last-child {
+    border-bottom: 0;
+  }
+
+  .future-benefits article {
+    padding: 13px 4px;
+  }
+
+  .future-featured-rooms {
+    padding-top: 70px;
+  }
+
+  .future-room-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .future-room-card,
+  .future-room-skeleton {
+    min-height: 470px;
+  }
+}
+
+@media (max-width: 430px) {
+  .future-hero {
+    min-height: 1100px;
+    padding-bottom: 430px;
+  }
+
+  .future-booking-dock {
+    grid-template-columns: 1fr;
+  }
+
+  .future-booking-dock > label,
+  .future-booking-category,
+  .future-booking-dock > button,
+  .future-booking-note {
+    grid-column: 1;
+  }
+
+  .future-room-card,
+  .future-room-skeleton {
+    min-height: 430px;
+  }
+}
+
+@media (hover: none) {
+  .future-hero-pointer-glow {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .future-hero-video,
+  .future-orb,
+  .future-live-dot::after,
+  .future-testimonial-sparkle,
+  .future-room-skeleton {
+    animation: none;
+  }
+
+  .future-room-card > img,
+  .future-destination-card img,
+  .future-primary-action,
+  .future-secondary-action,
+  .future-extra-card,
+  .future-home .hotel-video-frame video {
+    transition: none;
+  }
+}
