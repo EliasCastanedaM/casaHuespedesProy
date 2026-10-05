@@ -631,12 +631,12 @@ export default function Tourism() {
         .tourism-page .reveal { opacity: 0; transform: translateY(42px) scale(.985); transition: opacity .85s cubic-bezier(.2,.65,.25,1), transform .85s cubic-bezier(.2,.65,.25,1); transition-delay: var(--delay,0ms); }
         .tourism-page .reveal.is-visible { opacity:1; transform:translateY(0) scale(1); }
         .tourism-page .hero-media { transform: translate3d(0,var(--hero-shift,0px),0) scale(1.08); transition: transform .08s linear; }
-        .tourism-page .tourism-tilt { transform-style: preserve-3d; transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+        .tourism-page .tourism-tilt { transform-style: preserve-3d; transition: transform .38s cubic-bezier(.2,.8,.2,1); will-change:transform; }
         .tourism-page .tourism-shine { background: radial-gradient(circle at var(--shine-x,50%) var(--shine-y,50%), rgba(255,235,199,.28), transparent 38%); mix-blend-mode:screen; }
         .tourism-page .food-glint { background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,.22) 45%, transparent 68%); transform: translateX(-100%); }
         .tourism-page .food-card:hover .food-glint { animation: tourism-glint 1.1s ease forwards; }\n        .tourism-page .food-card:hover { box-shadow:0 28px 70px rgba(43,29,18,.20); }\n        .tourism-page .museum-card:hover { box-shadow:0 36px 95px rgba(0,0,0,.55),0 0 45px rgba(217,168,110,.08); }
         .tourism-page .museum-card::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; border:1px solid transparent; background:linear-gradient(135deg, rgba(255,220,165,.58), transparent 35%, transparent 68%, rgba(168,117,69,.5)) border-box; -webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; opacity:.16; transition:opacity .45s ease; }
-        .tourism-page .museum-card:hover::after { opacity:1; }
+        .tourism-page .museum-card:hover::after { opacity:1; }\n        .tourism-page .museum-card:hover img { filter:saturate(1.08) contrast(1.03); }
         .tourism-page .museum-track { scrollbar-width:none; }
         .tourism-page .museum-track::-webkit-scrollbar { display:none; }
         .tourism-page .ambient-orbit { animation: tourism-float 7s ease-in-out infinite; }
@@ -744,7 +744,7 @@ export default function Tourism() {
           <div className="pointer-events-none absolute -left-28 top-14 h-72 w-72 rounded-full border border-[#a87545]/10" />
           <div className="pointer-events-none absolute -right-24 top-10 h-64 w-64 rounded-full border border-[#a87545]/10" />
 
-          <div className="mx-auto max-w-[1380px] px-5 md:px-8">
+          <div className="mx-auto max-w-[1500px] px-5 md:px-8">
             <div className="mb-12 grid items-end gap-9 lg:grid-cols-[1fr_.85fr] lg:gap-20">
               <div data-reveal className="reveal">
                 <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">
@@ -884,7 +884,7 @@ export default function Tourism() {
 
         {/* FAQ compacto para mantener el valor SEO sin romper el diseño */}
         <section id="preguntas-pimentel" className="bg-white py-12 sm:py-14">
-          <div className="mx-auto max-w-7xl px-5 md:px-8">
+          <div className="mx-auto max-w-[1380px] px-5 md:px-8">
             <div className="grid gap-10 lg:grid-cols-[.72fr_1.28fr] lg:gap-20">
               <div data-reveal className="reveal">
                 <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">Antes de viajar</span>
