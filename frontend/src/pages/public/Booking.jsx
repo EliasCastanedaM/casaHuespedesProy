@@ -1,5 +1,6 @@
 import "./Home.css";
 import "./Booking.css";
+import "./FuturisticBooking.css";
 
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -288,24 +289,40 @@ export default function Booking() {
     }
   }
 
-  const availabilityBackUrl = `/disponibilidad?category=${encodeURIComponent(
-    categorySlug
-  )}&checkIn=${encodeURIComponent(
-    formData.check_in
-  )}&checkOut=${encodeURIComponent(
-    formData.check_out
-  )}&guests=${encodeURIComponent(formData.guests_count)}`;
+  const availabilityBackUrl = categorySlug
+    ? `/habitaciones/${encodeURIComponent(categorySlug)}`
+    : "/habitaciones";
 
   return (
-    <main className="booking-page">
+    <main className="booking-page future-booking-page">
       <div className="booking-container">
-        <div className="booking-header">
+        <div className="booking-header future-booking-header">
           <p className="hotel-eyebrow">Reserva online</p>
-          <h1>Completa tu reserva</h1>
+          <h1>
+            Completa tu
+            <span>reserva.</span>
+          </h1>
           <p>
             Elegiste una categoría disponible. Completa tus datos y revisa el
             monto antes de continuar al pago.
           </p>
+
+          <ol className="future-booking-progress" aria-label="Progreso de reserva">
+            <li className="is-complete">
+              <span>01</span>
+              <strong>Categoría</strong>
+            </li>
+            <li className="future-booking-progress-line" aria-hidden="true" />
+            <li className="is-active">
+              <span>02</span>
+              <strong>Tus datos</strong>
+            </li>
+            <li className="future-booking-progress-line" aria-hidden="true" />
+            <li>
+              <span>03</span>
+              <strong>Pago</strong>
+            </li>
+          </ol>
         </div>
 
         {loadingCategory && (
@@ -318,10 +335,10 @@ export default function Booking() {
           <div className="booking-error-card">
             <p>{error}</p>
             <Link
-              to="/disponibilidad"
+              to="/habitaciones"
               className="booking-back-link"
             >
-              Consultar disponibilidad
+              Volver a habitaciones
             </Link>
           </div>
         )}
@@ -532,11 +549,20 @@ export default function Booking() {
               </button>
             </form>
 
-            <aside className="booking-summary-card">
+            <aside className="booking-summary-card future-booking-summary">
+              <p className="future-booking-summary-kicker">Tu estadía</p>
               <h2 className="booking-summary-title">Resumen</h2>
 
+              <div className="future-booking-summary-image">
+                <img
+                  src={category.image_url || "/img/galeria/galeria-2.jpg"}
+                  alt={`Habitación ${category.name} referencial`}
+                />
+                <span>Imagen referencial</span>
+              </div>
+
               <div className="booking-summary-room">
-                <p>Categoría</p>
+                <p>Categoría seleccionada</p>
                 <h3>{category.name}</h3>
               </div>
 
@@ -583,7 +609,7 @@ export default function Booking() {
                 to={availabilityBackUrl}
                 className="booking-back-link"
               >
-                Volver a disponibilidad
+                Volver a la categoría
               </Link>
             </aside>
           </div>
