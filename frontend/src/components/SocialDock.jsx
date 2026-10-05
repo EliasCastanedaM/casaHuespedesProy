@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import "./SocialDock.css";
 
 function DockIcon({ type }) {
   const iconProps = {
@@ -86,7 +87,7 @@ export default function SocialDock() {
   );
 
   return (
-    <div className="fixed left-1/2 bottom-4 -translate-x-1/2 z-40 flex flex-row items-center gap-2 bg-[#fbf7ef]/95 border border-[#eadfce] rounded-full px-3 py-2 shadow-xl backdrop-blur-md lg:left-5 lg:top-1/2 lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2 lg:flex-col lg:gap-3 lg:px-2 lg:py-4">
+    <div className="future-social-dock fixed left-1/2 bottom-4 -translate-x-1/2 z-40 flex flex-row items-center gap-2 bg-[#fbf7ef]/95 border border-[#eadfce] rounded-full px-3 py-2 shadow-xl backdrop-blur-md lg:left-5 lg:top-1/2 lg:bottom-auto lg:translate-x-0 lg:-translate-y-1/2 lg:flex-col lg:gap-3 lg:px-2 lg:py-4">
       <span className="hidden lg:block [writing-mode:vertical-rl] rotate-180 text-[10px] font-black text-[#2d261f] tracking-[0.25em] uppercase">
         Contáctanos
       </span>
@@ -96,7 +97,7 @@ export default function SocialDock() {
         to="/#inicio"
         aria-label="Ir al inicio"
         title="Inicio"
-        className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
+        className="future-social-link w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
       >
         <DockIcon type="home" />
       </Link>
@@ -106,7 +107,7 @@ export default function SocialDock() {
         href={`mailto:casadehuespedespimentel2023@gmail.com?subject=${asuntoCorreo}&body=${cuerpoCorreo}`}
         aria-label="Enviar correo"
         title="Enviar correo"
-        className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
+        className="future-social-link w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
       >
         <DockIcon type="mail" />
       </a>
@@ -120,7 +121,7 @@ export default function SocialDock() {
         rel="noreferrer"
         aria-label="Contactar por WhatsApp"
         title="WhatsApp"
-        className="w-11 h-11 rounded-full bg-[#25D366] text-white grid place-items-center hover:bg-[#1faf54] transition"
+        className="future-social-link future-social-whatsapp w-11 h-11 rounded-full bg-[#25D366] text-white grid place-items-center hover:bg-[#1faf54] transition"
       >
         <DockIcon type="whatsapp" />
       </a>
@@ -132,7 +133,7 @@ export default function SocialDock() {
         rel="noreferrer"
         aria-label="Facebook"
         title="Facebook"
-        className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
+        className="future-social-link w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
       >
         <DockIcon type="facebook" />
       </a>
@@ -144,7 +145,7 @@ export default function SocialDock() {
         rel="noreferrer"
         aria-label="TikTok"
         title="TikTok"
-        className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
+        className="future-social-link w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
       >
         <DockIcon type="tiktok" />
       </a>
@@ -156,7 +157,7 @@ export default function SocialDock() {
         rel="noreferrer"
         aria-label="Instagram"
         title="Instagram"
-        className="w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
+        className="future-social-link w-11 h-11 rounded-full bg-[#2b1d12] text-white grid place-items-center hover:bg-[#a87545] transition"
       >
         <DockIcon type="instagram" />
       </a>
