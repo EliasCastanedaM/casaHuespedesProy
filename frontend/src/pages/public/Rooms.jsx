@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import CategoryCard from "../../components/CategoryCard";
+import RollingLink from "../../components/RollingLink";
 import { getRoomCategories } from "../../services/roomService";
 
 import "./Home.css";
@@ -69,13 +70,31 @@ export default function Rooms() {
               </p>
 
               <div className="hotel-hero-actions">
-                <a href="#categorias" className="hotel-btn-primary">
+                <RollingLink to="#categorias">
                   Ver categorías
-                </a>
+                </RollingLink>
 
-                <Link to="/habitaciones#categorias" className="hotel-btn-light">
-                  Consultar disponibilidad
-                </Link>
+                <RollingLink to="/#como-llegar" variant="ghost">
+                  Cómo llegar
+                </RollingLink>
+              </div>
+
+              <div
+                className="hotel-hero-signals"
+                aria-label="Cómo funciona la reserva por categorías"
+              >
+                <span>
+                  <strong>01</strong>
+                  Elige categoría
+                </span>
+                <span>
+                  <strong>02</strong>
+                  Consulta fechas
+                </span>
+                <span>
+                  <strong>03</strong>
+                  Precio al confirmar
+                </span>
               </div>
             </div>
           </div>
@@ -130,9 +149,13 @@ export default function Rooms() {
         )}
 
         {!loading && !error && categories.length > 0 && (
-          <div className="grid gap-7 lg:grid-cols-2">
-            {categories.map((category) => (
-              <CategoryCard key={category.slug} category={category} />
+          <div className="rooms-category-grid">
+            {categories.map((category, index) => (
+              <CategoryCard
+                key={category.slug}
+                category={category}
+                index={index}
+              />
             ))}
           </div>
         )}
