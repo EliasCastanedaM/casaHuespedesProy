@@ -1,0 +1,719 @@
+/* =========================================================
+   ROOMS · FUTURISTIC WARM LUXURY
+========================================================= */
+
+.future-rooms-page {
+  overflow: clip;
+  background:
+    radial-gradient(circle at 8% 2%, rgba(202, 148, 82, 0.12), transparent 25%),
+    #fbf7ef;
+}
+
+.future-rooms-hero {
+  position: relative;
+  min-height: 720px;
+  padding: 124px 0 110px;
+  overflow: hidden;
+  color: #fff;
+  background: #1c1009;
+  isolation: isolate;
+}
+
+.future-rooms-video {
+  position: absolute;
+  inset: 0;
+  z-index: -5;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.04);
+  filter: saturate(0.9) contrast(1.04) brightness(0.74);
+  animation: futureRoomsDrift 16s ease-in-out infinite alternate;
+}
+
+@keyframes futureRoomsDrift {
+  to {
+    transform: scale(1.09) translate3d(-1%, -0.6%, 0);
+  }
+}
+
+.future-rooms-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(23, 12, 6, 0.94) 0%,
+      rgba(28, 15, 8, 0.84) 38%,
+      rgba(25, 14, 8, 0.43) 70%,
+      rgba(17, 9, 5, 0.58) 100%
+    ),
+    linear-gradient(
+      0deg,
+      rgba(22, 12, 6, 0.88) 0%,
+      transparent 54%,
+      rgba(20, 11, 6, 0.26) 100%
+    );
+}
+
+.future-rooms-grid-lines {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  opacity: 0.14;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to right, #000, transparent 78%);
+}
+
+.future-rooms-shell,
+.future-rooms-catalog-shell {
+  width: min(1380px, calc(100% - 56px));
+  margin: 0 auto;
+}
+
+.future-rooms-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.72fr);
+  align-items: center;
+  gap: clamp(40px, 7vw, 96px);
+}
+
+.future-rooms-copy {
+  max-width: 820px;
+}
+
+.future-rooms-badge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  backdrop-filter: blur(14px);
+}
+
+.future-rooms-badge svg {
+  color: #f0c785;
+}
+
+.future-rooms-kicker {
+  margin: 24px 0 0;
+  color: #efbd78;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.future-rooms-copy h1 {
+  max-width: 900px;
+  margin: 18px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(56px, 6vw, 94px);
+  font-weight: 500;
+  line-height: 0.91;
+  letter-spacing: -0.05em;
+}
+
+.future-rooms-copy h1 span {
+  display: block;
+  margin-top: 8px;
+  color: #efbd78;
+}
+
+.future-rooms-description {
+  max-width: 630px;
+  margin: 26px 0 0;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 16px;
+  line-height: 1.72;
+}
+
+.future-rooms-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.future-rooms-primary,
+.future-rooms-secondary {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease,
+    background 220ms ease;
+}
+
+.future-rooms-primary {
+  padding: 0 8px 0 20px;
+  color: #301b0d;
+  background: linear-gradient(135deg, #f3d092, #d89a50);
+  box-shadow:
+    0 14px 32px rgba(190, 121, 46, 0.27),
+    inset 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.future-rooms-primary > span {
+  display: grid;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(54, 29, 13, 0.84);
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.future-rooms-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 44px rgba(190, 121, 46, 0.36);
+}
+
+.future-rooms-primary:hover > span {
+  transform: rotate(42deg);
+}
+
+.future-rooms-secondary {
+  padding: 0 20px;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+}
+
+.future-rooms-secondary:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.48);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.future-rooms-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 29px;
+}
+
+.future-rooms-flow > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(18, 10, 5, 0.24);
+  font-size: 9px;
+  font-weight: 800;
+  backdrop-filter: blur(9px);
+}
+
+.future-rooms-flow strong {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  color: #f0c785;
+  background: rgba(255, 255, 255, 0.08);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 9px;
+}
+
+.future-rooms-orbit {
+  position: relative;
+  min-height: 430px;
+  display: grid;
+  place-items: center;
+}
+
+.future-rooms-orbit::before {
+  content: "";
+  position: absolute;
+  width: 310px;
+  height: 310px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(226, 170, 101, 0.18),
+    rgba(226, 170, 101, 0) 70%
+  );
+  filter: blur(12px);
+}
+
+.future-rooms-orbit-ring {
+  position: absolute;
+  border: 1px solid rgba(255, 215, 161, 0.22);
+  border-radius: 50%;
+  animation: futureOrbitSpin 14s linear infinite;
+}
+
+.future-rooms-orbit-ring::before,
+.future-rooms-orbit-ring::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #efbd78;
+  box-shadow: 0 0 14px rgba(239, 189, 120, 0.7);
+}
+
+.future-rooms-orbit-ring::before {
+  left: 50%;
+  top: -4px;
+}
+
+.future-rooms-orbit-ring::after {
+  right: 12%;
+  bottom: 7%;
+}
+
+.future-rooms-orbit-ring-one {
+  width: 390px;
+  height: 390px;
+}
+
+.future-rooms-orbit-ring-two {
+  width: 300px;
+  height: 300px;
+  animation-direction: reverse;
+  animation-duration: 10s;
+}
+
+@keyframes futureOrbitSpin {
+  to { transform: rotate(360deg); }
+}
+
+.future-rooms-orbit-card {
+  position: relative;
+  z-index: 2;
+  width: 220px;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.23);
+  border-radius: 34px;
+  color: #fff;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.035));
+  box-shadow:
+    0 28px 70px rgba(12, 6, 3, 0.3),
+    inset 0 1px rgba(255, 255, 255, 0.14);
+  text-align: center;
+  backdrop-filter: blur(22px);
+}
+
+.future-rooms-orbit-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  margin-bottom: 16px;
+  border-radius: 20px;
+  color: #f1c887;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.future-rooms-orbit-card small {
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.future-rooms-orbit-card > strong {
+  display: block;
+  margin-top: 7px;
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 64px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.future-rooms-orbit-card p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.future-rooms-floating-chip {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.83);
+  background: rgba(36, 19, 9, 0.56);
+  font-size: 9px;
+  font-weight: 850;
+  backdrop-filter: blur(12px);
+  animation: futureChipFloat 4s ease-in-out infinite alternate;
+}
+
+.future-rooms-chip-one {
+  left: 0;
+  top: 27%;
+}
+
+.future-rooms-chip-two {
+  right: 0;
+  bottom: 27%;
+  animation-delay: -1.4s;
+}
+
+@keyframes futureChipFloat {
+  to { transform: translateY(-10px); }
+}
+
+.future-rooms-scroll {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.63);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+.future-rooms-scroll > span:last-child {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  animation: futureRoomsBounce 1.8s ease-in-out infinite;
+}
+
+@keyframes futureRoomsBounce {
+  50% { transform: translateY(5px); }
+}
+
+.future-rooms-catalog {
+  position: relative;
+  padding: clamp(78px, 8vw, 118px) 0 clamp(90px, 9vw, 132px);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(211, 161, 95, 0.13), transparent 27%),
+    radial-gradient(circle at 6% 88%, rgba(112, 68, 31, 0.07), transparent 25%),
+    #fbf7ef;
+}
+
+.future-rooms-catalog::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.26;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(168, 117, 69, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 117, 69, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, transparent, #000 20%, #000 75%, transparent);
+}
+
+.future-rooms-catalog-shell {
+  position: relative;
+  z-index: 2;
+}
+
+.future-rooms-catalog-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.7fr);
+  align-items: end;
+  gap: 60px;
+}
+
+.future-rooms-catalog-heading > div > p {
+  margin: 0 0 12px;
+  color: #9f6a39;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.future-rooms-catalog-heading h2 {
+  margin: 0;
+  color: #2b1d12;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(44px, 5.3vw, 76px);
+  font-weight: 500;
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+}
+
+.future-rooms-catalog-heading > p {
+  margin: 0 0 4px;
+  color: #736356;
+  font-size: 14px;
+  line-height: 1.72;
+}
+
+.future-rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 15px;
+  margin-top: 42px;
+}
+
+.future-rooms-grid > .scroll-reveal {
+  min-width: 0;
+}
+
+.future-rooms-loading,
+.future-rooms-empty,
+.future-rooms-error {
+  margin-top: 38px;
+  padding: 28px;
+  border: 1px solid rgba(168, 117, 69, 0.17);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 18px 42px rgba(43, 29, 18, 0.06);
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.future-rooms-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #6f5e50;
+  font-weight: 800;
+}
+
+.future-rooms-loading > span {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #b57b44;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: futureRoomLoading 0.8s linear infinite;
+}
+
+@keyframes futureRoomLoading {
+  to { transform: rotate(360deg); }
+}
+
+.future-rooms-error {
+  color: #9b2c2c;
+}
+
+.future-rooms-error button {
+  margin-top: 15px;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 18px;
+  color: #fff;
+  background: #2b1d12;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.future-rooms-help {
+  margin-top: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 30px 32px;
+  border: 1px solid rgba(168, 117, 69, 0.2);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 95% 10%, rgba(210, 160, 98, 0.16), transparent 28%),
+    rgba(255, 255, 255, 0.75);
+  box-shadow: 0 22px 55px rgba(43, 29, 18, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.future-rooms-help p {
+  margin: 0;
+  color: #a06c3d;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.future-rooms-help h3 {
+  margin: 8px 0 0;
+  color: #2b1d12;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 500;
+  line-height: 1.04;
+}
+
+.future-rooms-help span {
+  display: block;
+  max-width: 760px;
+  margin-top: 9px;
+  color: #736356;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.future-rooms-help > a {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: #fff;
+  background: #2b1d12;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition:
+    transform 220ms ease,
+    background 220ms ease;
+}
+
+.future-rooms-help > a:hover {
+  transform: translateY(-2px);
+  background: #a87545;
+}
+
+@media (max-width: 1240px) {
+  .future-rooms-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .future-rooms-hero {
+    min-height: 820px;
+    padding-top: 110px;
+  }
+
+  .future-rooms-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .future-rooms-orbit {
+    display: none;
+  }
+
+  .future-rooms-copy {
+    max-width: 760px;
+  }
+
+  .future-rooms-catalog-heading {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .future-rooms-help {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 760px) {
+  .future-rooms-shell,
+  .future-rooms-catalog-shell {
+    width: min(100% - 30px, 1380px);
+  }
+
+  .future-rooms-hero {
+    min-height: 760px;
+    padding: 100px 0 110px;
+  }
+
+  .future-rooms-copy h1 {
+    font-size: clamp(50px, 15vw, 72px);
+  }
+
+  .future-rooms-actions {
+    align-items: stretch;
+    flex-direction: column;
+    max-width: 350px;
+  }
+
+  .future-rooms-primary,
+  .future-rooms-secondary {
+    width: 100%;
+  }
+
+  .future-rooms-flow {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 260px;
+  }
+
+  .future-rooms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .future-rooms-help {
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .future-rooms-scroll {
+    bottom: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .future-rooms-video,
+  .future-rooms-orbit-ring,
+  .future-rooms-floating-chip,
+  .future-rooms-scroll > span:last-child,
+  .future-rooms-loading > span {
+    animation: none;
+  }
+
+  .future-rooms-primary,
+  .future-rooms-secondary,
+  .future-rooms-help > a {
+    transition: none;
+  }
+}
