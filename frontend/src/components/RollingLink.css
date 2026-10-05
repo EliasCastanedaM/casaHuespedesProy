@@ -1,0 +1,106 @@
+.rolling-link {
+  --rolling-link-bg: #fff8ef;
+  --rolling-link-color: #2b1d12;
+  --rolling-link-border: rgba(255, 255, 255, 0.35);
+  --rolling-link-arrow-bg: #2b1d12;
+  --rolling-link-arrow-color: #fff;
+
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 9px 0 20px;
+  border: 1px solid var(--rolling-link-border);
+  border-radius: 999px;
+  background: var(--rolling-link-bg);
+  color: var(--rolling-link-color);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+  box-shadow: 0 14px 32px rgba(22, 14, 9, 0.12);
+  backdrop-filter: blur(12px);
+  transition:
+    transform 220ms ease,
+    background 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.rolling-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 38px rgba(22, 14, 9, 0.17);
+}
+
+.rolling-link:focus-visible {
+  outline: 2px solid #d5a06d;
+  outline-offset: 3px;
+}
+
+.rolling-link--ghost {
+  --rolling-link-bg: rgba(255, 255, 255, 0.1);
+  --rolling-link-color: #fff;
+  --rolling-link-border: rgba(255, 255, 255, 0.28);
+  --rolling-link-arrow-bg: rgba(255, 255, 255, 0.16);
+  --rolling-link-arrow-color: #fff;
+  box-shadow: none;
+}
+
+.rolling-link--dark {
+  --rolling-link-bg: #2b1d12;
+  --rolling-link-color: #fff;
+  --rolling-link-border: #2b1d12;
+  --rolling-link-arrow-bg: #a87545;
+  --rolling-link-arrow-color: #fff;
+}
+
+.rolling-link-window {
+  display: block;
+  height: 1.16em;
+  overflow: hidden;
+  line-height: 1.16;
+}
+
+.rolling-link-track {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(0);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rolling-link-track > span {
+  display: block;
+  height: 1.16em;
+  line-height: 1.16;
+  white-space: nowrap;
+}
+
+.rolling-link:hover .rolling-link-track {
+  transform: translateY(-1.16em);
+}
+
+.rolling-link-arrow {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--rolling-link-arrow-bg);
+  color: var(--rolling-link-arrow-color);
+  font-size: 15px;
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rolling-link:hover .rolling-link-arrow {
+  transform: rotate(42deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rolling-link,
+  .rolling-link-track,
+  .rolling-link-arrow {
+    transition: none;
+  }
+}
