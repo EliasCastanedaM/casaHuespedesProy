@@ -1,0 +1,388 @@
+.future-contact-page {
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 7% 6%, rgba(209,157,94,.14), transparent 26%),
+    #fbf7ef;
+}
+
+.future-contact-hero {
+  position: relative;
+  min-height: 650px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  color: #fff;
+  background:
+    linear-gradient(120deg, rgba(25,14,8,.96), rgba(39,22,11,.88)),
+    url("/img/galeria/galeria-4.jpg") center/cover;
+  isolation: isolate;
+}
+
+.future-contact-hero::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 32px;
+  pointer-events: none;
+}
+
+.future-contact-hero-glow {
+  position: absolute;
+  right: 8%;
+  top: 16%;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: rgba(213,161,95,.17);
+  filter: blur(100px);
+}
+
+.future-contact-shell,
+.future-contact-info-shell,
+.future-contact-destination-shell {
+  width: min(1320px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.future-contact-shell {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0,1.12fr) minmax(300px,.65fr);
+  align-items: center;
+  gap: 70px;
+}
+
+.future-contact-copy > p:first-child {
+  color: #e7b977;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.future-contact-copy h1 {
+  max-width: 850px;
+  margin: 18px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(58px, 7vw, 106px);
+  font-weight: 500;
+  line-height: .9;
+  letter-spacing: -.05em;
+}
+
+.future-contact-copy h1 span {
+  display: block;
+  color: #efbd78;
+}
+
+.future-contact-lead {
+  max-width: 620px;
+  margin: 25px 0 0;
+  color: rgba(255,255,255,.68);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.future-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.future-contact-actions a,
+.future-contact-destination-actions a {
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  transition: transform .22s ease, background .22s ease;
+}
+
+.future-contact-actions a:first-child {
+  color: #2a180d;
+  background: linear-gradient(135deg,#f0ce93,#cd8b47);
+}
+
+.future-contact-actions a:last-child {
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.24);
+  background: rgba(255,255,255,.07);
+  backdrop-filter: blur(12px);
+}
+
+.future-contact-actions a:hover,
+.future-contact-destination-actions a:hover {
+  transform: translateY(-3px);
+}
+
+.future-contact-orbit {
+  min-height: 330px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 42px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.12), transparent 35%),
+    rgba(255,255,255,.055);
+  box-shadow:
+    0 32px 80px rgba(12,6,3,.3),
+    inset 0 1px rgba(255,255,255,.12);
+  backdrop-filter: blur(20px);
+}
+
+.future-contact-orbit::after {
+  content: "";
+  position: absolute;
+  inset: 28px;
+  border: 1px solid rgba(238,190,124,.18);
+  border-radius: 50%;
+  animation: contactOrbit 12s linear infinite;
+}
+
+@keyframes contactOrbit {
+  to { transform: rotate(360deg); }
+}
+
+.future-contact-orbit-core {
+  position: relative;
+  z-index: 2;
+  width: 190px;
+  height: 190px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(26,14,7,.4);
+  text-align: center;
+  backdrop-filter: blur(16px);
+}
+
+.future-contact-orbit-core > svg {
+  color: #e8ba79;
+}
+
+.future-contact-orbit-core small {
+  margin-top: 12px;
+  color: rgba(255,255,255,.46);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.future-contact-orbit-core strong {
+  max-width: 150px;
+  margin-top: 7px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.future-contact-orbit-core span {
+  margin-top: 7px;
+  color: #e8ba79;
+  font-size: 9px;
+}
+
+.future-contact-info {
+  padding: 70px 0;
+  background: #fbf7ef;
+}
+
+.future-contact-info-shell {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 14px;
+}
+
+.future-contact-info-card {
+  min-height: 130px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 20px;
+  border: 1px solid rgba(168,117,69,.18);
+  border-radius: 24px;
+  color: #2b1d12;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.92),rgba(247,237,224,.75));
+  box-shadow: 0 18px 42px rgba(43,29,18,.07);
+  text-decoration: none;
+  backdrop-filter: blur(14px);
+  transition: transform .24s ease, box-shadow .24s ease;
+}
+
+a.future-contact-info-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 26px 55px rgba(43,29,18,.12);
+}
+
+.future-contact-info-card > span {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  border-radius: 16px;
+  color: #9d6838;
+  background: rgba(168,117,69,.1);
+}
+
+.future-contact-info-card > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.future-contact-info-card small {
+  display: block;
+  color: #9b8a7c;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.future-contact-info-card strong {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.future-contact-info-card > svg {
+  color: #a87545;
+}
+
+.future-contact-destination {
+  padding: 0 0 90px;
+  background: #fbf7ef;
+}
+
+.future-contact-destination-card {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 32px;
+  padding: clamp(30px,5vw,58px);
+  overflow: hidden;
+  border: 1px solid rgba(168,117,69,.18);
+  border-radius: 34px;
+  color: #fff;
+  background:
+    linear-gradient(100deg,rgba(26,14,7,.9),rgba(33,18,9,.6)),
+    url("/img/galeria/galeria-1.jpg") center/cover;
+  box-shadow: 0 30px 70px rgba(43,29,18,.16);
+}
+
+.future-contact-destination-card p {
+  color: #e7b977;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.future-contact-destination-card h2 {
+  margin: 10px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(38px,5vw,70px);
+  font-weight: 500;
+  line-height: .95;
+}
+
+.future-contact-destination-card > div:first-child > span {
+  display: block;
+  max-width: 620px;
+  margin-top: 14px;
+  color: rgba(255,255,255,.66);
+  line-height: 1.6;
+}
+
+.future-contact-destination-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.future-contact-destination-actions a {
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.08);
+  backdrop-filter: blur(12px);
+}
+
+.future-contact-destination-actions a:last-child {
+  color: #28170c;
+  border: 0;
+  background: linear-gradient(135deg,#f0ce93,#ca8844);
+}
+
+@media (max-width: 900px) {
+  .future-contact-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .future-contact-orbit {
+    display: none;
+  }
+
+  .future-contact-info-shell {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+  .future-contact-destination-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 620px) {
+  .future-contact-hero {
+    min-height: 610px;
+  }
+
+  .future-contact-shell,
+  .future-contact-info-shell,
+  .future-contact-destination-shell {
+    width: min(100% - 28px,1320px);
+  }
+
+  .future-contact-copy h1 {
+    font-size: clamp(52px,16vw,72px);
+  }
+
+  .future-contact-info-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .future-contact-actions {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 340px;
+  }
+
+  .future-contact-actions a {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .future-contact-orbit::after {
+    animation: none;
+  }
+}
