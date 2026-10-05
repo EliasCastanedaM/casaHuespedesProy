@@ -51,15 +51,6 @@ export default function Footer() {
                 </Link>
               </li>
 
-              <li>
-                <Link
-                  to="/habitaciones"
-                  className="hover:text-[#d9b48f] transition"
-                >
-                  Reservas
-                </Link>
-              </li>
-
        
             </ul>
           </div>
