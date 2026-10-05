@@ -1564,6 +1564,20 @@
   }
 }
 
+
+.rooms-category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+
+@media (max-width: 720px) {
+  .rooms-category-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
 /* ===== MEJORAS UI OCT 2026 · Vengeance/Skiper inspired ===== */
 
 .hotel-hero-text {
