@@ -8,6 +8,7 @@ import {
 
 import "./Home.css";
 import "./Booking.css";
+import "./FuturisticBooking.css";
 
 const PAYMENT_SESSION_KEY = "pimentelPendingPayment";
 const DEFAULT_CULQI_URL =
@@ -251,7 +252,7 @@ export default function PaymentResult() {
 
   if (!paymentData || !booking || !publicToken) {
     return (
-      <main className="payment-result-page">
+      <main className="payment-result-page future-payment-page">
         <section className="payment-missing-card">
           <span className="payment-missing-icon" aria-hidden="true">
             !
@@ -262,7 +263,7 @@ export default function PaymentResult() {
             Vuelve a consultar disponibilidad y elige una categoría para
             continuar con el pago.
           </p>
-          <Link to="/disponibilidad" className="payment-primary-button">
+          <Link to="/habitaciones" className="payment-primary-button">
             Ver habitaciones
           </Link>
         </section>
@@ -271,10 +272,15 @@ export default function PaymentResult() {
   }
 
   return (
-    <main className="payment-result-page">
+    <main className="payment-result-page future-payment-page">
       <div className="payment-result-container">
-        <header className="payment-result-header">
+        <header className="payment-result-header future-payment-header">
           <p className="hotel-eyebrow">Pago de reserva</p>
+          <div className="future-payment-status-orb" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
           <h1>
             {isConfirmed
               ? "Reserva confirmada"
@@ -345,7 +351,7 @@ export default function PaymentResult() {
         )}
 
         <div className="payment-result-layout">
-          <section className="payment-action-card">
+          <section className="payment-action-card future-payment-action-card">
             <div className="payment-action-heading">
               <div>
                 <p className="hotel-eyebrow">
@@ -500,7 +506,7 @@ export default function PaymentResult() {
             </div>
           </section>
 
-          <aside className="payment-result-summary">
+          <aside className="payment-result-summary future-payment-summary">
             <p className="hotel-eyebrow">Tu reserva</p>
             <h2>Resumen</h2>
 
