@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import AmbientExperience from "../../components/AmbientExperience";
+import "./FuturisticTourism.css";
 
 /* =========================================================
    IMÁGENES DE MUSEOS DESDE ASSETS/GALLERY
@@ -72,8 +74,8 @@ const tourismVideos = [
     description:
       "La gastronomía lambayecana reúne productos del mar, recetas tradicionales y sabores que forman parte de la identidad del norte peruano.",
     videoSrc: videoGastronomiaPimentel,
-    buttonText: "Consultar disponibilidad",
-    buttonLink: "/#disponibilidad",
+    buttonText: "Ver habitaciones disponibles",
+    buttonLink: "/habitaciones",
   },
 ];
 
@@ -1047,16 +1049,17 @@ function TourismVideoSection({ video, reverse = false }) {
 export default function Tourism() {
   return (
     <>
+      <AmbientExperience />
       <Navbar />
 
       <main
         id="inicio-turismo"
-        className="min-h-screen overflow-hidden bg-[#fbf7ef] text-[#2b1d12]"
+        className="future-tourism min-h-screen overflow-hidden bg-[#fbf7ef] text-[#2b1d12]"
       >
         {/* =====================================================
             1. VIDEO PRINCIPAL
         ===================================================== */}
-        <section className="relative flex min-h-[650px] items-center overflow-hidden lg:min-h-[720px]">
+        <section className="tourism-future-hero relative flex min-h-[650px] items-center overflow-hidden lg:min-h-[720px]">
           <TourismVideoPlayer
             src={videoPortadaPimentel}
             title="Video principal de Pimentel"
@@ -1107,7 +1110,12 @@ export default function Tourism() {
                   Ver Pimentel
                 </a>
 
-                
+                <Link
+                  to="/habitaciones"
+                  className="tourism-future-secondary inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white backdrop-blur-md transition hover:-translate-y-1 hover:bg-white/20"
+                >
+                  Hospedarse en Pimentel
+                </Link>
               </div>
             </div>
           </div>
