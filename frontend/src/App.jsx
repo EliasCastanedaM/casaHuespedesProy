@@ -1,6 +1,7 @@
 import StatisticsAdmin from "./pages/admin/StatisticsAdmin";
 import ScrollToHash from "./components/ScrollToHash";
 import SeoManager from "./components/SeoManager";
+import MotionEnhancer from "./components/MotionEnhancer";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import PublicLayout from "./layouts/PublicLayout";
@@ -32,6 +33,7 @@ export default function App() {
   return (
     <>
       <SeoManager />
+      <MotionEnhancer />
       <ScrollToHash />
 
       <Routes>
