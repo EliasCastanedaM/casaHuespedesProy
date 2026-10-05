@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getRoomCategoryBySlug } from "../../services/roomService";
 import { searchCategoryAvailability } from "../../services/bookingService";
 import "./RoomDetail.css";
@@ -63,6 +63,7 @@ function amenityIcon(amenity) {
 export default function RoomDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const normalizedParam = String(id || "").trim().toLowerCase();
   const slug = LEGACY_ROOM_TO_CATEGORY[normalizedParam] || normalizedParam;
 
@@ -75,9 +76,18 @@ export default function RoomDetail() {
   const [availabilityResult, setAvailabilityResult] = useState(null);
   const [error, setError] = useState("");
   const [dateError, setDateError] = useState("");
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guestsCount, setGuestsCount] = useState(1);
+  const [checkIn, setCheckIn] = useState(
+    searchParams.get("checkIn") || searchParams.get("check_in") || ""
+  );
+  const [checkOut, setCheckOut] = useState(
+    searchParams.get("checkOut") || searchParams.get("check_out") || ""
+  );
+  const [guestsCount, setGuestsCount] = useState(() => {
+    const requestedGuests = Number(searchParams.get("guests") || 1);
+    return Number.isFinite(requestedGuests) && requestedGuests > 0
+      ? requestedGuests
+      : 1;
+  });
 
   const today = getLocalDateValue();
   const nights = useMemo(
