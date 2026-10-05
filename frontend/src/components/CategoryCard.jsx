@@ -4,7 +4,7 @@ import "./CategoryCard.css";
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1400&q=85";
 
-export default function CategoryCard({ category, index = 0 }) {
+export default function CategoryCard({ category }) {
   const quantity = Number(
     category.total_quantity ?? category.mapped_quantity ?? 0
   );
@@ -12,20 +12,15 @@ export default function CategoryCard({ category, index = 0 }) {
   const imageUrl = category.image_url || FALLBACK_IMAGE;
 
   return (
-    <article className="category-card">
-      <div
-        className="category-card-image"
-        style={{ backgroundImage: `url("${imageUrl}")` }}
-        aria-hidden="true"
-      />
+    <article
+      className="category-card"
+      style={{ backgroundImage: `url("${imageUrl}")` }}
+    >
       <div className="category-card-overlay" />
-      <div className="category-card-glow" aria-hidden="true" />
 
       <div className="category-card-content">
         <div className="category-card-top">
-          <span className="category-card-kicker">
-            {String(index + 1).padStart(2, "0")} · Categoría
-          </span>
+          <span className="category-card-kicker">Categoría</span>
           <span className="category-card-stock">
             {quantity} {quantity === 1 ? "habitación" : "habitaciones"}
           </span>
@@ -53,10 +48,7 @@ export default function CategoryCard({ category, index = 0 }) {
             className="category-card-action"
             to={`/habitaciones/${encodeURIComponent(category.slug)}`}
           >
-            <span>Ver habitación</span>
-            <span className="category-card-action-icon" aria-hidden="true">
-              ↗
-            </span>
+            Ver habitación
           </Link>
         </div>
       </div>
