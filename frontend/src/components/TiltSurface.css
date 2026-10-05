@@ -1,0 +1,49 @@
+.tilt-surface {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --glare-x: 50%;
+  --glare-y: 50%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform:
+    perspective(1200px)
+    rotateX(var(--tilt-x))
+    rotateY(var(--tilt-y));
+  transition:
+    transform 180ms ease-out,
+    box-shadow 280ms ease;
+  will-change: transform;
+}
+
+.tilt-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(
+      circle at var(--glare-x) var(--glare-y),
+      rgba(255, 229, 191, 0.24),
+      transparent 32%
+    );
+  transition: opacity 220ms ease;
+  mix-blend-mode: screen;
+}
+
+.tilt-surface--glare:hover::before {
+  opacity: 1;
+}
+
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .tilt-surface {
+    transform: none !important;
+    transition: none;
+  }
+
+  .tilt-surface::before {
+    display: none;
+  }
+}
