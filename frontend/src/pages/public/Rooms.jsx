@@ -1,7 +1,7 @@
 import SocialDock from "../../components/SocialDock";
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowUpRight,
   BedDouble,
@@ -20,6 +20,8 @@ import "./Home.css";
 import "./FuturisticRooms.css";
 
 export default function Rooms() {
+  const [searchParams] = useSearchParams();
+  const bookingQuery = searchParams.toString();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -179,7 +181,11 @@ export default function Rooms() {
             <div className="future-rooms-grid">
               {categories.map((category, index) => (
                 <ScrollReveal key={category.slug} delay={index * 70}>
-                  <CategoryCard category={category} index={index} />
+                  <CategoryCard
+                    category={category}
+                    index={index}
+                    bookingQuery={bookingQuery}
+                  />
                 </ScrollReveal>
               ))}
             </div>
