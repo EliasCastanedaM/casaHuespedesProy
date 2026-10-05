@@ -19,6 +19,7 @@ import PaymentResult from "./pages/public/PaymentResult";
 import PrivacyPolicy from "./pages/public/PrivacyPolicy";
 import TermsAndConditions from "./pages/public/TermsAndConditions";
 import DataDeletion from "./pages/public/DataDeletion";
+import RoomInventoryPreview from "./pages/public/RoomInventoryPreview";
 
 import Login from "./pages/admin/Login";
 import Dashboard from "./pages/admin/Dashboard";
@@ -40,6 +41,7 @@ export default function App() {
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/habitaciones" element={<Rooms />} />
+          <Route path="/inventario-habitaciones" element={<RoomInventoryPreview />} />
           <Route path="/habitaciones/:id" element={<RoomDetail />} />
           <Route
             path="/disponibilidad"
