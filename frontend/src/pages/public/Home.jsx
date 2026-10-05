@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import InteractiveGallery from "../../components/InteractiveGallery";
-import RollingLink from "../../components/RollingLink";
 import "./Home.css";
 
 const includedServices = [
@@ -105,31 +103,10 @@ export default function Home() {
               </p>
 
               <div className="hotel-hero-actions">
-                <RollingLink to="/habitaciones">
+
+                <Link to="/habitaciones" className="hotel-btn-light">
                   Ver habitaciones
-                </RollingLink>
-
-                <RollingLink to="/turismo" variant="ghost">
-                  Conoce Pimentel
-                </RollingLink>
-              </div>
-
-              <div
-                className="hotel-hero-signals"
-                aria-label="Características destacadas"
-              >
-                <span>
-                  <strong>01</strong>
-                  Cerca del mar
-                </span>
-                <span>
-                  <strong>02</strong>
-                  Atención directa
-                </span>
-                <span>
-                  <strong>03</strong>
-                  Pimentel · Lambayeque
-                </span>
+                </Link>
               </div>
             </div>
           </div>
@@ -185,28 +162,23 @@ export default function Home() {
         id="galeria"
         className="home-section hotel-gallery-section scroll-mt-32"
       >
-        <div className="hotel-gallery-heading">
-          <div>
-            <p className="hotel-eyebrow">Galería</p>
+        <div>
+          <p className="hotel-eyebrow">Galería</p>
 
-            <h2 className="hotel-title hotel-gallery-title">
-              Espacios que invitan a quedarse
-            </h2>
-          </div>
-
-          <p className="hotel-gallery-copy">
-            Una galería más visual y dinámica para conocer la casa antes de tu
-            llegada. Puedes cambiar entre una composición libre y una vista
-            ordenada.
-          </p>
+          <h2 className="hotel-title hotel-gallery-title">
+            Espacios que invitan a quedarse
+          </h2>
         </div>
 
-        <InteractiveGallery images={galleryImages} />
-
-        <div className="hotel-gallery-action-row">
-          <RollingLink to="/galeria" variant="dark">
-            Ver galería completa
-          </RollingLink>
+        <div className="hotel-gallery-grid">
+          {galleryImages.map((image) => (
+            <img
+              key={image.src}
+              src={image.src}
+              alt={image.alt}
+              loading="lazy"
+            />
+          ))}
         </div>
 
         <div className="hotel-testimonial">
