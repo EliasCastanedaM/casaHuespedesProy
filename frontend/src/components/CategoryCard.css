@@ -4,16 +4,58 @@
   overflow: hidden;
   border-radius: 30px;
   border: 1px solid rgba(255, 255, 255, 0.24);
-  background-position: center;
-  background-size: cover;
+  background: #2b1d12;
   box-shadow: 0 24px 60px rgba(43, 29, 18, 0.18);
   isolation: isolate;
   transition: transform 220ms ease, box-shadow 220ms ease;
 }
 
 .category-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 30px 75px rgba(43, 29, 18, 0.24);
+  transform: translateY(-8px);
+  box-shadow: 0 34px 82px rgba(43, 29, 18, 0.28);
+}
+
+.category-card-image {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background-position: center;
+  background-size: cover;
+  transform: scale(1.01);
+  transition:
+    transform 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 550ms ease;
+  will-change: transform;
+}
+
+.category-card:hover .category-card-image {
+  transform: scale(1.075);
+  filter: saturate(1.05) contrast(1.02);
+}
+
+.category-card-glow {
+  position: absolute;
+  right: -110px;
+  bottom: -120px;
+  z-index: -1;
+  width: 310px;
+  height: 310px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(216, 168, 116, 0.22),
+    rgba(216, 168, 116, 0) 68%
+  );
+  transform: scale(0.8);
+  opacity: 0;
+  transition:
+    transform 600ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 450ms ease;
+}
+
+.category-card:hover .category-card-glow {
+  transform: scale(1.1);
+  opacity: 1;
 }
 
 .category-card-overlay {
@@ -141,20 +183,50 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   margin-top: 18px;
-  padding: 13px 18px;
+  padding: 7px 8px 7px 18px;
   border-radius: 999px;
   color: #2b1d12;
   background: #fff8ef;
   font-size: 0.82rem;
   font-weight: 900;
   text-decoration: none;
-  transition: transform 180ms ease, background 180ms ease;
+  transition:
+    transform 220ms ease,
+    background 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .category-card-action:hover {
   transform: translateY(-2px);
   background: #fff;
+  box-shadow: 0 14px 28px rgba(10, 6, 4, 0.18);
+}
+
+.category-card-action-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: #2b1d12;
+  color: #fff;
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.category-card-action:hover .category-card-action-icon {
+  transform: rotate(42deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-card,
+  .category-card-image,
+  .category-card-glow,
+  .category-card-action,
+  .category-card-action-icon {
+    transition: none;
+  }
 }
 
 @media (max-width: 640px) {
