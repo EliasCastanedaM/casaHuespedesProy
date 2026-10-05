@@ -1,0 +1,89 @@
+:root {
+  --ambient-pointer-x: 50vw;
+  --ambient-pointer-y: 30vh;
+}
+
+.ambient-progress {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 120;
+  height: 2px;
+  pointer-events: none;
+}
+
+.ambient-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  background:
+    linear-gradient(
+      90deg,
+      #7d4d27 0%,
+      #d3a15f 48%,
+      #f3d29a 100%
+    );
+  box-shadow:
+    0 0 10px rgba(211, 161, 95, 0.55),
+    0 0 22px rgba(211, 161, 95, 0.22);
+  transition: transform 90ms linear;
+}
+
+.ambient-cursor-glow {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 110;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.18;
+  background:
+    radial-gradient(
+      circle,
+      rgba(224, 172, 105, 0.22),
+      rgba(224, 172, 105, 0.06) 32%,
+      transparent 68%
+    );
+  filter: blur(18px);
+  transform:
+    translate(
+      calc(var(--ambient-pointer-x) - 260px),
+      calc(var(--ambient-pointer-y) - 260px)
+    );
+  mix-blend-mode: soft-light;
+  transition:
+    opacity 240ms ease;
+}
+
+.ambient-noise {
+  position: fixed;
+  inset: 0;
+  z-index: 109;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image:
+    repeating-radial-gradient(
+      circle at 0 0,
+      rgba(32, 20, 12, 0.55) 0,
+      rgba(32, 20, 12, 0.55) 0.5px,
+      transparent 0.7px,
+      transparent 3px
+    );
+  background-size: 9px 9px;
+}
+
+@media (hover: none), (max-width: 900px) {
+  .ambient-cursor-glow {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-progress span {
+    transition: none;
+  }
+}
