@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import "./Navbar.css";
 
 export default function Navbar() {
   const location = useLocation();
@@ -58,8 +57,8 @@ export default function Navbar() {
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <header className="site-navbar">
-      <nav className="site-navbar-inner">
+    <header className="w-full sticky top-0 z-50 bg-[#fbf7ef]/90 backdrop-blur-xl border-b border-[#eadfce]/80 shadow-[0_10px_30px_rgba(43,29,18,0.05)]">
+      <nav className="relative max-w-7xl mx-auto px-5 md:px-8 h-[78px] flex items-center justify-between gap-6">
         {/* LOGO */}
         <Link
           to="/#inicio"
@@ -87,7 +86,7 @@ export default function Navbar() {
         </Link>
 
         {/* NAVEGACIÓN PARA COMPUTADORAS */}
-        <div className="site-navbar-links">
+        <div className="hidden lg:flex items-center justify-center gap-7 flex-1">
           <Link
             to="/turismo#inicio-turismo"
             className={navLink("/turismo")}
@@ -107,15 +106,6 @@ export default function Navbar() {
             Galería
           </Link>
         </div>
-
-        <Link
-          to="/habitaciones"
-          className="site-navbar-cta"
-          aria-label="Consultar habitaciones y disponibilidad"
-        >
-          <span>Reservar</span>
-          <span className="site-navbar-cta-icon" aria-hidden="true">↗</span>
-        </Link>
 
         {/* NAVEGACIÓN PARA CELULAR Y TABLET */}
         <div className="flex lg:hidden items-center gap-2">
