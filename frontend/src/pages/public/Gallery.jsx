@@ -6,6 +6,7 @@ import fechaImportante1 from "../../assets/fechas_importantes/fecha_importante_1
 import fechaImportante2 from "../../assets/fechas_importantes/fecha_importante_2.mp4";
 
 import "./Gallery.css";
+import "./FuturisticGallery.css";
 
 // =========================================================
 // ARCHIVOS MULTIMEDIA DE LA GALERÍA GENERAL
@@ -209,11 +210,11 @@ export default function Gallery() {
   }, [selectedImage]);
 
   return (
-    <main className="gallery-page">
+    <main className="gallery-page future-gallery-page">
       {/* ===================================================
           PORTADA
       =================================================== */}
-      <section className="gallery-hero">
+      <section className="gallery-hero future-gallery-hero">
         {heroVideo ? (
           <video
             className="gallery-hero-background"
