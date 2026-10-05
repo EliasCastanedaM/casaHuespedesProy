@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import SocialDock from "../../components/SocialDock";
 
 const SITE_URL = "https://www.casahuespedespimentel.com";
 const HERO_VIDEO = "/videos/pimentel.mp4";
-const HERO_FALLBACK = commonsImage("Sunset in Pimentel, Peru.jpg", 2200);
+const HERO_FALLBACK = commonsImage("Playa y muelle de Pimentel.jpg", 2200);
 
 const museumGalleryModules = import.meta.glob(
   "../../assets/gallery/museo-*.{jpg,jpeg,png,webp}",
@@ -394,7 +395,7 @@ function PlaceCard({ place, index }) {
       <article
         data-reveal
         style={{ "--delay": `${Math.min(index * 70, 280)}ms` }}
-        className="reveal group relative h-[345px] overflow-hidden rounded-[26px] border border-[#e8d7c2] bg-[#2b1d12] shadow-[0_18px_48px_rgba(43,29,18,0.14)] sm:h-[370px] xl:h-[390px]"
+        className="reveal group relative h-[360px] overflow-hidden rounded-[28px] border border-[#e8d7c2] bg-[#2b1d12] shadow-[0_20px_55px_rgba(43,29,18,0.14)] sm:h-[390px] lg:h-[430px]"
       >
         <SafeImage
           src={place.image}
@@ -437,9 +438,9 @@ function MuseumCard({ museum, index }) {
       <article
         data-reveal
         style={{ "--delay": `${index * 90}ms` }}
-        className="reveal museum-card group relative w-[82vw] max-w-[320px] overflow-hidden rounded-[24px] border border-[#d8a369]/35 bg-[#28170f] shadow-[0_28px_70px_rgba(0,0,0,.40)] sm:w-[300px] xl:w-[292px]"
+        className="reveal museum-card group relative w-[84vw] max-w-[360px] overflow-hidden rounded-[26px] border border-[#d8a369]/35 bg-[#28170f] shadow-[0_28px_80px_rgba(0,0,0,.44)] sm:w-[330px] xl:w-[340px]"
       >
-        <div className="relative h-[260px] overflow-hidden bg-[#160d08]">
+        <div className="relative h-[300px] overflow-hidden bg-[#160d08]">
           <SafeImage
             src={museum.image}
             fallback={museum.brochure || HERO_FALLBACK}
@@ -495,7 +496,7 @@ function DishCard({ dish, index }) {
       <article
         data-reveal
         style={{ "--delay": `${Math.min(index * 70, 300)}ms` }}
-        className="reveal food-card group relative h-[315px] overflow-hidden rounded-[22px] border border-[#eadbc7] bg-[#2b1d12] shadow-[0_16px_40px_rgba(43,29,18,.12)]"
+        className="reveal food-card group relative h-[390px] overflow-hidden rounded-[26px] border border-[#eadbc7] bg-[#2b1d12] shadow-[0_20px_55px_rgba(43,29,18,.14)] lg:h-[420px]"
       >
         <SafeImage
           src={dish.image}
@@ -529,46 +530,6 @@ function DishCard({ dish, index }) {
         </a>
       </article>
     </TiltSurface>
-  );
-}
-
-function SocialDock() {
-  const whatsapp = encodeURIComponent(
-    "Hola, quisiera información sobre Casa Huéspedes Pimentel.",
-  );
-  const links = [
-    { label: "Inicio", href: "/", text: "⌂" },
-    { label: "WhatsApp", href: `https://wa.me/51901551287?text=${whatsapp}`, text: "WA" },
-    { label: "Instagram", href: "https://www.instagram.com/casahuespedes.pimentel/", text: "IG" },
-    { label: "Facebook", href: "https://www.facebook.com/casadehuespedespimentel/?locale=es_LA", text: "f" },
-  ];
-  return (
-    <aside
-      aria-label="Contacto rápido"
-      className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-[#eadfce] bg-[#fbf7ef]/95 px-3 py-2 shadow-[0_15px_40px_rgba(43,29,18,0.20)] backdrop-blur-md lg:bottom-auto lg:left-5 lg:top-1/2 lg:translate-x-0 lg:-translate-y-1/2 lg:flex-col lg:px-2 lg:py-4"
-    >
-      <span className="hidden text-[9px] font-black uppercase tracking-[0.22em] text-[#2b1d12] lg:block lg:[writing-mode:vertical-rl] lg:rotate-180">
-        Contáctanos
-      </span>
-      {links.map((item) => {
-        const external = item.href.startsWith("http");
-        const classes = `grid h-10 w-10 place-items-center rounded-full text-[11px] font-black transition hover:-translate-y-0.5 ${
-          item.label === "WhatsApp" ? "bg-[#25D366] text-white" : "bg-[#2b1d12] text-white hover:bg-[#a87545]"
-        }`;
-        if (!external) {
-          return (
-            <Link key={item.label} to={item.href} aria-label={item.label} className={classes}>
-              {item.text}
-            </Link>
-          );
-        }
-        return (
-          <a key={item.label} href={item.href} target="_blank" rel="noreferrer" aria-label={item.label} className={classes}>
-            {item.text}
-          </a>
-        );
-      })}
-    </aside>
   );
 }
 
@@ -627,7 +588,7 @@ function VideoSection({ video, reverse }) {
   return (
     <section className="relative overflow-hidden bg-[#25160f] py-16 text-white sm:py-20">
       <div className="absolute left-1/2 top-0 h-px w-[80%] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#d9a86e]/[0.45] to-transparent" />
-      <div className="mx-auto max-w-7xl px-5 md:px-8">
+      <div className="mx-auto max-w-[1500px] px-5 md:px-8">
         <div className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${reverse ? "lg:[&>*:first-child]:order-2" : ""}`}>
           <div data-reveal className="reveal relative">
             <div className="absolute -inset-4 rounded-[34px] border border-white/10" />
@@ -673,7 +634,7 @@ export default function Tourism() {
         .tourism-page .tourism-tilt { transform-style: preserve-3d; transition: transform .32s cubic-bezier(.2,.8,.2,1); }
         .tourism-page .tourism-shine { background: radial-gradient(circle at var(--shine-x,50%) var(--shine-y,50%), rgba(255,235,199,.28), transparent 38%); mix-blend-mode:screen; }
         .tourism-page .food-glint { background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,.22) 45%, transparent 68%); transform: translateX(-100%); }
-        .tourism-page .food-card:hover .food-glint { animation: tourism-glint 1.1s ease forwards; }
+        .tourism-page .food-card:hover .food-glint { animation: tourism-glint 1.1s ease forwards; }\n        .tourism-page .food-card:hover { box-shadow:0 28px 70px rgba(43,29,18,.20); }\n        .tourism-page .museum-card:hover { box-shadow:0 36px 95px rgba(0,0,0,.55),0 0 45px rgba(217,168,110,.08); }
         .tourism-page .museum-card::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; border:1px solid transparent; background:linear-gradient(135deg, rgba(255,220,165,.58), transparent 35%, transparent 68%, rgba(168,117,69,.5)) border-box; -webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; opacity:.16; transition:opacity .45s ease; }
         .tourism-page .museum-card:hover::after { opacity:1; }
         .tourism-page .museum-track { scrollbar-width:none; }
@@ -697,21 +658,21 @@ export default function Tourism() {
       <main id="inicio-turismo" className="tourism-page overflow-hidden bg-[#fbf7ef] text-[#2b1d12]">
         {/* HERO — misma composición del concepto visual */}
         <section ref={heroRef} className="relative min-h-[720px] overflow-hidden lg:min-h-[820px]">
-          <div className="hero-media absolute -inset-[8%]">
+          <div className="hero-media absolute -inset-[6%]">
             <SafeImage
               src={HERO_FALLBACK}
               fallback={places[0].image}
               alt="Atardecer real frente al mar en Pimentel, Perú"
               loading="eager"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover brightness-[0.92] saturate-[1.08]"
             />
           </div>
 
-          <div className="absolute inset-0 bg-gradient-to-r from-[#120a06]/[0.95] via-[#1c0f08]/55 to-[#1c0f08]/10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#150c07]/65 via-transparent to-black/15" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#120a06]/[0.82] via-[#1c0f08]/38 to-[#1c0f08]/05" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#150c07]/45 via-transparent to-black/10" />
           <div className="ambient-orbit absolute right-[12%] top-[18%] h-64 w-64 rounded-full bg-[#d9a86e]/15 blur-[100px]" />
 
-          <div className="relative z-10 mx-auto flex min-h-[720px] max-w-7xl items-center px-6 py-28 md:px-10 lg:min-h-[820px] lg:px-12">
+          <div className="relative z-10 mx-auto flex min-h-[720px] max-w-[1540px] items-center px-6 py-28 md:px-10 lg:min-h-[820px] lg:px-14">
             <div className="max-w-[780px]">
               <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-black/15 px-4 py-2 backdrop-blur-md">
                 <span className="h-2 w-2 rounded-full bg-[#e8b97f] shadow-[0_0_20px_rgba(232,185,127,.9)]" />
@@ -725,7 +686,7 @@ export default function Tourism() {
                 <span className="block font-normal text-white/92">qué hacer y qué conocer</span>
               </h1>
 
-              <p className="mt-7 max-w-2xl text-base leading-8 text-white/82 sm:text-lg">
+              <p className="mt-7 max-w-2xl text-base leading-8 text-white/90 sm:text-lg">
                 Guía para descubrir Pimentel, Lambayeque: playa, muelle, caballitos de totora,
                 gastronomía y experiencias frente al mar.
               </p>
@@ -783,7 +744,7 @@ export default function Tourism() {
           <div className="pointer-events-none absolute -left-28 top-14 h-72 w-72 rounded-full border border-[#a87545]/10" />
           <div className="pointer-events-none absolute -right-24 top-10 h-64 w-64 rounded-full border border-[#a87545]/10" />
 
-          <div className="mx-auto max-w-7xl px-5 md:px-8">
+          <div className="mx-auto max-w-[1380px] px-5 md:px-8">
             <div className="mb-12 grid items-end gap-9 lg:grid-cols-[1fr_.85fr] lg:gap-20">
               <div data-reveal className="reveal">
                 <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">
@@ -805,10 +766,22 @@ export default function Tourism() {
               </div>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {places.slice(0, 6).map((place, index) => (
-                <PlaceCard key={place.id} place={place} index={index} />
-              ))}
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-12">
+              {places.slice(0, 6).map((place, index) => {
+                const spans = [
+                  "lg:col-span-5",
+                  "lg:col-span-3",
+                  "lg:col-span-4",
+                  "lg:col-span-3",
+                  "lg:col-span-4",
+                  "lg:col-span-5",
+                ];
+                return (
+                  <div key={place.id} className={spans[index]}>
+                    <PlaceCard place={place} index={index} />
+                  </div>
+                );
+              })}
             </div>
 
             <div data-reveal className="reveal mt-9 flex flex-wrap items-center justify-between gap-5 rounded-[24px] border border-[#e3d3bf] bg-white px-6 py-5 shadow-[0_14px_35px_rgba(43,29,18,.05)]">
@@ -834,7 +807,7 @@ export default function Tourism() {
           <div className="absolute -left-40 top-20 h-[430px] w-[430px] rounded-full bg-[#a87545]/15 blur-[135px]" />
           <div className="absolute -right-40 bottom-0 h-[430px] w-[430px] rounded-full bg-[#d9a86e]/10 blur-[145px]" />
 
-          <div className="relative mx-auto max-w-7xl px-5 md:px-8">
+          <div className="relative mx-auto max-w-[1500px] px-5 md:px-8">
             <div className="mb-10 grid items-end gap-8 lg:grid-cols-[1fr_.8fr]">
               <div data-reveal className="reveal">
                 <span className="text-xs font-black uppercase tracking-[0.24em] text-[#d9a86e]">
@@ -869,7 +842,7 @@ export default function Tourism() {
               </div>
             </div>
 
-            <div ref={museumTrackRef} className="museum-track flex snap-x snap-mandatory gap-5 overflow-x-auto pb-5 pt-3 xl:justify-between">
+            <div ref={museumTrackRef} className="museum-track flex snap-x snap-mandatory gap-6 overflow-x-auto pb-7 pt-4 xl:justify-between">
               {museums.map((museum, index) => (
                 <MuseumCard key={museum.id} museum={museum} index={index} />
               ))}
@@ -885,7 +858,7 @@ export default function Tourism() {
 
         {/* GASTRONOMÍA — fila de seis como en el concepto */}
         <section id="gastronomia" className="relative scroll-mt-24 bg-[#fbf7ef] py-20 sm:py-24">
-          <div className="mx-auto max-w-[1480px] px-5 md:px-8">
+          <div className="mx-auto max-w-[1450px] px-5 md:px-8">
             <div className="mb-10 grid items-end gap-8 lg:grid-cols-[.9fr_1.1fr] lg:gap-20">
               <div data-reveal className="reveal">
                 <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">
@@ -901,7 +874,7 @@ export default function Tourism() {
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {dishes.map((dish, index) => (
                 <DishCard key={dish.id} dish={dish} index={index} />
               ))}
@@ -910,7 +883,7 @@ export default function Tourism() {
         </section>
 
         {/* FAQ compacto para mantener el valor SEO sin romper el diseño */}
-        <section id="preguntas-pimentel" className="bg-white py-16 sm:py-20">
+        <section id="preguntas-pimentel" className="bg-white py-12 sm:py-14">
           <div className="mx-auto max-w-7xl px-5 md:px-8">
             <div className="grid gap-10 lg:grid-cols-[.72fr_1.28fr] lg:gap-20">
               <div data-reveal className="reveal">
@@ -938,14 +911,14 @@ export default function Tourism() {
         {/* CTA final — dormitorio + conversión */}
         <section className="relative overflow-hidden bg-[#2b1d12] text-white">
           <SafeImage
-            src={SITE_URL + "/img/galeria/galeria-1.jpg"}
+            src={SITE_URL + "/img/galeria/galeria-2.jpg"}
             fallback={HERO_FALLBACK}
             alt="Casa Huéspedes Pimentel"
-            className="absolute inset-0 h-full w-full object-cover opacity-[0.48]"
+            className="absolute inset-0 h-full w-full object-cover object-center opacity-[0.62]"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1b0f09]/[0.97] via-[#1b0f09]/[0.82] to-[#1b0f09]/55" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1b0f09]/[0.95] via-[#1b0f09]/[0.68] to-[#1b0f09]/35" />
 
-          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 py-20 md:px-8 lg:grid-cols-[1.08fr_.72fr] lg:py-24">
+          <div className="relative mx-auto grid max-w-[1450px] items-center gap-12 px-5 py-24 md:px-8 lg:grid-cols-[1.1fr_.7fr] lg:py-28">
             <div data-reveal className="reveal max-w-3xl">
               <span className="text-xs font-black uppercase tracking-[0.24em] text-[#d9a86e]">
                 Vive Pimentel desde
@@ -966,7 +939,7 @@ export default function Tourism() {
               </div>
             </div>
 
-            <div data-reveal className="reveal rounded-[28px] border border-white/20 bg-[#fbf7ef]/95 p-6 text-[#2b1d12] shadow-[0_28px_70px_rgba(0,0,0,.30)] backdrop-blur-md sm:p-8" style={{ "--delay": "140ms" }}>
+            <div data-reveal className="reveal rounded-[30px] border border-white/35 bg-[#fbf7ef]/90 p-6 text-[#2b1d12] shadow-[0_32px_85px_rgba(0,0,0,.34)] backdrop-blur-xl sm:p-8" style={{ "--delay": "140ms" }}>
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a87545]">Tu experiencia comienza aquí</span>
               <h3 className="mt-3 font-serif text-3xl">Hospédate en Pimentel</h3>
               <p className="mt-4 text-sm leading-7 text-[#6c5b50]">
