@@ -6,8 +6,7 @@ import Footer from "../../components/Footer";
 
 const SITE_URL = "https://www.casahuespedespimentel.com";
 const HERO_VIDEO = "/videos/pimentel.mp4";
-const HERO_FALLBACK =
-  "https://commons.wikimedia.org/wiki/Special:Redirect/file/Puesta%20de%20sol%20sobre%20el%20muelle%20de%20Pimentel.jpg?width=2200";
+const HERO_FALLBACK = commonsImage("Sunset in Pimentel, Peru.jpg", 2200);
 
 const museumGalleryModules = import.meta.glob(
   "../../assets/gallery/museo-*.{jpg,jpeg,png,webp}",
@@ -391,44 +390,42 @@ function TourismVideo({ src, title }) {
 
 function PlaceCard({ place, index }) {
   return (
-    <TiltSurface className={place.feature ? "lg:col-span-2" : ""}>
+    <TiltSurface>
       <article
         data-reveal
-        style={{ "--delay": `${Math.min(index * 70, 280)}ms` }}
-        className={`reveal group relative overflow-hidden rounded-[30px] border border-white/[0.35] bg-[#2b1d12] shadow-[0_24px_60px_rgba(43,29,18,0.15)] ${
-          place.feature ? "min-h-[470px]" : "min-h-[390px]"
-        }`}
+        style={{ "--delay": \`\${Math.min(index * 70, 280)}ms\` }}
+        className="reveal group relative h-[345px] overflow-hidden rounded-[26px] border border-[#e8d7c2] bg-[#2b1d12] shadow-[0_18px_48px_rgba(43,29,18,0.14)] sm:h-[370px] xl:h-[390px]"
       >
         <SafeImage
           src={place.image}
           fallback={HERO_FALLBACK}
           alt={place.title}
-          className="absolute inset-0 h-full w-full object-cover transition duration-[1100ms] ease-out group-hover:scale-[1.08]"
+          className="absolute inset-0 h-full w-full object-cover transition duration-[1000ms] ease-out group-hover:scale-[1.09]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#160d08]/95 via-[#160d08]/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#160d08]/[0.96] via-[#160d08]/20 to-transparent" />
         <div className="tourism-shine absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100" />
-        <div className="absolute inset-x-0 bottom-0 z-10 p-6 sm:p-8">
-          <span className="inline-flex rounded-full border border-white/[0.35] bg-black/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-md">
+
+        <div className="absolute inset-x-0 bottom-0 z-10 p-6">
+          <span className="inline-flex rounded-full border border-white/30 bg-black/25 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white backdrop-blur-md">
             {place.category}
           </span>
-          <h3 className={`mt-4 font-serif leading-[1.02] text-white ${place.feature ? "text-4xl sm:text-5xl" : "text-3xl"}`}>
+          <h3 className="mt-3 font-serif text-[28px] leading-[1.02] text-white sm:text-3xl">
             {place.title}
           </h3>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-white/80 sm:text-base">
+          <p className="mt-3 max-w-md text-sm leading-6 text-white/75">
             {place.description}
           </p>
-          <a
-            href={place.source}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-5 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#f0c08d] transition group-hover:gap-4"
-          >
-            Ver fotografía real <ArrowIcon />
-          </a>
         </div>
-        <div className="absolute right-6 top-6 z-10 grid h-12 w-12 place-items-center rounded-full border border-white/[0.35] bg-black/20 text-white backdrop-blur-md transition duration-500 group-hover:rotate-[-10deg] group-hover:bg-[#a87545]">
+
+        <a
+          href={place.source}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={\`Ver fuente de la fotografía de \${place.title}\`}
+          className="absolute bottom-6 right-6 z-20 grid h-11 w-11 place-items-center rounded-full border border-white/40 bg-black/25 text-white backdrop-blur-md transition duration-500 group-hover:-rotate-12 group-hover:bg-[#a87545]"
+        >
           <ArrowIcon />
-        </div>
+        </a>
       </article>
     </TiltSurface>
   );
@@ -439,61 +436,53 @@ function MuseumCard({ museum, index }) {
     <TiltSurface className="shrink-0 snap-start">
       <article
         data-reveal
-        style={{ "--delay": `${index * 90}ms` }}
-        className="reveal museum-card group relative w-[82vw] max-w-[355px] overflow-hidden rounded-[30px] border border-[#d8a369]/[0.35] bg-[#24150e] shadow-[0_30px_80px_rgba(0,0,0,0.38)] sm:w-[340px]"
+        style={{ "--delay": \`\${index * 90}ms\` }}
+        className="reveal museum-card group relative w-[82vw] max-w-[320px] overflow-hidden rounded-[24px] border border-[#d8a369]/35 bg-[#28170f] shadow-[0_28px_70px_rgba(0,0,0,.40)] sm:w-[300px] xl:w-[292px]"
       >
-        <div className="relative h-[330px] overflow-hidden bg-[#1a0f0a]">
+        <div className="relative h-[260px] overflow-hidden bg-[#160d08]">
           <SafeImage
             src={museum.image}
             fallback={museum.brochure || HERO_FALLBACK}
-            alt={`Fotografía real de ${museum.title}`}
-            className="h-full w-full object-cover transition duration-[1000ms] ease-out group-hover:scale-[1.10]"
+            alt={\`Fotografía real de \${museum.title}\`}
+            className="h-full w-full object-cover transition duration-[1000ms] ease-out group-hover:scale-[1.12]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#24150e] via-[#24150e]/15 to-transparent" />
-          <div className="museum-aura absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#d9a86e]/20 blur-3xl transition duration-700 group-hover:scale-150 group-hover:bg-[#f1c180]/30" />
-          <span className="absolute left-5 top-5 rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.17em] text-white backdrop-blur-md">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#28170f] via-transparent to-black/10" />
+          <div className="museum-aura absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#d9a86e]/10 blur-3xl transition duration-700 group-hover:scale-150 group-hover:bg-[#f0b96d]/25" />
+          <span className="absolute left-5 top-5 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.17em] text-white backdrop-blur-md">
             {museum.location}
           </span>
         </div>
 
-        <div className="relative p-6 text-white">
-          <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#d9a86e]">
-            Historia viva del norte
+        <div className="relative p-5 text-white">
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#d9a86e]">
+            Patrimonio cultural
           </span>
-          <h3 className="mt-3 min-h-[74px] font-serif text-2xl leading-tight">
+          <h3 className="mt-3 min-h-[58px] font-serif text-[23px] leading-[1.08]">
             {museum.title}
           </h3>
-          <p className="mt-4 min-h-[105px] text-sm leading-7 text-white/[0.66]">
+          <p className="mt-3 min-h-[88px] text-[13px] leading-6 text-white/62">
             {museum.description}
           </p>
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             <a
               href={museum.officialUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-[#a87545] px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#c58b55]"
+              className="inline-flex items-center gap-2 rounded-full bg-[#a87545] px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.13em] text-white transition hover:bg-[#c58b55]"
             >
-              Información oficial <ArrowIcon />
+              Ver museo <ArrowIcon className="h-3.5 w-3.5" />
             </a>
             {museum.brochure && (
               <a
                 href={museum.brochure}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center rounded-full border border-white/20 px-4 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-white/[0.85] transition hover:bg-white hover:text-[#2b1d12]"
+                className="inline-flex items-center rounded-full border border-white/20 px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.13em] text-white/80 transition hover:bg-white hover:text-[#2b1d12]"
               >
                 Folleto
               </a>
             )}
           </div>
-          <a
-            href={museum.source}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-5 block text-[10px] leading-5 text-white/[0.45] underline decoration-white/20 underline-offset-4 hover:text-white/75"
-          >
-            Foto: {museum.credit}
-          </a>
         </div>
       </article>
     </TiltSurface>
@@ -505,36 +494,39 @@ function DishCard({ dish, index }) {
     <TiltSurface>
       <article
         data-reveal
-        style={{ "--delay": `${Math.min(index * 80, 320)}ms` }}
-        className="reveal food-card group relative min-h-[420px] overflow-hidden rounded-[28px] border border-[#eadbc7] bg-[#2b1d12] shadow-[0_20px_55px_rgba(43,29,18,0.13)]"
+        style={{ "--delay": \`\${Math.min(index * 70, 300)}ms\` }}
+        className="reveal food-card group relative h-[315px] overflow-hidden rounded-[22px] border border-[#eadbc7] bg-[#2b1d12] shadow-[0_16px_40px_rgba(43,29,18,.12)]"
       >
         <SafeImage
           src={dish.image}
           fallback={dish.fallback || HERO_FALLBACK}
-          alt={`Fotografía real de ${dish.title}`}
-          className="absolute inset-0 h-full w-full object-cover transition duration-[1050ms] ease-out group-hover:scale-[1.10]"
+          alt={\`Fotografía real de \${dish.title}\`}
+          className="absolute inset-0 h-full w-full object-cover transition duration-[1000ms] ease-out group-hover:scale-[1.12]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1d100a]/95 via-[#1d100a]/10 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#180d08]/[0.97] via-[#180d08]/10 to-transparent" />
         <div className="food-glint absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100" />
-        <div className="absolute inset-x-0 bottom-0 z-10 p-6">
-          <span className="inline-flex rounded-full border border-white/30 bg-black/25 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white backdrop-blur-md">
+
+        <div className="absolute inset-x-0 bottom-0 z-10 p-5">
+          <span className="inline-flex rounded-full border border-white/30 bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.15em] text-white backdrop-blur-md">
             {dish.category}
           </span>
-          <h3 className="mt-4 font-serif text-3xl leading-none text-white">
+          <h3 className="mt-3 font-serif text-[24px] leading-none text-white">
             {dish.title}
           </h3>
-          <p className="mt-3 text-sm leading-6 text-white/[0.78]">
+          <p className="mt-2 text-[12px] leading-5 text-white/72">
             {dish.description}
           </p>
-          <a
-            href={dish.source}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-4 inline-flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.16em] text-[#f0c08d]"
-          >
-            Ver fuente <ArrowIcon className="h-3.5 w-3.5" />
-          </a>
         </div>
+
+        <a
+          href={dish.source}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={\`Ver fuente de la fotografía de \${dish.title}\`}
+          className="absolute bottom-5 right-5 z-20 grid h-9 w-9 place-items-center rounded-full border border-white/35 bg-black/25 text-white backdrop-blur-md transition group-hover:bg-[#a87545]"
+        >
+          <ArrowIcon className="h-3.5 w-3.5" />
+        </a>
       </article>
     </TiltSurface>
   );
@@ -703,199 +695,213 @@ export default function Tourism() {
       <Navbar />
 
       <main id="inicio-turismo" className="tourism-page overflow-hidden bg-[#fbf7ef] text-[#2b1d12]">
+        {/* HERO — misma composición del concepto visual */}
         <section ref={heroRef} className="relative min-h-[720px] overflow-hidden lg:min-h-[820px]">
           <div className="hero-media absolute -inset-[8%]">
-            <video
-              src={HERO_VIDEO}
-              poster={HERO_FALLBACK}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
+            <SafeImage
+              src={HERO_FALLBACK}
+              fallback={places[0].image}
+              alt="Atardecer real frente al mar en Pimentel, Perú"
+              loading="eager"
               className="h-full w-full object-cover"
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-[#120a06]/95 via-[#1c0f08]/[0.68] to-[#1c0f08]/15" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#150c07]/[0.82] via-transparent to-black/15" />
+
+          <div className="absolute inset-0 bg-gradient-to-r from-[#120a06]/[0.95] via-[#1c0f08]/55 to-[#1c0f08]/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#150c07]/65 via-transparent to-black/15" />
           <div className="ambient-orbit absolute right-[12%] top-[18%] h-64 w-64 rounded-full bg-[#d9a86e]/15 blur-[100px]" />
 
           <div className="relative z-10 mx-auto flex min-h-[720px] max-w-7xl items-center px-6 py-28 md:px-10 lg:min-h-[820px] lg:px-12">
-            <div className="max-w-4xl">
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#e8b97f] shadow-[0_0_22px_rgba(232,185,127,.8)]" />
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white">Descubre el norte del Perú</span>
+            <div className="max-w-[780px]">
+              <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-black/15 px-4 py-2 backdrop-blur-md">
+                <span className="h-2 w-2 rounded-full bg-[#e8b97f] shadow-[0_0_20px_rgba(232,185,127,.9)]" />
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white">
+                  Descubre el norte del Perú
+                </span>
               </div>
-              <p className="mt-7 text-xs font-black uppercase tracking-[0.3em] text-[#e8b97f]">Casa Huéspedes Pimentel</p>
-              <h1 className="mt-5 max-w-4xl font-serif text-5xl leading-[.98] tracking-[-0.04em] text-white sm:text-7xl lg:text-[92px]">
-                Pimentel, Perú: qué hacer y qué conocer
+
+              <h1 className="mt-7 max-w-[760px] font-serif text-5xl leading-[.96] tracking-[-0.04em] text-white sm:text-7xl lg:text-[88px]">
+                Pimentel, Perú:
+                <span className="block font-normal text-white/92">qué hacer y qué conocer</span>
               </h1>
-              <p className="mt-7 max-w-2xl text-base leading-8 text-white/[0.82] sm:text-lg">
-                Una guía visual para descubrir los lugares turísticos de Pimentel, su playa, el muelle, los caballitos de totora, la gastronomía y los museos de Lambayeque.
+
+              <p className="mt-7 max-w-2xl text-base leading-8 text-white/82 sm:text-lg">
+                Guía para descubrir Pimentel, Lambayeque: playa, muelle, caballitos de totora,
+                gastronomía y experiencias frente al mar.
               </p>
+
               <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-                <a href="#lugares-turisticos" className="inline-flex items-center justify-center gap-3 rounded-full bg-[#a87545] px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#c58b55]">
-                  Explorar Pimentel <ArrowIcon />
+                <a
+                  href="#lugares-turisticos"
+                  className="inline-flex items-center justify-center gap-3 rounded-full bg-[#b77c42] px-7 py-4 text-[11px] font-black uppercase tracking-[0.15em] text-white shadow-[0_12px_30px_rgba(98,55,26,.25)] transition hover:-translate-y-1 hover:bg-[#c88d55]"
+                >
+                  Ver Pimentel <ArrowIcon />
                 </a>
-                <a href="#videos-pimentel" className="inline-flex items-center justify-center gap-3 rounded-full border border-white/30 bg-white/10 px-6 py-4 text-xs font-black uppercase tracking-[0.14em] text-white backdrop-blur-md transition hover:bg-white hover:text-[#2b1d12]">
-                  <span className="grid h-8 w-8 place-items-center rounded-full border border-current"><PlayIcon className="h-3.5 w-3.5" /></span>
-                  Ver Pimentel en movimiento
+                <a
+                  href={videos[0].src}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-3 rounded-full border border-white/35 bg-black/15 px-6 py-4 text-[11px] font-black uppercase tracking-[0.14em] text-white backdrop-blur-md transition hover:bg-white hover:text-[#2b1d12]"
+                >
+                  <span className="grid h-9 w-9 place-items-center rounded-full border border-current">
+                    <PlayIcon className="h-3.5 w-3.5" />
+                  </span>
+                  Mira el video
                 </a>
               </div>
             </div>
           </div>
 
-          <div className="scroll-line absolute bottom-8 left-1/2 z-20 h-12 -translate-x-1/2 pl-px text-white/70">
-            <span className="absolute left-1/2 top-[-22px] -translate-x-1/2 whitespace-nowrap text-[9px] font-black uppercase tracking-[0.22em]">Scroll</span>
+          <div className="absolute right-8 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-end gap-3 xl:flex">
+            {["Mar", "Gastronomía", "Cultura", "Tradición", "Experiencias"].map((item) => (
+              <span key={item} className="text-[9px] font-black uppercase tracking-[0.22em] text-white/70">
+                {item}
+              </span>
+            ))}
+          </div>
+
+          <div className="absolute bottom-12 right-[8%] z-20 hidden items-center gap-4 lg:flex">
+            <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-[0_15px_35px_rgba(0,0,0,.35)]">
+              <SafeImage src={places[0].image} fallback={HERO_FALLBACK} alt="" className="h-full w-full object-cover" />
+            </div>
+            <div className="rounded-2xl border border-white/15 bg-black/35 px-5 py-3 text-white backdrop-blur-md">
+              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-[#e8b97f]">Movimiento de fondo</span>
+              <span className="mt-1 block text-xs text-white/75">Parallax suave al hacer scroll</span>
+            </div>
+          </div>
+
+          <div className="absolute left-7 top-1/2 z-20 hidden -translate-y-1/2 lg:block">
+            <span className="[writing-mode:vertical-rl] rotate-180 text-[9px] font-black uppercase tracking-[0.25em] text-white/65">
+              Scroll
+            </span>
+            <div className="scroll-line relative mx-auto mt-4 h-12 w-px" />
           </div>
         </section>
 
-        <section className="relative bg-[#fbf7ef] py-20 sm:py-24">
-          <div className="pointer-events-none absolute -left-24 top-10 h-64 w-64 rounded-full border border-[#a87545]/10" />
+        {/* LUGARES — 3 x 2 como en el mockup */}
+        <section id="lugares-turisticos" className="relative scroll-mt-24 bg-[#fbf7ef] py-20 sm:py-24">
+          <div className="pointer-events-none absolute -left-28 top-14 h-72 w-72 rounded-full border border-[#a87545]/10" />
+          <div className="pointer-events-none absolute -right-24 top-10 h-64 w-64 rounded-full border border-[#a87545]/10" />
+
           <div className="mx-auto max-w-7xl px-5 md:px-8">
-            <div className="grid items-end gap-10 lg:grid-cols-[1fr_.9fr] lg:gap-20">
+            <div className="mb-12 grid items-end gap-9 lg:grid-cols-[1fr_.85fr] lg:gap-20">
               <div data-reveal className="reveal">
-                <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">Pimentel en movimiento</span>
-                <h2 className="mt-5 max-w-3xl font-serif text-4xl leading-[1.02] sm:text-6xl lg:text-7xl">Descubre este destino antes de visitarlo</h2>
+                <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">
+                  Pimentel en movimiento
+                </span>
+                <h2 className="mt-5 max-w-3xl font-serif text-4xl leading-[1.01] sm:text-6xl lg:text-7xl">
+                  Descubre este destino antes de visitarlo
+                </h2>
               </div>
-              <div data-reveal className="reveal" style={{ "--delay": "120ms" }}>
+
+              <div data-reveal className="reveal pb-2" style={{ "--delay": "120ms" }}>
                 <p className="text-base leading-8 text-[#6c5b50] sm:text-lg">
-                  Recorre el mar, la historia, la gastronomía y las tradiciones de Pimentel a través de una guía visual pensada para inspirar tu próxima visita al balneario.
+                  Conoce el mar, el muelle, las tradiciones y los sabores de Pimentel mediante
+                  una selección visual de lugares y experiencias reales.
                 </p>
-                <div className="mt-6 flex flex-wrap gap-3 text-[10px] font-black uppercase tracking-[0.14em] text-[#7a5636]">
-                  <a href="#lugares-turisticos" className="rounded-full border border-[#dfcfbb] px-4 py-2 transition hover:border-[#a87545] hover:bg-[#a87545] hover:text-white">Lugares</a>
-                  <a href="#museos" className="rounded-full border border-[#dfcfbb] px-4 py-2 transition hover:border-[#a87545] hover:bg-[#a87545] hover:text-white">Museos</a>
-                  <a href="#gastronomia" className="rounded-full border border-[#dfcfbb] px-4 py-2 transition hover:border-[#a87545] hover:bg-[#a87545] hover:text-white">Gastronomía</a>
-                  <a href="#pimentel-de-noche" className="rounded-full border border-[#dfcfbb] px-4 py-2 transition hover:border-[#a87545] hover:bg-[#a87545] hover:text-white">Pimentel de noche</a>
-                </div>
+                <p className="mt-6 font-serif text-2xl italic leading-tight text-[#a87545]">
+                  Donde el mar, la tradición y la hospitalidad se encuentran.
+                </p>
               </div>
             </div>
-          </div>
-        </section>
 
-        <div id="videos-pimentel" className="scroll-mt-24">
-          <VideoSection video={videos[0]} />
-          <VideoSection video={videos[1]} reverse />
-        </div>
-
-        <section id="lugares-turisticos" className="scroll-mt-24 bg-[#fbf7ef] py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-5 md:px-8">
-            <div className="mb-12 grid items-end gap-8 lg:grid-cols-[.9fr_1.1fr] lg:gap-20">
-              <div data-reveal className="reveal">
-                <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">Mar, tradición e historia</span>
-                <h2 className="mt-5 font-serif text-4xl leading-[1.03] sm:text-6xl">Lugares turísticos de Pimentel</h2>
-              </div>
-              <p data-reveal className="reveal max-w-2xl text-base leading-8 text-[#6c5b50] sm:text-lg" style={{ "--delay": "110ms" }}>
-                Desde el muelle y la playa hasta la pesca artesanal y la Casa Museo José Abelardo Quiñones, esta selección reúne lugares reales para construir una visita con mar, cultura e identidad local.
-              </p>
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-3">
-              {places.map((place, index) => (
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {places.slice(0, 6).map((place, index) => (
                 <PlaceCard key={place.id} place={place} index={index} />
               ))}
             </div>
-          </div>
-        </section>
 
-        <section id="pimentel-de-noche" className="relative scroll-mt-24 overflow-hidden bg-[#170d08] py-20 text-white sm:py-24">
-          <SafeImage
-            src={commonsImage("Sunset in Pimentel, Peru.jpg", 2000)}
-            fallback={HERO_FALLBACK}
-            alt="Atardecer real en Pimentel, Perú"
-            className="absolute inset-0 h-full w-full object-cover opacity-[0.38]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#140b07]/[0.98] via-[#1d100a]/[0.88] to-[#1d100a]/[0.55]" />
-          <div className="ambient-orbit absolute -right-16 top-10 h-72 w-72 rounded-full bg-[#d9a86e]/15 blur-[100px]" />
-          <div className="relative mx-auto grid max-w-7xl gap-12 px-5 md:px-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:gap-20">
-            <div data-reveal className="reveal">
-              <span className="text-xs font-black uppercase tracking-[0.24em] text-[#d9a86e]">Cuando cae el sol</span>
-              <h2 className="mt-5 font-serif text-4xl leading-[1.02] sm:text-6xl">Pimentel de noche: el encanto continúa frente al mar</h2>
-              <p className="mt-6 max-w-xl text-base leading-8 text-white/[0.72] sm:text-lg">
-                El atardecer da paso a una experiencia más tranquila: paseo por el malecón, vistas del muelle iluminado y una cena para cerrar el día con sabor norteño.
-              </p>
-              <a href="#gastronomia" className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#a87545] px-7 py-4 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-1 hover:bg-[#c58b55]">
-                Descubrir sabores <ArrowIcon />
+            <div data-reveal className="reveal mt-9 flex flex-wrap items-center justify-between gap-5 rounded-[24px] border border-[#e3d3bf] bg-white px-6 py-5 shadow-[0_14px_35px_rgba(43,29,18,.05)]">
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#a87545]">También en Pimentel</span>
+                <p className="mt-2 font-serif text-2xl">Casa Museo José Abelardo Quiñones y Playa Las Rocas</p>
+              </div>
+              <a href="#preguntas-pimentel" className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.14em] text-[#7b4a1f]">
+                Más información <ArrowIcon />
               </a>
             </div>
-
-            <div data-reveal className="reveal grid gap-4 sm:grid-cols-3" style={{ "--delay": "130ms" }}>
-              {[
-                ["Atardecer", "Empieza la noche viendo cómo el cielo cambia sobre el Pacífico."],
-                ["Malecón", "Camina frente al mar y contempla el ambiente costero después del ocaso."],
-                ["Cena norteña", "Termina el día con pescados, mariscos y platos tradicionales de Lambayeque."],
-              ].map(([title, text], index) => (
-                <article key={title} className="group rounded-[24px] border border-white/15 bg-black/25 p-5 backdrop-blur-md transition duration-500 hover:-translate-y-2 hover:border-[#d9a86e]/[0.55] hover:bg-black/40">
-                  <span className="grid h-9 w-9 place-items-center rounded-full border border-[#d9a86e]/40 bg-[#d9a86e]/10 text-xs font-black text-[#f0c08d]">0{index + 1}</span>
-                  <h3 className="mt-5 font-serif text-2xl">{title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-white/[0.62]">{text}</p>
-                </article>
-              ))}
-            </div>
           </div>
         </section>
 
-        <section id="museos" className="relative scroll-mt-24 overflow-hidden bg-[#1f120c] py-20 text-white sm:py-24">
-          <div className="absolute -left-44 top-24 h-96 w-96 rounded-full bg-[#a87545]/15 blur-[130px]" />
-          <div className="absolute -right-40 bottom-0 h-[430px] w-[430px] rounded-full bg-[#d9a86e]/10 blur-[140px]" />
-          <div className="mx-auto max-w-7xl px-5 md:px-8">
+        {/* MUSEOS — bloque oscuro y cinematográfico */}
+        <section id="museos" className="relative scroll-mt-24 overflow-hidden bg-[#21130c] py-20 text-white sm:py-24">
+          <SafeImage
+            src={museums[0].image}
+            fallback={HERO_FALLBACK}
+            alt=""
+            className="pointer-events-none absolute -left-24 top-24 h-[520px] w-[360px] rounded-[50%] object-cover opacity-[0.08] blur-[1px]"
+          />
+          <div className="absolute -left-40 top-20 h-[430px] w-[430px] rounded-full bg-[#a87545]/15 blur-[135px]" />
+          <div className="absolute -right-40 bottom-0 h-[430px] w-[430px] rounded-full bg-[#d9a86e]/10 blur-[145px]" />
+
+          <div className="relative mx-auto max-w-7xl px-5 md:px-8">
             <div className="mb-10 grid items-end gap-8 lg:grid-cols-[1fr_.8fr]">
               <div data-reveal className="reveal">
-                <span className="text-xs font-black uppercase tracking-[0.24em] text-[#d9a86e]">Historia viva del norte</span>
-                <h2 className="mt-5 max-w-3xl font-serif text-4xl leading-[1.02] sm:text-6xl lg:text-7xl">Museos de Lambayeque: historia viva del norte</h2>
+                <span className="text-xs font-black uppercase tracking-[0.24em] text-[#d9a86e]">
+                  Historia viva del norte
+                </span>
+                <h2 className="mt-5 max-w-3xl font-serif text-4xl leading-[1.02] sm:text-6xl lg:text-7xl">
+                  Museos de Lambayeque
+                </h2>
+                <p className="mt-5 max-w-3xl text-sm leading-7 text-white/60 sm:text-base">
+                  Completa tu visita a Pimentel con una ruta por museos que conservan el legado
+                  Mochica, Lambayeque y Sicán.
+                </p>
               </div>
-              <div data-reveal className="reveal lg:text-right" style={{ "--delay": "120ms" }}>
-                <p className="text-base leading-8 text-white/[0.65] sm:text-lg">Completa tu visita con algunos de los museos más representativos de Lambayeque y descubre el legado Mochica, Lambayeque y Sicán.</p>
-                <div className="mt-6 flex gap-3 lg:justify-end">
-                  <button type="button" onClick={() => scrollMuseums(-1)} aria-label="Museo anterior" className="grid h-12 w-12 place-items-center rounded-full border border-white/20 bg-white/5 text-white transition hover:bg-white hover:text-[#2b1d12]"><ChevronIcon direction="left" /></button>
-                  <button type="button" onClick={() => scrollMuseums(1)} aria-label="Museo siguiente" className="grid h-12 w-12 place-items-center rounded-full border border-white/20 bg-white/5 text-white transition hover:bg-white hover:text-[#2b1d12]"><ChevronIcon direction="right" /></button>
-                </div>
+
+              <div data-reveal className="reveal flex flex-wrap gap-3 lg:justify-end" style={{ "--delay": "120ms" }}>
+                {museumMap && (
+                  <a
+                    href={museumMap}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-3 rounded-full bg-[#a87545] px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-1 hover:bg-[#c58b55]"
+                  >
+                    Ver ruta de museos <ArrowIcon />
+                  </a>
+                )}
+                <button type="button" onClick={() => scrollMuseums(-1)} aria-label="Museo anterior" className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/5 transition hover:bg-white hover:text-[#2b1d12]">
+                  <ChevronIcon direction="left" />
+                </button>
+                <button type="button" onClick={() => scrollMuseums(1)} aria-label="Museo siguiente" className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/5 transition hover:bg-white hover:text-[#2b1d12]">
+                  <ChevronIcon direction="right" />
+                </button>
               </div>
             </div>
 
-            {museumMap && (
-              <div data-reveal className="reveal mb-10 overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.045] shadow-[0_28px_80px_rgba(0,0,0,.25)]" style={{ "--delay": "150ms" }}>
-                <div className="grid items-center lg:grid-cols-[.7fr_1.3fr]">
-                  <div className="bg-[#eadfce] p-5 sm:p-7">
-                    <a href={museumMap} target="_blank" rel="noreferrer" aria-label="Ampliar mapa de museos de Lambayeque">
-                      <img src={museumMap} alt="Mapa de la ruta de museos de Lambayeque" loading="lazy" className="mx-auto max-h-[360px] w-full object-contain transition duration-700 hover:scale-[1.025]" />
-                    </a>
-                  </div>
-                  <div className="p-7 sm:p-10 lg:p-12">
-                    <span className="text-[10px] font-black uppercase tracking-[0.22em] text-[#d9a86e]">Planea tu recorrido</span>
-                    <h3 className="mt-4 font-serif text-3xl sm:text-4xl">Ruta de museos de Lambayeque</h3>
-                    <p className="mt-5 max-w-xl text-sm leading-7 text-white/60 sm:text-base">Ubica los principales museos de la región y combina cultura, arqueología y costa en una salida desde Pimentel.</p>
-                    <a href={museumMap} target="_blank" rel="noreferrer" className="mt-7 inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/5 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-white transition hover:bg-white hover:text-[#2b1d12]">Ampliar mapa <ArrowIcon /></a>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={museumTrackRef} className="museum-track flex snap-x snap-mandatory gap-6 overflow-x-auto pb-5 pt-3">
+            <div ref={museumTrackRef} className="museum-track flex snap-x snap-mandatory gap-5 overflow-x-auto pb-5 pt-3 xl:justify-between">
               {museums.map((museum, index) => (
                 <MuseumCard key={museum.id} museum={museum} index={index} />
               ))}
             </div>
 
-            <p className="mt-8 max-w-4xl text-sm leading-7 text-white/[0.45]">
-              Antes de visitar un museo, consulta horarios, tarifas y condiciones actuales en su enlace oficial del Ministerio de Cultura.
-            </p>
+            <div className="mt-4 flex justify-center gap-2">
+              {museums.map((museum, index) => (
+                <span key={museum.id} className={index === 0 ? "h-1 w-10 rounded-full bg-[#d9a86e]" : "h-1 w-6 rounded-full bg-white/20"} />
+              ))}
+            </div>
           </div>
         </section>
 
-        <section id="gastronomia" className="scroll-mt-24 bg-white py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-5 md:px-8">
-            <div className="mb-12 grid items-end gap-8 lg:grid-cols-[.9fr_1.1fr] lg:gap-20">
+        {/* GASTRONOMÍA — fila de seis como en el concepto */}
+        <section id="gastronomia" className="relative scroll-mt-24 bg-[#fbf7ef] py-20 sm:py-24">
+          <div className="mx-auto max-w-[1480px] px-5 md:px-8">
+            <div className="mb-10 grid items-end gap-8 lg:grid-cols-[.9fr_1.1fr] lg:gap-20">
               <div data-reveal className="reveal">
-                <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">Sabores del norte</span>
-                <h2 className="mt-5 font-serif text-4xl leading-[1.02] sm:text-6xl">Gastronomía de Pimentel y Lambayeque</h2>
+                <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">
+                  Sabores del norte
+                </span>
+                <h2 className="mt-5 font-serif text-4xl leading-[1.02] sm:text-6xl">
+                  Gastronomía de Pimentel
+                </h2>
               </div>
-              <div data-reveal className="reveal" style={{ "--delay": "120ms" }}>
-                <p className="text-base leading-8 text-[#6c5b50] sm:text-lg">La costa y la cocina lambayecana se encuentran en platos de mar, recetas tradicionales y sabores que forman parte de la identidad del norte peruano.</p>
-              </div>
+              <p data-reveal className="reveal max-w-2xl text-base leading-8 text-[#6c5b50] sm:text-lg" style={{ "--delay": "120ms" }}>
+                Mar, tradición culinaria lambayecana e ingredientes del norte en seis platos
+                que forman parte de la experiencia de viajar por esta región.
+              </p>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {dishes.map((dish, index) => (
                 <DishCard key={dish.id} dish={dish} index={index} />
               ))}
@@ -903,50 +909,90 @@ export default function Tourism() {
           </div>
         </section>
 
-        <section id="preguntas-pimentel" className="bg-[#f5ecdf] py-20 sm:py-24">
-          <div className="mx-auto grid max-w-7xl gap-10 px-5 md:px-8 lg:grid-cols-[.75fr_1.25fr] lg:gap-20">
-            <div data-reveal className="reveal">
-              <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">Planifica tu visita</span>
-              <h2 className="mt-5 font-serif text-4xl leading-[1.04] sm:text-5xl">Todo lo que necesitas saber para conocer Pimentel</h2>
-              <p className="mt-6 text-base leading-8 text-[#6c5b50]">Respuestas rápidas para organizar tu visita, elegir qué conocer y aprovechar mejor tu estadía en Pimentel y Lambayeque.</p>
-            </div>
-            <div data-reveal className="reveal space-y-3" style={{ "--delay": "120ms" }}>
-              {faqItems.map((item) => (
-                <details key={item.question} className="group rounded-[22px] border border-[#dfcfbb] bg-white px-6 py-5 shadow-[0_12px_30px_rgba(43,29,18,.05)]">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-5 font-serif text-xl text-[#2b1d12] marker:hidden sm:text-2xl">
-                    {item.question}
-                    <span className="faq-chevron grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f3e7d7] text-[#7b4a1f]"><ChevronIcon /></span>
-                  </summary>
-                  <p className="mt-4 max-w-3xl pr-10 text-sm leading-7 text-[#6c5b50] sm:text-base">{item.answer}</p>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="relative overflow-hidden bg-[#2b1d12] text-white">
-          <SafeImage src={`${SITE_URL}/img/galeria/galeria-1.jpg`} fallback={HERO_FALLBACK} alt="Casa Huéspedes Pimentel" className="absolute inset-0 h-full w-full object-cover opacity-[0.35]" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1b0f09]/[0.96] via-[#1b0f09]/[0.86] to-[#1b0f09]/60" />
-          <div className="relative mx-auto max-w-7xl px-5 py-24 md:px-8 sm:py-28">
-            <div data-reveal className="reveal max-w-3xl">
-              <span className="text-xs font-black uppercase tracking-[0.24em] text-[#d9a86e]">Tu base para explorar</span>
-              <h2 className="mt-5 font-serif text-4xl leading-[1.02] sm:text-6xl">Vive Pimentel desde Casa Huéspedes</h2>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-white/[0.72] sm:text-lg">Después de conocer el muelle, la playa, los museos y los sabores del norte, vuelve a un espacio cómodo y cerca del mar.</p>
-              <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-                <Link to="/habitaciones" className="inline-flex items-center justify-center gap-3 rounded-full bg-[#a87545] px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white transition hover:-translate-y-1 hover:bg-[#c58b55]">Ver habitaciones <ArrowIcon /></Link>
-                <a href="/#disponibilidad" className="inline-flex items-center justify-center rounded-full border border-white/25 bg-white/5 px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white backdrop-blur-sm transition hover:bg-white hover:text-[#2b1d12]">Consultar disponibilidad</a>
+        {/* FAQ compacto para mantener el valor SEO sin romper el diseño */}
+        <section id="preguntas-pimentel" className="bg-white py-16 sm:py-20">
+          <div className="mx-auto max-w-7xl px-5 md:px-8">
+            <div className="grid gap-10 lg:grid-cols-[.72fr_1.28fr] lg:gap-20">
+              <div data-reveal className="reveal">
+                <span className="text-xs font-black uppercase tracking-[0.24em] text-[#a87545]">Antes de viajar</span>
+                <h2 className="mt-5 font-serif text-4xl leading-[1.03] sm:text-5xl">Conoce Pimentel mejor</h2>
+                <p className="mt-5 text-base leading-8 text-[#6c5b50]">
+                  Información útil sobre turismo, cultura y experiencias para organizar tu visita.
+                </p>
+              </div>
+              <div data-reveal className="reveal grid gap-3 sm:grid-cols-2" style={{ "--delay": "110ms" }}>
+                {faqItems.map((item) => (
+                  <details key={item.question} className="rounded-[18px] border border-[#e6d7c5] bg-[#fbf7ef] px-5 py-4">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-serif text-lg marker:hidden">
+                      {item.question}
+                      <span className="faq-chevron text-[#a87545]"><ChevronIcon /></span>
+                    </summary>
+                    <p className="mt-3 text-sm leading-6 text-[#6c5b50]">{item.answer}</p>
+                  </details>
+                ))}
               </div>
             </div>
           </div>
         </section>
 
-        <section className="bg-[#160d08] py-8 text-white/50">
+        {/* CTA final — dormitorio + conversión */}
+        <section className="relative overflow-hidden bg-[#2b1d12] text-white">
+          <SafeImage
+            src={SITE_URL + "/img/galeria/galeria-1.jpg"}
+            fallback={HERO_FALLBACK}
+            alt="Casa Huéspedes Pimentel"
+            className="absolute inset-0 h-full w-full object-cover opacity-[0.48]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1b0f09]/[0.97] via-[#1b0f09]/[0.82] to-[#1b0f09]/55" />
+
+          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 py-20 md:px-8 lg:grid-cols-[1.08fr_.72fr] lg:py-24">
+            <div data-reveal className="reveal max-w-3xl">
+              <span className="text-xs font-black uppercase tracking-[0.24em] text-[#d9a86e]">
+                Vive Pimentel desde
+              </span>
+              <h2 className="mt-5 font-serif text-5xl leading-[.98] sm:text-6xl">
+                Casa Huéspedes
+              </h2>
+              <p className="mt-6 max-w-xl text-base leading-8 text-white/72">
+                Descansa en un ambiente acogedor y disfruta de una ubicación ideal para vivir
+                todo lo que Pimentel tiene para ofrecer.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-5 text-[10px] font-black uppercase tracking-[0.13em] text-white/75">
+                <span>Habitaciones cómodas</span>
+                <span>•</span>
+                <span>Cerca del mar</span>
+                <span>•</span>
+                <span>Atención personalizada</span>
+              </div>
+            </div>
+
+            <div data-reveal className="reveal rounded-[28px] border border-white/20 bg-[#fbf7ef]/95 p-6 text-[#2b1d12] shadow-[0_28px_70px_rgba(0,0,0,.30)] backdrop-blur-md sm:p-8" style={{ "--delay": "140ms" }}>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a87545]">Tu experiencia comienza aquí</span>
+              <h3 className="mt-3 font-serif text-3xl">Hospédate en Pimentel</h3>
+              <p className="mt-4 text-sm leading-7 text-[#6c5b50]">
+                Revisa las categorías disponibles y elige tus fechas para comenzar tu estadía.
+              </p>
+              <div className="mt-7 grid gap-3">
+                <Link to="/habitaciones" className="inline-flex items-center justify-center gap-3 rounded-full bg-[#a87545] px-6 py-4 text-[10px] font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-1 hover:bg-[#c58b55]">
+                  Ver habitaciones <ArrowIcon />
+                </Link>
+                <a href="/#disponibilidad" className="inline-flex items-center justify-center rounded-full border border-[#d7c5ae] px-6 py-4 text-[10px] font-black uppercase tracking-[0.14em] text-[#2b1d12] transition hover:border-[#a87545] hover:text-[#a87545]">
+                  Consultar disponibilidad
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#160d08] py-7 text-white/45">
           <div className="mx-auto max-w-7xl px-5 md:px-8">
-            <details className="text-xs leading-6">
-              <summary className="cursor-pointer font-bold uppercase tracking-[0.16em] text-white/70">Créditos de fotografías reales utilizadas</summary>
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <details className="text-[11px] leading-6">
+              <summary className="cursor-pointer font-black uppercase tracking-[0.16em] text-white/65">
+                Créditos de las fotografías reales utilizadas
+              </summary>
+              <div className="mt-5 grid gap-2 md:grid-cols-2">
                 {[...places, ...museums, ...dishes].map((item) => (
-                  <a key={`${item.id}-credit`} href={item.source} target="_blank" rel="noreferrer" className="hover:text-white">
+                  <a key={item.id + "-credit"} href={item.source} target="_blank" rel="noreferrer" className="hover:text-white">
                     {item.title}: {item.credit}
                   </a>
                 ))}
