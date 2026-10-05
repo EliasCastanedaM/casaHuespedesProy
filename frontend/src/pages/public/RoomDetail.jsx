@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { getRoomCategoryBySlug } from "../../services/roomService";
 import { searchCategoryAvailability } from "../../services/bookingService";
 import "./RoomDetail.css";
+import "./FuturisticRoomDetail.css";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1400&auto=format&fit=crop";
@@ -322,7 +323,8 @@ export default function RoomDetail() {
     : 0;
 
   return (
-    <main className="room-detail-page">
+    <main className="room-detail-page future-room-detail-page">
+      <div className="future-detail-ambient" aria-hidden="true" />
       <div className="room-detail-shell">
         <Link
           to="/habitaciones"
@@ -360,7 +362,7 @@ export default function RoomDetail() {
             </div>
 
             <div className="room-detail-showcase">
-              <div className="room-detail-media">
+              <div className="room-detail-media future-room-detail-media">
                 {selectedMedia?.type === "video" ? (
                   <video
                     src={selectedMedia.url}
@@ -598,7 +600,7 @@ export default function RoomDetail() {
           </div>
 
           <aside className="room-detail-booking-aside">
-            <div className="room-detail-booking-card">
+            <div className="room-detail-booking-card future-room-booking-card">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a87545]">
                 Consulta de disponibilidad
               </p>
