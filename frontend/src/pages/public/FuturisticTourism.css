@@ -1,0 +1,119 @@
+.future-tourism {
+  position: relative;
+  background:
+    radial-gradient(circle at 10% 2%, rgba(211,161,95,.12), transparent 24%),
+    #fbf7ef;
+}
+
+.tourism-future-hero {
+  min-height: min(860px, calc(100vh - 24px)) !important;
+}
+
+.tourism-future-hero::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  z-index: 4;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 34px;
+  pointer-events: none;
+}
+
+.tourism-future-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: .14;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to right,#000,transparent 78%);
+}
+
+.future-tourism h1 {
+  text-wrap: balance;
+  text-shadow: 0 10px 34px rgba(0,0,0,.18);
+}
+
+.future-tourism .tourism-future-secondary {
+  box-shadow: inset 0 1px rgba(255,255,255,.15);
+}
+
+.future-tourism section {
+  scroll-margin-top: 96px;
+}
+
+.future-tourism article {
+  transform-style: preserve-3d;
+  transition:
+    transform .45s cubic-bezier(.22,1,.36,1),
+    box-shadow .4s ease,
+    border-color .4s ease;
+}
+
+.future-tourism article:hover {
+  transform: translateY(-6px);
+}
+
+.future-tourism .group:hover {
+  box-shadow:
+    0 28px 65px rgba(43,29,18,.16),
+    0 0 0 4px rgba(168,117,69,.045);
+}
+
+.future-tourism .group img {
+  transition: transform .85s cubic-bezier(.22,1,.36,1) !important;
+}
+
+.future-tourism .group:hover img {
+  transform: scale(1.055);
+}
+
+.future-tourism section.bg-\[\#2b1d12\] {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(168,117,69,.16), transparent 28%),
+    linear-gradient(135deg,#23160e,#2b1d12) !important;
+}
+
+.future-tourism section.bg-\[\#2b1d12\]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .08;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);
+  background-size: 54px 54px;
+}
+
+.future-tourism .rounded-\[28px\],
+.future-tourism .rounded-\[30px\],
+.future-tourism .rounded-\[36px\] {
+  backdrop-filter: blur(12px);
+}
+
+.future-tourism a {
+  transition:
+    transform .24s cubic-bezier(.22,1,.36,1),
+    background .24s ease,
+    border-color .24s ease,
+    box-shadow .24s ease;
+}
+
+.future-tourism a:hover {
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .future-tourism article,
+  .future-tourism .group img,
+  .future-tourism a {
+    transition: none !important;
+  }
+}
