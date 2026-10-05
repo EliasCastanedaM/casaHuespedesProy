@@ -1,8 +1,27 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  ArrowUpRight,
+  BedDouble,
+  CalendarDays,
+  ChevronRight,
+  Coffee,
+  HeartHandshake,
+  MapPin,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Waves,
+  Wifi,
+} from "lucide-react";
 import InteractiveGallery from "../../components/InteractiveGallery";
 import RollingLink from "../../components/RollingLink";
+import ScrollReveal from "../../components/ScrollReveal";
+import TiltSurface from "../../components/TiltSurface";
+import { getRoomCategories } from "../../services/roomService";
 import "./Home.css";
+import "./FuturisticHome.css";
 
 const includedServices = [
   {
@@ -67,185 +86,348 @@ const galleryImages = [
 
 
 export default function Home() {
+  const navigate = useNavigate();
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [featuredCategories, setFeaturedCategories] = useState([]);
+  const [staySearch, setStaySearch] = useState({
+    checkIn: "",
+    checkOut: "",
+    guests: 2,
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadFeaturedCategories() {
+      try {
+        const data = await getRoomCategories();
+        if (active) {
+          setFeaturedCategories(Array.isArray(data) ? data.slice(0, 5) : []);
+        }
+      } catch (error) {
+        console.error("No se pudieron cargar las categorías destacadas:", error);
+      }
+    }
+
+    loadFeaturedCategories();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function handleHeroPointerMove(event) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) / bounds.width) * 100;
+    const y = ((event.clientY - bounds.top) / bounds.height) * 100;
+
+    event.currentTarget.style.setProperty("--pointer-x", `${x}%`);
+    event.currentTarget.style.setProperty("--pointer-y", `${y}%`);
+  }
+
+  function handleStaySearchSubmit(event) {
+    event.preventDefault();
+
+    const params = new URLSearchParams();
+    if (staySearch.checkIn) params.set("checkIn", staySearch.checkIn);
+    if (staySearch.checkOut) params.set("checkOut", staySearch.checkOut);
+    params.set("guests", String(staySearch.guests || 1));
+
+    navigate(`/habitaciones?${params.toString()}#categorias`);
+  }
 
   return (
-    <main className="home-page">
-      {/* HERO */}
-      <section id="inicio" className="hotel-hero scroll-mt-32">
-        <div className="hotel-hero-image">
-          <video
-            className="hotel-hero-video"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            poster="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkHdw5hzGtHMnAH_fmaZXxD6XIvDdJFRQkP5tack1E0BG9rSwu4THaP9mj&s=10"
-            aria-hidden="true"
-          >
-            <source src="/videos/pimentel.mp4" type="video/mp4" />
-            Tu navegador no puede reproducir este video.
-          </video>
-
-          <div className="hotel-hero-overlay" />
-
-          <div className="home-section hotel-hero-content">
-            <div className="hotel-hero-text">
-              <p className="hotel-hero-kicker">Descanso · Playa · Pimentel</p>
-
-              <h1 className="hotel-hero-main-title">
-                Un refugio cerca al mar:
-                <span>Casa Huéspedes Pimentel</span>
-              </h1>
-
-              <p>
-                Habitaciones de acuerdo a tus necesidades, atención familiar y
-                una estadía tranquila para disfrutar el balneario de Pimentel.
-              </p>
-
-              <div className="hotel-hero-actions">
-                <RollingLink to="/habitaciones">
-                  Ver habitaciones
-                </RollingLink>
-
-                <RollingLink to="/turismo" variant="ghost">
-                  Conoce Pimentel
-                </RollingLink>
-              </div>
-
-              <div
-                className="hotel-hero-signals"
-                aria-label="Características destacadas"
-              >
-                <span>
-                  <strong>01</strong>
-                  Cerca del mar
-                </span>
-                <span>
-                  <strong>02</strong>
-                  Atención directa
-                </span>
-                <span>
-                  <strong>03</strong>
-                  Pimentel · Lambayeque
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* POR QUÉ VIAJAR A PIMENTEL */}
-      <StoryVideoSection
-        id="por-que-pimentel"
-        eyebrow="Destino"
-        title="Viaje a Pimentel"
-        description="Disfruta de la tranquilidad de Pimentel, un destino ideal para caminar junto al mar, visitar su emblemático muelle y descubrir restaurantes donde podrás disfrutar lo mejor de la gastronomía peruana.
-        Pimentel es un encantador balneario ubicado en la costa norte del Perú, en el departamento de Lambayeque. Destaca por sus hermosas playas, su tradicional muelle y su ambiente tranquilo, ideal para descansar y disfrutar de la riqueza cultural y gastronómica de la región.
-        "
-        videoSrc="/videos/pimentel.mp4"
-        poster="https://www.caminoincamachu.com/wp-content/uploads/2024/03/playa-pimentel-1.jpg"
-        ctaLink="/turismo"
-        ctaText="Ver guía de Pimentel"
-      />
-
-      {/* POR QUÉ HOSPEDARSE */}
-      <StoryVideoSection
-        id="nosotros"
-        eyebrow="Hospedaje"
-        title="¿Por qué hospedarse en Casa Huéspedes Pimentel?"
-        description="Porque tendrás una estadía sencilla, cómoda y cercana al mar. Casa Huéspedes Pimentel ofrece habitaciones funcionales, atención directa y una ubicación pensada para descansar durante tu visita."
-        videoSrc="/videos/casa-huespedes.mp4"
-        reverse
-        poster="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNgk5I02gkcVtGTCcBFDQw7JPuzaGrK-w26uUyhTMgTQ&s=10"
-      />
-
-      {/* CÓMO LLEGAR */}
-      <HowToGetThereSection videoSrc="/videos/como-llegar.mp4" />
-
-      {/* SERVICIOS DESTACADOS */}
-      <section id="servicios-incluidos" className="hotel-services-strip">
-        <div className="home-section hotel-services-grid">
-          {includedServices.map((service) => (
-            <article key={service.title} className="hotel-service-item">
-              <div className="hotel-service-icon">{service.icon}</div>
-
-              <div>
-                <h3>{service.title}</h3>
-                <p>{service.description}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* GALERÍA Y TESTIMONIO */}
+    <main className="home-page future-home">
       <section
-        id="galeria"
-        className="home-section hotel-gallery-section scroll-mt-32"
+        id="inicio"
+        className="future-hero scroll-mt-32"
+        onPointerMove={handleHeroPointerMove}
       >
-        <div className="hotel-gallery-heading">
-          <div>
-            <p className="hotel-eyebrow">Galería</p>
+        <video
+          className="future-hero-video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          poster="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkHdw5hzGtHMnAH_fmaZXxD6XIvDdJFRQkP5tack1E0BG9rSwu4THaP9mj&s=10"
+          aria-hidden="true"
+        >
+          <source src="/videos/pimentel.mp4" type="video/mp4" />
+          Tu navegador no puede reproducir este video.
+        </video>
 
-            <h2 className="hotel-title hotel-gallery-title">
-              Espacios que invitan a quedarse
-            </h2>
-          </div>
+        <div className="future-hero-veil" />
+        <div className="future-hero-pointer-glow" aria-hidden="true" />
+        <div className="future-orb future-orb-one" aria-hidden="true" />
+        <div className="future-orb future-orb-two" aria-hidden="true" />
 
-          <p className="hotel-gallery-copy">
-            Una galería más visual y dinámica para conocer la casa antes de tu
-            llegada. Puedes cambiar entre una composición libre y una vista
-            ordenada.
-          </p>
-        </div>
-
-        <InteractiveGallery images={galleryImages} />
-
-        <div className="hotel-gallery-action-row">
-          <RollingLink to="/galeria" variant="dark">
-            Ver galería completa
-          </RollingLink>
-        </div>
-
-        <div className="hotel-testimonial">
-          <p className="hotel-eyebrow">Testimonio</p>
-
-          <p className="hotel-testimonial-text">
-            “Un lugar tranquilo para descansar y disfrutar Pimentel. La atención
-            fue cercana y la estadía muy cómoda.”
-          </p>
-
-          <p className="hotel-testimonial-name">Huésped visitante</p>
-          <p className="hotel-testimonial-place">Casa Huéspedes Pimentel</p>
-        </div>
-      </section>
-
-      {/* EXTRAS */}
-      <section
-        id="servicios-extras"
-        className="hotel-extras-section scroll-mt-32"
-      >
-        <div className="home-section">
-          <div className="hotel-section-header">
-            <div>
-              <p className="hotel-eyebrow">Servicios</p>
-
-              <h2 className="hotel-title">Servicios extras</h2>
+        <div className="future-hero-shell">
+          <ScrollReveal className="future-hero-copy">
+            <div className="future-live-pill">
+              <span className="future-live-dot" />
+              Casa Huéspedes Pimentel
             </div>
 
-            <p className="hotel-section-description">
-              Servicios adicionales coordinados directamente con el hospedaje,
-              según disponibilidad.
+            <p className="future-kicker">
+              <span />
+              Hospedaje cálido frente a la esencia de Pimentel
             </p>
+
+            <h1>
+              Tu descanso
+              <span>junto al mar.</span>
+            </h1>
+
+            <p className="future-hero-description">
+              Habitaciones cómodas, atención cercana y una experiencia pensada
+              para disfrutar Pimentel con calma, diseño y comodidad.
+            </p>
+
+            <div className="future-hero-actions">
+              <Link to="/habitaciones" className="future-primary-action">
+                Reservar ahora
+                <span>
+                  <ArrowUpRight size={16} strokeWidth={2.2} />
+                </span>
+              </Link>
+
+              <Link to="/turismo" className="future-secondary-action">
+                Conoce Pimentel
+                <ChevronRight size={16} />
+              </Link>
+            </div>
+
+            <div className="future-trust-row">
+              <span><Waves size={16} /> Cerca del mar</span>
+              <span><MapPin size={16} /> Pimentel, Lambayeque</span>
+              <span><HeartHandshake size={16} /> Atención directa</span>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal className="future-destination-wrap" delay={160}>
+            <TiltSurface className="future-destination-card" maxTilt={4}>
+              <img
+                src="/img/galeria/galeria-4.jpg"
+                alt="Pimentel y su entorno costero"
+              />
+              <div className="future-destination-overlay" />
+              <div className="future-destination-content">
+                <div>
+                  <span>Explora el destino</span>
+                  <h2>Pimentel</h2>
+                  <p>Playa · cultura · gastronomía</p>
+                </div>
+                <Link to="/turismo" aria-label="Conocer Pimentel">
+                  <ArrowUpRight size={18} />
+                </Link>
+              </div>
+            </TiltSurface>
+          </ScrollReveal>
+        </div>
+
+        <div className="future-booking-dock-wrap">
+          <ScrollReveal delay={230}>
+            <form
+              className="future-booking-dock"
+              onSubmit={handleStaySearchSubmit}
+            >
+              <label>
+                <span className="future-booking-icon">
+                  <CalendarDays size={18} />
+                </span>
+                <span>
+                  <small>Fecha de llegada</small>
+                  <input
+                    type="date"
+                    value={staySearch.checkIn}
+                    onChange={(event) =>
+                      setStaySearch((current) => ({
+                        ...current,
+                        checkIn: event.target.value,
+                      }))
+                    }
+                  />
+                </span>
+              </label>
+
+              <label>
+                <span className="future-booking-icon">
+                  <CalendarDays size={18} />
+                </span>
+                <span>
+                  <small>Fecha de salida</small>
+                  <input
+                    type="date"
+                    value={staySearch.checkOut}
+                    min={staySearch.checkIn || undefined}
+                    onChange={(event) =>
+                      setStaySearch((current) => ({
+                        ...current,
+                        checkOut: event.target.value,
+                      }))
+                    }
+                  />
+                </span>
+              </label>
+
+              <label>
+                <span className="future-booking-icon">
+                  <Users size={18} />
+                </span>
+                <span>
+                  <small>Huéspedes</small>
+                  <select
+                    value={staySearch.guests}
+                    onChange={(event) =>
+                      setStaySearch((current) => ({
+                        ...current,
+                        guests: Number(event.target.value),
+                      }))
+                    }
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((guest) => (
+                      <option key={guest} value={guest}>
+                        {guest} {guest === 1 ? "persona" : "personas"}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+
+              <label className="future-booking-category">
+                <span className="future-booking-icon">
+                  <BedDouble size={18} />
+                </span>
+                <span>
+                  <small>Categoría</small>
+                  <strong>Todas las habitaciones</strong>
+                </span>
+              </label>
+
+              <button type="submit">
+                <span>Buscar disponibilidad</span>
+                <span className="future-search-icon">
+                  <Search size={17} />
+                </span>
+              </button>
+
+              <div className="future-booking-note">
+                <Waves size={21} />
+                <span>
+                  Vive Pimentel
+                  <small>desde una ubicación privilegiada</small>
+                </span>
+              </div>
+            </form>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      <FutureBenefits />
+
+      <section className="future-featured-rooms">
+        <div className="future-section-shell">
+          <ScrollReveal className="future-section-heading">
+            <div>
+              <p className="future-section-kicker">Alojamiento en Pimentel</p>
+              <h2>Categorías de habitaciones</h2>
+            </div>
+
+            <div className="future-section-heading-copy">
+              <p>
+                Elige el tipo de estadía que mejor encaje contigo. El precio se
+                muestra después de consultar disponibilidad para tus fechas.
+              </p>
+              <Link to="/habitaciones">
+                Ver todas
+                <ArrowUpRight size={16} />
+              </Link>
+            </div>
+          </ScrollReveal>
+
+          <div className="future-room-grid">
+            {featuredCategories.length > 0
+              ? featuredCategories.map((category, index) => (
+                  <ScrollReveal key={category.slug} delay={index * 80}>
+                    <TiltSurface className="future-room-card" maxTilt={5}>
+                      <img
+                        src={category.image_url}
+                        alt={`Habitación ${category.name} referencial`}
+                        loading="lazy"
+                      />
+                      <div className="future-room-card-shade" />
+
+                      <div className="future-room-card-top">
+                        <span>
+                          <Users size={14} />
+                          Hasta {category.capacity} personas
+                        </span>
+                        <span className="future-room-index">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                      </div>
+
+                      <div className="future-room-card-content">
+                        <h3>{category.name}</h3>
+                        <p>{category.description}</p>
+                        <div className="future-room-card-footer">
+                          <span>
+                            <BedDouble size={15} />
+                            {category.bed_description || "Distribución cómoda"}
+                          </span>
+                          <Link
+                            to={`/habitaciones/${encodeURIComponent(category.slug)}`}
+                            aria-label={`Ver habitación ${category.name}`}
+                          >
+                            <ArrowUpRight size={18} />
+                          </Link>
+                        </div>
+                      </div>
+                    </TiltSurface>
+                  </ScrollReveal>
+                ))
+              : Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="future-room-skeleton" />
+                ))}
           </div>
+        </div>
+      </section>
 
-          <div className="hotel-extra-grid">
-            {extraServices.map((service) => (
-              <article key={service.title} className="hotel-extra-card">
-                <img src={service.image} alt={service.title} />
+      <ScrollReveal>
+        <StoryVideoSection
+          id="por-que-pimentel"
+          eyebrow="Destino"
+          title="Viaje a Pimentel"
+          description="Disfruta de la tranquilidad de Pimentel, un destino ideal para caminar junto al mar, visitar su emblemático muelle y descubrir restaurantes donde podrás disfrutar lo mejor de la gastronomía peruana. Pimentel es un encantador balneario ubicado en la costa norte del Perú, en el departamento de Lambayeque."
+          videoSrc="/videos/pimentel.mp4"
+          poster="https://www.caminoincamachu.com/wp-content/uploads/2024/03/playa-pimentel-1.jpg"
+          ctaLink="/turismo"
+          ctaText="Ver guía de Pimentel"
+        />
+      </ScrollReveal>
 
+      <ScrollReveal>
+        <StoryVideoSection
+          id="nosotros"
+          eyebrow="Hospedaje"
+          title="¿Por qué hospedarse en Casa Huéspedes Pimentel?"
+          description="Porque tendrás una estadía sencilla, cómoda y cercana al mar. Casa Huéspedes Pimentel ofrece habitaciones funcionales, atención directa y una ubicación pensada para descansar durante tu visita."
+          videoSrc="/videos/casa-huespedes.mp4"
+          reverse
+          poster="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSNgk5I02gkcVtGTCcBFDQw7JPuzaGrK-w26uUyhTMgTQ&s=10"
+        />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <HowToGetThereSection videoSrc="/videos/como-llegar.mp4" />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <section id="servicios-incluidos" className="hotel-services-strip future-services-strip">
+          <div className="home-section hotel-services-grid">
+            {includedServices.map((service) => (
+              <article key={service.title} className="hotel-service-item">
+                <div className="hotel-service-icon">{service.icon}</div>
                 <div>
                   <h3>{service.title}</h3>
                   <p>{service.description}</p>
@@ -253,36 +435,106 @@ export default function Home() {
               </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      </ScrollReveal>
 
-      {/* CTA */}
-      <section className="hotel-cta">
-        <img
-          src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1800&auto=format&fit=crop"
-          alt="Pimentel"
-        />
-
-        <div className="home-section hotel-cta-content">
-          <div className="hotel-cta-card">
+      <ScrollReveal>
+        <section
+          id="galeria"
+          className="home-section hotel-gallery-section scroll-mt-32"
+        >
+          <div className="hotel-gallery-heading">
             <div>
-              <h2 className="hotel-title">¿Listo para visitar Pimentel?</h2>
+              <p className="hotel-eyebrow">Galería</p>
+              <h2 className="hotel-title hotel-gallery-title">
+                Espacios que invitan a quedarse
+              </h2>
+            </div>
+            <p className="hotel-gallery-copy">
+              Una galería más visual y dinámica para conocer la casa antes de tu
+              llegada. Puedes cambiar entre una composición libre y una vista
+              ordenada.
+            </p>
+          </div>
 
-              <p>
-                Conoce nuestras habitaciones y elige el espacio ideal para tu
-                próxima estadía.
+          <InteractiveGallery images={galleryImages} />
+
+          <div className="hotel-gallery-action-row">
+            <RollingLink to="/galeria" variant="dark">
+              Ver galería completa
+            </RollingLink>
+          </div>
+
+          <div className="hotel-testimonial future-testimonial">
+            <Sparkles size={22} className="future-testimonial-sparkle" />
+            <p className="hotel-eyebrow">Testimonio</p>
+            <p className="hotel-testimonial-text">
+              “Un lugar tranquilo para descansar y disfrutar Pimentel. La atención
+              fue cercana y la estadía muy cómoda.”
+            </p>
+            <p className="hotel-testimonial-name">Huésped visitante</p>
+            <p className="hotel-testimonial-place">Casa Huéspedes Pimentel</p>
+          </div>
+        </section>
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <section
+          id="servicios-extras"
+          className="hotel-extras-section scroll-mt-32"
+        >
+          <div className="home-section">
+            <div className="hotel-section-header">
+              <div>
+                <p className="hotel-eyebrow">Servicios</p>
+                <h2 className="hotel-title">Servicios extras</h2>
+              </div>
+              <p className="hotel-section-description">
+                Servicios adicionales coordinados directamente con el hospedaje,
+                según disponibilidad.
               </p>
             </div>
 
-            <Link to="/habitaciones" className="hotel-btn-primary">
-              Ver habitaciones
-            </Link>
+            <div className="hotel-extra-grid">
+              {extraServices.map((service) => (
+                <article key={service.title} className="hotel-extra-card future-extra-card">
+                  <img src={service.image} alt={service.title} />
+                  <div>
+                    <h3>{service.title}</h3>
+                    <p>{service.description}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <section className="hotel-cta future-cta">
+          <img
+            src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1800&auto=format&fit=crop"
+            alt="Pimentel"
+          />
+
+          <div className="home-section hotel-cta-content">
+            <div className="hotel-cta-card">
+              <div>
+                <h2 className="hotel-title">¿Listo para visitar Pimentel?</h2>
+                <p>
+                  Conoce nuestras habitaciones y elige el espacio ideal para tu
+                  próxima estadía.
+                </p>
+              </div>
+              <Link to="/habitaciones" className="hotel-btn-primary">
+                Ver habitaciones
+              </Link>
+            </div>
+          </div>
+        </section>
+      </ScrollReveal>
 
       <HouseConcept />
-
       <SocialDock />
 
       <FloatingSupportWidget
@@ -291,6 +543,54 @@ export default function Home() {
         onClose={() => setIsSupportOpen(false)}
       />
     </main>
+  );
+}
+
+function FutureBenefits() {
+  const benefits = [
+    {
+      icon: BedDouble,
+      title: "Habitaciones cómodas",
+      text: "Para cada tipo de viaje",
+    },
+    {
+      icon: MapPin,
+      title: "Ubicación privilegiada",
+      text: "En Pimentel, Lambayeque",
+    },
+    {
+      icon: Users,
+      title: "Ideal para familias",
+      text: "Espacios amplios y prácticos",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Estadía confiable",
+      text: "Atención directa y cercana",
+    },
+  ];
+
+  return (
+    <section className="future-benefits">
+      <div className="future-benefits-shell">
+        {benefits.map((benefit, index) => {
+          const Icon = benefit.icon;
+          return (
+            <ScrollReveal key={benefit.title} delay={index * 70}>
+              <article>
+                <span className="future-benefit-icon">
+                  <Icon size={24} strokeWidth={1.7} />
+                </span>
+                <div>
+                  <h3>{benefit.title}</h3>
+                  <p>{benefit.text}</p>
+                </div>
+              </article>
+            </ScrollReveal>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
