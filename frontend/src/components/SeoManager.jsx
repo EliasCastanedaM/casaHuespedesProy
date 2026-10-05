@@ -187,7 +187,8 @@ export default function SeoManager() {
     const metadata = getMetadata(pathname);
     const shouldNoIndex =
       pathname.startsWith("/admin") ||
-      pathname === "/pago-resultado";
+      pathname === "/pago-resultado" ||
+      pathname === "/inventario-habitaciones";
 
     const canonicalPath = pathname === "/" ? "" : pathname;
     const canonicalUrl = `${SITE_URL}${canonicalPath}`;
