@@ -393,7 +393,7 @@ function PlaceCard({ place, index }) {
     <TiltSurface>
       <article
         data-reveal
-        style={{ "--delay": \`\${Math.min(index * 70, 280)}ms\` }}
+        style={{ "--delay": `${Math.min(index * 70, 280)}ms` }}
         className="reveal group relative h-[345px] overflow-hidden rounded-[26px] border border-[#e8d7c2] bg-[#2b1d12] shadow-[0_18px_48px_rgba(43,29,18,0.14)] sm:h-[370px] xl:h-[390px]"
       >
         <SafeImage
@@ -421,7 +421,7 @@ function PlaceCard({ place, index }) {
           href={place.source}
           target="_blank"
           rel="noreferrer"
-          aria-label={\`Ver fuente de la fotografía de \${place.title}\`}
+          aria-label={`Ver fuente de la fotografía de ${place.title}`}
           className="absolute bottom-6 right-6 z-20 grid h-11 w-11 place-items-center rounded-full border border-white/40 bg-black/25 text-white backdrop-blur-md transition duration-500 group-hover:-rotate-12 group-hover:bg-[#a87545]"
         >
           <ArrowIcon />
@@ -436,14 +436,14 @@ function MuseumCard({ museum, index }) {
     <TiltSurface className="shrink-0 snap-start">
       <article
         data-reveal
-        style={{ "--delay": \`\${index * 90}ms\` }}
+        style={{ "--delay": `${index * 90}ms` }}
         className="reveal museum-card group relative w-[82vw] max-w-[320px] overflow-hidden rounded-[24px] border border-[#d8a369]/35 bg-[#28170f] shadow-[0_28px_70px_rgba(0,0,0,.40)] sm:w-[300px] xl:w-[292px]"
       >
         <div className="relative h-[260px] overflow-hidden bg-[#160d08]">
           <SafeImage
             src={museum.image}
             fallback={museum.brochure || HERO_FALLBACK}
-            alt={\`Fotografía real de \${museum.title}\`}
+            alt={`Fotografía real de ${museum.title}`}
             className="h-full w-full object-cover transition duration-[1000ms] ease-out group-hover:scale-[1.12]"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#28170f] via-transparent to-black/10" />
@@ -494,13 +494,13 @@ function DishCard({ dish, index }) {
     <TiltSurface>
       <article
         data-reveal
-        style={{ "--delay": \`\${Math.min(index * 70, 300)}ms\` }}
+        style={{ "--delay": `${Math.min(index * 70, 300)}ms` }}
         className="reveal food-card group relative h-[315px] overflow-hidden rounded-[22px] border border-[#eadbc7] bg-[#2b1d12] shadow-[0_16px_40px_rgba(43,29,18,.12)]"
       >
         <SafeImage
           src={dish.image}
           fallback={dish.fallback || HERO_FALLBACK}
-          alt={\`Fotografía real de \${dish.title}\`}
+          alt={`Fotografía real de ${dish.title}`}
           className="absolute inset-0 h-full w-full object-cover transition duration-[1000ms] ease-out group-hover:scale-[1.12]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#180d08]/[0.97] via-[#180d08]/10 to-transparent" />
@@ -522,7 +522,7 @@ function DishCard({ dish, index }) {
           href={dish.source}
           target="_blank"
           rel="noreferrer"
-          aria-label={\`Ver fuente de la fotografía de \${dish.title}\`}
+          aria-label={`Ver fuente de la fotografía de ${dish.title}`}
           className="absolute bottom-5 right-5 z-20 grid h-9 w-9 place-items-center rounded-full border border-white/35 bg-black/25 text-white backdrop-blur-md transition group-hover:bg-[#a87545]"
         >
           <ArrowIcon className="h-3.5 w-3.5" />
