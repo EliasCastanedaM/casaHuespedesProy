@@ -72,8 +72,8 @@ const tourismVideos = [
     description:
       "La gastronomía lambayecana reúne productos del mar, recetas tradicionales y sabores que forman parte de la identidad del norte peruano.",
     videoSrc: videoGastronomiaPimentel,
-    buttonText: "Consultar disponibilidad",
-    buttonLink: "/#disponibilidad",
+    buttonText: "Ver habitaciones disponibles",
+    buttonLink: "/habitaciones",
   },
 ];
 
@@ -1107,7 +1107,12 @@ export default function Tourism() {
                   Ver Pimentel
                 </a>
 
-                
+                <Link
+                  to="/habitaciones"
+                  className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-7 py-4 text-xs font-black uppercase tracking-[0.15em] text-white backdrop-blur-md transition hover:-translate-y-1 hover:bg-white/20"
+                >
+                  Hospedarse en Pimentel
+                </Link>
               </div>
             </div>
           </div>
