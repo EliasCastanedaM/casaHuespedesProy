@@ -106,6 +106,10 @@ export default function Navbar() {
           <Link to="/galeria" className={navLink("/galeria")}>
             Galería
           </Link>
+
+          <Link to="/contacto" className={navLink("/contacto")}>
+            Contacto
+          </Link>
         </div>
 
         <Link
@@ -191,9 +195,16 @@ export default function Navbar() {
             <Link
               to="/galeria"
               onClick={closeMobileMenu}
-              className="py-3 text-sm font-black uppercase tracking-[0.14em] text-[#5f5147] transition hover:text-[#a87545]"
+              className="border-b border-[#eadfce] py-3 text-sm font-black uppercase tracking-[0.14em] text-[#5f5147] transition hover:text-[#a87545]"
             >
               Galería
+            </Link>
+            <Link
+              to="/contacto"
+              onClick={closeMobileMenu}
+              className="py-3 text-sm font-black uppercase tracking-[0.14em] text-[#5f5147] transition hover:text-[#a87545]"
+            >
+              Contacto
             </Link>
           </div>
         </div>
