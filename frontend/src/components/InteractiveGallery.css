@@ -1,0 +1,292 @@
+.experience-collage {
+  position: relative;
+  margin-top: 30px;
+  padding: 18px 18px 24px;
+  overflow: hidden;
+  border: 1px solid rgba(168, 117, 69, 0.18);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 15% 18%, rgba(168, 117, 69, 0.14), transparent 30%),
+    radial-gradient(circle at 86% 72%, rgba(43, 29, 18, 0.08), transparent 34%),
+    rgba(255, 252, 247, 0.78);
+  box-shadow: 0 28px 70px rgba(43, 29, 18, 0.1);
+  isolation: isolate;
+}
+
+.experience-collage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.32;
+  background-image:
+    linear-gradient(rgba(168, 117, 69, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 117, 69, 0.09) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, #000, transparent 88%);
+}
+
+.experience-collage-toolbar {
+  position: relative;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px 8px 0;
+}
+
+.experience-collage-kicker {
+  display: block;
+  color: #a87545;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.experience-collage-toolbar p {
+  margin: 5px 0 0;
+  color: #67594e;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.experience-collage-toggle {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px 0 18px;
+  border: 1px solid rgba(43, 29, 18, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #2b1d12;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(43, 29, 18, 0.08);
+  backdrop-filter: blur(12px);
+  transition:
+    transform 220ms ease,
+    background 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.experience-collage-toggle:hover {
+  transform: translateY(-2px);
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(43, 29, 18, 0.12);
+}
+
+.experience-collage-toggle:focus-visible {
+  outline: 2px solid #a87545;
+  outline-offset: 3px;
+}
+
+.experience-collage-toggle-icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: #2b1d12;
+  color: #fff;
+  transition: transform 320ms ease;
+}
+
+.experience-collage-toggle:hover .experience-collage-toggle-icon {
+  transform: rotate(10deg);
+}
+
+.experience-collage-stage {
+  min-height: 470px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+  gap: 0;
+  padding: 34px clamp(14px, 4vw, 58px) 28px;
+}
+
+.experience-collage-card {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  margin: 0 -6px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 26px;
+  background: #e9dfd2;
+  box-shadow: 0 22px 46px rgba(43, 29, 18, 0.2);
+  transition:
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 450ms ease,
+    border-radius 450ms ease;
+  will-change: transform;
+}
+
+.experience-collage-card-1 {
+  z-index: 2;
+  transform: translate(34px, 24px) rotate(-7deg);
+}
+
+.experience-collage-card-2 {
+  z-index: 4;
+  transform: translate(10px, -22px) rotate(4deg);
+}
+
+.experience-collage-card-3 {
+  z-index: 3;
+  transform: translate(-10px, 24px) rotate(-4deg);
+}
+
+.experience-collage-card-4 {
+  z-index: 1;
+  transform: translate(-34px, -10px) rotate(7deg);
+}
+
+.experience-collage.is-organized .experience-collage-card {
+  z-index: 1;
+  margin: 0 6px;
+  border-radius: 20px;
+  transform: translate(0, 0) rotate(0deg);
+  box-shadow: 0 16px 34px rgba(43, 29, 18, 0.12);
+}
+
+.experience-collage-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(22, 14, 9, 0.42), transparent 38%);
+  pointer-events: none;
+}
+
+.experience-collage-card img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition:
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 450ms ease;
+}
+
+.experience-collage-card:hover {
+  z-index: 10;
+  box-shadow: 0 28px 62px rgba(43, 29, 18, 0.25);
+}
+
+.experience-collage-card:hover img {
+  transform: scale(1.055);
+  filter: saturate(1.06) contrast(1.02);
+}
+
+.experience-collage-index {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  z-index: 2;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.experience-collage-hint {
+  margin: 0;
+  padding: 0 8px 4px;
+  color: #8b7e73;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 820px) {
+  .experience-collage-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .experience-collage-stage {
+    min-height: 600px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 32px 24px 28px;
+  }
+
+  .experience-collage-card {
+    margin: 0;
+  }
+
+  .experience-collage-card-1 {
+    transform: translate(10px, 10px) rotate(-5deg);
+  }
+
+  .experience-collage-card-2 {
+    transform: translate(-8px, -8px) rotate(4deg);
+  }
+
+  .experience-collage-card-3 {
+    transform: translate(8px, 8px) rotate(4deg);
+  }
+
+  .experience-collage-card-4 {
+    transform: translate(-8px, -8px) rotate(-5deg);
+  }
+
+  .experience-collage.is-organized .experience-collage-card {
+    margin: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .experience-collage {
+    padding: 14px 12px 20px;
+    border-radius: 26px;
+  }
+
+  .experience-collage-toggle {
+    width: 100%;
+  }
+
+  .experience-collage-stage {
+    min-height: auto;
+    gap: 8px;
+    padding: 26px 4px 22px;
+  }
+
+  .experience-collage-card,
+  .experience-collage.is-organized .experience-collage-card {
+    border-radius: 17px;
+  }
+
+  .experience-collage-card-1 {
+    transform: translate(4px, 6px) rotate(-3deg);
+  }
+
+  .experience-collage-card-2 {
+    transform: translate(-4px, -4px) rotate(3deg);
+  }
+
+  .experience-collage-card-3 {
+    transform: translate(4px, 4px) rotate(3deg);
+  }
+
+  .experience-collage-card-4 {
+    transform: translate(-4px, -5px) rotate(-3deg);
+  }
+
+  .experience-collage.is-organized .experience-collage-card {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .experience-collage-card,
+  .experience-collage-card img,
+  .experience-collage-toggle,
+  .experience-collage-toggle-icon {
+    transition: none;
+  }
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getRoomCategoryBySlug } from "../../services/roomService";
 import { searchCategoryAvailability } from "../../services/bookingService";
+import "./RoomDetail.css";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1400&auto=format&fit=crop";
@@ -321,8 +322,8 @@ export default function RoomDetail() {
     : 0;
 
   return (
-    <main className="bg-[#fbf7f0]">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <main className="room-detail-page">
+      <div className="room-detail-shell">
         <Link
           to="/habitaciones"
           className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-[#4b250f]"
@@ -330,9 +331,9 @@ export default function RoomDetail() {
           ← Volver a las habitaciones
         </Link>
 
-        <section className="mt-6 grid lg:grid-cols-[minmax(0,1fr)_360px] gap-8 items-start">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
+        <section className="room-detail-layout">
+          <div className="room-detail-main">
+            <div className="room-detail-intro">
               <h1 className="text-3xl md:text-4xl font-black text-[#2b2118]">
                 Habitación {category.name}
               </h1>
@@ -346,7 +347,7 @@ export default function RoomDetail() {
               {category.description}
             </p>
 
-            <div className="mt-5 flex flex-wrap gap-3 text-sm text-gray-700">
+            <div className="room-detail-facts">
               <span className="rounded-full border border-[#eadfce] bg-white px-4 py-2 font-bold">
                 👤 Hasta {category.capacity} persona(s)
               </span>
@@ -358,8 +359,8 @@ export default function RoomDetail() {
               </span>
             </div>
 
-            <div className="mt-7 grid lg:grid-cols-[minmax(0,1fr)_300px] gap-4">
-              <div className="relative min-h-[420px] overflow-hidden rounded-3xl bg-black">
+            <div className="room-detail-showcase">
+              <div className="room-detail-media">
                 {selectedMedia?.type === "video" ? (
                   <video
                     src={selectedMedia.url}
@@ -385,7 +386,7 @@ export default function RoomDetail() {
                 </div>
               </div>
 
-              <aside className="rounded-3xl border border-[#eadfce] bg-white p-6">
+              <aside className="room-detail-summary">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a87545]">
                   Categoría
                 </p>
@@ -422,7 +423,7 @@ export default function RoomDetail() {
               </aside>
             </div>
 
-            <section className="mt-8 rounded-3xl border border-[#eadfce] bg-white p-5">
+            <section className="room-detail-gallery-panel">
               <div className="flex gap-3 border-b border-gray-100">
                 <button
                   type="button"
@@ -464,7 +465,7 @@ export default function RoomDetail() {
                               `Habitación ${category.name}`,
                           })
                         }
-                        className="h-32 overflow-hidden rounded-2xl bg-gray-100"
+                        className={`room-detail-thumb ${selectedMedia?.type === "image" && selectedMedia?.url === photo.image_url ? "is-selected" : ""}`}
                       >
                         <img
                           src={photo.image_url}
@@ -511,7 +512,7 @@ export default function RoomDetail() {
                             fallbackImage,
                         })
                       }
-                      className="relative h-48 overflow-hidden rounded-2xl bg-black text-left"
+                      className={`room-detail-video-thumb ${selectedMedia?.type === "video" && selectedMedia?.url === video.video_url ? "is-selected" : ""}`}
                     >
                       <video
                         src={video.video_url}
@@ -534,8 +535,8 @@ export default function RoomDetail() {
               </p>
             </section>
 
-            <div className="mt-8 grid gap-5 md:grid-cols-2">
-              <section className="rounded-3xl border border-[#eadfce] bg-white p-6">
+            <div className="room-detail-info-grid">
+              <section className="room-detail-info-panel">
                 <h2 className="text-xl font-black text-[#2b2118]">
                   Distribución de la habitación
                 </h2>
@@ -568,7 +569,7 @@ export default function RoomDetail() {
                 </div>
               </section>
 
-              <section className="rounded-3xl border border-[#eadfce] bg-white p-6">
+              <section className="room-detail-info-panel">
                 <h2 className="text-xl font-black text-[#2b2118]">
                   Servicios y equipamiento
                 </h2>
@@ -596,8 +597,8 @@ export default function RoomDetail() {
             </div>
           </div>
 
-          <aside className="lg:sticky lg:top-24">
-            <div className="rounded-3xl border border-[#eadfce] bg-white p-6 shadow-sm">
+          <aside className="room-detail-booking-aside">
+            <div className="room-detail-booking-card">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a87545]">
                 Consulta de disponibilidad
               </p>
@@ -686,7 +687,7 @@ export default function RoomDetail() {
                 type="button"
                 onClick={handleCheckAvailability}
                 disabled={checkingAvailability}
-                className="mt-6 flex w-full items-center justify-center rounded-xl bg-[#8b5427] px-6 py-4 font-black text-white transition hover:bg-[#633817] disabled:cursor-wait disabled:opacity-60"
+                className="room-detail-check-button"
               >
                 {checkingAvailability
                   ? "Consultando..."
@@ -738,7 +739,7 @@ export default function RoomDetail() {
                       <button
                         type="button"
                         onClick={handleContinueToBooking}
-                        className="mt-5 flex w-full items-center justify-center rounded-xl bg-[#2b2118] px-5 py-3 font-black text-white transition hover:bg-[#4b250f]"
+                        className="room-detail-book-button"
                       >
                         Reservar esta categoría
                       </button>
@@ -757,7 +758,7 @@ export default function RoomDetail() {
               )}
             </div>
 
-            <div className="mt-5 rounded-3xl border border-[#eadfce] bg-[#f4eadc] p-6">
+            <div className="room-detail-note-card">
               <h3 className="font-black text-[#2b2118]">
                 Información importante
               </h3>
