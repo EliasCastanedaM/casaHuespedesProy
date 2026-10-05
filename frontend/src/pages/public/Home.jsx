@@ -5,7 +5,6 @@ import {
   BedDouble,
   CalendarDays,
   ChevronRight,
-  Coffee,
   HeartHandshake,
   MapPin,
   Search,
@@ -13,7 +12,6 @@ import {
   Sparkles,
   Users,
   Waves,
-  Wifi,
 } from "lucide-react";
 import InteractiveGallery from "../../components/InteractiveGallery";
 import RollingLink from "../../components/RollingLink";
@@ -351,7 +349,7 @@ export default function Home() {
                   <ScrollReveal key={category.slug} delay={index * 80}>
                     <TiltSurface className="future-room-card" maxTilt={5}>
                       <img
-                        src={category.image_url}
+                        src={category.image_url || "/img/galeria/galeria-2.jpg"}
                         alt={`Habitación ${category.name} referencial`}
                         loading="lazy"
                       />
