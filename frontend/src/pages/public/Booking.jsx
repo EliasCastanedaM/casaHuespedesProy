@@ -288,13 +288,9 @@ export default function Booking() {
     }
   }
 
-  const availabilityBackUrl = `/disponibilidad?category=${encodeURIComponent(
-    categorySlug
-  )}&checkIn=${encodeURIComponent(
-    formData.check_in
-  )}&checkOut=${encodeURIComponent(
-    formData.check_out
-  )}&guests=${encodeURIComponent(formData.guests_count)}`;
+  const roomDetailBackUrl = categorySlug
+    ? `/habitaciones/${encodeURIComponent(categorySlug)}`
+    : "/habitaciones";
 
   return (
     <main className="booking-page">
@@ -306,6 +302,23 @@ export default function Booking() {
             Elegiste una categoría disponible. Completa tus datos y revisa el
             monto antes de continuar al pago.
           </p>
+
+          <ol className="booking-progress" aria-label="Progreso de la reserva">
+            <li className="is-complete">
+              <span>01</span>
+              <strong>Categoría</strong>
+            </li>
+            <li className="booking-progress-line" aria-hidden="true" />
+            <li className="is-active">
+              <span>02</span>
+              <strong>Tus datos</strong>
+            </li>
+            <li className="booking-progress-line" aria-hidden="true" />
+            <li>
+              <span>03</span>
+              <strong>Pago</strong>
+            </li>
+          </ol>
         </div>
 
         {loadingCategory && (
@@ -318,10 +331,10 @@ export default function Booking() {
           <div className="booking-error-card">
             <p>{error}</p>
             <Link
-              to="/disponibilidad"
+              to="/habitaciones"
               className="booking-back-link"
             >
-              Consultar disponibilidad
+              Volver a habitaciones
             </Link>
           </div>
         )}
@@ -533,10 +546,21 @@ export default function Booking() {
             </form>
 
             <aside className="booking-summary-card">
+              <p className="booking-summary-eyebrow">Tu estadía</p>
               <h2 className="booking-summary-title">Resumen</h2>
 
+              {category.image_url && (
+                <div className="booking-summary-image">
+                  <img
+                    src={category.image_url}
+                    alt={`Habitación ${category.name} referencial`}
+                  />
+                  <span>Imagen referencial</span>
+                </div>
+              )}
+
               <div className="booking-summary-room">
-                <p>Categoría</p>
+                <p>Categoría seleccionada</p>
                 <h3>{category.name}</h3>
               </div>
 
@@ -580,10 +604,10 @@ export default function Booking() {
               </div>
 
               <Link
-                to={availabilityBackUrl}
+                to={roomDetailBackUrl}
                 className="booking-back-link"
               >
-                Volver a disponibilidad
+                Volver a la categoría
               </Link>
             </aside>
           </div>
