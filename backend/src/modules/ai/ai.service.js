@@ -465,9 +465,8 @@ async function generateAiReplyInternal({
   history = [],
   now = new Date(),
 }) {
-  // El asesor virtual solo opera en el horario nocturno configurado.
-  // Esta comprobación ocurre antes de Supabase, flujo de reservas y OpenAI,
-  // por lo que durante el día no se consumen tokens ni se ejecuta el bot.
+  // El asesor virtual opera 24/7. isAiServiceTime se conserva como punto
+  // único de decisión para mantener compatibilidad con la arquitectura actual.
   if (!isAiServiceTime(now)) {
     return {
       reply: buildHumanServiceRedirect(channel),
