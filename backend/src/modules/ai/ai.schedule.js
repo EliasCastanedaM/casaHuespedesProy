@@ -1,49 +1,12 @@
 import { env } from "../../config/env.js";
 
-function parseClock(value, fallback) {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || "").trim());
-  if (!match) return fallback;
-
-  const hour = Number(match[1]);
-  const minute = Number(match[2]);
-  if (
-    !Number.isInteger(hour) ||
-    !Number.isInteger(minute) ||
-    hour < 0 ||
-    hour > 23 ||
-    minute < 0 ||
-    minute > 59
-  ) {
-    return fallback;
-  }
-
-  return hour * 60 + minute;
-}
-
-function localMinutes(date, timeZone) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-
-  const hour = Number(parts.find((part) => part.type === "hour")?.value || 0);
-  const minute = Number(parts.find((part) => part.type === "minute")?.value || 0);
-  return hour * 60 + minute;
-}
-
-export function isAiServiceTime(date = new Date()) {
-  const start = parseClock(env.ai.serviceStart, 23 * 60);
-  const end = parseClock(env.ai.serviceEnd, 8 * 60);
-  const current = localMinutes(date, env.ai.timeZone || "America/Lima");
-
-  // Un mismo inicio y fin se interpreta como servicio durante todo el día.
-  if (start === end) return true;
-  if (start < end) return current >= start && current < end;
-
-  // Rango que cruza medianoche, por ejemplo 23:00 -> 08:00.
-  return current >= start || current < end;
+/**
+ * Casa Huéspedes Pimentel usa el asesor virtual las 24 horas, los 7 días.
+ * Se conserva esta función como punto único de decisión para no romper
+ * integraciones existentes que ya la consumen.
+ */
+export function isAiServiceTime(_date = new Date()) {
+  return true;
 }
 
 function whatsappNumber() {
@@ -58,21 +21,20 @@ function whatsappNumber() {
 export function buildHumanServiceRedirect(channel = "web") {
   const waNumber = whatsappNumber();
   const displayPhone = `+${waNumber.slice(0, 2)} ${waNumber.slice(2, 5)} ${waNumber.slice(5, 8)} ${waNumber.slice(8)}`;
-  const schedule = `${env.ai.serviceStart || "23:00"} a ${env.ai.serviceEnd || "08:00"}`;
 
   if (channel === "whatsapp") {
     return [
       `¡Hola! Gracias por comunicarte con ${env.hotel.name}.`,
-      `Nuestro asesor virtual atiende de ${schedule}.`,
-      "En este horario la atención corresponde a nuestro equipo humano. Puedes continuar escribiéndonos por este mismo chat.",
+      "Nuestro asesor virtual está disponible las 24 horas, todos los días.",
+      "Si solicitas atención humana, el asistente automático se pausará en esta conversación mientras te atiende una persona.",
       `WhatsApp: ${displayPhone}`,
     ].join("\n\n");
   }
 
   return [
     `¡Hola! Gracias por comunicarte con ${env.hotel.name}.`,
-    `Nuestro asesor virtual atiende de ${schedule}.`,
-    "En este horario la atención corresponde a nuestro equipo humano.",
-    `Puedes comunicarte por WhatsApp al ${displayPhone}: https://wa.me/${waNumber}`,
+    "Nuestro asesor virtual está disponible las 24 horas, todos los días.",
+    "Si deseas atención humana, puedes solicitarla en cualquier momento.",
+    `También puedes comunicarte por WhatsApp al ${displayPhone}: https://wa.me/${waNumber}`,
   ].join("\n\n");
 }
