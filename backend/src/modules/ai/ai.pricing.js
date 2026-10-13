@@ -15,11 +15,16 @@ export function isCategoryPriceInquiry(message) {
     /\b\d{4}-\d{2}-\d{2}\b/.test(normalized) ||
     /\b\d{1,2}[\/-]\d{1,2}(?:[\/-]\d{2,4})?\b/.test(normalized) ||
     /\b\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/.test(normalized) ||
-    /\b(?:hoy|manana|pasado manana|esta noche|este fin de semana)\b/.test(normalized);
+    /\b(?:hoy|manana|pasado manana|esta noche|este fin de semana)\b/.test(normalized) ||
+    /\b(?:del|desde)\s+\d{1,2}\b/.test(normalized) ||
+    /\b\d+\s+noches?\b/.test(normalized);
 
   // Para fechas concretas, el flujo habitual debe consultar disponibilidad.
   // Los precios de otras plataformas no se equiparan a la tarifa de la web.
-  return asksPrice && !specificStay && !/\b(?:booking|airbnb)\b/.test(normalized);
+  const bookingOrHandoff =
+    /\b(?:reservar|reserva|pago|pague|pagar|transferencia|humano|asesor|persona|agente|queja)\b/.test(normalized);
+  return asksPrice && !specificStay && !bookingOrHandoff &&
+    !/\b(?:booking|airbnb)\b/.test(normalized);
 }
 
 function requestedSlugs(message) {
