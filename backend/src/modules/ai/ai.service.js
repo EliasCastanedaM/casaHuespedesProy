@@ -12,6 +12,7 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { isCategoryPriceInquiry, formatCategoryPricesReply } from "./ai.pricing.js";
 import { buildHumanServiceRedirect, isAiServiceTime } from "./ai.schedule.js";
 import {
   handleDeterministicBookingFlow,
@@ -529,6 +530,28 @@ async function generateAiReplyInternal({
   ) {
     bookingContext = deterministic.context;
     await saveBookingContext(channel, externalUserId, bookingContext);
+  }
+
+  // Las preguntas generales de precios se responden con los valores vigentes
+  // de Supabase, sin depender de la memoria del modelo ni de sus herramientas.
+  if (isCategoryPriceInquiry(message)) {
+    try {
+      const categories = await getPublicRoomCategoriesService();
+      return {
+        reply: formatCategoryPricesReply(categories, message),
+        responseId: null,
+        deterministic: true,
+        mode: "category_prices",
+      };
+    } catch (error) {
+      console.warn("No se pudieron consultar las tarifas vigentes:", error.message);
+      return {
+        reply: "No puedo confirmar los precios en este momento. Para evitar darte información incorrecta, por favor comunícate con nuestro equipo al " + (env.hotel.phone || "901551287") + ".",
+        responseId: null,
+        deterministic: true,
+        mode: "category_prices_unavailable",
+      };
+    }
   }
 
   const previousResponseId = await getPreviousResponseId(
