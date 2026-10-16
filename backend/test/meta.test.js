@@ -1230,3 +1230,82 @@ test("no presenta el catálogo a mitad de una conversación antigua", async () =
   );
   assert.equal(queries, 1);
 });
+
+
+test("una pregunta ajena al hospedaje no recibe catálogo ni explicaciones históricas", async () => {
+  let sent = "";
+  let timesGenerated = 0;
+  const result = await processMetaMessage(
+    message({
+      channel: "instagram",
+      externalUserId: "tema-guerra",
+      text: "Buenas noches, me podrías ayudar a hacer un resumen sobre la Segunda Guerra Mundial?",
+    }),
+    successfulDependencies({
+      claim: async () => ({ id: 301 }),
+      isFirstMetaIncomingMessage: async () => true,
+      listCategories: async () => [
+        { slug: "doble", name: "Doble", price_per_night: 176.80 },
+      ],
+      generateReply: async () => {
+        timesGenerated++;
+        return {
+          reply: "Solo puedo ayudarte con información sobre nuestro hospedaje y reservas.",
+          mode: "outside_hotel_scope",
+        };
+      },
+      sendReply: async (_message, reply) => {
+        sent = reply;
+        return { messages: [{ id: "msg-bloqueado" }] };
+      },
+    })
+  );
+  assert.equal(result.status, "replied");
+  assert.equal(timesGenerated, 1);
+  assert.doesNotMatch(sent, /Segunda Guerra|Doble:|176\.80|1939|1945/);
+  assert.match(sent, /hospedaje/);
+});
+
+test("un tema académico en chat existente se rechaza sin repetir catálogo", async () => {
+  let sent = "";
+  await processMetaMessage(
+    message({ channel: "facebook", externalUserId: "tesis", text: "Es para mi tesis, ¿me ayudas?" }),
+    successfulDependencies({
+      claim: async () => ({ id: 302 }),
+      isFirstMetaIncomingMessage: async () => false,
+      generateReply: async () => ({
+        reply: "Solo puedo ayudarte con el hospedaje y las reservas.",
+        mode: "outside_hotel_scope",
+      }),
+      sendReply: async (_message, reply) => {
+        sent = reply;
+        return { messages: [{ id: "msg-tesis" }] };
+      },
+    })
+  );
+  assert.equal(sent, "Solo puedo ayudarte con el hospedaje y las reservas.");
+});
+
+test("una consulta de tarifas en primer mensaje pasa por el filtro antes del catálogo", async () => {
+  let sent = "";
+  let calls = 0;
+  await processMetaMessage(
+    message({ channel: "instagram", externalUserId: "tarifas-nuevo", text: "¿Cuánto cuestan las habitaciones?" }),
+    successfulDependencies({
+      claim: async () => ({ id: 303 }),
+      isFirstMetaIncomingMessage: async () => true,
+      listCategories: async () => [{ slug: "triple", name: "Triple", price_per_night: 197.20 }],
+      generateReply: async () => {
+        calls++;
+        return { reply: "Triple S/ 197.20", mode: "category_prices" };
+      },
+      sendReply: async (_message, reply) => {
+        sent = reply;
+        return { messages: [{ id: "msg-tarifas" }] };
+      },
+    })
+  );
+  assert.equal(calls, 1);
+  assert.match(sent, /Triple: S\/ 197\.20 por noche/);
+  assert.equal((sent.match(/Triple: S\/ 197\.20/g) || []).length, 1);
+});
