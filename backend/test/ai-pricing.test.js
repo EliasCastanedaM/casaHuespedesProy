@@ -45,6 +45,8 @@ test("tarifas son dinámicas: no quedan importes antiguos incrustados", () => {
 test("no intercepta solicitud con fechas ni precios de plataformas externas", () => {
   assert.equal(isCategoryPriceInquiry("¿Cuánto cuesta del 15/10/2026 al 17/10/2026?"), false);
   assert.equal(isCategoryPriceInquiry("Precio para mañana"), false);
+  assert.equal(isCategoryPriceInquiry("¿Cuánto cuesta llevar una mascota?"), false);
+  assert.equal(isCategoryPriceInquiry("Precio por perro"), false);
   assert.equal(isCategoryPriceInquiry("¿Cuál es la tarifa de Booking?"), false);
   assert.equal(isCategoryPriceInquiry("Quiero reservar, ¿cuál es el precio?"), false);
   assert.equal(isCategoryPriceInquiry("Ya pagué el precio acordado"), false);
