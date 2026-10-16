@@ -23,7 +23,9 @@ export function isCategoryPriceInquiry(message) {
   // Los precios de otras plataformas no se equiparan a la tarifa de la web.
   const bookingOrHandoff =
     /\b(?:reservar|reserva|pago|pague|pagar|transferencia|humano|asesor|persona|agente|queja)\b/.test(normalized);
-  return asksPrice && !specificStay && !bookingOrHandoff &&
+  // Precios de mascotas y otros cargos no son tarifas de habitaciones.
+  const petInquiry = /\b(?:mascotas?|perros?|gatos?|animales?)\b/.test(normalized);
+  return asksPrice && !specificStay && !bookingOrHandoff && !petInquiry &&
     !/\b(?:booking|airbnb)\b/.test(normalized);
 }
 
@@ -75,4 +77,39 @@ export function formatCategoryPricesReply(categories, message) {
     "",
     "Para confirmar disponibilidad y el total de tu estadía, indícame fecha de entrada, fecha de salida y número de huéspedes.",
   ].join("\n");
+}
+
+/**
+ * El saludo inicial se genera de forma determinista con el catálogo vigente.
+ * Nunca se incrustan importes fijos en este mensaje.
+ */
+export function formatInitialGreeting(categories) {
+  const active = Array.isArray(categories)
+    ? categories.filter((category) => category?.is_active !== false)
+    : [];
+  const rows = active.map((category) => {
+    const amount = Number(category.price_per_night);
+    const price = category.price_per_night != null && Number.isFinite(amount) && amount > 0
+      ? `S/ ${amount.toFixed(2)} por noche`
+      : "tarifa por confirmar";
+    return `- ${category.name}: ${price}`;
+  });
+
+  return [
+    "¡Hola! 👋 Bienvenido(a) a Casa Huéspedes Pimentel.",
+    rows.length
+      ? "Estas son nuestras categorías y tarifas vigentes:"
+      : "Por el momento no puedo confirmar nuestras categorías y precios.",
+    ...rows,
+    "",
+    "¿Para qué fechas deseas hospedarte y cuántas personas serían? Así podré confirmar la disponibilidad y el total.",
+  ].join("\n");
+}
+
+export function isOpeningGreetingOnly(message) {
+  const normalized = normalizeMessage(message)
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return /^(?:hola|holi|hello|hi|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hola buenas|hola buenos dias|hola buenas tardes|hola buenas noches)$/.test(normalized);
 }

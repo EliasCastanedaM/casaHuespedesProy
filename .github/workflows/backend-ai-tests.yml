@@ -1,0 +1,36 @@
+name: Backend AI Tests (branch)
+on:
+  push:
+    branches:
+      - feat/ai-welcome-prices-pet-fee
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci --ignore-scripts
+      - name: Test all backend cases
+        run: npm test
+      - name: Verify JS syntax
+        run: |
+          node --check src/modules/ai/ai.pricing.js
+          node --check src/modules/ai/ai.prompt.js
+          node --check src/modules/meta/meta.service.js
+          node --check test/meta.test.js

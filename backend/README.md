@@ -142,5 +142,6 @@ El asesor virtual está limitado por defecto al horario nocturno de Casa Huéspe
 
 El rango es inclusivo al inicio y exclusivo al final: a las 23:00 se activa la IA y a las 08:00 pasa a atención humana. Fuera del horario IA, `/api/ai/chat` y los mensajes de texto de WhatsApp/Facebook/Instagram reciben una derivación al equipo humano y no se ejecutan ni el flujo de reservas ni una llamada a OpenAI.
 
-Las reglas confirmadas incluidas en el prompt indican además que las mascotas requieren petición previa, su aceptación no puede ser confirmada automáticamente por la IA, el cargo es de S/ 35 si son aprobadas y no se permite ruido excesivo.
+Las reglas confirmadas incluidas en el prompt indican además que las mascotas requieren petición previa, su aceptación no puede ser confirmada automáticamente por la IA, el cargo es de S/ 20 si son aprobadas y no se permite ruido excesivo.
 
+Al iniciar una conversación nueva en Instagram o Facebook Messenger, el asesor saluda y muestra las categorías activas con sus tarifas actuales consultadas en la base de datos. La presentación inicial se envía una sola vez, no se repite en mensajes posteriores y no confirma disponibilidad sin fechas.

@@ -5,6 +5,7 @@ import app from "../src/app.js";
 import { env } from "../src/config/env.js";
 import {
   isHumanHandoffRequest,
+  isFirstMetaIncomingMessage,
   listRecoverableMessages,
   parseMetaWebhook,
   processMetaMessage,
@@ -1079,4 +1080,101 @@ test("POST del webhook acepta firma válida y rechaza firma inválida", async ()
     env.meta.appSecret = previousSecret;
     await closeServer(server);
   }
+});
+
+test("primer saludo en Instagram y Facebook presenta categorías y precios sin llamar a la IA", async () => {
+  const categories = [
+    { slug: "matrimonial", name: "Matrimonial Estándar", price_per_night: 154.70 },
+    { slug: "doble", name: "Doble", price_per_night: 176.80 },
+  ];
+  for (const channel of ["instagram", "facebook"]) {
+    let sent = "";
+    const result = await processMetaMessage(
+      message({ channel, externalUserId: "nuevo-huesped-" + channel, text: "¡Hola!" }),
+      successfulDependencies({
+        claim: async () => ({ id: 171 }),
+        isFirstMetaIncomingMessage: async () => true,
+        listCategories: async () => categories,
+        generateReply: async () => {
+          throw new Error("No debe usar el modelo para saludar");
+        },
+        sendReply: async (_message, reply) => {
+          sent += reply;
+          return { messages: [{ id: "salida-1" }] };
+        },
+      })
+    );
+    assert.equal(result.status, "replied");
+    assert.match(sent, /¡Hola!/);
+    assert.match(sent, /Matrimonial Estándar: S\/ 154\.70 por noche/);
+    assert.match(sent, /Doble: S\/ 176\.80 por noche/);
+    assert.match(sent, /fecha|fechas/i);
+  }
+});
+
+test("primera consulta específica conserva la respuesta original después del catálogo", async () => {
+  let sent = "";
+  let generated = 0;
+  await processMetaMessage(
+    message({ channel: "facebook", externalUserId: "nuevo-huesped-consulta", text: "¿Puedo llevar mi mascota?" }),
+    successfulDependencies({
+      claim: async () => ({ id: 172 }),
+      isFirstMetaIncomingMessage: async () => true,
+      listCategories: async () => [{ slug: "familiar", name: "Familiar", price_per_night: 221.00 }],
+      generateReply: async () => {
+        generated += 1;
+        return { reply: "Las mascotas requieren aprobación previa y tienen un cargo adicional de S/ 20." };
+      },
+      sendReply: async (_message, reply) => {
+        sent = reply;
+        return { messages: [{ id: "salida-2" }] };
+      },
+    })
+  );
+  assert.equal(generated, 1);
+  assert.match(sent, /Familiar: S\/ 221\.00/);
+  assert.match(sent, /S\/ 20/);
+});
+
+test("mensajes posteriores no repiten el saludo ni el catálogo", async () => {
+  let sent = "";
+  await processMetaMessage(
+    message({ channel: "facebook", externalUserId: "huesped-existente", text: "Gracias" }),
+    successfulDependencies({
+      claim: async () => ({ id: 173 }),
+      isFirstMetaIncomingMessage: async () => false,
+      listCategories: async () => {
+        throw new Error("No debe volver a cargar el catálogo en cada respuesta");
+      },
+      generateReply: async () => ({ reply: "Con mucho gusto." }),
+      sendReply: async (_message, reply) => {
+        sent = reply;
+        return { messages: [{ id: "salida-3" }] };
+      },
+    })
+  );
+  assert.equal(sent, "Con mucho gusto.");
+});
+
+test("identifica correctamente el primer mensaje aunque haya dos entrantes guardados", async () => {
+  const queryCalls = [];
+  const db = {
+    query: async (sql, params) => {
+      queryCalls.push({ sql, params });
+      return { rows: [{ id: 201, direction: "incoming" }] };
+    },
+  };
+  assert.equal(await isFirstMetaIncomingMessage("instagram", "nuevo", 201, db), true);
+  assert.equal(await isFirstMetaIncomingMessage("instagram", "nuevo", 202, db), false);
+  assert.equal(await isFirstMetaIncomingMessage("facebook", "nuevo", 201, db), true);
+  assert.equal(await isFirstMetaIncomingMessage("whatsapp", "nuevo", 201, db), false);
+  assert.equal(queryCalls.length, 3);
+  assert.ok(queryCalls.every(({ sql }) => /LIMIT 1/.test(sql)));
+});
+
+test("no envía bienvenida si ya había una respuesta manual anterior", async () => {
+  const db = {
+    query: async () => ({ rows: [{ id: 199, direction: "outgoing" }] }),
+  };
+  assert.equal(await isFirstMetaIncomingMessage("facebook", "existente", 201, db), false);
 });

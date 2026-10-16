@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import { generateAiReply } from "../ai/ai.service.js";
+import { isCategoryPriceInquiry, isOpeningGreetingOnly, formatInitialGreeting } from "../ai/ai.pricing.js";
+import { getPublicRoomCategoriesService } from "../rooms/roomCategory.service.js";
 import {
   sendInstagramMessageParts,
   sendInstagramMetaReply,
@@ -544,6 +546,19 @@ export async function listConversationMessages(
     [channel, externalUserId, safeLimit]
   );
   return result.rows;
+}
+
+export async function isFirstMetaIncomingMessage(channel, externalUserId, incomingId, db = pool) {
+  if (!incomingId || !["instagram", "facebook"].includes(channel)) return false;
+  // El primer mensaje debe conservar su bienvenida incluso si el huésped
+  // escribió otros mensajes que ya llegaron y se guardaron en el mismo webhook.
+  const result = await db.query(
+    "SELECT id, direction FROM meta_messages WHERE channel = $1 AND external_user_id = $2 ORDER BY id ASC LIMIT 1;",
+    [channel, externalUserId]
+  );
+  return result.rows.length === 1 &&
+    Number(result.rows[0].id) === Number(incomingId) &&
+    result.rows[0].direction === "incoming";
 }
 
 async function getRecentConversationHistory(
@@ -1229,6 +1244,9 @@ export async function processMetaMessage(message, overrides = {}) {
     setHandoff: overrides.setHandoff ?? setHandoffState,
     loadHistory: overrides.loadHistory ?? getRecentConversationHistory,
     generateReply: overrides.generateReply ?? generateAiReply,
+    isFirstMetaIncomingMessage: overrides.isFirstMetaIncomingMessage ??
+      (mockedPersistence ? async () => false : isFirstMetaIncomingMessage),
+    listCategories: overrides.listCategories ?? getPublicRoomCategoriesService,
     sendReply: overrides.sendReply ?? sendMetaReply,
     findOutgoing:
       overrides.findOutgoing ??
@@ -1313,16 +1331,38 @@ export async function processMetaMessage(message, overrides = {}) {
       message.externalUserId,
       message.messageId
     );
-    const result = await dependencies.generateReply({
-      channel: message.channel,
-      externalUserId: message.externalUserId,
-      message: message.text,
-      history,
-    });
+    const firstMessage = await dependencies.isFirstMetaIncomingMessage(
+      message.channel,
+      message.externalUserId,
+      incomingId
+    );
+
+    let welcome = "";
+    if (firstMessage) {
+      try {
+        welcome = formatInitialGreeting(await dependencies.listCategories());
+      } catch (error) {
+        console.warn("No se pudieron consultar las tarifas para el saludo:", error.message);
+        welcome = formatInitialGreeting([]);
+      }
+    }
+
+    let reply;
+    if (firstMessage && (isOpeningGreetingOnly(message.text) || isCategoryPriceInquiry(message.text))) {
+      reply = welcome;
+    } else {
+      const result = await dependencies.generateReply({
+        channel: message.channel,
+        externalUserId: message.externalUserId,
+        message: message.text,
+        history,
+      });
+      reply = firstMessage ? welcome + "\n\n" + result.reply : result.reply;
+    }
 
     const outgoing = await dependencies.createOutgoing(
       message,
-      result.reply,
+      reply,
       "assistant",
       incomingId
     );
