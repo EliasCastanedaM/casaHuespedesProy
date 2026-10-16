@@ -167,6 +167,29 @@ export function isNewReservationIntent(message) {
   ].some((pattern) => pattern.test(text));
 }
 
+// Permite continuar desde el catálogo de bienvenida de WhatsApp aunque
+// el huésped haya empezado con un simple "Hola" y aún no exista una reserva
+// activa. Solo acepta elecciones y datos de estadía muy concretos.
+export function isWhatsAppBookingStep(message) {
+  const raw = String(message || "").trim();
+  if (!raw || raw.length > 110) return false;
+  const normalized = normalizedText(raw)
+    .replace(/[¡!¿?.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (/^(?:(?:la|una|el|un)\s+)?(?:matrimonial(?:\s+(?:estandar|ejecutiva))?|doble|triple|familiar)$/.test(normalized)) {
+    return true;
+  }
+  if (/^(?:somos|para)?\s*\d{1,2}\s*(?:personas?|huespedes?|adultos?)$/.test(normalized)) {
+    return true;
+  }
+  const dates = extractDates(raw);
+  if (dates.check_in) {
+    return /^(?:(?:ingreso|entrada|llegada|salida|del|desde|hasta|al|y|a|,|\s|[\d/-])+)$/.test(normalized);
+  }
+  return false;
+}
+
 export function isPaymentReportedMessage(message) {
   const text = normalizedText(message);
 
