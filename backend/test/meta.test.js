@@ -5,6 +5,7 @@ import app from "../src/app.js";
 import { env } from "../src/config/env.js";
 import {
   isHumanHandoffRequest,
+  isFirstMetaIncomingMessage,
   listRecoverableMessages,
   parseMetaWebhook,
   processMetaMessage,
@@ -1153,4 +1154,27 @@ test("mensajes posteriores no repiten el saludo ni el catálogo", async () => {
     })
   );
   assert.equal(sent, "Con mucho gusto.");
+});
+
+test("identifica correctamente el primer mensaje aunque haya dos entrantes guardados", async () => {
+  const queryCalls = [];
+  const db = {
+    query: async (sql, params) => {
+      queryCalls.push({ sql, params });
+      return { rows: [{ id: 201, direction: "incoming" }] };
+    },
+  };
+  assert.equal(await isFirstMetaIncomingMessage("instagram", "nuevo", 201, db), true);
+  assert.equal(await isFirstMetaIncomingMessage("instagram", "nuevo", 202, db), false);
+  assert.equal(await isFirstMetaIncomingMessage("facebook", "nuevo", 201, db), true);
+  assert.equal(await isFirstMetaIncomingMessage("whatsapp", "nuevo", 201, db), false);
+  assert.equal(queryCalls.length, 3);
+  assert.ok(queryCalls.every(({ sql }) => /LIMIT 1/.test(sql)));
+});
+
+test("no envía bienvenida si ya había una respuesta manual anterior", async () => {
+  const db = {
+    query: async () => ({ rows: [{ id: 199, direction: "outgoing" }] }),
+  };
+  assert.equal(await isFirstMetaIncomingMessage("facebook", "existente", 201, db), false);
 });
