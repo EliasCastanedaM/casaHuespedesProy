@@ -1429,3 +1429,40 @@ test("WhatsApp no antepone catálogo a consultas ajenas al hotel", async () => {
   );
   assert.equal(reply, "Solo atiendo consultas del hospedaje.");
 });
+
+
+test("WhatsApp orienta la reserva cuando se repite Hola despues de mostrar el catalogo", async () => {
+  const sent = [];
+  let aiCalls = 0;
+  const base = successfulDependencies({
+    listCategories: async () => [
+      { slug: "doble", name: "Doble", price_per_night: 176.80 },
+    ],
+    generateReply: async () => {
+      aiCalls += 1;
+      return { reply: "Saludo genérico no deseado" };
+    },
+    sendReply: async (_message, content) => {
+      sent.push(content);
+      return { messages: [{ id: "wamid.saludo-" + sent.length }] };
+    },
+  });
+
+  const first = await processMetaMessage(
+    message({ channel: "whatsapp", externalUserId: "prueba-dos-holas", messageId: "wamid.hola1", text: "hola" }),
+    { ...base, claim: async () => ({ id: 1201 }), isFirstMetaIncomingMessage: async () => true }
+  );
+  const second = await processMetaMessage(
+    message({ channel: "whatsapp", externalUserId: "prueba-dos-holas", messageId: "wamid.hola2", text: "hola" }),
+    { ...base, claim: async () => ({ id: 1202 }), isFirstMetaIncomingMessage: async () => false }
+  );
+
+  assert.equal(first.status, "replied");
+  assert.equal(second.status, "replied");
+  assert.equal(sent.length, 2);
+  assert.match(sent[0], /Doble: S\/ 176\.80 por noche/);
+  assert.match(sent[1], /categoría prefieres/);
+  assert.match(sent[1], /fechas de ingreso y salida/);
+  assert.doesNotMatch(sent[1], /Bienvenido|Estas son nuestras categorías|Saludo genérico/i);
+  assert.equal(aiCalls, 0);
+});
