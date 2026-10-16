@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   handleDeterministicBookingFlow,
   isReservationIntent,
+  isWhatsAppBookingStep,
   mergeAvailabilityIntoBookingContext,
 } from "../src/modules/ai/ai.booking-flow.js";
 import { activeBookingContextFromRow } from "../src/modules/ai/ai.service.js";
@@ -406,4 +407,14 @@ test("WhatsApp maneja fallos de disponibilidad sin solicitar PII", async () => {
   assert.equal(result.mode, "booking_availability_unavailable");
   assert.match(result.reply, /No pude confirmar la disponibilidad/);
   assert.equal(calls.bookings.length, 0);
+});
+
+
+test('WhatsApp acepta elecciones de categoria desde la bienvenida', () => {
+  assert.equal(isWhatsAppBookingStep('Triple'), true);
+  assert.equal(isWhatsAppBookingStep('La Familiar'), true);
+  assert.equal(isWhatsAppBookingStep('Ingreso 20/11/2026 y salida 22/11/2026'), true);
+  assert.equal(isWhatsAppBookingStep('2 personas'), true);
+  assert.equal(isWhatsAppBookingStep('Hola'), false);
+  assert.equal(isWhatsAppBookingStep('¿Cuánto cuesta la matrimonial?'), false);
 });
