@@ -1435,6 +1435,7 @@ test("WhatsApp orienta la reserva cuando se repite Hola despues de mostrar el ca
   const sent = [];
   let aiCalls = 0;
   const base = successfulDependencies({
+    hasPreviouslySentCatalog: async () => true,
     listCategories: async () => [
       { slug: "doble", name: "Doble", price_per_night: 176.80 },
     ],
