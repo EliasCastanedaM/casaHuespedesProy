@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isCategoryPriceInquiry, formatCategoryPricesReply } from "../src/modules/ai/ai.pricing.js";
+import { isCategoryPriceInquiry, formatCategoryPricesReply, formatInitialGreeting, isOpeningGreetingOnly } from "../src/modules/ai/ai.pricing.js";
 
 const categories = [
   { slug: "matrimonial", name: "Matrimonial Estándar", price_per_night: 154.70 },
@@ -55,4 +55,32 @@ test("sin un precio válido no inventa un importe", () => {
   const answer = formatCategoryPricesReply([{ slug: "triple", name: "Triple", price_per_night: null }], "Precio triple");
   assert.match(answer, /no puedo confirmar las tarifas/i);
   assert.doesNotMatch(answer, /S\/ 0\.00/);
+});
+
+test("el saludo inicial incluye todas las categorías con el precio vigente", () => {
+  const answer = formatInitialGreeting(categories);
+  assert.match(answer, /¡Hola!/);
+  for (const category of categories) {
+    assert.ok(answer.includes(category.name));
+    assert.ok(answer.includes(`S/ ${category.price_per_night.toFixed(2)} por noche`));
+  }
+  assert.doesNotMatch(answer, /habitaci[oó]n 101/i);
+});
+
+test("el saludo refleja cambios en Supabase y no inventa precios faltantes", () => {
+  const answer = formatInitialGreeting([
+    { slug: "triple", name: "Triple", price_per_night: 215.50 },
+    { slug: "familiar", name: "Familiar", price_per_night: null },
+  ]);
+  assert.match(answer, /Triple: S\/ 215\.50/);
+  assert.match(answer, /Familiar: tarifa por confirmar/);
+  assert.doesNotMatch(answer, /S\/ 0\.00/);
+});
+
+test("detecta saludos sencillos sin consumir una respuesta del modelo", () => {
+  for (const greeting of ["Hola", "¡Hola!", "Buenas tardes", "Buenos días", "Hola, buenas noches"]) {
+    assert.equal(isOpeningGreetingOnly(greeting), true);
+  }
+  assert.equal(isOpeningGreetingOnly("Hola, quiero reservar una doble"), false);
+  assert.equal(isOpeningGreetingOnly("Quiero reservar"), false);
 });
