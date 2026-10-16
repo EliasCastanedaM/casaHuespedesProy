@@ -23,6 +23,9 @@ const UNSUPPORTED_MESSAGE_REPLY =
 const HUMAN_HANDOFF_REPLY =
   "Claro, dejaré esta conversación para que la atienda una persona. El asistente automático quedará pausado en este chat.";
 
+const WHATSAPP_FOLLOWUP_GREETING_REPLY =
+  "Con gusto 😊. Para ayudarte con tu reserva, dime qué categoría prefieres y cuáles serían las fechas de ingreso y salida y el número de huéspedes. Así puedo revisar la disponibilidad.";
+
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
@@ -584,6 +587,22 @@ export async function isFirstMetaIncomingMessage(channel, externalUserId, incomi
     [channel, externalUserId]
   );
   return previousWelcome.rows[0]?.has_welcome === false;
+}
+
+// Confirma que el huésped ya recibió el catálogo antes de convertir otro
+// saludo en una invitación a continuar. No depende de memoria volátil.
+async function hasPreviouslySentCatalog(channel, externalUserId, db = pool) {
+  if (channel !== "whatsapp") return false;
+  const result = await db.query(
+    `SELECT EXISTS (
+       SELECT 1 FROM meta_messages
+       WHERE channel = $1 AND external_user_id = $2
+         AND direction = 'outgoing' AND author = 'assistant'
+         AND content LIKE '%Estas son nuestras categorías y tarifas vigentes:%'
+     ) AS has_welcome;`,
+    [channel, externalUserId]
+  );
+  return result.rows[0]?.has_welcome === true;
 }
 
 async function getRecentConversationHistory(
@@ -1272,6 +1291,8 @@ export async function processMetaMessage(message, overrides = {}) {
     isFirstMetaIncomingMessage: overrides.isFirstMetaIncomingMessage ??
       (mockedPersistence ? async () => false : isFirstMetaIncomingMessage),
     listCategories: overrides.listCategories ?? getPublicRoomCategoriesService,
+    hasPreviouslySentCatalog: overrides.hasPreviouslySentCatalog ??
+      (mockedPersistence ? async () => false : hasPreviouslySentCatalog),
     sendReply: overrides.sendReply ?? sendMetaReply,
     findOutgoing:
       overrides.findOutgoing ??
@@ -1377,6 +1398,15 @@ export async function processMetaMessage(message, overrides = {}) {
     let reply;
     if (firstMessage && isOpeningGreetingOnly(message.text)) {
       reply = welcome;
+    } else if (message.channel === "whatsapp" &&
+               isOpeningGreetingOnly(message.text) &&
+               await dependencies.hasPreviouslySentCatalog(
+                 message.channel, message.externalUserId, dependencies.db ?? pool
+               )) {
+      // La bienvenida y el catálogo se presentan solo una vez. Un "hola"
+      // posterior continúa orientando la reserva, sin reabrir el saludo
+      // ni consumir otra llamada a OpenAI.
+      reply = WHATSAPP_FOLLOWUP_GREETING_REPLY;
     } else {
       // Incluso en el primer mensaje, el filtro de alcance debe ejecutarse
       // antes de mostrar el catálogo: un pedido ajeno no recibe precios.
