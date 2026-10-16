@@ -496,7 +496,7 @@ async function generateAiReplyInternal({
           mensaje_actual: currentMessage,
           historial_reciente: recentHistory,
         }),
-        max_output_tokens: 24,
+        max_output_tokens: 128,
         store: false,
       });
       return classification.output_text;
