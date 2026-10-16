@@ -1167,8 +1167,9 @@ test("identifica correctamente el primer mensaje aunque haya dos entrantes guard
   assert.equal(await isFirstMetaIncomingMessage("instagram", "nuevo", 201, db), true);
   assert.equal(await isFirstMetaIncomingMessage("instagram", "nuevo", 202, db), false);
   assert.equal(await isFirstMetaIncomingMessage("facebook", "nuevo", 201, db), true);
-  assert.equal(await isFirstMetaIncomingMessage("whatsapp", "nuevo", 201, db), false);
-  assert.equal(queryCalls.length, 3);
+  assert.equal(await isFirstMetaIncomingMessage("whatsapp", "nuevo", 201, db), true);
+  assert.equal(await isFirstMetaIncomingMessage("tiktok", "nuevo", 201, db), false);
+  assert.equal(queryCalls.length, 4);
   assert.ok(queryCalls.every(({ sql }) => /LIMIT 1/.test(sql)));
 });
 
@@ -1308,4 +1309,123 @@ test("una consulta de tarifas en primer mensaje pasa por el filtro antes del cat
   assert.equal(calls, 1);
   assert.match(sent, /Triple: S\/ 197\.20 por noche/);
   assert.equal((sent.match(/Triple: S\/ 197\.20/g) || []).length, 1);
+});
+
+
+test("WhatsApp saluda con las cinco categorías y precios actuales al primer Hola", async () => {
+  let reply = "";
+  const categories = [
+    { slug: "matrimonial", name: "Matrimonial Estándar", price_per_night: 154.70 },
+    { slug: "matrimonial-ejecutiva", name: "Matrimonial Ejecutiva", price_per_night: 163.20 },
+    { slug: "doble", name: "Doble", price_per_night: 176.80 },
+    { slug: "triple", name: "Triple", price_per_night: 197.20 },
+    { slug: "familiar", name: "Familiar", price_per_night: 221.00 },
+  ];
+  await processMetaMessage(
+    message({ channel: "whatsapp", externalUserId: "nuevo-whatsapp", text: "Hola" }),
+    successfulDependencies({
+      claim: async () => ({ id: 901 }),
+      isFirstMetaIncomingMessage: async () => true,
+      listCategories: async () => categories,
+      generateReply: async () => { throw new Error("No debe llamar a la IA en saludo"); },
+      sendReply: async (_message, content) => {
+        reply = content;
+        return { messages: [{ id: "wamid.welcome1" }] };
+      },
+    })
+  );
+  for (const category of categories) {
+    assert.match(reply, new RegExp(category.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.ok(reply.includes(`S/ ${category.price_per_night.toFixed(2)} por noche`));
+  }
+  assert.match(reply, /¿Para qué fechas/);
+  assert.doesNotMatch(reply, /nombre completo|correo|celular/);
+});
+
+test("WhatsApp inicializa intención de reserva pero no pide los datos juntos al saludar", async () => {
+  let reply = "";
+  let calls = 0;
+  await processMetaMessage(
+    message({
+      channel: "whatsapp",
+      externalUserId: "reserva-inicial",
+      text: "Hola, quisiera reservar una habitación",
+    }),
+    successfulDependencies({
+      claim: async () => ({ id: 902 }),
+      isFirstMetaIncomingMessage: async () => true,
+      listCategories: async () => [
+        { name: "Matrimonial Estándar", slug: "matrimonial", price_per_night: 154.70 },
+        { name: "Doble", slug: "doble", price_per_night: 176.80 },
+      ],
+      generateReply: async () => {
+        calls++;
+        return {
+          reply: "Para comenzar, ¿qué categoría prefieres?",
+          mode: "booking_details_required",
+          deterministic: true,
+        };
+      },
+      sendReply: async (_message, content) => {
+        reply = content;
+        return { messages: [{ id: "wamid.welcome2" }] };
+      },
+    })
+  );
+  assert.equal(calls, 1);
+  assert.match(reply, /Matrimonial Estándar: S\/ 154\.70/);
+  assert.match(reply, /¿Para qué fechas/);
+  assert.doesNotMatch(reply, /Para comenzar|todos esos datos|nombre completo|correo/);
+});
+
+test("WhatsApp permite saludo posterior en chat de prueba antiguo sin repetirlo", async () => {
+  const querySql = [];
+  const db = {
+    query: async (sql) => {
+      querySql.push(sql);
+      if (sql.includes("LIMIT 1")) {
+        return { rows: [{ id: 42, direction: "incoming" }] };
+      }
+      if (sql.includes("AS has_welcome")) {
+        return { rows: [{ has_welcome: false }] };
+      }
+      throw new Error("SQL inesperado");
+    },
+  };
+  assert.equal(
+    await isFirstMetaIncomingMessage("whatsapp", "prueba-antigua", 903, db, "Hola, quisiera reservar una habitación"),
+    true
+  );
+  assert.equal(querySql.length, 2);
+  const alreadyGreeted = {
+    query: async (sql) =>
+      sql.includes("LIMIT 1")
+        ? { rows: [{ id: 42, direction: "incoming" }] }
+        : { rows: [{ has_welcome: true }] },
+  };
+  assert.equal(
+    await isFirstMetaIncomingMessage("whatsapp", "prueba-antigua", 904, alreadyGreeted, "Hola"),
+    false
+  );
+});
+
+test("WhatsApp no antepone catálogo a consultas ajenas al hotel", async () => {
+  let reply = "";
+  await processMetaMessage(
+    message({ channel: "whatsapp", text: "Explícame la Segunda Guerra Mundial" }),
+    successfulDependencies({
+      claim: async () => ({ id: 905 }),
+      isFirstMetaIncomingMessage: async () => true,
+      listCategories: async () => [{ name: "Doble", price_per_night: 176.8 }],
+      generateReply: async () => ({
+        mode: "outside_hotel_scope",
+        reply: "Solo atiendo consultas del hospedaje.",
+      }),
+      sendReply: async (_message, content) => {
+        reply = content;
+        return { messages: [{ id: "wamid.offtopic" }] };
+      },
+    })
+  );
+  assert.equal(reply, "Solo atiendo consultas del hospedaje.");
 });

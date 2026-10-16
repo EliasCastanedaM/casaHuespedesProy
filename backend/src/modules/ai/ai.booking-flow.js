@@ -167,6 +167,29 @@ export function isNewReservationIntent(message) {
   ].some((pattern) => pattern.test(text));
 }
 
+// Permite continuar desde el catálogo de bienvenida de WhatsApp aunque
+// el huésped haya empezado con un simple "Hola" y aún no exista una reserva
+// activa. Solo acepta elecciones y datos de estadía muy concretos.
+export function isWhatsAppBookingStep(message) {
+  const raw = String(message || "").trim();
+  if (!raw || raw.length > 110) return false;
+  const normalized = normalizedText(raw)
+    .replace(/[¡!¿?.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (/^(?:(?:la|una|el|un)\s+)?(?:matrimonial(?:\s+(?:estandar|ejecutiva))?|doble|triple|familiar)$/.test(normalized)) {
+    return true;
+  }
+  if (/^(?:somos|para)?\s*\d{1,2}\s*(?:personas?|huespedes?|adultos?)$/.test(normalized)) {
+    return true;
+  }
+  const dates = extractDates(raw);
+  if (dates.check_in) {
+    return /^(?:(?:ingreso|entrada|llegada|salida|del|desde|hasta|al|y|a|,|\s|[\d/-])+)$/.test(normalized);
+  }
+  return false;
+}
+
 export function isPaymentReportedMessage(message) {
   const text = normalizedText(message);
 
@@ -449,6 +472,31 @@ function missingDataReply(context, invalidCategoryReference) {
   )}.\nEnvíame todos esos datos juntos en un solo mensaje. No envíes datos de tarjeta.`;
 }
 
+// En WhatsApp recopilamos primero los datos de estadía y consultamos
+// disponibilidad antes de solicitar datos personales. No obliga al cliente
+// a enviar todos sus datos privados en un solo mensaje.
+function progressiveMissingDataReply(missing, context) {
+  if (missing.includes("categoría de habitación")) {
+    return "Para ayudarte con la reserva, ¿qué categoría prefieres: Matrimonial Estándar, Matrimonial Ejecutiva, Doble, Triple o Familiar?";
+  }
+  if (missing.includes("fecha de ingreso") || missing.includes("fecha de salida")) {
+    return "¿Cuáles serían las fechas de ingreso y salida? Escríbelas en formato DD/MM/AAAA, por ejemplo: ingreso 20/11/2026 y salida 22/11/2026.";
+  }
+  if (missing.includes("cantidad de huéspedes")) {
+    return "¿Cuántas personas se hospedarán?";
+  }
+  if (missing.includes("nombre completo")) {
+    return "Hay disponibilidad en esa categoría para las fechas indicadas al momento de la consulta. Para preparar la pre-reserva, ¿cuál es tu nombre completo? La disponibilidad se confirmará nuevamente antes de crearla.";
+  }
+  if (missing.includes("correo")) {
+    return "Gracias. ¿A qué correo electrónico deseas recibir la información de tu pre-reserva?";
+  }
+  if (missing.includes("celular")) {
+    return "Por último, ¿me indicas tu número de celular de contacto? No envíes datos de tarjeta.";
+  }
+  return missingDataReply(context, null);
+}
+
 function createdBookingReply(result, paymentUrl) {
   const booking = result.booking;
   const category =
@@ -541,6 +589,7 @@ export async function handleDeterministicBookingFlow({
   paymentUrl,
   createIntentId = randomUUID,
   newIntentPrepared = false,
+  progressiveCollection = false,
 }) {
   const safeInitialContext = normalizeCategoryContext(context);
 
@@ -629,6 +678,59 @@ export async function handleDeterministicBookingFlow({
 
   const missing = missingFields(nextContext);
   if (missing.length > 0) {
+    if (progressiveCollection) {
+      // Antes de solicitar nombre, correo o teléfono, confirmar que exista
+      // inventario para la estadía. No se crea reserva en esta consulta.
+      const hasStayDetails = Boolean(
+        nextContext.category?.category_slug &&
+        nextContext.check_in &&
+        (nextContext.check_out || nextContext.nights) &&
+        nextContext.guests_count
+      );
+      if (hasStayDetails) {
+        let preliminaryAvailability;
+        try {
+          preliminaryAvailability = await services.searchAvailableRooms({
+            check_in: nextContext.check_in,
+            check_out: nextContext.check_out || undefined,
+            nights: nextContext.check_out ? undefined : nextContext.nights,
+            guests_count: nextContext.guests_count,
+          });
+        } catch (error) {
+          return {
+            handled: true,
+            context: nextContext,
+            mode: "booking_availability_unavailable",
+            reply: `No pude confirmar la disponibilidad para esas fechas. No se creó ninguna reserva. Puedes indicarme otras fechas o llamar al ${hotelPhone}.`,
+          };
+        }
+
+        const categorySlug = inferCategorySlug(nextContext.category);
+        const available = (preliminaryAvailability?.categories || []).find(
+          (category) => category.slug === categorySlug &&
+            Number(category.available_quantity || 0) > 0
+        );
+        if (!available) {
+          const refreshedContext = mergeAvailabilityIntoBookingContext(
+            { ...nextContext, category: null },
+            preliminaryAvailability
+          );
+          return {
+            handled: true,
+            context: refreshedContext,
+            mode: "booking_availability_unavailable",
+            reply: `No quedan habitaciones disponibles en la categoría solicitada para esas fechas. No se creó ninguna reserva.\n${availableAlternativesReply(preliminaryAvailability)}\nElige otra categoría o llama al ${hotelPhone}.`,
+          };
+        }
+      }
+
+      return {
+        handled: true,
+        context: nextContext,
+        mode: "booking_details_required",
+        reply: progressiveMissingDataReply(missing, nextContext),
+      };
+    }
     return {
       handled: true,
       context: nextContext,

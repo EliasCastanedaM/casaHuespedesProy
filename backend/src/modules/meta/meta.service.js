@@ -549,7 +549,7 @@ export async function listConversationMessages(
 }
 
 export async function isFirstMetaIncomingMessage(channel, externalUserId, incomingId, db = pool, messageText = "") {
-  if (!incomingId || !["instagram", "facebook"].includes(channel)) return false;
+  if (!incomingId || !["instagram", "facebook", "whatsapp"].includes(channel)) return false;
   // El primer mensaje recibe la bienvenida incluso si otros mensajes
   // llegaron en el mismo webhook.
   const result = await db.query(
@@ -564,7 +564,16 @@ export async function isFirstMetaIncomingMessage(channel, externalUserId, incomi
   // Los huéspedes antiguos conservan el historial. Si vuelven a escribir
   // un saludo breve y nunca recibieron el nuevo catálogo, se lo presentamos
   // una sola vez sin obligarlos a iniciar un chat distinto.
-  if (!isOpeningGreetingOnly(messageText)) return false;
+  // WhatsApp incluye también la primera consulta de reserva en una cuenta
+  // de prueba que ya tenía mensajes previos, pero todavía no tenía catálogo.
+  // Una conversación existente solo se saluda cuando empieza de forma clara:
+  // no se interrumpe una reserva en curso con otra presentación.
+  const startsConversation = isOpeningGreetingOnly(messageText) ||
+    (channel === "whatsapp" &&
+      /\b(?:hola|buenas|buenos dias)\b/i.test(
+        String(messageText || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+      ));
+  if (!startsConversation) return false;
   const previousWelcome = await db.query(
     `SELECT EXISTS (
        SELECT 1 FROM meta_messages
@@ -1381,6 +1390,12 @@ export async function processMetaMessage(message, overrides = {}) {
         reply = result.reply;
       } else if (firstMessage && result.mode === "category_prices" &&
                  isCategoryPriceInquiry(message.text)) {
+        reply = welcome;
+      } else if (firstMessage && message.channel === "whatsapp" &&
+                 result.mode === "booking_details_required") {
+        // El flujo de reserva ya dejó guardada la intención y los datos
+        // del primer mensaje. Mostramos primero el catálogo, sin pedir
+        // todos los datos juntos ni repetir la pregunta de fechas.
         reply = welcome;
       } else {
         reply = firstMessage ? welcome + "\n\n" + result.reply : result.reply;

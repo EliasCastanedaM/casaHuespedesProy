@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   handleDeterministicBookingFlow,
   isReservationIntent,
+  isWhatsAppBookingStep,
   mergeAvailabilityIntoBookingContext,
 } from "../src/modules/ai/ai.booking-flow.js";
 import { activeBookingContextFromRow } from "../src/modules/ai/ai.service.js";
@@ -316,4 +317,104 @@ test("un número físico nunca se acepta ni se repite al huésped", async () => 
     JSON.stringify(result.context),
     /room_number|assigned_room|Habitación 407/i
   );
+});
+
+
+test("WhatsApp solicita la estadía antes de pedir datos privados y confirma inventario", async () => {
+  const calls = emptyCalls();
+  const services = successfulBookingServices(calls);
+  const options = { services, progressiveCollection: true };
+  const start = await flow({
+    ...options,
+    message: "Hola, quisiera reservar una habitación",
+    context: {},
+  });
+  assert.equal(start.mode, "booking_details_required");
+  assert.match(start.reply, /qué categoría prefieres/i);
+  assert.doesNotMatch(start.reply, /nombre completo|correo|celular|todos esos datos/);
+  assert.equal(calls.searches.length, 0);
+
+  const category = await flow({
+    ...options, message: "Triple", context: start.context,
+  });
+  assert.match(category.reply, /fechas de ingreso y salida/);
+  assert.equal(calls.searches.length, 0);
+
+  const dates = await flow({
+    ...options, message: "Ingreso 20/11/2026 y salida 22/11/2026", context: category.context,
+  });
+  assert.match(dates.reply, /Cuántas personas/i);
+  assert.equal(calls.searches.length, 0);
+
+  const guests = await flow({
+    ...options, message: "2 personas", context: dates.context,
+  });
+  assert.match(guests.reply, /nombre completo/i);
+  assert.equal(calls.searches.length, 1, "Debe validar antes de solicitar PII");
+  assert.equal(calls.bookings.length, 0);
+
+  const name = await flow({
+    ...options, message: "Nombre: Ana Torres", context: guests.context,
+  });
+  assert.match(name.reply, /correo electrónico/i);
+  assert.doesNotMatch(name.reply, /datos juntos/i);
+
+  const email = await flow({
+    ...options, message: "correo: ana@example.com", context: name.context,
+  });
+  assert.match(email.reply, /celular/i);
+
+  const complete = await flow({
+    ...options, message: "Celular: 987654321", context: email.context,
+  });
+  assert.equal(calls.bookings.length, 1);
+  assert.equal(complete.context.booking.status, "pending_payment");
+  assert.match(complete.reply, /CHP-00081/);
+});
+
+test("WhatsApp no pide nombre ni crea reservas cuando la categoría está agotada", async () => {
+  const calls = emptyCalls();
+  const services = successfulBookingServices(calls);
+  services.searchAvailableRooms = async () => ({
+    categories: [],
+    check_in: "2026-11-20",
+    check_out: "2026-11-22",
+    nights: 2,
+    guests_count: 2,
+  });
+  const result = await flow({
+    progressiveCollection: true,
+    message: "Quiero reservar la Triple. Ingreso 20/11/2026, salida 22/11/2026, 2 personas",
+    context: {},
+    services,
+  });
+  assert.equal(result.mode, "booking_availability_unavailable");
+  assert.match(result.reply, /No quedan habitaciones disponibles/);
+  assert.doesNotMatch(result.reply, /nombre completo|correo|celular/);
+  assert.equal(calls.bookings.length, 0);
+});
+
+test("WhatsApp maneja fallos de disponibilidad sin solicitar PII", async () => {
+  const calls = emptyCalls();
+  const services = successfulBookingServices(calls);
+  services.searchAvailableRooms = async () => { throw new Error("Sin servicio"); };
+  const result = await flow({
+    progressiveCollection: true,
+    message: "Quiero reservar la Triple. Ingreso 20/11/2026, salida 22/11/2026, 2 personas",
+    context: {},
+    services,
+  });
+  assert.equal(result.mode, "booking_availability_unavailable");
+  assert.match(result.reply, /No pude confirmar la disponibilidad/);
+  assert.equal(calls.bookings.length, 0);
+});
+
+
+test('WhatsApp acepta elecciones de categoria desde la bienvenida', () => {
+  assert.equal(isWhatsAppBookingStep('Triple'), true);
+  assert.equal(isWhatsAppBookingStep('La Familiar'), true);
+  assert.equal(isWhatsAppBookingStep('Ingreso 20/11/2026 y salida 22/11/2026'), true);
+  assert.equal(isWhatsAppBookingStep('2 personas'), true);
+  assert.equal(isWhatsAppBookingStep('Hola'), false);
+  assert.equal(isWhatsAppBookingStep('¿Cuánto cuesta la matrimonial?'), false);
 });

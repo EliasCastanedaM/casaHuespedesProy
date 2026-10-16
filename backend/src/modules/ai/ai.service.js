@@ -23,6 +23,7 @@ import {
   handleDeterministicBookingFlow,
   isNewReservationIntent,
   isReservationIntent,
+  isWhatsAppBookingStep,
   mergeAvailabilityIntoBookingContext,
 } from "./ai.booking-flow.js";
 
@@ -536,7 +537,8 @@ async function generateAiReplyInternal({
 
   let bookingContext = await loadBookingContext(channel, externalUserId);
   const newReservation = isNewReservationIntent(message);
-  if (newReservation || isReservationIntent(message)) {
+  if (newReservation || isReservationIntent(message) ||
+      (channel === "whatsapp" && isWhatsAppBookingStep(message))) {
     bookingContext = await ensureDurableBookingIntent(
       channel,
       externalUserId,
@@ -549,6 +551,7 @@ async function generateAiReplyInternal({
     hotelPhone: env.hotel.phone || "901551287",
     paymentUrl: env.culqiPaymentUrl,
     newIntentPrepared: newReservation,
+    progressiveCollection: channel === "whatsapp",
     services: {
       listCategories: getPublicRoomCategoriesService,
       searchAvailableRooms: searchAvailableRoomCategoriesService,
@@ -579,6 +582,7 @@ async function generateAiReplyInternal({
       reply: deterministic.reply,
       responseId: null,
       deterministic: true,
+      mode: deterministic.mode || "booking_flow",
     };
   }
 
