@@ -589,6 +589,22 @@ export async function isFirstMetaIncomingMessage(channel, externalUserId, incomi
   return previousWelcome.rows[0]?.has_welcome === false;
 }
 
+// Confirma que el huésped ya recibió el catálogo antes de convertir otro
+// saludo en una invitación a continuar. No depende de memoria volátil.
+async function hasPreviouslySentCatalog(channel, externalUserId, db = pool) {
+  if (channel !== "whatsapp") return false;
+  const result = await db.query(
+    `SELECT EXISTS (
+       SELECT 1 FROM meta_messages
+       WHERE channel = $1 AND external_user_id = $2
+         AND direction = 'outgoing' AND author = 'assistant'
+         AND content LIKE '%Estas son nuestras categorías y tarifas vigentes:%'
+     ) AS has_welcome;`,
+    [channel, externalUserId]
+  );
+  return result.rows[0]?.has_welcome === true;
+}
+
 async function getRecentConversationHistory(
   channel,
   externalUserId,
@@ -1275,6 +1291,8 @@ export async function processMetaMessage(message, overrides = {}) {
     isFirstMetaIncomingMessage: overrides.isFirstMetaIncomingMessage ??
       (mockedPersistence ? async () => false : isFirstMetaIncomingMessage),
     listCategories: overrides.listCategories ?? getPublicRoomCategoriesService,
+    hasPreviouslySentCatalog: overrides.hasPreviouslySentCatalog ??
+      (mockedPersistence ? async () => false : hasPreviouslySentCatalog),
     sendReply: overrides.sendReply ?? sendMetaReply,
     findOutgoing:
       overrides.findOutgoing ??
@@ -1380,7 +1398,11 @@ export async function processMetaMessage(message, overrides = {}) {
     let reply;
     if (firstMessage && isOpeningGreetingOnly(message.text)) {
       reply = welcome;
-    } else if (message.channel === "whatsapp" && isOpeningGreetingOnly(message.text)) {
+    } else if (message.channel === "whatsapp" &&
+               isOpeningGreetingOnly(message.text) &&
+               await dependencies.hasPreviouslySentCatalog(
+                 message.channel, message.externalUserId, dependencies.db ?? pool
+               )) {
       // La bienvenida y el catálogo se presentan solo una vez. Un "hola"
       // posterior continúa orientando la reserva, sin reabrir el saludo
       // ni consumir otra llamada a OpenAI.
