@@ -23,6 +23,7 @@ import {
   handleDeterministicBookingFlow,
   isNewReservationIntent,
   isReservationIntent,
+  isWhatsAppBookingStep,
   mergeAvailabilityIntoBookingContext,
 } from "./ai.booking-flow.js";
 
@@ -536,7 +537,8 @@ async function generateAiReplyInternal({
 
   let bookingContext = await loadBookingContext(channel, externalUserId);
   const newReservation = isNewReservationIntent(message);
-  if (newReservation || isReservationIntent(message)) {
+  if (newReservation || isReservationIntent(message) ||
+      (channel === "whatsapp" && isWhatsAppBookingStep(message))) {
     bookingContext = await ensureDurableBookingIntent(
       channel,
       externalUserId,
