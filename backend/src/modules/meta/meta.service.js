@@ -23,6 +23,9 @@ const UNSUPPORTED_MESSAGE_REPLY =
 const HUMAN_HANDOFF_REPLY =
   "Claro, dejaré esta conversación para que la atienda una persona. El asistente automático quedará pausado en este chat.";
 
+const WHATSAPP_FOLLOWUP_GREETING_REPLY =
+  "Con gusto 😊. Para ayudarte con tu reserva, dime qué categoría prefieres y cuáles serían las fechas de ingreso y salida y el número de huéspedes. Así puedo revisar la disponibilidad.";
+
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
@@ -1377,6 +1380,11 @@ export async function processMetaMessage(message, overrides = {}) {
     let reply;
     if (firstMessage && isOpeningGreetingOnly(message.text)) {
       reply = welcome;
+    } else if (message.channel === "whatsapp" && isOpeningGreetingOnly(message.text)) {
+      // La bienvenida y el catálogo se presentan solo una vez. Un "hola"
+      // posterior continúa orientando la reserva, sin reabrir el saludo
+      // ni consumir otra llamada a OpenAI.
+      reply = WHATSAPP_FOLLOWUP_GREETING_REPLY;
     } else {
       // Incluso en el primer mensaje, el filtro de alcance debe ejecutarse
       // antes de mostrar el catálogo: un pedido ajeno no recibe precios.
