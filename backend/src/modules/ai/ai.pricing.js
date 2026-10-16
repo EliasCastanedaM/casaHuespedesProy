@@ -23,7 +23,9 @@ export function isCategoryPriceInquiry(message) {
   // Los precios de otras plataformas no se equiparan a la tarifa de la web.
   const bookingOrHandoff =
     /\b(?:reservar|reserva|pago|pague|pagar|transferencia|humano|asesor|persona|agente|queja)\b/.test(normalized);
-  return asksPrice && !specificStay && !bookingOrHandoff &&
+  // Precios de mascotas y otros cargos no son tarifas de habitaciones.
+  const petInquiry = /\b(?:mascotas?|perros?|gatos?|animales?)\b/.test(normalized);
+  return asksPrice && !specificStay && !bookingOrHandoff && !petInquiry &&
     !/\b(?:booking|airbnb)\b/.test(normalized);
 }
 
