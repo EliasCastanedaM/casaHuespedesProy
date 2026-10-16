@@ -113,7 +113,8 @@ test("el asesor ofrece llamada y reserva directa después de disponibilidad", ()
   assert.match(prompt, /reservar directamente en esta conversación/);
   assert.match(prompt, /no envíes un enlace de pago/);
   assert.match(prompt, /mascotas se aceptan únicamente bajo petición previa/i);
-  assert.match(prompt, /S\/ 35/);
+  assert.match(prompt, /S\/ 20/);
+  assert.doesNotMatch(prompt, /S\/ 35/);
   assert.match(prompt, /No se permite ruido excesivo/i);
   assert.match(prompt, /Nunca menciones, muestres ni solicites números físicos/i);
   assert.match(prompt, /cantidad disponible por categoría/i);
