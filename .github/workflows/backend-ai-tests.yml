@@ -2,7 +2,12 @@ name: Backend AI Tests (branch)
 on:
   push:
     branches:
-      - feat/ai-welcome-prices-pet-fee
+      - main
+      - 'fix/**'
+      - 'feat/**'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
