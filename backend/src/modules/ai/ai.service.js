@@ -549,6 +549,7 @@ async function generateAiReplyInternal({
     hotelPhone: env.hotel.phone || "901551287",
     paymentUrl: env.culqiPaymentUrl,
     newIntentPrepared: newReservation,
+    progressiveCollection: channel === "whatsapp",
     services: {
       listCategories: getPublicRoomCategoriesService,
       searchAvailableRooms: searchAvailableRoomCategoriesService,
@@ -579,6 +580,7 @@ async function generateAiReplyInternal({
       reply: deterministic.reply,
       responseId: null,
       deterministic: true,
+      mode: deterministic.mode || "booking_flow",
     };
   }
 
