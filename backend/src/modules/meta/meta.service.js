@@ -548,17 +548,33 @@ export async function listConversationMessages(
   return result.rows;
 }
 
-export async function isFirstMetaIncomingMessage(channel, externalUserId, incomingId, db = pool) {
+export async function isFirstMetaIncomingMessage(channel, externalUserId, incomingId, db = pool, messageText = "") {
   if (!incomingId || !["instagram", "facebook"].includes(channel)) return false;
-  // El primer mensaje debe conservar su bienvenida incluso si el huésped
-  // escribió otros mensajes que ya llegaron y se guardaron en el mismo webhook.
+  // El primer mensaje recibe la bienvenida incluso si otros mensajes
+  // llegaron en el mismo webhook.
   const result = await db.query(
     "SELECT id, direction FROM meta_messages WHERE channel = $1 AND external_user_id = $2 ORDER BY id ASC LIMIT 1;",
     [channel, externalUserId]
   );
-  return result.rows.length === 1 &&
+  const firstEverMessage = result.rows.length === 1 &&
     Number(result.rows[0].id) === Number(incomingId) &&
     result.rows[0].direction === "incoming";
+  if (firstEverMessage) return true;
+
+  // Los huéspedes antiguos conservan el historial. Si vuelven a escribir
+  // un saludo breve y nunca recibieron el nuevo catálogo, se lo presentamos
+  // una sola vez sin obligarlos a iniciar un chat distinto.
+  if (!isOpeningGreetingOnly(messageText)) return false;
+  const previousWelcome = await db.query(
+    `SELECT EXISTS (
+       SELECT 1 FROM meta_messages
+       WHERE channel = $1 AND external_user_id = $2
+         AND direction = 'outgoing' AND author = 'assistant'
+         AND content LIKE '%Estas son nuestras categorías y tarifas vigentes:%'
+     ) AS has_welcome;`,
+    [channel, externalUserId]
+  );
+  return previousWelcome.rows[0]?.has_welcome === false;
 }
 
 async function getRecentConversationHistory(
@@ -1334,7 +1350,9 @@ export async function processMetaMessage(message, overrides = {}) {
     const firstMessage = await dependencies.isFirstMetaIncomingMessage(
       message.channel,
       message.externalUserId,
-      incomingId
+      incomingId,
+      dependencies.db ?? pool,
+      message.text
     );
 
     let welcome = "";
