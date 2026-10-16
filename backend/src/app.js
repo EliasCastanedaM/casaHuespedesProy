@@ -78,6 +78,7 @@ app.get("/api/health", (_req, res) => {
     status: "OK",
     service: "Casa Huéspedes Pimentel API",
     aiConfigured: Boolean(env.openai.apiKey),
+    deployedCommit: process.env.RENDER_GIT_COMMIT || null,
   });
 });
 
