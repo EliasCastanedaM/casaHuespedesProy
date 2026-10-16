@@ -1366,16 +1366,25 @@ export async function processMetaMessage(message, overrides = {}) {
     }
 
     let reply;
-    if (firstMessage && (isOpeningGreetingOnly(message.text) || isCategoryPriceInquiry(message.text))) {
+    if (firstMessage && isOpeningGreetingOnly(message.text)) {
       reply = welcome;
     } else {
+      // Incluso en el primer mensaje, el filtro de alcance debe ejecutarse
+      // antes de mostrar el catálogo: un pedido ajeno no recibe precios.
       const result = await dependencies.generateReply({
         channel: message.channel,
         externalUserId: message.externalUserId,
         message: message.text,
         history,
       });
-      reply = firstMessage ? welcome + "\n\n" + result.reply : result.reply;
+      if (result.mode === "outside_hotel_scope") {
+        reply = result.reply;
+      } else if (firstMessage && result.mode === "category_prices" &&
+                 isCategoryPriceInquiry(message.text)) {
+        reply = welcome;
+      } else {
+        reply = firstMessage ? welcome + "\n\n" + result.reply : result.reply;
+      }
     }
 
     const outgoing = await dependencies.createOutgoing(

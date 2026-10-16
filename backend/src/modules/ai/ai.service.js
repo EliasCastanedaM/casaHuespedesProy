@@ -12,6 +12,11 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import {
+  HOTEL_SCOPE_CLASSIFIER_PROMPT,
+  OUT_OF_HOTEL_SCOPE_REPLY,
+  isHotelRelatedMessage,
+} from "./ai.scope.js";
 import { isCategoryPriceInquiry, formatCategoryPricesReply } from "./ai.pricing.js";
 import { buildHumanServiceRedirect, isAiServiceTime } from "./ai.schedule.js";
 import {
@@ -474,6 +479,36 @@ async function generateAiReplyInternal({
       responseId: null,
       deterministic: true,
       mode: "human_redirect",
+    };
+  }
+
+  // Un asesor de hospedaje no debe contestar temas generales ni usar las
+  // herramientas de tarifas/reservas para responder solicitudes ajenas.
+  // Para mensajes ambiguos, un clasificador independiente valida el alcance
+  // antes de generar cualquier respuesta abierta o consultar inventario.
+  const hotelScope = await isHotelRelatedMessage(message, {
+    history: history.length ? history : await loadStoredHistory(channel, externalUserId, message),
+    classify: async ({ message: currentMessage, history: recentHistory }) => {
+      const classification = await getClient().responses.create({
+        model: env.openai.model,
+        instructions: HOTEL_SCOPE_CLASSIFIER_PROMPT,
+        input: JSON.stringify({
+          mensaje_actual: currentMessage,
+          historial_reciente: recentHistory,
+        }),
+        max_output_tokens: 128,
+        store: false,
+      });
+      return classification.output_text;
+    },
+  });
+
+  if (!hotelScope) {
+    return {
+      reply: OUT_OF_HOTEL_SCOPE_REPLY,
+      responseId: null,
+      deterministic: true,
+      mode: "outside_hotel_scope",
     };
   }
 
