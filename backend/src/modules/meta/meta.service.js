@@ -548,10 +548,12 @@ export async function listConversationMessages(
   return result.rows;
 }
 
-async function isFirstMetaIncomingMessage(channel, externalUserId, incomingId, db = pool) {
+export async function isFirstMetaIncomingMessage(channel, externalUserId, incomingId, db = pool) {
   if (!incomingId || !["instagram", "facebook"].includes(channel)) return false;
+  // El primer mensaje debe conservar su bienvenida incluso si el huésped
+  // escribió otros mensajes que ya llegaron y se guardaron en el mismo webhook.
   const result = await db.query(
-    "SELECT id, direction FROM meta_messages WHERE channel = $1 AND external_user_id = $2 ORDER BY id ASC LIMIT 2;",
+    "SELECT id, direction FROM meta_messages WHERE channel = $1 AND external_user_id = $2 ORDER BY id ASC LIMIT 1;",
     [channel, externalUserId]
   );
   return result.rows.length === 1 &&
