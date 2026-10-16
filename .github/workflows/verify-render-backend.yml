@@ -1,0 +1,34 @@
+name: Verify Render Backend Release
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Check that Render deployed the matching Git commit
+        env:
+          HEALTH_URL: https://casa-real-huespedes-backend.onrender.com/api/health
+          EXPECTED_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          for attempt in $(seq 1 24); do
+            response=$(curl --silent --show-error --fail --location --connect-timeout 8 --max-time 12 "$HEALTH_URL" 2>/dev/null || true)
+            deployed=$(echo "$response" | jq -r '.deployedCommit // empty' 2>/dev/null || true)
+            ok=$(echo "$response" | jq -r '.success // false' 2>/dev/null || true)
+            if [[ "$ok" == "true" && "$deployed" == "$EXPECTED_SHA" ]]; then
+              echo "Render backend is healthy and running commit $EXPECTED_SHA"
+              exit 0
+            fi
+            echo "Attempt $attempt: backend has commit ${deployed:-not-reported}; expected $EXPECTED_SHA"
+            sleep 10
+          done
+          echo "Render has not confirmed the expected commit. Inspect the service in the Render dashboard."
+          exit 1
