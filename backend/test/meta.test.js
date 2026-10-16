@@ -1178,3 +1178,55 @@ test("no envía bienvenida si ya había una respuesta manual anterior", async ()
   };
   assert.equal(await isFirstMetaIncomingMessage("facebook", "existente", 201, db), false);
 });
+
+
+test("un cliente de Instagram con historial recibe el catálogo cuando saluda por primera vez", async () => {
+  const queries = [];
+  const simulatedDb = {
+    query: async (sql, params) => {
+      queries.push({ sql, params });
+      if (sql.includes("ORDER BY id ASC LIMIT 1")) {
+        return { rows: [{ id: 31, direction: "incoming" }] };
+      }
+      if (sql.includes("AS has_welcome")) return { rows: [{ has_welcome: false }] };
+      throw new Error("Consulta inesperada");
+    },
+  };
+  assert.equal(
+    await isFirstMetaIncomingMessage("instagram", "cliente-antiguo", 99, simulatedDb, "¡Hola!"),
+    true
+  );
+  assert.equal(queries.length, 2);
+  assert.ok(queries[1].sql.includes("AS has_welcome"));
+});
+
+test("no repite el catálogo cuando ya fue enviado al huésped", async () => {
+  const simulatedDb = {
+    query: async (sql) => {
+      if (sql.includes("ORDER BY id ASC LIMIT 1")) {
+        return { rows: [{ id: 31, direction: "incoming" }] };
+      }
+      if (sql.includes("AS has_welcome")) return { rows: [{ has_welcome: true }] };
+      throw new Error("Consulta inesperada");
+    },
+  };
+  assert.equal(
+    await isFirstMetaIncomingMessage("facebook", "cliente-antiguo", 99, simulatedDb, "Hola"),
+    false
+  );
+});
+
+test("no presenta el catálogo a mitad de una conversación antigua", async () => {
+  let queries = 0;
+  const simulatedDb = {
+    query: async () => {
+      queries += 1;
+      return { rows: [{ id: 31, direction: "incoming" }] };
+    },
+  };
+  assert.equal(
+    await isFirstMetaIncomingMessage("instagram", "cliente-antiguo", 99, simulatedDb, "Necesito una habitación doble"),
+    false
+  );
+  assert.equal(queries, 1);
+});
