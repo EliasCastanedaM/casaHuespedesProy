@@ -211,6 +211,13 @@ export function handleWhatsAppMvpTurn({ message, context = {} }) {
       },
     };
   }
+  // Una pregunta informativa intermedia no debe reiniciar la reserva ni
+  // forzar el siguiente paso del formulario: responde la IA y conserva datos.
+  if (state?.state === "collecting" && !intent && /[¿?]/.test(String(message)) &&
+      extractDateTokens(message).length === 0 &&
+      !/\b\d{1,2}\s*(?:adultos?|adults?|ninos?|nin[oa]s?|children|guests?|huespedes?|personas?)\b/.test(text)) {
+    return { handled: false, context };
+  }
   const data = collect(message, state || {});
   data.language = language;
   data.state = "collecting";
