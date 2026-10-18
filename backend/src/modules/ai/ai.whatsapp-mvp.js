@@ -1,6 +1,6 @@
 // Flujo seguro y progresivo de WhatsApp MVP, sin crear reservas ni consultar stock.
 // El contexto se guarda en ai_conversations.booking_context por conversación.
-const MENU = "También puedo ayudar con: 1) Habitaciones y tarifas 2) Servicios 3) Ubicación y cómo llegar 4) Políticas y preguntas frecuentes 5) Reserva.";
+const MENU = "También puedo ayudarte con: 1) Habitaciones y tarifas 2) Servicios 3) Ubicación y cómo llegar 4) Políticas y preguntas frecuentes 5) Reserva.";
 
 function normalize(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
