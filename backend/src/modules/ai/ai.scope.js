@@ -23,7 +23,7 @@ function normalized(value) {
 
 // Saludos y confirmaciones breves no precisan una segunda llamada al modelo.
 function isSimpleCourtesy(message) {
-  return /^(?:[¡!¿?.,\s]*)(?:hola|buenas(?: tardes| noches)?|buenos dias|que tal|hello|hi|hey|gracias|muchas gracias|ok|okay|vale|si|no|perfecto|listo|de acuerdo|entendido|claro|hasta luego)(?:[¡!¿?.,\s]*)$/.test(normalized(message));
+  return /^(?:[¡!¿?.,\s]*)(?:hola|buenas(?: tardes| noches)?|buenos dias|que tal|hello|hi|hey|gracias|muchas gracias|ok|okay|vale|si|no|perfecto|listo|de acuerdo|entendido|claro|hasta luego|ola|bom dia|boa tarde|boa noite|bonjour|bonsoir|salut)(?:[¡!¿?.,\s]*)$/.test(normalized(message));
 }
 
 // Datos habituales en medio de una reserva se aceptan sin clasificación extra.
