@@ -17,10 +17,9 @@ const LEGACY_ROOM_TO_CATEGORY = {
   202: "triple",
   302: "triple",
   303: "triple",
-  406: "triple",
   407: "triple",
   203: "familiar",
-  405: "familiar",
+  405: "familiar-2",
 };
 
 function getLocalDateValue(date = new Date()) {
@@ -96,6 +95,7 @@ export default function RoomDetail() {
             "doble",
             "triple",
             "familiar",
+            "familiar-2",
           ].includes(slug)
         ) {
           throw new Error("La categoría de habitación no existe.");

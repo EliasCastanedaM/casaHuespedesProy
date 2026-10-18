@@ -43,9 +43,17 @@ function requestedSlugs(message) {
       slugs.add("matrimonial-ejecutiva");
     }
   }
-  for (const slug of ["doble", "triple", "familiar"]) {
-    if (new RegExp(`\\b${slug}\\b`).test(normalized)) {
-      slugs.add(slug);
+  for (const slug of ["doble", "triple"]) {
+    if (new RegExp(`\\b${slug}\\b`).test(normalized)) slugs.add(slug);
+  }
+  if (/\bfamiliar\b/.test(normalized)) {
+    if (/\bfamiliar\s*(?:1|uno)\b/.test(normalized)) {
+      slugs.add("familiar");
+    } else if (/\bfamiliar\s*(?:2|dos)\b/.test(normalized)) {
+      slugs.add("familiar-2");
+    } else {
+      slugs.add("familiar");
+      slugs.add("familiar-2");
     }
   }
   return slugs;
