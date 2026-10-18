@@ -3,14 +3,15 @@ import assert from "node:assert/strict";
 import { isCategoryPriceInquiry, formatCategoryPricesReply, formatInitialGreeting, isOpeningGreetingOnly } from "../src/modules/ai/ai.pricing.js";
 
 const categories = [
-  { slug: "matrimonial", name: "Matrimonial Estándar", price_per_night: 154.70 },
-  { slug: "matrimonial-ejecutiva", name: "Matrimonial Ejecutiva", price_per_night: 163.20 },
-  { slug: "doble", name: "Doble", price_per_night: 176.80 },
-  { slug: "triple", name: "Triple", price_per_night: 197.20 },
-  { slug: "familiar", name: "Familiar", price_per_night: 221.00 },
+  { slug: "matrimonial", name: "Matrimonial Estándar", price_per_night: 120.00 },
+  { slug: "matrimonial-ejecutiva", name: "Matrimonial Ejecutiva", price_per_night: 140.00 },
+  { slug: "doble", name: "Doble - 2 Camas", price_per_night: 140.00 },
+  { slug: "triple", name: "Triple - 3 Camas", price_per_night: 210.00 },
+  { slug: "familiar", name: "Familiar 1", price_per_night: 250.00 },
+  { slug: "familiar-2", name: "Familiar 2", price_per_night: 250.00 },
 ];
 
-test("consulta general de tarifas incluye las cinco categorías vigentes", () => {
+test("consulta general de tarifas incluye las seis categorías vigentes", () => {
   assert.equal(isCategoryPriceInquiry("¿Cuáles son los precios?"), true);
   const answer = formatCategoryPricesReply(categories, "¿Cuáles son los precios?");
   for (const category of categories) {
@@ -22,15 +23,22 @@ test("consulta general de tarifas incluye las cinco categorías vigentes", () =>
 
 test("pregunta por matrimonial ofrece ambas opciones sin inventar precio", () => {
   const answer = formatCategoryPricesReply(categories, "Precio de matrimonial");
-  assert.match(answer, /Matrimonial Estándar: S\/ 154\.70/);
-  assert.match(answer, /Matrimonial Ejecutiva: S\/ 163\.20/);
+  assert.match(answer, /Matrimonial Estándar: S\/ 120\.00/);
+  assert.match(answer, /Matrimonial Ejecutiva: S\/ 140\.00/);
   assert.doesNotMatch(answer, /Familiar:/);
 });
 
 test("el asesor responde precio único del tipo pedido", () => {
   const answer = formatCategoryPricesReply(categories, "¿Cuánto cuesta la familiar?");
-  assert.match(answer, /Familiar: S\/ 221\.00/);
+  assert.match(answer, /Familiar 1: S\/ 250\.00/);
+  assert.match(answer, /Familiar 2: S\/ 250\.00/);
   assert.doesNotMatch(answer, /Doble:/);
+});
+
+test("el precio de Familiar 2 se consulta sin mezclar Familiar 1", () => {
+  const answer = formatCategoryPricesReply(categories, "Precio Familiar 2");
+  assert.match(answer, /Familiar 2: S\/ 250\.00/);
+  assert.doesNotMatch(answer, /Familiar 1:/);
 });
 
 test("tarifas son dinámicas: no quedan importes antiguos incrustados", () => {
@@ -39,7 +47,7 @@ test("tarifas son dinámicas: no quedan importes antiguos incrustados", () => {
     : category);
   const answer = formatCategoryPricesReply(updated, "Precio triple");
   assert.match(answer, /S\/ 199\.50/);
-  assert.doesNotMatch(answer, /S\/ 197\.20/);
+  assert.doesNotMatch(answer, /S\/ 210\.00/);
 });
 
 test("no intercepta solicitud con fechas ni precios de plataformas externas", () => {
@@ -75,7 +83,7 @@ test("el saludo refleja cambios en Supabase y no inventa precios faltantes", () 
     { slug: "familiar", name: "Familiar", price_per_night: null },
   ]);
   assert.match(answer, /Triple: S\/ 215\.50/);
-  assert.match(answer, /Familiar: tarifa por confirmar/);
+  assert.match(answer, /Familiar 1: tarifa por confirmar/);
   assert.doesNotMatch(answer, /S\/ 0\.00/);
 });
 
