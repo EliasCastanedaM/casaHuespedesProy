@@ -557,7 +557,7 @@ async function generateAiReplyInternal({
     try {
       const categories = await getPublicRoomCategoriesService();
       return {
-        reply: formatCategoryPricesReply(categories, message),
+        reply: formatCategoryPricesReply(categories, message, { channel }),
         responseId: null,
         deterministic: true,
         mode: "category_prices",
