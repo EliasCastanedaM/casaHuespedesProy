@@ -52,6 +52,11 @@ function namedCount(text, words) {
 function collect(message, previous = {}) {
   const text = normalize(message);
   const next = { ...previous };
+  if (previous.awaiting === "children") {
+    if (/^(?:no|ninguna|ninguno|nope|sem|nao|non)$/i.test(text)) next.children = 0;
+    if (/^(?:uno|una|un|one|um|uma)$/i.test(text)) next.children = 1;
+    if (/^\d{1,2}$/.test(text)) next.children = Number(text);
+  }
   if (previous.awaiting === "pets") {
     if (/^(?:no|ninguna|ninguno|nope|sem|nao|non)$/i.test(text)) next.pets = 0;
     if (/^(?:uno|una|un|one|um|uma|one pet|um animal)$/i.test(text)) next.pets = 1;
@@ -113,6 +118,7 @@ const labels = {
   es: {
     dates: "¡Perfecto! 😊 ¿Qué fechas de entrada y salida necesitas?",
     guests: "¿Cuántas personas vienen? Indícame los adultos y, si hay niños, sus edades.",
+    children: "¿Viajan niños? Si es así, dime cuántos y sus edades.",
     ages: "¿Qué edades tienen los niños?",
     pets: "¿Llevarán mascotas? Si es así, ¿cuántas?",
     handoff: "¡Perfecto! 😊 Voy a comunicarte con una persona de nuestro equipo para confirmar disponibilidad y ayudarte a cerrar la reserva. Ya tiene los datos que compartiste; no necesitas repetirlos.",
@@ -121,6 +127,7 @@ const labels = {
   en: {
     dates: "Perfect! 😊 What are your check-in and check-out dates?",
     guests: "How many people are coming? Please tell me the number of adults and children's ages, if any.",
+    children: "Are there any children? If so, how many and what are their ages?",
     ages: "How old are the children?",
     pets: "Will you bring any pets? If so, how many?",
     handoff: "Perfect! 😊 I'll connect you with our team to check availability and complete the reservation. They will have the details you already shared.",
@@ -129,6 +136,7 @@ const labels = {
   pt: {
     dates: "Perfeito! 😊 Quais são as datas de entrada e saída?",
     guests: "Quantas pessoas vêm? Informe o número de adultos e as idades das crianças, se houver.",
+    children: "Há crianças na viagem? Se sim, quantas e quais são as idades?",
     ages: "Quais são as idades das crianças?",
     pets: "Vocês trarão animais de estimação? Quantos?",
     handoff: "Perfeito! 😊 Vou encaminhar você à nossa equipe para confirmar a disponibilidade e concluir a reserva. Não será necessário repetir os dados.",
@@ -137,6 +145,7 @@ const labels = {
   fr: {
     dates: "Parfait ! 😊 Quelles sont vos dates d'arrivée et de départ ?",
     guests: "Combien de personnes voyagent ? Précisez le nombre d'adultes et l'âge des enfants, le cas échéant.",
+    children: "Y a-t-il des enfants ? Si oui, combien et quel âge ont-ils ?",
     ages: "Quel âge ont les enfants ?",
     pets: "Voyagez-vous avec des animaux ? Si oui, combien ?",
     handoff: "Parfait ! 😊 Je vous mets en relation avec notre équipe pour vérifier les disponibilités et terminer la réservation. Vous n'aurez pas à répéter les informations.",
@@ -148,6 +157,7 @@ function missingQuestion(data, l) {
   const dictionary = labels[l] || labels.es;
   if (!data.check_in || !data.check_out) return dictionary.dates;
   if (data.total_guests == null && data.adults == null) return dictionary.guests;
+  if (data.children == null) return dictionary.children;
   if (data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length < data.children)) return dictionary.ages;
   if (data.pets == null) return dictionary.pets;
   return null;
@@ -210,6 +220,7 @@ export function handleWhatsAppMvpTurn({ message, context = {} }) {
   if (question) {
     data.awaiting = !data.check_in || !data.check_out ? "dates"
       : data.total_guests == null && data.adults == null ? "guests"
+      : data.children == null ? "children"
       : data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length < data.children) ? "ages"
       : "pets";
     return { handled: true, context: nextContext, reply: question, mode: "whatsapp_mvp_collecting" };
