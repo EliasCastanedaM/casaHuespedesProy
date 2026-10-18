@@ -12,7 +12,8 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
-import { requiresManualReview, humanReviewReply, whatsAppMvpReservationReply } from "./ai.guest-rules.js";
+import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
+import { handleWhatsAppMvpTurn } from "./ai.whatsapp-mvp.js";
 import {
   HOTEL_SCOPE_CLASSIFIER_PROMPT,
   OUT_OF_HOTEL_SCOPE_REPLY,
@@ -228,7 +229,7 @@ async function loadBookingContext(channel, externalUserId) {
 
 async function saveBookingContext(channel, externalUserId, context) {
   const key = conversationKey(channel, externalUserId);
-  const ttlMs = ["booked", "payment_reported"].includes(context?.state)
+  const ttlMs = channel === "whatsapp" || ["booked", "payment_reported"].includes(context?.state)
     ? BOOKED_CONTEXT_TTL_MS
     : DRAFT_CONTEXT_TTL_MS;
   const expiresAt = Object.keys(context || {}).length > 0
@@ -514,18 +515,30 @@ async function generateAiReplyInternal({
     };
   }
 
-  // Un grupo numeroso requiere siempre una cotización revisada por una persona.
+  // WhatsApp MVP: recoger los datos mínimos progresivamente y pasar a humano
+  // solo después de guardarlos. No consultar stock, crear reservas ni pedir PII.
+  if (channel === "whatsapp") {
+    const current = await loadBookingContext(channel, externalUserId);
+    const progress = handleWhatsAppMvpTurn({ message, context: current });
+    if (progress.handled) {
+      if (JSON.stringify(current) !== JSON.stringify(progress.context)) {
+        await saveBookingContext(channel, externalUserId, progress.context);
+      }
+      return {
+        reply: progress.reply,
+        responseId: null,
+        deterministic: true,
+        mode: progress.mode,
+      };
+    }
+  }
+
+  // Las excepciones de Instagram y Facebook siguen con sus reglas de revisión.
   const specialQuoteReason = requiresManualReview(message, {
     hasReservationIntent: isReservationIntent(message) || isCategoryPriceInquiry(message),
   });
   if (specialQuoteReason) {
     return { reply: humanReviewReply(specialQuoteReason, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
-  }
-
-  // El WhatsApp MVP no crea reservas ni promete disponibilidad sin un PMS validado.
-  // Instagram y Facebook conservan el flujo existente para casos normales.
-  if (channel === "whatsapp" && isReservationIntent(message)) {
-    return { reply: whatsAppMvpReservationReply(), responseId: null, deterministic: true, mode: "human_review_required" };
   }
 
   // Las preguntas generales de precios se responden con los valores vigentes
@@ -559,8 +572,8 @@ async function generateAiReplyInternal({
     return { reply: humanReviewReply(exception, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
   }
 
-  const newReservation = isNewReservationIntent(message);
-  if (newReservation || isReservationIntent(message)) {
+  const newReservation = channel !== "whatsapp" && isNewReservationIntent(message);
+  if (channel !== "whatsapp" && (newReservation || isReservationIntent(message))) {
     bookingContext = await ensureDurableBookingIntent(
       channel,
       externalUserId,
