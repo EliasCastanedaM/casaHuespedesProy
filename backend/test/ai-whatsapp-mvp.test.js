@@ -86,3 +86,14 @@ test("un mensaje autónomo sobre el menú no inicia reserva", () => {
   assert.equal(menu.mode, "whatsapp_mvp_menu");
   assert.equal(menu.context.whatsapp_mvp, undefined);
 });
+
+
+test("una consulta de información no reinicia una reserva en curso", () => {
+  const progress = turn("Quiero reservar");
+  const info = turn("¿Cuáles son las tarifas?", progress.context);
+  assert.equal(info.handled, false);
+  assert.deepEqual(info.context, progress.context);
+  const resumed = turn("20/11/2026 al 22/11/2026", info.context);
+  assert.equal(resumed.mode, "whatsapp_mvp_collecting");
+  assert.match(resumed.reply, /personas/i);
+});
