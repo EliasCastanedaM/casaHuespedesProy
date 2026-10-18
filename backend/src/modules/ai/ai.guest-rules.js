@@ -37,6 +37,12 @@ export function whatsAppMvpReservationReply() {
 
 export function whatsAppMvpWelcome(message = "") {
   const text = normalize(message).trim();
+  if (/^(ola|bom dia|boa tarde|boa noite)$/.test(text)) {
+    return "Olá! 👋 Bem-vindo(a) à Casa Huéspedes Pimentel. Você pode escrever no idioma que preferir. Deseja informações ou fazer uma reserva?";
+  }
+  if (/^(bonjour|bonsoir|salut)$/.test(text)) {
+    return "Bonjour ! 👋 Bienvenue à Casa Huéspedes Pimentel. Vous pouvez écrire dans la langue de votre choix. Souhaitez-vous des informations ou faire une réservation ?";
+  }
   if (/^(hi|hello|hey|good morning|good afternoon|good evening)$/.test(text)) {
     return "Hello! 👋 Welcome to Casa Huéspedes Pimentel. You can write in any language. Would you like hotel information or help with a reservation?";
   }
