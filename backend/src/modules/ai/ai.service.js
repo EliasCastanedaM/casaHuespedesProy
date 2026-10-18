@@ -524,7 +524,7 @@ async function generateAiReplyInternal({
 
   // El WhatsApp MVP no crea reservas ni promete disponibilidad sin un PMS validado.
   // Instagram y Facebook conservan el flujo existente para casos normales.
-  if (channel === "whatsapp" && (isReservationIntent(message) || isWhatsAppBookingStep(message))) {
+  if (channel === "whatsapp" && isReservationIntent(message)) {
     return { reply: whatsAppMvpReservationReply(), responseId: null, deterministic: true, mode: "human_review_required" };
   }
 
