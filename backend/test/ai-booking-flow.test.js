@@ -413,6 +413,8 @@ test("WhatsApp maneja fallos de disponibilidad sin solicitar PII", async () => {
 test('WhatsApp acepta elecciones de categoria desde la bienvenida', () => {
   assert.equal(isWhatsAppBookingStep('Triple'), true);
   assert.equal(isWhatsAppBookingStep('La Familiar'), true);
+  assert.equal(isWhatsAppBookingStep('Familiar 1'), true);
+  assert.equal(isWhatsAppBookingStep('Familiar 2'), true);
   assert.equal(isWhatsAppBookingStep('Ingreso 20/11/2026 y salida 22/11/2026'), true);
   assert.equal(isWhatsAppBookingStep('2 personas'), true);
   assert.equal(isWhatsAppBookingStep('Hola'), false);
