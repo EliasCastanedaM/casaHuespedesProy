@@ -64,8 +64,8 @@ export default function Rooms() {
 
               <p>
                 Ahora nuestras habitaciones se presentan por categoría:
-                matrimonial estándar, matrimonial ejecutiva, doble, triple y
-                familiar. La fotografía de cada categoría es referencial.
+                matrimonial estándar, matrimonial ejecutiva, doble, triple,
+                familiar 1 y familiar 2. La fotografía de cada categoría es referencial.
               </p>
 
               <div className="hotel-hero-actions">
