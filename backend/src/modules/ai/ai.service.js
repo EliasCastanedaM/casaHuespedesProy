@@ -515,9 +515,11 @@ async function generateAiReplyInternal({
   }
 
   // Un grupo numeroso requiere siempre una cotización revisada por una persona.
-  const largeGroupReason = requiresManualReview(message);
-  if (largeGroupReason) {
-    return { reply: humanReviewReply(largeGroupReason, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
+  const specialQuoteReason = requiresManualReview(message, {
+    hasReservationIntent: isReservationIntent(message) || isCategoryPriceInquiry(message),
+  });
+  if (specialQuoteReason) {
+    return { reply: humanReviewReply(specialQuoteReason, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
   }
 
   // El WhatsApp MVP no crea reservas ni promete disponibilidad sin un PMS validado.
