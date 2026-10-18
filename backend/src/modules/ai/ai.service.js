@@ -444,7 +444,7 @@ async function createFirstResponse(
       previousResponseId ? history : recoveryHistory,
       message
     ),
-    tools,
+    tools: channel === "whatsapp" ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
     parallel_tool_calls: false,
     max_output_tokens: env.ai.maxOutputTokens,
     store: true,
@@ -522,7 +522,7 @@ async function generateAiReplyInternal({
 
   // El WhatsApp MVP no crea reservas ni promete disponibilidad sin un PMS validado.
   // Instagram y Facebook conservan el flujo existente para casos normales.
-  if (channel === "whatsapp" && isReservationIntent(message)) {
+  if (channel === "whatsapp" && (isReservationIntent(message) || isWhatsAppBookingStep(message))) {
     return { reply: whatsAppMvpReservationReply(), responseId: null, deterministic: true, mode: "human_review_required" };
   }
 
@@ -558,15 +558,18 @@ async function generateAiReplyInternal({
   }
 
   const newReservation = isNewReservationIntent(message);
-  if (newReservation || isReservationIntent(message) ||
-      (channel === "whatsapp" && isWhatsAppBookingStep(message))) {
+  if (newReservation || isReservationIntent(message)) {
     bookingContext = await ensureDurableBookingIntent(
       channel,
       externalUserId,
       { forceNew: newReservation }
     );
   }
-  const deterministic = await handleDeterministicBookingFlow({
+  // Sin PMS, el MVP WhatsApp nunca consulta inventario ni crea pre-reservas.
+  // Sus peticiones de reserva se derivan arriba para atención humana.
+  const deterministic = channel === "whatsapp"
+    ? { handled: false, context: bookingContext }
+    : await handleDeterministicBookingFlow({
     message,
     context: bookingContext,
     hotelPhone: env.hotel.phone || "901551287",
@@ -666,7 +669,7 @@ async function generateAiReplyInternal({
       instructions: buildHotelAssistantPrompt({ channel }),
       previous_response_id: response.id,
       input: toolOutputs,
-      tools,
+      tools: channel === "whatsapp" ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
       parallel_tool_calls: false,
       max_output_tokens: env.ai.maxOutputTokens,
       store: true,
