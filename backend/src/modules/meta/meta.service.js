@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import { generateAiReply } from "../ai/ai.service.js";
+import { whatsAppMvpWelcome } from "../ai/ai.guest-rules.js";
 import { isCategoryPriceInquiry, isOpeningGreetingOnly, formatInitialGreeting } from "../ai/ai.pricing.js";
 import { getPublicRoomCategoriesService } from "../rooms/roomCategory.service.js";
 import {
@@ -24,7 +25,7 @@ const HUMAN_HANDOFF_REPLY =
   "Claro, dejaré esta conversación para que la atienda una persona. El asistente automático quedará pausado en este chat.";
 
 const WHATSAPP_FOLLOWUP_GREETING_REPLY =
-  "Con gusto 😊. Para ayudarte con tu reserva, dime qué categoría prefieres y cuáles serían las fechas de ingreso y salida y el número de huéspedes. Así puedo revisar la disponibilidad.";
+  "Con gusto 😊. Puedes consultar información del hotel o solicitar una reserva. Para reservar, comparte tus fechas, cantidad de adultos, niños (con sus edades) y mascotas; una persona confirmará disponibilidad.";
 
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -498,10 +499,13 @@ export async function setHandoffState(
 
 export async function listActiveHandoffs(db = pool) {
   const result = await db.query(
-    `SELECT channel, external_user_id, customer_name, handoff_requested_at, updated_at
-     FROM meta_conversations
-     WHERE handoff_active = TRUE
-     ORDER BY handoff_requested_at ASC NULLS LAST, updated_at ASC;`
+    `SELECT c.channel, c.external_user_id, c.customer_name, c.handoff_requested_at, c.updated_at,
+            a.booking_context -> 'whatsapp_mvp' AS reservation_context
+     FROM meta_conversations c
+     LEFT JOIN ai_conversations a
+       ON a.channel = c.channel AND a.external_user_id = c.external_user_id
+     WHERE c.handoff_active = TRUE
+     ORDER BY c.handoff_requested_at ASC NULLS LAST, c.updated_at ASC;`
   );
   return result.rows;
 }
@@ -510,10 +514,13 @@ export async function listConversations(db = pool) {
   const result = await db.query(
     `SELECT c.channel, c.external_user_id, c.customer_name, c.handoff_active,
             c.handoff_requested_at, c.handoff_resolved_at, c.created_at, c.updated_at,
+            a.booking_context -> 'whatsapp_mvp' AS reservation_context,
             m.content AS last_message, m.author AS last_author,
             m.message_type AS last_message_type, m.status AS last_status,
             COALESCE(m.meta_timestamp, m.created_at, c.last_message_at, c.updated_at) AS last_message_at
      FROM meta_conversations c
+     LEFT JOIN ai_conversations a
+       ON a.channel = c.channel AND a.external_user_id = c.external_user_id
      LEFT JOIN LATERAL (
        SELECT content, author, message_type, status, meta_timestamp, created_at
        FROM meta_messages
@@ -1387,11 +1394,15 @@ export async function processMetaMessage(message, overrides = {}) {
 
     let welcome = "";
     if (firstMessage) {
-      try {
-        welcome = formatInitialGreeting(await dependencies.listCategories());
-      } catch (error) {
-        console.warn("No se pudieron consultar las tarifas para el saludo:", error.message);
-        welcome = formatInitialGreeting([]);
+      if (message.channel === "whatsapp") {
+        welcome = whatsAppMvpWelcome(message.text);
+      } else {
+        try {
+          welcome = formatInitialGreeting(await dependencies.listCategories());
+        } catch (error) {
+          console.warn("No se pudieron consultar las tarifas para el saludo:", error.message);
+          welcome = formatInitialGreeting([]);
+        }
       }
     }
 
@@ -1416,9 +1427,13 @@ export async function processMetaMessage(message, overrides = {}) {
         message: message.text,
         history,
       });
-      if (result.mode === "outside_hotel_scope") {
+      if (result.mode === "human_review_required") {
+        await dependencies.setHandoff(message.channel, message.externalUserId, true);
         reply = result.reply;
-      } else if (firstMessage && result.mode === "category_prices" &&
+      } else if (result.mode === "outside_hotel_scope") {
+        reply = result.reply;
+      } else if (firstMessage && message.channel !== "whatsapp" &&
+                 result.mode === "category_prices" &&
                  isCategoryPriceInquiry(message.text)) {
         reply = welcome;
       } else if (firstMessage && message.channel === "whatsapp" &&

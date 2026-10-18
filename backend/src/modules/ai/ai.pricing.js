@@ -59,7 +59,7 @@ function requestedSlugs(message) {
   return slugs;
 }
 
-export function formatCategoryPricesReply(categories, message) {
+export function formatCategoryPricesReply(categories, message, { channel = "instagram" } = {}) {
   const validCategories = Array.isArray(categories)
     ? categories.filter((category) => category?.is_active !== false)
     : [];
@@ -83,7 +83,9 @@ export function formatCategoryPricesReply(categories, message) {
     "Estas son nuestras tarifas vigentes por categoría:",
     ...rows,
     "",
-    "Para confirmar disponibilidad y el total de tu estadía, indícame fecha de entrada, fecha de salida y número de huéspedes.",
+    channel === "whatsapp"
+      ? "Si deseas solicitar una reserva, indícame fechas y número de huéspedes; una persona de nuestro equipo confirmará disponibilidad y precio final."
+      : "Para confirmar disponibilidad y el total de tu estadía, indícame fecha de entrada, fecha de salida y número de huéspedes.",
   ].join("\n");
 }
 
@@ -119,5 +121,5 @@ export function isOpeningGreetingOnly(message) {
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  return /^(?:hola|holi|hello|hi|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hola buenas|hola buenos dias|hola buenas tardes|hola buenas noches)$/.test(normalized);
+  return /^(?:hola|holi|hello|hi|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hola buenas|hola buenos dias|hola buenas tardes|hola buenas noches|ola|bom dia|boa tarde|boa noite|bonjour|bonsoir|salut)$/.test(normalized);
 }

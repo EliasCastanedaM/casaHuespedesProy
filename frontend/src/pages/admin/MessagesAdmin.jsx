@@ -343,6 +343,35 @@ export default function MessagesAdmin() {
                   </button>
                 </header>
 
+                {selected.channel === "whatsapp" && selected.reservation_context && (
+                  <section className="border-b border-amber-200 bg-amber-50 px-5 py-4" aria-label="Resumen interno de reserva">
+                    <p className="text-sm font-black text-amber-900">Resumen interno para recepción</p>
+                    <p className="mt-1 text-xs text-amber-800">
+                      {selected.reservation_context.state === "handoff"
+                        ? "Pendiente de confirmación humana: no se ha confirmado disponibilidad ni creado reserva."
+                        : "Recopilando datos; no se ha confirmado disponibilidad."}
+                    </p>
+                    <dl className="mt-3 grid grid-cols-1 gap-x-5 gap-y-2 text-xs text-amber-950 sm:grid-cols-2">
+                      {[
+                        ["Ingreso", selected.reservation_context.check_in],
+                        ["Salida", selected.reservation_context.check_out],
+                        ["Adultos", selected.reservation_context.adults],
+                        ["Niños", selected.reservation_context.children],
+                        ["Edades", selected.reservation_context.child_ages?.join(", ")],
+                        ["Total de huéspedes", selected.reservation_context.total_guests],
+                        ["Mascotas", selected.reservation_context.pets],
+                        ["Categoría", selected.reservation_context.category_slug],
+                        ["Preferencias", selected.reservation_context.preferences],
+                      ].map(([label, value]) => (
+                        <div key={label} className="flex gap-2">
+                          <dt className="font-bold">{label}:</dt>
+                          <dd className="break-words">{value === undefined || value === null || value === "" ? "Pendiente" : String(value)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                )}
+
                 <div className="flex-1 space-y-3 overflow-y-auto bg-[#f8f5f0] p-4 md:p-6">
                   {loadingMessages && messages.length === 0 ? (
                     <p className="text-center text-sm text-[#8a7d72]">

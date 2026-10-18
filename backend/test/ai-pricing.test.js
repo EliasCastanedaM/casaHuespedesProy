@@ -94,3 +94,10 @@ test("detecta saludos sencillos sin consumir una respuesta del modelo", () => {
   assert.equal(isOpeningGreetingOnly("Hola, quiero reservar una doble"), false);
   assert.equal(isOpeningGreetingOnly("Quiero reservar"), false);
 });
+
+
+test("WhatsApp informa tarifas vigentes pero no confirma disponibilidad", () => {
+  const reply = formatCategoryPricesReply(categories, "¿Cuánto cuestan?", { channel: "whatsapp" });
+  assert.match(reply, /una persona de nuestro equipo confirmará disponibilidad/);
+  assert.doesNotMatch(reply, /podré confirmar disponibilidad/);
+});

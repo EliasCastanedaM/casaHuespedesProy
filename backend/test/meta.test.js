@@ -1312,21 +1312,14 @@ test("una consulta de tarifas en primer mensaje pasa por el filtro antes del cat
 });
 
 
-test("WhatsApp saluda con las cinco categorías y precios actuales al primer Hola", async () => {
+test("WhatsApp MVP saluda brevemente sin imponer menú ni publicar todas las tarifas", async () => {
   let reply = "";
-  const categories = [
-    { slug: "matrimonial", name: "Matrimonial Estándar", price_per_night: 154.70 },
-    { slug: "matrimonial-ejecutiva", name: "Matrimonial Ejecutiva", price_per_night: 163.20 },
-    { slug: "doble", name: "Doble", price_per_night: 176.80 },
-    { slug: "triple", name: "Triple", price_per_night: 197.20 },
-    { slug: "familiar", name: "Familiar", price_per_night: 221.00 },
-  ];
   await processMetaMessage(
     message({ channel: "whatsapp", externalUserId: "nuevo-whatsapp", text: "Hola" }),
     successfulDependencies({
       claim: async () => ({ id: 901 }),
       isFirstMetaIncomingMessage: async () => true,
-      listCategories: async () => categories,
+      listCategories: async () => { throw new Error("WhatsApp no debe cargar tarifas al saludar"); },
       generateReply: async () => { throw new Error("No debe llamar a la IA en saludo"); },
       sendReply: async (_message, content) => {
         reply = content;
@@ -1334,17 +1327,16 @@ test("WhatsApp saluda con las cinco categorías y precios actuales al primer Hol
       },
     })
   );
-  for (const category of categories) {
-    assert.match(reply, new RegExp(category.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    assert.ok(reply.includes(`S/ ${category.price_per_night.toFixed(2)} por noche`));
-  }
-  assert.match(reply, /¿Para qué fechas/);
-  assert.doesNotMatch(reply, /nombre completo|correo|celular/);
+  assert.match(reply, /bienvenido|bienvenida/i);
+  assert.match(reply, /idioma que prefieras/i);
+  assert.match(reply, /información del hospedaje|hacer una reserva/i);
+  assert.doesNotMatch(reply, /S\/\s*\d+|tarifas vigentes/i);
 });
 
-test("WhatsApp inicializa intención de reserva pero no pide los datos juntos al saludar", async () => {
+test("WhatsApp MVP deriva a humano la solicitud de reserva sin crearla", async () => {
   let reply = "";
   let calls = 0;
+  let handoff = false;
   await processMetaMessage(
     message({
       channel: "whatsapp",
@@ -1354,15 +1346,12 @@ test("WhatsApp inicializa intención de reserva pero no pide los datos juntos al
     successfulDependencies({
       claim: async () => ({ id: 902 }),
       isFirstMetaIncomingMessage: async () => true,
-      listCategories: async () => [
-        { name: "Matrimonial Estándar", slug: "matrimonial", price_per_night: 154.70 },
-        { name: "Doble", slug: "doble", price_per_night: 176.80 },
-      ],
+      setHandoff: async (_channel, _user, active) => { handoff = active; },
       generateReply: async () => {
         calls++;
         return {
-          reply: "Para comenzar, ¿qué categoría prefieres?",
-          mode: "booking_details_required",
+          reply: "Para reservar, comparte fechas, adultos, niños y mascotas. Un humano confirmará disponibilidad.",
+          mode: "human_review_required",
           deterministic: true,
         };
       },
@@ -1373,9 +1362,9 @@ test("WhatsApp inicializa intención de reserva pero no pide los datos juntos al
     })
   );
   assert.equal(calls, 1);
-  assert.match(reply, /Matrimonial Estándar: S\/ 154\.70/);
-  assert.match(reply, /¿Para qué fechas/);
-  assert.doesNotMatch(reply, /Para comenzar|todos esos datos|nombre completo|correo/);
+  assert.equal(handoff, true);
+  assert.match(reply, /humano confirmará disponibilidad/);
+  assert.doesNotMatch(reply, /S\/\s*\d+|pre-reserva fue creada/i);
 });
 
 test("WhatsApp permite saludo posterior en chat de prueba antiguo sin repetirlo", async () => {
@@ -1461,9 +1450,9 @@ test("WhatsApp orienta la reserva cuando se repite Hola despues de mostrar el ca
   assert.equal(first.status, "replied");
   assert.equal(second.status, "replied");
   assert.equal(sent.length, 2);
-  assert.match(sent[0], /Doble: S\/ 176\.80 por noche/);
-  assert.match(sent[1], /categoría prefieres/);
-  assert.match(sent[1], /fechas de ingreso y salida/);
+  assert.match(sent[0], /bienvenido/i);
+  assert.match(sent[1], /categoría|reserva/i);
+  assert.match(sent[1], /fechas/);
   assert.doesNotMatch(sent[1], /Bienvenido|Estas son nuestras categorías|Saludo genérico/i);
   assert.equal(aiCalls, 0);
 });

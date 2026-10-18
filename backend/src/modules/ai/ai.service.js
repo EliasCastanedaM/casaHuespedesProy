@@ -12,6 +12,8 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
+import { handleWhatsAppMvpTurn, isWhatsAppMenuRequest } from "./ai.whatsapp-mvp.js";
 import {
   HOTEL_SCOPE_CLASSIFIER_PROMPT,
   OUT_OF_HOTEL_SCOPE_REPLY,
@@ -227,7 +229,7 @@ async function loadBookingContext(channel, externalUserId) {
 
 async function saveBookingContext(channel, externalUserId, context) {
   const key = conversationKey(channel, externalUserId);
-  const ttlMs = ["booked", "payment_reported"].includes(context?.state)
+  const ttlMs = channel === "whatsapp" || ["booked", "payment_reported"].includes(context?.state)
     ? BOOKED_CONTEXT_TTL_MS
     : DRAFT_CONTEXT_TTL_MS;
   const expiresAt = Object.keys(context || {}).length > 0
@@ -434,16 +436,16 @@ function responseInput(history, message) {
 
 async function createFirstResponse(
   openai,
-  { message, previousResponseId, history, recoveryHistory }
+  { message, previousResponseId, history, recoveryHistory, channel }
 ) {
   const request = {
     model: env.openai.model,
-    instructions: buildHotelAssistantPrompt(),
+    instructions: buildHotelAssistantPrompt({ channel }),
     input: responseInput(
       previousResponseId ? history : recoveryHistory,
       message
     ),
-    tools,
+    tools: channel === "whatsapp" ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
     parallel_tool_calls: false,
     max_output_tokens: env.ai.maxOutputTokens,
     store: true,
@@ -483,6 +485,16 @@ async function generateAiReplyInternal({
     };
   }
 
+  // Pedido explícito del menú del hotel: respuesta fija, breve y sin
+  // consultar datos externos. Otras consultas sí pasan por el filtro de alcance.
+  if (channel === "whatsapp" && isWhatsAppMenuRequest(message)) {
+    const context = await loadBookingContext(channel, externalUserId);
+    const menu = handleWhatsAppMvpTurn({ message, context });
+    return {
+      reply: menu.reply, responseId: null, deterministic: true, mode: menu.mode,
+    };
+  }
+
   // Un asesor de hospedaje no debe contestar temas generales ni usar las
   // herramientas de tarifas/reservas para responder solicitudes ajenas.
   // Para mensajes ambiguos, un clasificador independiente valida el alcance
@@ -513,13 +525,39 @@ async function generateAiReplyInternal({
     };
   }
 
+  // WhatsApp MVP: recoger los datos mínimos progresivamente y pasar a humano
+  // solo después de guardarlos. No consultar stock, crear reservas ni pedir PII.
+  if (channel === "whatsapp") {
+    const current = await loadBookingContext(channel, externalUserId);
+    const progress = handleWhatsAppMvpTurn({ message, context: current });
+    if (JSON.stringify(current) !== JSON.stringify(progress.context)) {
+      await saveBookingContext(channel, externalUserId, progress.context);
+    }
+    if (progress.handled) {
+      return {
+        reply: progress.reply,
+        responseId: null,
+        deterministic: true,
+        mode: progress.mode,
+      };
+    }
+  }
+
+  // Las excepciones de Instagram y Facebook siguen con sus reglas de revisión.
+  const specialQuoteReason = requiresManualReview(message, {
+    hasReservationIntent: isReservationIntent(message) || isCategoryPriceInquiry(message),
+  });
+  if (specialQuoteReason) {
+    return { reply: humanReviewReply(specialQuoteReason, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
+  }
+
   // Las preguntas generales de precios se responden con los valores vigentes
   // de Supabase, sin depender de la memoria del modelo ni de sus herramientas.
   if (isCategoryPriceInquiry(message)) {
     try {
       const categories = await getPublicRoomCategoriesService();
       return {
-        reply: formatCategoryPricesReply(categories, message),
+        reply: formatCategoryPricesReply(categories, message, { channel }),
         responseId: null,
         deterministic: true,
         mode: "category_prices",
@@ -536,16 +574,27 @@ async function generateAiReplyInternal({
   }
 
   let bookingContext = await loadBookingContext(channel, externalUserId);
-  const newReservation = isNewReservationIntent(message);
-  if (newReservation || isReservationIntent(message) ||
-      (channel === "whatsapp" && isWhatsAppBookingStep(message))) {
+  const exception = requiresManualReview(message, {
+    bookingInProgress: Boolean(bookingContext?.active),
+    hasReservationIntent: isReservationIntent(message),
+  });
+  if (exception) {
+    return { reply: humanReviewReply(exception, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
+  }
+
+  const newReservation = channel !== "whatsapp" && isNewReservationIntent(message);
+  if (channel !== "whatsapp" && (newReservation || isReservationIntent(message))) {
     bookingContext = await ensureDurableBookingIntent(
       channel,
       externalUserId,
       { forceNew: newReservation }
     );
   }
-  const deterministic = await handleDeterministicBookingFlow({
+  // Sin PMS, el MVP WhatsApp nunca consulta inventario ni crea pre-reservas.
+  // Sus peticiones de reserva se derivan arriba para atención humana.
+  const deterministic = channel === "whatsapp"
+    ? { handled: false, context: bookingContext }
+    : await handleDeterministicBookingFlow({
     message,
     context: bookingContext,
     hotelPhone: env.hotel.phone || "901551287",
@@ -611,6 +660,7 @@ async function generateAiReplyInternal({
     previousResponseId,
     history,
     recoveryHistory,
+    channel,
   });
 
   for (let round = 0; round < 4; round += 1) {
@@ -641,10 +691,10 @@ async function generateAiReplyInternal({
 
     response = await openai.responses.create({
       model: env.openai.model,
-      instructions: buildHotelAssistantPrompt(),
+      instructions: buildHotelAssistantPrompt({ channel }),
       previous_response_id: response.id,
       input: toolOutputs,
-      tools,
+      tools: channel === "whatsapp" ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
       parallel_tool_calls: false,
       max_output_tokens: env.ai.maxOutputTokens,
       store: true,
