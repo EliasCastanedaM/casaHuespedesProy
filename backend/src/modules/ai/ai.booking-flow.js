@@ -13,9 +13,10 @@ function normalizedText(value) {
 const CATEGORY_LABELS = {
   matrimonial: "Matrimonial Estándar",
   "matrimonial-ejecutiva": "Matrimonial Ejecutiva",
-  doble: "Doble",
-  triple: "Triple",
-  familiar: "Familiar",
+  doble: "Doble - 2 Camas",
+  triple: "Triple - 3 Camas",
+  familiar: "Familiar 1",
+  "familiar-2": "Familiar 2",
 };
 
 function inferCategorySlug(category) {
@@ -40,10 +41,11 @@ function inferCategorySlug(category) {
     return "matrimonial";
   }
 
+  if (/familiar\s*(?:2|dos)\b/.test(searchable)) return "familiar-2";
+  if (/familiar\s*(?:1|uno)\b/.test(searchable)) return "familiar";
+
   return (
-    Object.keys(CATEGORY_LABELS).find((slug) =>
-      searchable.includes(slug)
-    ) || null
+    Object.keys(CATEGORY_LABELS).find((slug) => searchable.includes(slug)) || null
   );
 }
 
@@ -177,7 +179,7 @@ export function isWhatsAppBookingStep(message) {
     .replace(/[¡!¿?.,]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (/^(?:(?:la|una|el|un)\s+)?(?:matrimonial(?:\s+(?:estandar|ejecutiva))?|doble|triple|familiar)$/.test(normalized)) {
+  if (/^(?:(?:la|una|el|un)\s+)?(?:matrimonial(?:\s+(?:estandar|ejecutiva))?|doble|triple|familiar(?:\s+(?:1|2))?)$/.test(normalized)) {
     return true;
   }
   if (/^(?:somos|para)?\s*\d{1,2}\s*(?:personas?|huespedes?|adultos?)$/.test(normalized)) {
@@ -352,6 +354,9 @@ function extractCategoryReference(message) {
     return "matrimonial";
   }
 
+  if (/\bfamiliar\s*(?:2|dos)\b/.test(text)) return "familiar-2";
+  if (/\bfamiliar\s*(?:1|uno)\b/.test(text)) return "familiar";
+
   const category = Object.keys(CATEGORY_LABELS).find((slug) =>
     new RegExp(`\\b${slug}\\b`).test(text)
   );
@@ -477,7 +482,7 @@ function missingDataReply(context, invalidCategoryReference) {
 // a enviar todos sus datos privados en un solo mensaje.
 function progressiveMissingDataReply(missing, context) {
   if (missing.includes("categoría de habitación")) {
-    return "Para ayudarte con la reserva, ¿qué categoría prefieres: Matrimonial Estándar, Matrimonial Ejecutiva, Doble, Triple o Familiar?";
+    return "Para ayudarte con la reserva, ¿qué categoría prefieres: Matrimonial Estándar, Matrimonial Ejecutiva, Doble - 2 Camas, Triple - 3 Camas, Familiar 1 o Familiar 2?";
   }
   if (missing.includes("fecha de ingreso") || missing.includes("fecha de salida")) {
     return "¿Cuáles serían las fechas de ingreso y salida? Escríbelas en formato DD/MM/AAAA, por ejemplo: ingreso 20/11/2026 y salida 22/11/2026.";
