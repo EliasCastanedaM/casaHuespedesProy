@@ -36,7 +36,7 @@ test("intención tras consulta de habitaciones retiene datos sin iniciar reserva
   const info = turn("Somos 2 adultos y queremos una doble");
   assert.equal(info.handled, false);
   assert.equal(info.context.whatsapp_mvp.state, "browsing");
-  const booking = turn("Quiero reservar del 20/11/2026 al 22/11/2026 sin mascotas", info.context);
+  const booking = turn("Quiero reservar del 20/11/2026 al 22/11/2026 sin mascotas y sin niños", info.context);
   assert.equal(booking.mode, "human_review_required");
   assert.equal(booking.context.whatsapp_mvp.category_slug, "doble");
   assert.equal(booking.context.whatsapp_mvp.adults, 2);
@@ -69,4 +69,20 @@ test("reserva con niños sin edad pregunta antes de escalar", () => {
   const result = turn("Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos y 1 niño sin mascotas");
   assert.equal(result.mode, "whatsapp_mvp_collecting");
   assert.match(result.reply, /edades/i);
+});
+
+
+test("nunca supone que dos adultos implica ausencia de niños", () => {
+  const start = turn("Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin mascotas");
+  assert.equal(start.mode, "whatsapp_mvp_collecting");
+  assert.match(start.reply, /Viajan niños/i);
+  const done = turn("No", start.context);
+  assert.equal(done.mode, "human_review_required");
+  assert.equal(done.context.whatsapp_mvp.children, 0);
+});
+
+test("un mensaje autónomo sobre el menú no inicia reserva", () => {
+  const menu = turn("¿Qué opciones hay en el menú?");
+  assert.equal(menu.mode, "whatsapp_mvp_menu");
+  assert.equal(menu.context.whatsapp_mvp, undefined);
 });
