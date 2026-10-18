@@ -1426,7 +1426,8 @@ export async function processMetaMessage(message, overrides = {}) {
         reply = result.reply;
       } else if (result.mode === "outside_hotel_scope") {
         reply = result.reply;
-      } else if (firstMessage && result.mode === "category_prices" &&
+      } else if (firstMessage && message.channel !== "whatsapp" &&
+                 result.mode === "category_prices" &&
                  isCategoryPriceInquiry(message.text)) {
         reply = welcome;
       } else if (firstMessage && message.channel === "whatsapp" &&
