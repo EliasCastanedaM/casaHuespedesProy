@@ -499,10 +499,13 @@ export async function setHandoffState(
 
 export async function listActiveHandoffs(db = pool) {
   const result = await db.query(
-    `SELECT channel, external_user_id, customer_name, handoff_requested_at, updated_at
-     FROM meta_conversations
-     WHERE handoff_active = TRUE
-     ORDER BY handoff_requested_at ASC NULLS LAST, updated_at ASC;`
+    `SELECT c.channel, c.external_user_id, c.customer_name, c.handoff_requested_at, c.updated_at,
+            a.booking_context -> 'whatsapp_mvp' AS reservation_context
+     FROM meta_conversations c
+     LEFT JOIN ai_conversations a
+       ON a.channel = c.channel AND a.external_user_id = c.external_user_id
+     WHERE c.handoff_active = TRUE
+     ORDER BY c.handoff_requested_at ASC NULLS LAST, c.updated_at ASC;`
   );
   return result.rows;
 }
@@ -511,10 +514,13 @@ export async function listConversations(db = pool) {
   const result = await db.query(
     `SELECT c.channel, c.external_user_id, c.customer_name, c.handoff_active,
             c.handoff_requested_at, c.handoff_resolved_at, c.created_at, c.updated_at,
+            a.booking_context -> 'whatsapp_mvp' AS reservation_context,
             m.content AS last_message, m.author AS last_author,
             m.message_type AS last_message_type, m.status AS last_status,
             COALESCE(m.meta_timestamp, m.created_at, c.last_message_at, c.updated_at) AS last_message_at
      FROM meta_conversations c
+     LEFT JOIN ai_conversations a
+       ON a.channel = c.channel AND a.external_user_id = c.external_user_id
      LEFT JOIN LATERAL (
        SELECT content, author, message_type, status, meta_timestamp, created_at
        FROM meta_messages
