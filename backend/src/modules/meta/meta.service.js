@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import { generateAiReply } from "../ai/ai.service.js";
+import { whatsAppMvpWelcome } from "../ai/ai.guest-rules.js";
 import { isCategoryPriceInquiry, isOpeningGreetingOnly, formatInitialGreeting } from "../ai/ai.pricing.js";
 import { getPublicRoomCategoriesService } from "../rooms/roomCategory.service.js";
 import {
@@ -24,7 +25,7 @@ const HUMAN_HANDOFF_REPLY =
   "Claro, dejaré esta conversación para que la atienda una persona. El asistente automático quedará pausado en este chat.";
 
 const WHATSAPP_FOLLOWUP_GREETING_REPLY =
-  "Con gusto 😊. Para ayudarte con tu reserva, dime qué categoría prefieres y cuáles serían las fechas de ingreso y salida y el número de huéspedes. Así puedo revisar la disponibilidad.";
+  "Con gusto 😊. Puedes consultar información del hotel o solicitar una reserva. Para reservar, comparte tus fechas, cantidad de adultos, niños (con sus edades) y mascotas; una persona confirmará disponibilidad.";
 
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -1387,11 +1388,15 @@ export async function processMetaMessage(message, overrides = {}) {
 
     let welcome = "";
     if (firstMessage) {
-      try {
-        welcome = formatInitialGreeting(await dependencies.listCategories());
-      } catch (error) {
-        console.warn("No se pudieron consultar las tarifas para el saludo:", error.message);
-        welcome = formatInitialGreeting([]);
+      if (message.channel === "whatsapp") {
+        welcome = whatsAppMvpWelcome(message.text);
+      } else {
+        try {
+          welcome = formatInitialGreeting(await dependencies.listCategories());
+        } catch (error) {
+          console.warn("No se pudieron consultar las tarifas para el saludo:", error.message);
+          welcome = formatInitialGreeting([]);
+        }
       }
     }
 
@@ -1416,7 +1421,10 @@ export async function processMetaMessage(message, overrides = {}) {
         message: message.text,
         history,
       });
-      if (result.mode === "outside_hotel_scope") {
+      if (result.mode === "human_review_required") {
+        await dependencies.setHandoff(message.channel, message.externalUserId, true);
+        reply = result.reply;
+      } else if (result.mode === "outside_hotel_scope") {
         reply = result.reply;
       } else if (firstMessage && result.mode === "category_prices" &&
                  isCategoryPriceInquiry(message.text)) {
