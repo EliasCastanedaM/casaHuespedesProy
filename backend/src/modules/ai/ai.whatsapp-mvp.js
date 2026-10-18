@@ -51,6 +51,17 @@ function namedCount(text, words) {
 function collect(message, previous = {}) {
   const text = normalize(message);
   const next = { ...previous };
+  if (previous.awaiting === "pets") {
+    if (/^(?:no|ninguna|ninguno|nope|sem|nao|non)$/i.test(text)) next.pets = 0;
+    if (/^(?:uno|una|un|one|um|uma|one pet|um animal)$/i.test(text)) next.pets = 1;
+    if (/^\d{1,2}$/.test(text)) next.pets = Number(text);
+  }
+  if (previous.awaiting === "ages" && /^\d{1,2}(?:\s*(?:,|y|and|e|et)\s*\d{1,2})*$/.test(text)) {
+    next.child_ages = (text.match(/\d{1,2}/g) || []).map(Number);
+  }
+  if (previous.awaiting === "guests" && /^\d{1,2}$/.test(text)) {
+    next.total_guests = Number(text);
+  }
   const dates = extractDateTokens(message);
   if (dates.length === 2) {
     next.check_in = dates[0];
@@ -163,16 +174,43 @@ export function handleWhatsAppMvpTurn({ message, context = {} }) {
   const state = context.whatsapp_mvp || null;
   const language = detectLanguage(message, state?.language || "es");
   const dictionary = labels[language] || labels.es;
-  if (!state && menuRequested(text)) {
+  const intent = reservationIntent(text);
+  if (menuRequested(text)) {
     return { handled: true, reply: dictionary.menu, mode: "whatsapp_mvp_menu", context };
   }
-  if (!state && !reservationIntent(text)) return { handled: false, context };
+  if (!state && !intent) {
+    const preliminary = collect(message);
+    const hasDetails = ["check_in", "total_guests", "adults", "children", "pets", "category_slug", "preferences"]
+      .some((key) => preliminary[key] !== undefined);
+    if (!hasDetails) return { handled: false, context };
+    return {
+      handled: false,
+      context: {
+        ...context,
+        whatsapp_mvp: { ...preliminary, language, state: "browsing" },
+      },
+    };
+  }
+  if (state?.state === "browsing" && !intent) {
+    return {
+      handled: false,
+      context: {
+        ...context,
+        whatsapp_mvp: { ...collect(message, state), language, state: "browsing" },
+      },
+    };
+  }
   const data = collect(message, state || {});
   data.language = language;
   data.state = "collecting";
+  delete data.awaiting;
   const nextContext = { ...context, whatsapp_mvp: data, state: "whatsapp_mvp" };
   const question = missingQuestion(data, language);
   if (question) {
+    data.awaiting = !data.check_in || !data.check_out ? "dates"
+      : data.total_guests == null && data.adults == null ? "guests"
+      : data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length < data.children) ? "ages"
+      : "pets";
     return { handled: true, context: nextContext, reply: question, mode: "whatsapp_mvp_collecting" };
   }
   data.state = "handoff";
