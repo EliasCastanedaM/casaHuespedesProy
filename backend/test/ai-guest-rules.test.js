@@ -43,6 +43,8 @@ test("las solicitudes especiales requieren revisión humana, no reservas automá
 test("la bienvenida WhatsApp es breve y acepta idiomas", () => {
   assert.match(whatsAppMvpWelcome("Hola"), /idioma que prefieras/);
   assert.match(whatsAppMvpWelcome("Hello"), /write in any language/);
+  assert.match(whatsAppMvpWelcome("Olá"), /idioma que preferir/);
+  assert.match(whatsAppMvpWelcome("Bonjour"), /langue de votre choix/);
   assert.doesNotMatch(whatsAppMvpWelcome("Hola"), /S\/ \d+/);
   assert.match(whatsAppMvpReservationReply(), /verificar disponibilidad/);
 });
