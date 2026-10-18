@@ -12,6 +12,7 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { requiresManualReview, humanReviewReply, whatsAppMvpReservationReply } from "./ai.guest-rules.js";
 import {
   HOTEL_SCOPE_CLASSIFIER_PROMPT,
   OUT_OF_HOTEL_SCOPE_REPLY,
@@ -434,11 +435,11 @@ function responseInput(history, message) {
 
 async function createFirstResponse(
   openai,
-  { message, previousResponseId, history, recoveryHistory }
+  { message, previousResponseId, history, recoveryHistory, channel }
 ) {
   const request = {
     model: env.openai.model,
-    instructions: buildHotelAssistantPrompt(),
+    instructions: buildHotelAssistantPrompt({ channel }),
     input: responseInput(
       previousResponseId ? history : recoveryHistory,
       message
@@ -513,6 +514,18 @@ async function generateAiReplyInternal({
     };
   }
 
+  // Un grupo numeroso requiere siempre una cotización revisada por una persona.
+  const largeGroupReason = requiresManualReview(message);
+  if (largeGroupReason) {
+    return { reply: humanReviewReply(largeGroupReason, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
+  }
+
+  // El WhatsApp MVP no crea reservas ni promete disponibilidad sin un PMS validado.
+  // Instagram y Facebook conservan el flujo existente para casos normales.
+  if (channel === "whatsapp" && isReservationIntent(message)) {
+    return { reply: whatsAppMvpReservationReply(), responseId: null, deterministic: true, mode: "human_review_required" };
+  }
+
   // Las preguntas generales de precios se responden con los valores vigentes
   // de Supabase, sin depender de la memoria del modelo ni de sus herramientas.
   if (isCategoryPriceInquiry(message)) {
@@ -536,6 +549,14 @@ async function generateAiReplyInternal({
   }
 
   let bookingContext = await loadBookingContext(channel, externalUserId);
+  const exception = requiresManualReview(message, {
+    bookingInProgress: Boolean(bookingContext?.active),
+    hasReservationIntent: isReservationIntent(message),
+  });
+  if (exception) {
+    return { reply: humanReviewReply(exception, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
+  }
+
   const newReservation = isNewReservationIntent(message);
   if (newReservation || isReservationIntent(message) ||
       (channel === "whatsapp" && isWhatsAppBookingStep(message))) {
@@ -611,6 +632,7 @@ async function generateAiReplyInternal({
     previousResponseId,
     history,
     recoveryHistory,
+    channel,
   });
 
   for (let round = 0; round < 4; round += 1) {
@@ -641,7 +663,7 @@ async function generateAiReplyInternal({
 
     response = await openai.responses.create({
       model: env.openai.model,
-      instructions: buildHotelAssistantPrompt(),
+      instructions: buildHotelAssistantPrompt({ channel }),
       previous_response_id: response.id,
       input: toolOutputs,
       tools,
