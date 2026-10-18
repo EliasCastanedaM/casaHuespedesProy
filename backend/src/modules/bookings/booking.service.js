@@ -699,6 +699,7 @@ export async function createBookingByCategoryService(
     "doble",
     "triple",
     "familiar",
+    "familiar-2",
   ]);
 
   if (!allowedCategories.has(categorySlug)) {
