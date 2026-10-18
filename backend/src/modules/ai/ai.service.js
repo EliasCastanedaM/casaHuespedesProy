@@ -13,7 +13,7 @@ import {
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
 import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
-import { handleWhatsAppMvpTurn } from "./ai.whatsapp-mvp.js";
+import { handleWhatsAppMvpTurn, isWhatsAppMenuRequest } from "./ai.whatsapp-mvp.js";
 import {
   HOTEL_SCOPE_CLASSIFIER_PROMPT,
   OUT_OF_HOTEL_SCOPE_REPLY,
@@ -482,6 +482,16 @@ async function generateAiReplyInternal({
       responseId: null,
       deterministic: true,
       mode: "human_redirect",
+    };
+  }
+
+  // Pedido explícito del menú del hotel: respuesta fija, breve y sin
+  // consultar datos externos. Otras consultas sí pasan por el filtro de alcance.
+  if (channel === "whatsapp" && isWhatsAppMenuRequest(message)) {
+    const context = await loadBookingContext(channel, externalUserId);
+    const menu = handleWhatsAppMvpTurn({ message, context });
+    return {
+      reply: menu.reply, responseId: null, deterministic: true, mode: menu.mode,
     };
   }
 
