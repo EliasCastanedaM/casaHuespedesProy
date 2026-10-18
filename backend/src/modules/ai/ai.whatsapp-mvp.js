@@ -20,8 +20,9 @@ function reservationIntent(text) {
     !/\b(?:cancelar|cancel|anular|modificar|change|cambiar)\b/.test(text);
 }
 
-function menuRequested(text) {
-  return /(?:^|[\s¿?])(?:menu|opciones|opcoes|options|choix)(?:$|[\s?!.,])/.test(text);
+export function isWhatsAppMenuRequest(message) {
+  const cleaned = normalize(message).replace(/[¿?¡!.,]/g, " ").replace(/\s+/g, " ").trim();
+  return /^(?:menu|opciones|opcoes|options|choix|mostrar menu|ver menu|show menu|show me the menu|que opciones hay|que opciones hay en el menu|cuales son las opciones|que opciones tienes|what are the options|me muestras el menu|me das el menu)$/.test(cleaned);
 }
 
 function extractDateTokens(message) {
@@ -175,7 +176,7 @@ export function handleWhatsAppMvpTurn({ message, context = {} }) {
   const language = detectLanguage(message, state?.language || "es");
   const dictionary = labels[language] || labels.es;
   const intent = reservationIntent(text);
-  if (menuRequested(text)) {
+  if (isWhatsAppMenuRequest(message)) {
     return { handled: true, reply: dictionary.menu, mode: "whatsapp_mvp_menu", context };
   }
   if (!state && !intent) {
