@@ -80,7 +80,7 @@ test("el saludo inicial incluye todas las categorías con el precio vigente", ()
 test("el saludo refleja cambios en Supabase y no inventa precios faltantes", () => {
   const answer = formatInitialGreeting([
     { slug: "triple", name: "Triple", price_per_night: 215.50 },
-    { slug: "familiar", name: "Familiar", price_per_night: null },
+    { slug: "familiar", name: "Familiar 1", price_per_night: null },
   ]);
   assert.match(answer, /Triple: S\/ 215\.50/);
   assert.match(answer, /Familiar 1: tarifa por confirmar/);
