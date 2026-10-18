@@ -119,5 +119,5 @@ export function isOpeningGreetingOnly(message) {
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  return /^(?:hola|holi|hello|hi|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hola buenas|hola buenos dias|hola buenas tardes|hola buenas noches)$/.test(normalized);
+  return /^(?:hola|holi|hello|hi|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hola buenas|hola buenos dias|hola buenas tardes|hola buenas noches|ola|bom dia|boa tarde|boa noite|bonjour|bonsoir|salut)$/.test(normalized);
 }
