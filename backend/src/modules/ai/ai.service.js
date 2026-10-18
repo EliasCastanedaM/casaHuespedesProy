@@ -520,10 +520,10 @@ async function generateAiReplyInternal({
   if (channel === "whatsapp") {
     const current = await loadBookingContext(channel, externalUserId);
     const progress = handleWhatsAppMvpTurn({ message, context: current });
+    if (JSON.stringify(current) !== JSON.stringify(progress.context)) {
+      await saveBookingContext(channel, externalUserId, progress.context);
+    }
     if (progress.handled) {
-      if (JSON.stringify(current) !== JSON.stringify(progress.context)) {
-        await saveBookingContext(channel, externalUserId, progress.context);
-      }
       return {
         reply: progress.reply,
         responseId: null,
