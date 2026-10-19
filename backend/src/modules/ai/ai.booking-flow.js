@@ -652,31 +652,68 @@ export async function handleDeterministicBookingFlow({
     startsNewReservation && !newIntentPrepared ? {} : safeInitialContext;
   const intent = startsNewReservation || isReservationIntent(message);
 
-  if (!baseContext.active && !intent) {
-    const next = mergeMessageData(baseContext, message, {
+  // La recomendación es una consulta informativa incluso si quedó un borrador
+  // de reserva activo en este chat. No obliga a completar el borrador previo.
+  const recommendationInquiry = !intent &&
+    /\b(?:recomiendas?|recomienda|recomendar|recomendacion|sugieres?|sugerencia)\b/.test(normalizedText(message));
+  if (recommendationInquiry) {
+    const prior = baseContext.booking?.id ? {} : baseContext;
+    const next = mergeMessageData(prior, message, {
       activate: false,
       allowUnlabeledName: false,
     });
-    // Registrar la categoría recomendada como SUGERENCIA, no como selección.
-    // Si el huésped luego decide reservar, primero confirmará la recomendación.
-    if (
-      next.guests_count &&
-      /\b(?:recomiendas?|recomienda|recomendar|recomendacion|sugieres?|sugerencia)\b/.test(normalizedText(message)) &&
-      typeof services?.listCategories === "function"
-    ) {
-      const categories = await services.listCategories();
-      const suitable = (Array.isArray(categories) ? categories : [])
-        .filter((category) => Number(category.capacity) >= next.guests_count &&
-          category.is_active !== false && inferCategorySlug(category))
-        .sort((a, b) => Number(a.capacity) - Number(b.capacity) ||
-          Number(a.price_per_night) - Number(b.price_per_night));
-      const suggestion = suitable[0];
-      if (suggestion) {
-        next.suggested_category_slug = inferCategorySlug(suggestion);
-        next.suggested_guests_count = next.guests_count;
-      }
+    // Una sugerencia no equivale a elegir la habitación. Siempre pedir
+    // confirmación explícita cuando el huésped manifieste intención de reservar.
+    next.category = null;
+    if (!next.guests_count) {
+      next.suggested_category_slug = null;
+      next.suggested_guests_count = null;
+      return {
+        handled: true,
+        context: next,
+        mode: "recommendation_needs_guests",
+        reply: "¡Claro! 😊 ¿Cuántas personas se hospedarán? Si hay niños, dime también sus edades.",
+      };
     }
-    return { handled: false, context: next };
+    const categories = await services.listCategories();
+    const suitable = (Array.isArray(categories) ? categories : [])
+      .filter((category) => Number(category.capacity) >= next.guests_count &&
+        category.is_active !== false && inferCategorySlug(category))
+      .sort((a, b) => Number(a.capacity) - Number(b.capacity) ||
+        Number(a.price_per_night) - Number(b.price_per_night));
+    const suggested = suitable[0];
+    if (!suggested) {
+      next.suggested_category_slug = null;
+      next.suggested_guests_count = null;
+      return {
+        handled: true,
+        context: next,
+        mode: "recommendation_needs_human",
+        reply: "No puedo confirmar una categoría adecuada para ese grupo. Nuestro equipo puede ayudarte a revisar las opciones.",
+      };
+    }
+    next.suggested_category_slug = inferCategorySlug(suggested);
+    next.suggested_guests_count = next.guests_count;
+    const amount = Number(suggested.price_per_night);
+    const price = Number.isFinite(amount) && amount > 0
+      ? ` La tarifa base es S/ ${amount.toFixed(2)} por noche.`
+      : "";
+    return {
+      handled: true,
+      context: next,
+      mode: "category_recommendation",
+      reply: `Para ${next.guests_count} huéspedes te recomiendo ${categoryLabel(suggested)}, con capacidad para ${Number(suggested.capacity)} personas.${price} Esta recomendación no confirma disponibilidad. 😊 ¿Quieres solicitar una reserva de esta categoría?`,
+    };
+  }
+
+  if (!baseContext.active && !intent) {
+    return {
+      handled: false,
+      context: mergeMessageData(baseContext, message, {
+        activate: false,
+        allowUnlabeledName: false,
+      }),
+    };
   }
 
   if (baseContext.booking?.id && baseContext.intent_id) {
