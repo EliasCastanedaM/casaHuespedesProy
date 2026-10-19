@@ -40,6 +40,9 @@ test("las solicitudes especiales requieren revisión humana, no reservas automá
   assert.equal(requiresManualReview("grupo de 12"), "grupo de 8 o más personas");
   assert.equal(requiresManualReview("Somos 3 personas"), null);
   assert.equal(requiresManualReview("¿Aceptan perros?"), null);
+  assert.equal(requiresManualReview("¿Aceptan perros?", { bookingInProgress: true }), null);
+  assert.equal(requiresManualReview("¿Desde qué edad pagan los niños?", { bookingInProgress: true }), null);
+  assert.equal(requiresManualReview("Llevaré un perro", { bookingInProgress: true }), "reserva con mascota");
   assert.match(humanReviewReply("reserva con mascota"), /una persona/);
 });
 
