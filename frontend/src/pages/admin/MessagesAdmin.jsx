@@ -1,16 +1,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BarChart3, Bot, CheckCheck, CircleAlert, Clock3, Facebook,
-  Headphones, Instagram, MessageSquare, Phone, RefreshCw,
+  BarChart3, Bot, Camera, CheckCheck, CircleAlert, Clock3, Users,
+  Headphones, MessageSquare, Phone, RefreshCw,
   RotateCcw, Search, Send, UserRound,
 } from "lucide-react";
 import api from "../../services/api";
 
 const CHANNELS = [
   { id: "all", label: "Todas", icon: MessageSquare },
-  { id: "instagram", label: "Instagram", icon: Instagram },
-  { id: "facebook", label: "Facebook", icon: Facebook },
+  { id: "instagram", label: "Instagram", icon: Camera },
+  { id: "facebook", label: "Facebook", icon: Users },
   { id: "whatsapp", label: "WhatsApp", icon: Phone },
 ];
 const STATUS_OPTIONS = [
@@ -332,8 +332,8 @@ export default function MessagesAdmin() {
 
         <div className="mb-5 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
           <StatCard label="Conversaciones totales" value={dashboard.total} icon={MessageSquare} detail="Todos los canales" />
-          <StatCard label="Instagram" value={dashboard.channels.instagram?.total || 0} icon={Instagram} detail="Conversaciones guardadas" />
-          <StatCard label="Facebook" value={dashboard.channels.facebook?.total || 0} icon={Facebook} detail="Conversaciones guardadas" />
+          <StatCard label="Instagram" value={dashboard.channels.instagram?.total || 0} icon={Camera} detail="Conversaciones guardadas" />
+          <StatCard label="Facebook" value={dashboard.channels.facebook?.total || 0} icon={Users} detail="Conversaciones guardadas" />
           <StatCard label="WhatsApp" value={dashboard.channels.whatsapp?.total || 0} icon={Phone} detail="Conversaciones guardadas" />
           <StatCard label="Atención por IA" value={dashboard.ai} icon={Bot} detail="Chats bajo control automático" />
           <StatCard label="Atención manual" value={dashboard.manual} icon={Headphones} detail="Chats bajo control humano" />
