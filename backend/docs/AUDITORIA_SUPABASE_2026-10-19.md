@@ -71,3 +71,54 @@ Aplicadas mediante migraciones Supabase:
 6. **Depuración futura:** solo después de pruebas de dependencia, respaldar y sacar archivos históricos del esquema expuesto, evaluar `gallery` y `tourism_places` sin uso, y posibles campos de tarifas antiguos.
 
 **Sin autorización adicional no eliminar historiales, desactivar bloqueos o cambiar tarifas.**
+
+
+## Fase 2 — Auditoría ampliada (continuación del 19/10/2026)
+
+### Correcciones realizadas en el backend
+
+- [PR #33 — Disponibilidad](https://github.com/EliasCastanedaM/casaHuespedesProy/pull/33): `searchAvailableRoomCategoriesService` ahora verifica `availability_status='available'` y `rooms.status='active'` al computar `available_quantity`, aun cuando el consumidor especifique `available_only=false`. Antes podía sumar unidades bloqueadas como disponibles en un resumen administrativo. Pruebas de mantenimiento, bloqueo de unidad y bloqueo global sin cambios de inventario.
+- [PR #34 — Precios](https://github.com/EliasCastanedaM/casaHuespedesProy/pull/34): cuando el administrador actualiza expresamente `price_per_night`, el backend sincroniza `price_low`, `price_medium`, `price_high` para evitar incoherencias de legado. Cambios de descripción/fotos no modifican los campos antiguos. **No se han alterado tarifas actuales.**
+
+La rama principal ha pasado **148/148 pruebas del backend** y compilación web en CI sobre PR #34. La validación real en Render sigue pendiente por limitaciones de acceso a su endpoint desde este entorno.
+
+### Verificación de integridad con SQL de solo lectura
+
+| Prueba | Resultado |
+|---|---|
+| Habitaciones activas sin categoría | 0 |
+| Fotografías huérfanas | 0 |
+| Videos huérfanos | 0 |
+| Habitaciones activas sin fotos | 0 |
+| Habitaciones activas sin exactamente una foto principal | 0 |
+| Bloqueos de mismo cuarto/fecha/tipo/hora duplicados | 0 |
+| Correos o teléfonos de clientes duplicados | 0 |
+| Reservas operativas / pagos operativos | 0 / 0 |
+| Conversaciones Meta / mensajes Meta | 12 / 322 |
+
+Simulación read-only del calendario con los filtros equivalentes al backend:
+
+| Ejemplo | Unidades activas | Unidades sin bloqueo |
+|---|---:|---:|
+| 22–23/oct | 13 | 13 |
+| 24–25/oct (bloqueo global) | 13 | 0 |
+| 08–09/nov (bloqueo global) | 13 | 0 |
+| 16–17/nov | 13 | 13 |
+| 24–25/dic (bloqueo global) | 13 | 0 |
+
+Esto valida que los bloqueos globales se reconocen correctamente. **NO implica que 13 unidades estén realmente disponibles en Booking o Airbnb:** dichos canales no sincronizan todavía con esta base mediante channel manager; podrían tener reservas externas.
+
+### Reservas y pagos: controles identificados en el código
+
+- `createBookingByCategoryService` selecciona una unidad activa dentro de su categoría, usa locks transaccionales (categoría + unidad) y vuelve a verificar disponibilidad antes del INSERT.
+- Hay pruebas automatizadas de idempotencia por `booking_intent_id`, dos solicitudes concurrentes, reversión si falla el INSERT de pago y ausencia de correos duplicados en reintentos.
+- `reportBookingPaymentService` marca `payment_reported`, **no acredita cobro por sí solo**; la confirmación final del personal es indispensable y está protegida con transición de estado.
+- `bookings` y `payments` están vacías: todavía falta prueba de extremo a extremo **en un entorno aislado**, incluyendo bloqueo, anticoincidencia de reservas simultáneas, reporte de pago, verificación humana, cancelación y liberación de stock.
+- Verificar en fase 3 si todas las transiciones administrativas de estado deben restringirse por una máquina de estados más estricta; no modificar estados sin aprobación operativa.
+
+### Integraciones y contenido pendientes
+
+- El sitio web toma categorías/precios de PostgreSQL, pero los servicios `frontend/src/pages/public/Services.jsx` y los lugares turísticos están definidos en el frontend, mientras `services` y `tourism_places` permanecen vacías.
+- Antes de mover información a `services`, validar con la administración qué servicio está incluido, adicional, sujeto a disponibilidad y a qué tarifa; no publicar precios ni servicios no aprobados.
+- Los bloqueos de 21 días, la unidad 406 y las tarifas de temporada deben permanecer intactos hasta confirmación comercial. También se requiere diseñar cómo accederán los administradores autorizados a la futura edición por WhatsApp.
+- El backend Render no fue accesible desde el ambiente de auditoría para una prueba directa de los endpoints; sí se verificó ejecución SQL interna, pruebas CI y compilación. La prueba con el usuario/rol real de Render queda pendiente.
