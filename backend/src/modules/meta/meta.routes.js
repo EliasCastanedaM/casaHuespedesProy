@@ -2,6 +2,8 @@ import { Router } from "express";
 import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
 import {
   listConversationsController,
+  dashboardController,
+  updateResolvedController,
   listHandoffsController,
   listMessagesController,
   receiveWebhookController,
@@ -22,6 +24,7 @@ router.patch(
   updateHandoffController
 );
 
+router.get("/conversations/dashboard", requireAdminAuth, dashboardController);
 router.get("/conversations", requireAdminAuth, listConversationsController);
 router.get(
   "/conversations/:channel/:externalUserId/messages",
@@ -32,6 +35,11 @@ router.post(
   "/conversations/:channel/:externalUserId/messages",
   requireAdminAuth,
   sendManualMessageController
+);
+router.patch(
+  "/conversations/:channel/:externalUserId/resolved",
+  requireAdminAuth,
+  updateResolvedController
 );
 router.patch(
   "/conversations/:channel/:externalUserId/handoff",

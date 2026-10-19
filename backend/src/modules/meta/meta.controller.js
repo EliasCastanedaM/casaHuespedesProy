@@ -9,6 +9,8 @@ import {
   listActiveHandoffs,
   listConversationMessages,
   listConversations,
+  getConversationDashboard,
+  setConversationResolved,
   listRecoverableMessages,
   parseMetaStatusUpdates,
   parseMetaWebhook,
@@ -151,10 +153,42 @@ export async function listHandoffsController(_req, res, next) {
   }
 }
 
-export async function listConversationsController(_req, res, next) {
+export async function listConversationsController(req, res, next) {
   try {
-    const conversations = await listConversations();
+    const conversations = await listConversations(undefined, {
+      channel: req.query.channel,
+      status: req.query.status,
+      search: req.query.search,
+      limit: req.query.limit,
+      offset: req.query.offset,
+    });
     return res.json({ success: true, data: conversations });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function dashboardController(_req, res, next) {
+  try {
+    const dashboard = await getConversationDashboard();
+    return res.json({ success: true, data: dashboard });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateResolvedController(req, res, next) {
+  try {
+    const conversation = conversationParams(req, res);
+    if (!conversation) return;
+    if (typeof req.body?.resolved !== "boolean") {
+      return res.status(400).json({ success: false, message: "resolved debe ser true o false." });
+    }
+    const updated = await setConversationResolved(
+      conversation.channel, conversation.externalUserId, req.body.resolved
+    );
+    if (!updated) return res.status(404).json({ success: false, message: "Conversación no encontrada." });
+    return res.json({ success: true, data: updated });
   } catch (error) {
     next(error);
   }

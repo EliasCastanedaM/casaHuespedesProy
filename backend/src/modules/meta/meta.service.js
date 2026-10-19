@@ -319,11 +319,12 @@ export async function persistIncomingMessages(messages, db = pool) {
         ]
       );
 
-      await client.query(
+      const insertedMessage = await client.query(
         `INSERT INTO meta_messages
           (channel, external_user_id, meta_message_id, direction, author, message_type, content, status, meta_timestamp)
          VALUES ($1, $2, $3, 'incoming', 'client', $4, $5, 'pending', $6)
-         ON CONFLICT (channel, meta_message_id) WHERE meta_message_id IS NOT NULL DO NOTHING;`,
+         ON CONFLICT (channel, meta_message_id) WHERE meta_message_id IS NOT NULL DO NOTHING
+         RETURNING id;`,
         [
           message.channel,
           message.externalUserId,
@@ -333,6 +334,13 @@ export async function persistIncomingMessages(messages, db = pool) {
           metaTimestamp,
         ]
       );
+      if (insertedMessage.rows.length > 0) {
+        await client.query(
+          `UPDATE meta_conversations SET resolved_at = NULL
+           WHERE channel = $1 AND external_user_id = $2 AND resolved_at IS NOT NULL;`,
+          [message.channel, message.externalUserId]
+        );
+      }
 
       const result = await client.query(
         `SELECT id, channel, external_user_id, meta_message_id, message_type, content,
@@ -510,28 +518,102 @@ export async function listActiveHandoffs(db = pool) {
   return result.rows;
 }
 
-export async function listConversations(db = pool) {
+
+export async function getConversationDashboard(db = pool) {
+  // Conteos sin paginación: las tarjetas nunca dependen de los 50 chats visibles.
   const result = await db.query(
-    `SELECT c.channel, c.external_user_id, c.customer_name, c.handoff_active,
-            c.handoff_requested_at, c.handoff_resolved_at, c.created_at, c.updated_at,
-            a.booking_context -> 'whatsapp_mvp' AS reservation_context,
-            m.content AS last_message, m.author AS last_author,
-            m.message_type AS last_message_type, m.status AS last_status,
-            COALESCE(m.meta_timestamp, m.created_at, c.last_message_at, c.updated_at) AS last_message_at
+    `SELECT c.channel,
+            COUNT(*)::int AS total,
+            COUNT(*) FILTER (WHERE NOT c.handoff_active AND c.resolved_at IS NULL)::int AS ai,
+            COUNT(*) FILTER (WHERE c.handoff_active AND c.resolved_at IS NULL)::int AS manual,
+            COUNT(*) FILTER (WHERE c.resolved_at IS NOT NULL)::int AS resolved,
+            COUNT(*) FILTER (
+              WHERE c.resolved_at IS NULL
+                AND m.direction = 'incoming' AND m.status IN ('received', 'failed')
+            )::int AS unanswered
      FROM meta_conversations c
-     LEFT JOIN ai_conversations a
-       ON a.channel = c.channel AND a.external_user_id = c.external_user_id
      LEFT JOIN LATERAL (
-       SELECT content, author, message_type, status, meta_timestamp, created_at
+       SELECT direction, status
        FROM meta_messages
        WHERE channel = c.channel AND external_user_id = c.external_user_id
        ORDER BY COALESCE(meta_timestamp, created_at) DESC, id DESC
        LIMIT 1
      ) m ON TRUE
+     GROUP BY c.channel;`
+  );
+  const channels = Object.fromEntries(
+    ["instagram", "facebook", "whatsapp"].map((channel) => [
+      channel, { total: 0, ai: 0, manual: 0, resolved: 0, unanswered: 0 },
+    ])
+  );
+  for (const row of result.rows) {
+    if (!channels[row.channel]) continue;
+    channels[row.channel] = Object.fromEntries(
+      ["total", "ai", "manual", "resolved", "unanswered"].map((key) => [key, Number(row[key]) || 0])
+    );
+  }
+  const sum = (field) => Object.values(channels).reduce((value, channel) => value + channel[field], 0);
+  return { total: sum("total"), ai: sum("ai"), manual: sum("manual"),
+    resolved: sum("resolved"), unanswered: sum("unanswered"), channels };
+}
+
+export async function listConversations(db = pool, options = {}) {
+  const allowedChannels = new Set(["instagram", "facebook", "whatsapp"]);
+  const allowedStatuses = new Set(["all", "ai", "manual", "resolved", "unanswered"]);
+  const channel = allowedChannels.has(options.channel) ? options.channel : null;
+  const status = allowedStatuses.has(options.status) ? options.status : "all";
+  const search = String(options.search || "").trim().slice(0, 100);
+  const limit = Math.min(Math.max(Number(options.limit) || 50, 1), 100);
+  const offset = Math.min(Math.max(Number(options.offset) || 0, 0), 100000);
+  const result = await db.query(
+    `SELECT c.channel, c.external_user_id, c.customer_name, c.handoff_active,
+            c.handoff_requested_at, c.handoff_resolved_at, c.resolved_at,
+            c.created_at, c.updated_at,
+            a.booking_context -> 'whatsapp_mvp' AS reservation_context,
+            m.content AS last_message, m.author AS last_author,
+            m.direction AS last_direction, m.message_type AS last_message_type,
+            m.status AS last_status,
+            COALESCE(m.meta_timestamp, m.created_at, c.last_message_at, c.updated_at) AS last_message_at
+     FROM meta_conversations c
+     LEFT JOIN ai_conversations a
+       ON a.channel = c.channel AND a.external_user_id = c.external_user_id
+     LEFT JOIN LATERAL (
+       SELECT content, author, direction, message_type, status, meta_timestamp, created_at
+       FROM meta_messages
+       WHERE channel = c.channel AND external_user_id = c.external_user_id
+       ORDER BY COALESCE(meta_timestamp, created_at) DESC, id DESC
+       LIMIT 1
+     ) m ON TRUE
+     WHERE ($1::text IS NULL OR c.channel = $1)
+       AND ($2 = '' OR COALESCE(c.customer_name, '') ILIKE '%' || $2 || '%'
+         OR c.external_user_id ILIKE '%' || $2 || '%'
+         OR COALESCE(m.content, '') ILIKE '%' || $2 || '%')
+       AND (
+         $3 = 'all'
+         OR ($3 = 'ai' AND NOT c.handoff_active AND c.resolved_at IS NULL)
+         OR ($3 = 'manual' AND c.handoff_active AND c.resolved_at IS NULL)
+         OR ($3 = 'resolved' AND c.resolved_at IS NOT NULL)
+         OR ($3 = 'unanswered' AND c.resolved_at IS NULL
+           AND m.direction = 'incoming' AND m.status IN ('received', 'failed'))
+       )
      ORDER BY COALESCE(m.meta_timestamp, m.created_at, c.last_message_at, c.updated_at) DESC
-     LIMIT 50;`
+     LIMIT $4 OFFSET $5;`,
+    [channel, search, status, limit, offset]
   );
   return result.rows;
+}
+
+export async function setConversationResolved(channel, externalUserId, resolved, db = pool) {
+  validateConversation(channel, externalUserId);
+  const result = await db.query(
+    `UPDATE meta_conversations
+     SET resolved_at = CASE WHEN $3 THEN CURRENT_TIMESTAMP ELSE NULL END,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE channel = $1 AND external_user_id = $2
+     RETURNING channel, external_user_id, resolved_at, handoff_active, updated_at;`,
+    [channel, externalUserId, resolved === true]
+  );
+  return result.rows[0] || null;
 }
 
 export async function listConversationMessages(
