@@ -488,7 +488,13 @@ function missingDataReply(context, invalidCategoryReference) {
 // a enviar todos sus datos privados en un solo mensaje.
 function progressiveMissingDataReply(missing, context) {
   if (missing.includes("categoría de habitación")) {
-    return "Para ayudarte con la reserva, ¿qué categoría prefieres: Matrimonial Estándar, Matrimonial Ejecutiva, Doble - 2 Camas, Triple - 3 Camas, Familiar 1 o Familiar 2?";
+    const suggested = context.suggested_category_slug &&
+      context.suggested_guests_count === context.guests_count &&
+      categoryLabel(context.suggested_category_slug);
+    if (suggested) {
+      return `Para ${context.guests_count} huéspedes te recomendé ${suggested}. 😊 ¿Deseas reservar esa categoría?`;
+    }
+    return "¡Perfecto! 😊 ¿Qué categoría prefieres: Matrimonial Estándar, Matrimonial Ejecutiva, Doble - 2 Camas, Triple - 3 Camas, Familiar 1 o Familiar 2?";
   }
   if (missing.includes("fecha de ingreso") || missing.includes("fecha de salida")) {
     return "¿Cuáles serían las fechas de ingreso y salida? Escríbelas en formato DD/MM/AAAA, por ejemplo: ingreso 20/11/2026 y salida 22/11/2026.";
@@ -647,13 +653,30 @@ export async function handleDeterministicBookingFlow({
   const intent = startsNewReservation || isReservationIntent(message);
 
   if (!baseContext.active && !intent) {
-    return {
-      handled: false,
-      context: mergeMessageData(baseContext, message, {
-        activate: false,
-        allowUnlabeledName: false,
-      }),
-    };
+    const next = mergeMessageData(baseContext, message, {
+      activate: false,
+      allowUnlabeledName: false,
+    });
+    // Registrar la categoría recomendada como SUGERENCIA, no como selección.
+    // Si el huésped luego decide reservar, primero confirmará la recomendación.
+    if (
+      next.guests_count &&
+      /\b(?:recomiendas?|recomienda|recomendar|recomendacion|sugieres?|sugerencia)\b/.test(normalizedText(message)) &&
+      typeof services?.listCategories === "function"
+    ) {
+      const categories = await services.listCategories();
+      const suitable = (Array.isArray(categories) ? categories : [])
+        .filter((category) => Number(category.capacity) >= next.guests_count &&
+          category.is_active !== false && inferCategorySlug(category))
+        .sort((a, b) => Number(a.capacity) - Number(b.capacity) ||
+          Number(a.price_per_night) - Number(b.price_per_night));
+      const suggestion = suitable[0];
+      if (suggestion) {
+        next.suggested_category_slug = inferCategorySlug(suggestion);
+        next.suggested_guests_count = next.guests_count;
+      }
+    }
+    return { handled: false, context: next };
   }
 
   if (baseContext.booking?.id && baseContext.intent_id) {
@@ -679,7 +702,16 @@ export async function handleDeterministicBookingFlow({
     state: "draft",
     intent_id: nextContext.intent_id || createIntentId(),
   };
-  const categoryReference = extractCategoryReference(message);
+  // Aceptar explícitamente una recomendación anterior, nunca reservarla
+  // por el solo hecho de haberla mencionado la IA.
+  const normalized = normalizedText(message);
+  const acceptedRecommendation = /^(?:si|claro|perfecto|ok|okay|dale|esa|esa misma|la recomendada|esta bien|de acuerdo)$/.test(normalized);
+  const declinedRecommendation = /^(?:no|otra|prefiero otra|otra categoria)$/.test(normalized);
+  if (declinedRecommendation) {
+    nextContext.suggested_category_slug = null;
+  }
+  const categoryReference = extractCategoryReference(message) ||
+    (acceptedRecommendation ? nextContext.suggested_category_slug : null);
   const selectedCategory = await resolveSelectedCategory(
     categoryReference,
     nextContext,

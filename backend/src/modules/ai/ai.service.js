@@ -600,7 +600,9 @@ async function generateAiReplyInternal({
     hotelPhone: env.hotel.phone || "901551287",
     paymentUrl: env.culqiPaymentUrl,
     newIntentPrepared: newReservation,
-    progressiveCollection: channel === "whatsapp",
+    // Las reservas por Instagram y Facebook también deben ser conversacionales:
+    // una pregunta por vez, con verificación de stock antes de solicitar PII.
+    progressiveCollection: true,
     services: {
       listCategories: getPublicRoomCategoriesService,
       searchAvailableRooms: searchAvailableRoomCategoriesService,

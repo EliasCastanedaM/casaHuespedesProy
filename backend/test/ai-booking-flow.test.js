@@ -461,3 +461,72 @@ test("la interpretación de cantidades escritas conserva cifras y reconoce grupo
     assert.equal(info.context.guests_count, expected, message);
   }
 });
+
+
+test("Instagram recuerda categoría recomendada pero solicita aprobación explícita", async () => {
+  const calls = emptyCalls();
+  const services = successfulBookingServices(calls);
+  const options = { services, progressiveCollection: true };
+
+  const info = await flow({
+    ...options,
+    message: "Somos tres adultos, ¿qué habitación nos recomiendas?",
+    context: {},
+  });
+  assert.equal(info.handled, false);
+  assert.equal(info.context.guests_count, 3);
+  assert.equal(info.context.suggested_category_slug, "triple");
+  assert.equal(info.context.category, null);
+
+  const intent = await flow({
+    ...options,
+    message: "Ahora quiero hacer una reserva, ¿qué datos necesitas?",
+    context: info.context,
+  });
+  assert.equal(intent.handled, true);
+  assert.match(intent.reply, /te recomendé Triple - 3 Camas/);
+  assert.match(intent.reply, /Deseas reservar esa categoría/i);
+  assert.doesNotMatch(intent.reply, /Envíame todos esos datos|cantidad de huéspedes|nombre completo, correo/i);
+  assert.equal(intent.context.guests_count, 3);
+  assert.equal(calls.bookings.length, 0);
+
+  const accept = await flow({ ...options, message: "Sí", context: intent.context });
+  assert.equal(accept.context.category.category_slug, "triple");
+  assert.match(accept.reply, /fechas de ingreso y salida/);
+  assert.equal(calls.bookings.length, 0);
+
+  const dates = await flow({
+    ...options, message: "Ingreso 20/11/2026 y salida 22/11/2026",
+    context: accept.context,
+  });
+  assert.match(dates.reply, /nombre completo/);
+  assert.doesNotMatch(dates.reply, /cantidad de huéspedes|categoría prefieres/);
+  assert.equal(calls.searches.length, 1);
+  assert.equal(calls.bookings.length, 0);
+});
+
+test("se permite rechazar la sugerencia y elegir otra categoría", async () => {
+  const services = successfulBookingServices(emptyCalls());
+  const options = { services, progressiveCollection: true };
+  const info = await flow({ ...options, message: "Somos tres adultos, ¿qué habitación me recomiendas?", context: {} });
+  const intent = await flow({ ...options, message: "Quiero hacer una reserva", context: info.context });
+  const declined = await flow({ ...options, message: "No", context: intent.context });
+  assert.equal(declined.context.suggested_category_slug, null);
+  assert.match(declined.reply, /qué categoría prefieres/i);
+  const selected = await flow({ ...options, message: "La Matrimonial", context: declined.context });
+  assert.equal(selected.context.category.category_slug, "matrimonial");
+  assert.match(selected.reply, /fechas de ingreso y salida/);
+});
+
+test("el asesor solicita un solo dato por turno si no hay categoría recomendada", async () => {
+  const services = successfulBookingServices(emptyCalls());
+  const result = await flow({
+    message: "Quisiera hacer una reserva",
+    context: {},
+    progressiveCollection: true,
+    services,
+  });
+  assert.match(result.reply, /qué categoría prefieres/i);
+  assert.doesNotMatch(result.reply, /Envíame todos|nombre completo, correo/i);
+  assert.equal(result.context.guests_count, null);
+});
