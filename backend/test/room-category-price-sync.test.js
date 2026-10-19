@@ -42,7 +42,7 @@ test("al modificar el precio base actualiza también precios heredados", async (
   const update = db.queries.find(q => /UPDATE room_categories/.test(q.sql));
   assert.ok(update);
   for (const column of ["price_low", "price_medium", "price_high"]) {
-    assert.match(update.sql, new RegExp(column + String.raw`\\s*=\\s*CASE WHEN \\$8::boolean THEN \\$2`));
+    assert.ok(update.sql.includes(`${column} = CASE WHEN $8::boolean THEN $2 ELSE ${column} END`));
   }
   assert.equal(update.params[1], 235);
   assert.equal(update.params[7], true);
