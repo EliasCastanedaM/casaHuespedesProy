@@ -271,11 +271,17 @@ function extractFullName(message, allowUnlabeled = true) {
 }
 
 function extractGuests(message) {
-  const match = normalizedText(message).match(
-    /\b(\d{1,2})\s*(?:personas?|huespedes?|adultos?)\b/
+  const counts = {
+    un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4,
+    cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9,
+    diez: 10, once: 11, doce: 12,
+  };
+  const text = normalizedText(message);
+  const match = text.match(
+    /\b(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)\s*(?:personas?|huespedes?|adultos?)\b/
   );
   if (!match) return null;
-  const guests = Number(match[1]);
+  const guests = counts[match[1]] ?? Number(match[1]);
   return Number.isInteger(guests) && guests >= 1 && guests <= 30
     ? guests
     : null;
