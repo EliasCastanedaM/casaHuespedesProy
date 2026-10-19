@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isHotelInformationInterruption } from "./ai.category-info.js";
 
 const DEFAULT_PHONE = "901551287";
 
@@ -706,6 +707,12 @@ export async function handleDeterministicBookingFlow({
     };
   }
 
+  // El huésped puede preguntar por servicios, políticas o ubicación mientras
+  // cotiza o reserva. La IA responde libremente y la reserva conserva contexto.
+  if (!intent && isHotelInformationInterruption(message)) {
+    return { handled: false, context: safeInitialContext };
+  }
+
   if (!baseContext.active && !intent) {
     return {
       handled: false,
@@ -755,6 +762,32 @@ export async function handleDeterministicBookingFlow({
     services.listCategories
   );
   nextContext = { ...nextContext, category: selectedCategory };
+
+  // Evitar ofrecer una categoría que no aloja a todos los huéspedes. No se
+  // consulta disponibilidad ni se crea pre-reserva en este caso.
+  if (
+    selectedCategory &&
+    Number(nextContext.guests_count) > 0 &&
+    Number(selectedCategory.capacity) > 0 &&
+    Number(selectedCategory.capacity) < Number(nextContext.guests_count)
+  ) {
+    const all = await services.listCategories();
+    const suitable = (Array.isArray(all) ? all : [])
+      .filter(item => Number(item.capacity) >= Number(nextContext.guests_count) &&
+        item.is_active !== false && inferCategorySlug(item))
+      .sort((a, b) => Number(a.capacity) - Number(b.capacity) ||
+        Number(a.price_per_night) - Number(b.price_per_night));
+    const alternative = suitable[0];
+    nextContext.category = null;
+    nextContext.suggested_category_slug = alternative ? inferCategorySlug(alternative) : null;
+    nextContext.suggested_guests_count = nextContext.guests_count;
+    return {
+      handled: true,
+      mode: "booking_capacity_exceeded",
+      context: nextContext,
+      reply: `${categoryLabel(selectedCategory)} tiene capacidad para ${Number(selectedCategory.capacity)} huéspedes, pero me indicaste ${nextContext.guests_count}. ${alternative ? "Te recomiendo " + categoryLabel(alternative) + ". ¿Deseas continuar con esa categoría?" : "Nuestro equipo puede ayudarte a evaluar una alternativa."}`,
+    };
+  }
 
   const missing = missingFields(nextContext);
   if (missing.length > 0) {
