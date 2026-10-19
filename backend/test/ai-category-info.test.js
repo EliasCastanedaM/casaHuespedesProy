@@ -48,6 +48,6 @@ test("no confunde recomendaciones, selección y disponibilidad con detalles", ()
 test("las preguntas de hotel interrumpen una reserva sin reiniciarla", () => {
   assert.equal(isHotelInformationInterruption("¿Dónde están ubicados?"), true);
   assert.equal(isHotelInformationInterruption("¿Qué servicios incluyen?"), true);
-  assert.equal(isHotelInformationInterruption("¿Aceptan perros?"), false);
+  assert.equal(isHotelInformationInterruption("¿Aceptan perros?"), true);
   assert.equal(isHotelInformationInterruption("Ahora quiero reservar"), false);
 });
