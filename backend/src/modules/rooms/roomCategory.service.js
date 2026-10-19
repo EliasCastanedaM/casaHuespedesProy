@@ -104,6 +104,11 @@ export async function updateRoomCategoryService(
     SET
       capacity = $1,
       price_per_night = $2,
+      -- Compatibilidad: las columnas de temporadas antiguas deben conservar
+      -- el precio vigente solo cuando se modifica explícitamente la tarifa.
+      price_low = CASE WHEN $8::boolean THEN $2 ELSE price_low END,
+      price_medium = CASE WHEN $8::boolean THEN $2 ELSE price_medium END,
+      price_high = CASE WHEN $8::boolean THEN $2 ELSE price_high END,
       bed_description = $3,
       description = $4,
       image_url = $5,
@@ -128,6 +133,7 @@ export async function updateRoomCategoryService(
         ? Boolean(categoryData.is_active)
         : current.is_active,
       normalizedSlug,
+      has("price_per_night"),
     ]
   );
 
