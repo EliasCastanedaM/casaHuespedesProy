@@ -51,3 +51,48 @@ test("las preguntas de hotel interrumpen una reserva sin reiniciarla", () => {
   assert.equal(isHotelInformationInterruption("¿Aceptan perros?"), true);
   assert.equal(isHotelInformationInterruption("Ahora quiero reservar"), false);
 });
+
+
+test("compara Familiar 1 y Familiar 2 sin omitir ninguna y conserva sus diferencias", () => {
+  const families = categories.map(category => category.slug === "familiar"
+    ? { ...category, bed_description: "2 camas de 2 plazas + 3 camas de 1½ plazas",
+        description: "Segundo piso y vista interior." }
+    : category.slug === "familiar-2"
+      ? { ...category, bed_description: "1 cama de 2 plazas + 3 camas de 1½ plazas",
+          description: "Cuarto piso, acceso directo a terraza y vista al mar." }
+      : category);
+  const question = "Explícame las diferencias entre Familiar 1 y Familiar 2.";
+  assert.equal(isRoomDetailsInquiry(question), true);
+  const answer = formatRoomDetailsReply(families, question);
+  assert.match(answer, /Familiar 1/);
+  assert.match(answer, /Familiar 2/);
+  assert.match(answer, /Segundo piso y vista interior/);
+  assert.match(answer, /acceso directo a terraza y vista al mar/);
+  assert.equal((answer.match(/S\/ 250\.00 por noche/g) || []).length, 2);
+  assert.doesNotMatch(answer, /Matrimonial Ejecutiva|Triple - 3 Camas/);
+});
+
+test("la comparación acepta otras formulaciones y dos nombres concretos", () => {
+  for (const question of [
+    "¿Cuál es la diferencia entre Familiar 1 y Familiar 2?",
+    "Compara Familiar 1 vs Familiar 2",
+    "Diferencias entre Familiar 1 y Familiar 2",
+    "Explícame las dos categorías, Familiar 1 y Familiar 2",
+  ]) {
+    assert.equal(isRoomDetailsInquiry(question), true, question);
+    const answer = formatRoomDetailsReply(categories, question);
+    assert.match(answer, /Familiar 1/);
+    assert.match(answer, /Familiar 2/);
+    assert.doesNotMatch(answer, /Triple - 3 Camas/);
+  }
+  const matrimonial = formatRoomDetailsReply(categories, "Compara Matrimonial Estándar y Matrimonial Ejecutiva");
+  assert.match(matrimonial, /Matrimonial Estándar/);
+  assert.match(matrimonial, /Matrimonial Ejecutiva/);
+  assert.doesNotMatch(matrimonial, /Familiar 2/);
+});
+
+test("preguntar por Familiar 2 individualmente sigue mostrando solo esa categoría", () => {
+  const answer = formatRoomDetailsReply(categories, "Cuéntame solo sobre Familiar 2");
+  assert.match(answer, /Familiar 2/);
+  assert.doesNotMatch(answer, /Familiar 1/);
+});
