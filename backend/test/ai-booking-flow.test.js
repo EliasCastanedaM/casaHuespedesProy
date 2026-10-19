@@ -516,8 +516,10 @@ test("se permite rechazar la sugerencia y elegir otra categoría", async () => {
   assert.equal(declined.context.suggested_category_slug, null);
   assert.match(declined.reply, /qué categoría prefieres/i);
   const selected = await flow({ ...options, message: "La Matrimonial", context: declined.context });
-  assert.equal(selected.context.category.category_slug, "matrimonial");
-  assert.match(selected.reply, /fechas de ingreso y salida/);
+  assert.equal(selected.mode, "booking_capacity_exceeded");
+  assert.equal(selected.context.category, null);
+  assert.match(selected.reply, /capacidad para 2 huéspedes/);
+  assert.equal(selected.context.suggested_category_slug, "triple");
 });
 
 test("el asesor solicita un solo dato por turno si no hay categoría recomendada", async () => {
@@ -593,4 +595,45 @@ test("si hay una pre-reserva anterior, la nueva recomendación no reutiliza la r
   assert.equal(result.mode, "category_recommendation");
   assert.equal(result.context.booking, undefined);
   assert.equal(result.context.guests_count, 3);
+});
+
+
+test("una reserva en borrador no bloquea preguntas sobre servicios ni categorías", async () => {
+  const services = successfulBookingServices(emptyCalls());
+  const active = {
+    active: true, state: "draft", guests_count: 3,
+    category: null, intent_id: INTENT_ID,
+  };
+  for (const text of ["¿Dónde están ubicados?", "¿Qué servicios ofrecen?", "Cuéntame más sobre esas categorías y esas habitaciones", "Explícame cada una y cuál es"]) {
+    const result = await flow({ message: text, context: active, services, progressiveCollection: true });
+    assert.equal(result.handled, false, text);
+    assert.equal(result.context.guests_count, 3);
+    assert.equal(result.context.active, true);
+  }
+});
+
+test("el asistente rechaza una Matrimonial de capacidad 2 para tres huéspedes", async () => {
+  const calls = emptyCalls();
+  const services = successfulBookingServices(calls);
+  const result = await flow({
+    message: "Matrimonial estándar",
+    context: { active: true, state: "draft", guests_count: 3, intent_id: INTENT_ID },
+    services,
+    progressiveCollection: true,
+  });
+  assert.equal(result.mode, "booking_capacity_exceeded");
+  assert.equal(result.context.category, null);
+  assert.equal(result.context.suggested_category_slug, "triple");
+  assert.match(result.reply, /capacidad para 2 huéspedes/);
+  assert.equal(calls.searches.length, 0);
+  assert.equal(calls.bookings.length, 0);
+});
+
+test("la consulta informativa no sobrescribe la categoría ya seleccionada", async () => {
+  const services = successfulBookingServices(emptyCalls());
+  const context = { active: true, state: "draft", guests_count: 2, category: categoryMatrimonial, intent_id: INTENT_ID };
+  const result = await flow({ message: "¿Dónde están ubicados?", context, services, progressiveCollection: true });
+  assert.equal(result.handled, false);
+  assert.equal(result.context.category.category_slug, "matrimonial");
+  assert.equal(result.context.guests_count, 2);
 });
