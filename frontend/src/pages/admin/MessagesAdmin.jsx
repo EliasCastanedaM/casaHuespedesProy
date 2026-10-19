@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3, Bot, Camera, CheckCheck, CircleAlert, Clock3, Users,
   Headphones, MessageSquare, Phone, RefreshCw,
@@ -115,6 +115,10 @@ export default function MessagesAdmin() {
   const listSequence = useRef(0);
   const messageSequence = useRef(0);
   const filterKeyRef = useRef("");
+  const messagesViewportRef = useRef(null);
+  const lastScrolledConversationRef = useRef("");
+  const nearLatestRef = useRef(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
   const selected = useMemo(
     () => conversations.find((item) => conversationId(item) === selectedId),
@@ -235,6 +239,42 @@ export default function MessagesAdmin() {
     const timer = window.setInterval(() => void loadMessages(conversation, true), 6000);
     return () => window.clearInterval(timer);
   }, [selectedId, loadMessages]);
+
+  // Abrir el chat por los últimos mensajes, sin interrumpir la lectura del historial.
+  useLayoutEffect(() => {
+    const viewport = messagesViewportRef.current;
+    if (!selectedId) {
+      lastScrolledConversationRef.current = "";
+      nearLatestRef.current = true;
+      return;
+    }
+    if (!viewport) return;
+    if (lastScrolledConversationRef.current !== selectedId) {
+      lastScrolledConversationRef.current = selectedId;
+      nearLatestRef.current = true;
+      setShowJumpToLatest(false);
+    }
+    if (nearLatestRef.current) {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+  }, [messages, selectedId]);
+
+  const handleMessagesScroll = useCallback(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return;
+    const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    const nearLatest = distanceFromBottom <= 90;
+    nearLatestRef.current = nearLatest;
+    setShowJumpToLatest(!nearLatest);
+  }, []);
+
+  const jumpToLatest = useCallback(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return;
+    nearLatestRef.current = true;
+    viewport.scrollTop = viewport.scrollHeight;
+    setShowJumpToLatest(false);
+  }, []);
 
   function selectChannel(next) {
     setChannel(next);
@@ -357,8 +397,8 @@ export default function MessagesAdmin() {
           <p className="px-2 text-xs text-[#7b8586]">Actualización automática cada 10 s</p>
         </div>
 
-        <div className="grid min-h-[690px] border border-[#ded4c4] bg-white shadow-sm xl:grid-cols-[290px_minmax(380px,1fr)_295px]">
-          <aside className="min-w-0 border-b border-[#ded4c4] xl:border-b-0 xl:border-r">
+        <div className="grid min-h-0 border border-[#ded4c4] bg-white shadow-sm xl:h-[clamp(560px,calc(100dvh-320px),820px)] xl:grid-cols-[290px_minmax(380px,1fr)_295px] xl:overflow-hidden">
+          <aside className="flex min-h-0 min-w-0 flex-col border-b border-[#ded4c4] xl:h-full xl:border-b-0 xl:border-r">
             <div className="border-b border-[#ded4c4] bg-[#fbf6ec] p-4">
               <h2 className="font-serif text-lg font-bold">{channel === "all" ? "Todas las conversaciones" : "Conversaciones de " + channelLabel}</h2>
               <p className="mt-1 text-xs text-[#63747a]">{platformCounts.total} conversaciones registradas</p>
@@ -386,7 +426,7 @@ export default function MessagesAdmin() {
               </p>
             </div>
 
-            <div className="max-h-[600px] overflow-y-auto">
+            <div className="min-h-0 max-h-[370px] flex-1 overflow-y-auto overscroll-contain xl:max-h-none">
               {loadingConversations && conversations.length === 0 ? (
                 <p className="p-5 text-sm text-[#63747a]">Cargando conversaciones...</p>
               ) : conversations.length === 0 ? (
@@ -422,7 +462,7 @@ export default function MessagesAdmin() {
             </div>
           </aside>
 
-          <div className="flex min-h-[610px] min-w-0 flex-col border-b border-[#ded4c4] xl:border-b-0 xl:border-r">
+          <div className="flex h-[550px] min-h-0 min-w-0 flex-col border-b border-[#ded4c4] xl:h-full xl:border-b-0 xl:border-r">
             {!selected ? (
               <div className="flex flex-1 items-center justify-center p-8 text-center text-sm text-[#73818a]">
                 Selecciona una conversación para consultar su historial.
@@ -439,7 +479,14 @@ export default function MessagesAdmin() {
                   <StatusLabel conversation={selected} />
                 </div>
 
-                <div className="h-[470px] flex-1 space-y-3 overflow-y-auto bg-[#f8f5f0] p-4">
+                <div className="relative min-h-0 flex-1">
+                  <div
+                    ref={messagesViewportRef}
+                    onScroll={handleMessagesScroll}
+                    role="log"
+                    aria-label="Historial de mensajes de la conversación"
+                    className="h-full min-h-0 space-y-3 overflow-y-auto overscroll-contain bg-[#f8f5f0] p-4"
+                  >
                   {loadingMessages && messages.length === 0 ? (
                     <p className="text-center text-sm text-[#73818a]">Cargando historial...</p>
                   ) : messages.length === 0 ? (
@@ -469,6 +516,16 @@ export default function MessagesAdmin() {
                       );
                     })
                   )}
+                  </div>
+                  {showJumpToLatest && (
+                    <button
+                      type="button"
+                      onClick={jumpToLatest}
+                      className="absolute bottom-4 right-5 border border-[#075a78] bg-[#003647] px-4 py-2 text-xs font-bold text-white shadow-lg hover:bg-[#075a78]"
+                    >
+                      ↓ Ir a los últimos mensajes
+                    </button>
+                  )}
                 </div>
 
                 <form onSubmit={sendMessage} className="border-t border-[#ded4c4] bg-white p-3">
@@ -495,7 +552,7 @@ export default function MessagesAdmin() {
             )}
           </div>
 
-          <aside className="min-w-0 bg-[#fffdf9]">
+          <aside className="min-w-0 bg-[#fffdf9] xl:h-full xl:overflow-y-auto">
             <div className="border-b border-[#ded4c4] p-4">
               <h2 className="flex items-center gap-2 font-serif text-lg font-bold"><UserRound size={18} /> Detalle de la conversación</h2>
               {selected ? (
