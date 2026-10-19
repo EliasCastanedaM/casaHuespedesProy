@@ -371,13 +371,12 @@ export default function MessagesAdmin() {
               </div>
               <div className="mt-3 flex flex-wrap gap-1" aria-label="Filtrar por estado">
                 {STATUS_OPTIONS.map((item) => {
-                  const count = statusFilter === item.id ? "" : "";
                   return (
                     <button type="button" key={item.id} onClick={() => setStatusFilter(item.id)}
                       aria-pressed={statusFilter === item.id}
                       className={"border px-2 py-1.5 text-[11px] font-bold " +
                         (statusFilter === item.id ? "border-[#003647] bg-[#003647] text-white" : "border-[#d9d2c7] bg-white text-[#52636a] hover:bg-[#f4efe6]")}>
-                      {item.label}{count}
+                      {item.label}
                     </button>
                   );
                 })}
