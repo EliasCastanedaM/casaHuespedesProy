@@ -12,6 +12,7 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { formatPolicyInformationReply } from "./ai.policy-info.js";
 import { isRoomDetailsInquiry, formatRoomDetailsReply } from "./ai.category-info.js";
 import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
 import { handleWhatsAppMvpTurn, isWhatsAppMenuRequest } from "./ai.whatsapp-mvp.js";
@@ -523,6 +524,19 @@ async function generateAiReplyInternal({
       responseId: null,
       deterministic: true,
       mode: "outside_hotel_scope",
+    };
+  }
+
+  // Una consulta sobre reglas comerciales no equivale a modificar la reserva.
+  // Responderla antes de la recolección de datos/guardias de atención humana
+  // evita repetir "¿cuáles son las fechas?" cuando ya hay un borrador abierto.
+  const policyReply = formatPolicyInformationReply(message);
+  if (policyReply) {
+    return {
+      reply: policyReply,
+      responseId: null,
+      deterministic: true,
+      mode: "policy_information",
     };
   }
 
