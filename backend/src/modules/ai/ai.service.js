@@ -703,7 +703,9 @@ async function generateAiReplyInternal({
 
   await savePreviousResponseId(channel, externalUserId, response.id);
 
-  const reply = response.output_text?.trim();
+  // Meta muestra a veces los asteriscos de Markdown literalmente. Entregar
+  // texto plano sin alterar precios ni la estructura del mensaje.
+  const reply = response.output_text?.trim().replace(/\*\*/g, "");
   if (!reply) {
     const error = new Error(
       "El asesor no pudo generar una respuesta. Inténtalo nuevamente."
