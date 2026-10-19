@@ -146,6 +146,11 @@ export async function searchAvailableRoomCategoriesService(
   const availableByCategory = new Map();
 
   for (const room of availability.rooms || []) {
+    // Cuando available_only=false, la búsqueda también devuelve unidades
+    // ocupadas, bloqueadas o inactivas. Nunca sumarlas como stock disponible.
+    if (room.availability_status !== "available" || room.status !== "active") {
+      continue;
+    }
     const slug = String(room.category_slug || "").trim().toLowerCase();
     if (!slug) continue;
 
