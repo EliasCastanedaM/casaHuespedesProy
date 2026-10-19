@@ -421,6 +421,11 @@ test('WhatsApp acepta elecciones de categoria desde la bienvenida', () => {
   assert.equal(isWhatsAppBookingStep('¿Cuánto cuesta la matrimonial?'), false);
 });
 
+test("la expresión quiero hacer una reserva activa el flujo determinista", () => {
+  assert.equal(isReservationIntent("Ahora quiero hacer una reserva, ¿qué datos necesitas?"), true);
+  assert.equal(isReservationIntent("Quisiera hacer una reserva"), true);
+});
+
 test("el asesor conserva tres adultos expresados en palabras al cambiar a reserva", async () => {
   const calls = emptyCalls();
   const services = successfulBookingServices(calls);
