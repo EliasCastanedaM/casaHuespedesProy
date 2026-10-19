@@ -420,3 +420,39 @@ test('WhatsApp acepta elecciones de categoria desde la bienvenida', () => {
   assert.equal(isWhatsAppBookingStep('Hola'), false);
   assert.equal(isWhatsAppBookingStep('¿Cuánto cuesta la matrimonial?'), false);
 });
+
+test("el asesor conserva tres adultos expresados en palabras al cambiar a reserva", async () => {
+  const calls = emptyCalls();
+  const services = successfulBookingServices(calls);
+  const info = await flow({
+    message: "Somos tres adultos, ¿qué habitación nos recomiendas?",
+    context: {},
+    services,
+  });
+  assert.equal(info.handled, false);
+  assert.equal(info.context.active, false);
+  assert.equal(info.context.guests_count, 3);
+
+  const booking = await flow({
+    message: "Ahora quiero hacer una reserva, ¿qué datos necesitas?",
+    context: info.context,
+    services,
+  });
+  assert.equal(booking.handled, true);
+  assert.equal(booking.context.guests_count, 3);
+  assert.doesNotMatch(booking.reply, /cantidad de huéspedes/i);
+  assert.equal(calls.bookings.length, 0);
+});
+
+test("la interpretación de cantidades escritas conserva cifras y reconoce grupos", async () => {
+  const services = successfulBookingServices(emptyCalls());
+  for (const [message, expected] of [
+    ["Somos 3 adultos", 3],
+    ["Somos ocho personas", 8],
+    ["Vendrán doce huéspedes", 12],
+    ["Somos dos personas", 2],
+  ]) {
+    const info = await flow({ message, context: {}, services });
+    assert.equal(info.context.guests_count, expected, message);
+  }
+});
