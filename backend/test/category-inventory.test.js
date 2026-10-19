@@ -510,3 +510,44 @@ test("mantenimiento, bloqueo global y capacidad reducen o impiden el stock", asy
     (error) => error.statusCode === 400 && /cantidad de huéspedes/.test(error.message)
   );
 });
+
+
+test("available_only=false no contabiliza habitaciones bloqueadas como disponibles", async () => {
+  const database = createInventoryDatabase();
+  database.setRoomStatus(1, "maintenance");
+  database.addBlockedSlot({
+    room_id: 2,
+    blocked_date: "2026-10-10",
+    blocked_time: null,
+    block_type: "day",
+  });
+
+  const result = await categoryAvailability(database, { available_only: false });
+
+  assert.equal(result.categories[0].total_quantity, 5);
+  assert.equal(result.categories[0].active_quantity, 4);
+  assert.equal(result.categories[0].available_quantity, 3);
+  assert.equal(result.categories[0].occupied_quantity, 1);
+  assert.equal(result.categories[0].is_available, true);
+  assert.equal(result.available_count, 3);
+
+  const defaultResult = await categoryAvailability(database);
+  assert.equal(defaultResult.categories[0].available_quantity, 3);
+  assert.equal(defaultResult.available_count, result.available_count);
+});
+
+test("bloqueo global impide disponibilidad incluso en resultados completos", async () => {
+  const database = createInventoryDatabase();
+  database.addBlockedSlot({
+    room_id: null,
+    blocked_date: "2026-10-10",
+    blocked_time: null,
+    block_type: "day",
+  });
+  const result = await categoryAvailability(database, { available_only: false });
+  assert.equal(result.categories[0].active_quantity, 5);
+  assert.equal(result.categories[0].available_quantity, 0);
+  assert.equal(result.categories[0].occupied_quantity, 5);
+  assert.equal(result.categories[0].is_available, false);
+  assert.equal(result.available_count, 0);
+});
