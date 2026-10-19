@@ -17,6 +17,10 @@ export function requiresManualReview(message, { bookingInProgress = false, hasRe
   const groupOfEight = numberedParty || /\bgrupos?\s+de\s+(?:8|9|1\d|2\d|3\d)\b/.test(text);
 
   if (groupOfEight && groupWords) return "grupo de 8 o más personas";
+  // Una pregunta general sobre políticas NO significa que el huésped ya
+  // incluyó mascotas o niños en su reserva. El bot debe informar primero.
+  const generalQuestion = /^[^a-z0-9]*(?:aceptan|permiten|admiten|cuanto|cuantos|desde|hasta|a partir|que|como|puedo)\b/.test(text) && !hasReservationIntent;
+  if (generalQuestion) return null;
   if (children && (bookingInProgress || hasReservationIntent)) return "reserva con niños";
   if (pets && (bookingInProgress || hasReservationIntent)) return "reserva con mascota";
   return null;
