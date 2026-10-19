@@ -12,6 +12,7 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { isRoomDetailsInquiry, formatRoomDetailsReply } from "./ai.category-info.js";
 import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
 import { handleWhatsAppMvpTurn, isWhatsAppMenuRequest } from "./ai.whatsapp-mvp.js";
 import {
@@ -569,6 +570,28 @@ async function generateAiReplyInternal({
         responseId: null,
         deterministic: true,
         mode: "category_prices_unavailable",
+      };
+    }
+  }
+
+  // Las preguntas informativas no deben quedar atrapadas en un borrador de
+  // reserva anterior. La fuente oficial es el catálogo de Supabase.
+  if (isRoomDetailsInquiry(message)) {
+    try {
+      const categories = await getPublicRoomCategoriesService();
+      return {
+        reply: formatRoomDetailsReply(categories, message),
+        responseId: null,
+        deterministic: true,
+        mode: "category_details",
+      };
+    } catch (error) {
+      console.warn("No fue posible consultar las categorías:", error.message);
+      return {
+        reply: "No puedo confirmar los detalles de las habitaciones en este momento. Nuestro equipo puede ayudarte.",
+        responseId: null,
+        deterministic: true,
+        mode: "category_details_unavailable",
       };
     }
   }
