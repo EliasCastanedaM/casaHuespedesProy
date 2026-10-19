@@ -434,7 +434,8 @@ test("el asesor conserva tres adultos expresados en palabras al cambiar a reserv
     context: {},
     services,
   });
-  assert.equal(info.handled, false);
+  assert.equal(info.handled, true);
+  assert.match(info.reply, /te recomiendo Triple - 3 Camas/);
   assert.equal(info.context.active, false);
   assert.equal(info.context.guests_count, 3);
 
@@ -473,7 +474,8 @@ test("Instagram recuerda categoría recomendada pero solicita aprobación explí
     message: "Somos tres adultos, ¿qué habitación nos recomiendas?",
     context: {},
   });
-  assert.equal(info.handled, false);
+  assert.equal(info.handled, true);
+  assert.match(info.reply, /te recomiendo Triple - 3 Camas/);
   assert.equal(info.context.guests_count, 3);
   assert.equal(info.context.suggested_category_slug, "triple");
   assert.equal(info.context.category, null);
@@ -529,4 +531,66 @@ test("el asesor solicita un solo dato por turno si no hay categoría recomendada
   assert.match(result.reply, /qué categoría prefieres/i);
   assert.doesNotMatch(result.reply, /Envíame todos|nombre completo, correo/i);
   assert.equal(result.context.guests_count, null);
+});
+
+test("un borrador anterior no impide una nueva recomendación por capacidad", async () => {
+  const calls = emptyCalls();
+  const services = successfulBookingServices(calls);
+  const contextWithPendingDraft = {
+    active: true,
+    state: "draft",
+    intent_id: INTENT_ID,
+    category: null,
+    guests_count: 2,
+    check_in: null,
+    check_out: null,
+    customer: {},
+  };
+  const options = { services, progressiveCollection: true };
+  const info = await flow({
+    ...options,
+    message: "Somos tres adultos qué habitación nos recomiendas",
+    context: contextWithPendingDraft,
+  });
+  assert.equal(info.handled, true);
+  assert.equal(info.mode, "category_recommendation");
+  assert.equal(info.context.guests_count, 3);
+  assert.equal(info.context.suggested_category_slug, "triple");
+  assert.equal(info.context.category, null);
+  assert.match(info.reply, /te recomiendo Triple - 3 Camas/);
+  assert.doesNotMatch(info.reply, /Qué categoría prefieres|disponibilidad confirmada|pre-reserva fue creada/i);
+  assert.equal(calls.bookings.length, 0);
+
+  const intention = await flow({
+    ...options,
+    message: "Ahora quiero hacer una reserva qué datos necesitas",
+    context: info.context,
+  });
+  assert.match(intention.reply, /te recomendé Triple - 3 Camas/);
+  assert.equal(intention.context.guests_count, 3);
+  assert.equal(intention.context.category, null);
+  assert.equal(calls.bookings.length, 0);
+
+  const select = await flow({ ...options, message: "Sí", context: intention.context });
+  assert.equal(select.context.category.category_slug, "triple");
+  assert.match(select.reply, /fechas de ingreso y salida/);
+  assert.equal(calls.bookings.length, 0);
+});
+
+test("si hay una pre-reserva anterior, la nueva recomendación no reutiliza la reserva previa", async () => {
+  const services = successfulBookingServices(emptyCalls());
+  const result = await flow({
+    message: "Somos tres adultos, qué habitación nos recomiendas",
+    context: {
+      active: true,
+      state: "booked",
+      intent_id: INTENT_ID,
+      booking: { id: 81, booking_code: "CHP-00081", status: "pending_payment" },
+      guests_count: 2,
+    },
+    services,
+  });
+  assert.equal(result.mode, "category_recommendation");
+  assert.equal(result.context.booking, undefined);
+  assert.equal(result.context.guests_count, 3);
 });
