@@ -1,7 +1,7 @@
 const clean = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export function isRoomDetailsInquiry(message) {
   const s = clean(message);
-  if (/\b(?:reservar|reserva|cancelar|pagar|disponibilidad|recomendar|recomiendas|recomienda)\b/.test(s)) return false;
+  if (/\b(?:reservar|reserva|cancelar|pagar|disponibilidad|disponibles?|recomendar|recomiendas|recomienda)\b/.test(s)) return false;
   const topic = /\b(?:habitaciones?|categorias?|camas?|matrimonial|doble|triple|familiar)\b/.test(s);
   const asks = /\b(?:cuentame|explicame|explica|describe|detalles?|informacion|cuales|que|tipos|opciones|dime|tienen)\b/.test(s);
   const followup = /\b(?:explicame|cuentame|describe)\b.*\b(?:cada una|una por una|todas|esas|las opciones)\b/.test(s);
@@ -11,8 +11,8 @@ export function isHotelInformationInterruption(message) {
   const s = clean(message);
   if (/\b(?:reservar|reserva|pagar|cancelar|disponibilidad)\b/.test(s)) return false;
   if (isRoomDetailsInquiry(message)) return true;
-  return /\b(?:que|como|donde|cuales|cuentame|explicame|informacion|horario|incluye|tienen)\b/.test(s) &&
-    /\b(?:servicios?|ubicacion|direccion|desayuno|wifi|mascotas?|politicas?|fotos?|terraza|estacionamiento)\b/.test(s);
+  return /\b(?:que|como|donde|cuales|cuentame|explicame|informacion|horario|incluye|tienen|aceptan|permiten|admiten)\b/.test(s) &&
+    /\b(?:servicios?|ubicacion|ubicad[oa]s?|direccion|desayuno|wifi|mascotas?|perros?|gatos?|politicas?|fotos?|terraza|estacionamiento)\b/.test(s);
 }
 export function formatRoomDetailsReply(categories, message) {
   const list = (Array.isArray(categories) ? categories : []).filter(c => c && c.is_active !== false && c.name);
