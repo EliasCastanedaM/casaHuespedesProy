@@ -11,7 +11,7 @@ const router=Router();
 // Requiere JWT válido incluso para ver reglas e históricos internos.
 router.use(requireAdminAuth);
 
-function requireApprovalRole(req,res,next) {
+export function requireApprovalRole(req,res,next) {
   if (req.user?.role!=="admin") return res.status(403).json({
     success:false,
     message:"Solo una persona con rol administrador puede aprobar o rechazar propuestas.",
