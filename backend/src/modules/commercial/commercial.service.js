@@ -258,6 +258,16 @@ export async function decideRate(id,decision,user,db=pool) {
     const item=r.rows[0];
     if(!item) throw badRequest("Propuesta no encontrada.",404);
     if(item.status!=="pending") throw badRequest("La tarifa ya fue revisada.",409);
+    if(decision==="approved") {
+      const current=await client.query(
+        "SELECT price_per_night FROM public.room_categories WHERE slug=$1 AND is_active=TRUE",
+        [item.category_slug]
+      );
+      if(!current.rows.length ||
+          Number(current.rows[0].price_per_night)!==Number(item.base_price_snapshot)) {
+        throw badRequest("La tarifa base cambió desde la propuesta. Crea una propuesta nueva.",409);
+      }
+    }
     // Una aprobación documenta autorización humana. Este módulo NO altera
     // room_categories ni cobros. La conexión al motor de precios es otra fase.
     const out=await client.query(
