@@ -27,9 +27,14 @@ const router = Router();
 router.get("/", requireAdminAuth, getAllRoomsController);
 router.get("/categories", getPublicRoomCategoriesController);
 router.get("/categories/:slug", getPublicRoomCategoryBySlugController);
+// El personal puede preparar tarifas en el panel comercial, pero solo el
+// administrador puede publicar cambios directos del precio base.
 router.put(
   "/categories/:slug",
   requireAdminAuth,
+  (req,res,next) => req.user?.role === "admin"
+    ? next()
+    : res.status(403).json({success:false,message:"Solo administración puede cambiar la tarifa Full. Utiliza una propuesta comercial."}),
   updateRoomCategoryController
 );
 router.get("/admin", requireAdminAuth, getAllRoomsController);
