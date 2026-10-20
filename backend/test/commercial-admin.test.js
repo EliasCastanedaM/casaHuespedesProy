@@ -97,7 +97,8 @@ function txPool(query) {
       return {
         async query(sql,params) {
           queries.push(sql);
-          if(["BEGIN","COMMIT","ROLLBACK"].includes(sql))return {rows:[]};
+          if(["BEGIN","COMMIT","ROLLBACK"].includes(sql) ||
+             sql.includes("pg_advisory_xact_lock"))return {rows:[]};
           return query(sql,params);
         },
         release(){queries.push("release");},
@@ -153,7 +154,11 @@ test("temporada aprobada del mismo tipo y fechas no permite solapamiento",async(
 
 test("aprobar sugerencia comercial no modifica room_categories ni genera reserva",async()=>{
   const db=txPool(async sql=>{
-    if(sql.includes("FROM public.hotel_rate_proposals"))return {rows:[{id:5,status:"pending",category_slug:"triple",base_price_snapshot:210}]};
+    if(sql.includes("SELECT id FROM public.hotel_rate_proposals"))return {rows:[]};
+    if(sql.includes("FROM public.hotel_rate_proposals"))return {rows:[{
+      id:5,status:"pending",category_slug:"triple",
+      base_price_snapshot:210,start_date:"2026-12-23",end_date:"2026-12-27"
+    }]};
     if(sql.includes("SELECT price_per_night FROM public.room_categories"))return {rows:[{price_per_night:210}]};
     if(sql.includes("UPDATE public.hotel_rate_proposals"))return {rows:[{id:5,status:"approved"}]};
     throw Error("unexpected SQL");
@@ -164,11 +169,28 @@ test("aprobar sugerencia comercial no modifica room_categories ni genera reserva
 
 test("impide aprobar propuestas tarifarias si la tarifa Full ya cambió",async()=>{
   const db=txPool(async sql=>{
-    if(sql.includes("FROM public.hotel_rate_proposals"))return {rows:[{id:5,status:"pending",category_slug:"triple",base_price_snapshot:210}]};
+    if(sql.includes("SELECT id FROM public.hotel_rate_proposals"))return {rows:[]};
+    if(sql.includes("FROM public.hotel_rate_proposals"))return {rows:[{
+      id:5,status:"pending",category_slug:"triple",
+      base_price_snapshot:210,start_date:"2026-12-23",end_date:"2026-12-27"
+    }]};
     if(sql.includes("SELECT price_per_night FROM public.room_categories"))return {rows:[{price_per_night:240}]};
     throw Error("unexpected SQL");
   });
   await assert.rejects(decideRate(5,"approved",admin,db),/tarifa base cambió/);
   assert.ok(db.queries.includes("ROLLBACK"));
   assert.equal(db.queries.some(s=>s.includes("UPDATE public.hotel_rate_proposals")),false);
+});
+
+test("no permite dos tarifas aprobadas superpuestas para la misma categoría",async()=>{
+  const db=txPool(async sql=>{
+    if(sql.includes("SELECT id FROM public.hotel_rate_proposals"))return {rows:[{id:7}]};
+    if(sql.includes("FROM public.hotel_rate_proposals"))return {rows:[{
+      id:5,status:"pending",category_slug:"triple",base_price_snapshot:210,
+      start_date:"2026-12-23",end_date:"2026-12-27"
+    }]};
+    throw Error("unexpected SQL");
+  });
+  await assert.rejects(decideRate(5,"approved",admin,db),/tarifa aprobada para esa categoría/);
+  assert.ok(db.queries.includes("ROLLBACK"));
 });
