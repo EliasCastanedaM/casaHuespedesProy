@@ -110,7 +110,7 @@ test("aprobación de mascotas bloquea regla aún ambigua y revierte transacción
   const db=txPool(async sql=>{
     if(sql.includes("FROM public.hotel_rule_proposals"))return {rows:[{
       id:3,rule_code:"mascotas",status:"pending",previous_updated_at:ruleDate,
-      proposed_config:{...mockRule.config,amount_pen:20,charge_frequency:null},
+      proposed_config:{...mockRule.config,amount_pen:25,charge_frequency:null},
     }]};
     if(sql.includes("FROM public.hotel_policy_rules"))return {rows:[mockRule]};
     throw Error("unexpected SQL");
