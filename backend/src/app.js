@@ -22,6 +22,7 @@ import metaRoutes from "./modules/meta/meta.routes.js";
 import mobileRoutes from "./modules/mobile/mobile.routes.js";
 import roomRoutes from "./modules/rooms/room.routes.js";
 import serviceRoutes from "./modules/services/service.routes.js";
+import hotelProfileRoutes from "./modules/hotel/hotelProfile.routes.js";
 import settingRoutes from "./modules/settings/setting.routes.js";
 import availabilityRoutes from "./routes/availability.routes.js";
 
@@ -93,6 +94,7 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/ai", aiLimiter, aiRoutes);
 app.use("/api/rooms", apiLimiter, roomRoutes);
 app.use("/api/services", apiLimiter, serviceRoutes);
+app.use("/api/hotel/profile", apiLimiter, hotelProfileRoutes);
 app.use("/api/bookings", apiLimiter, bookingRoutes);
 app.use("/api/customers", apiLimiter, customerRoutes);
 app.use("/api/gallery", apiLimiter, galleryRoutes);

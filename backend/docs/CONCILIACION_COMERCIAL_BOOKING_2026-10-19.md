@@ -69,7 +69,7 @@ Los siguientes **9** servicios/ayudas se cargaron en `services`, indicando la fu
 
 ## Diferencias pendientes con Booking / terceros
 
-- **Dirección:** ficha Booking y sitio propio muestran «Calle José Quiñones 237». Google Hoteles muestra «José Quiñones 233». Gerencia debe confirmar oficialmente antes de uniformar ficha Google, Meta e IA.
+- **Dirección confirmada por la administración el 19/10/2026: Calle José Quiñones 237, Pimentel, Lambayeque, Perú.** Booking y la web ya indicaban 237; Google Hoteles mostraba 233. La ficha externa debe corregirla quien administra ese perfil. Se incorporó a `hotel_profile` como dato verificado; IA y contacto web consultan esa fuente.
 - **Tipos de habitación:** Booking usa sus propias descripciones y en búsquedas puede mostrar capacidades distintas de las seis categorías internas. No importar ocupación/nombres OTA sin validación por categoría.
 - **Check-in 14:00–22:00, check-out 11:30–12:00:** horarios publicados en Booking; se guardan como *regla pendiente* hasta confirmar si valen también para reservas por la web.
 - **Descanso 23:00–08:00, sin fumar ni fiestas:** aparece publicado en Booking. Informar con cuidado; el reglamento definitivo debe alinearse entre plataformas.
@@ -86,4 +86,4 @@ Los siguientes **9** servicios/ayudas se cargaron en `services`, indicando la fu
 
 **Seguridad:** `services` y `hotel_policy_rules` con RLS activo, sin privilegios directos `anon`/`authenticated`. Acceso mediante backend Node PostgreSQL.
 
-**Antes de cerrar el trabajo:** verificar servicio web público y asesor en Render tras despliegue; comprobar los nueve servicios en la web, preguntar por desayuno/cocina/lavandería en Instagram; confirmar dirección oficial, periodicidad de mascotas, regla desde nueve años y camas de Familiar 2. No se ha creado ninguna reserva de prueba en producción.
+**Antes de cerrar el trabajo:** verificar servicio web público y asesor en Render tras despliegue; comprobar los nueve servicios en la web, preguntar por desayuno/cocina/lavandería en Instagram; actualizar ficha externa de Google Hoteles (233 → 237), periodicidad de mascotas, regla desde nueve años y camas de Familiar 2. No se ha creado ninguna reserva de prueba en producción.
