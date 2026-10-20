@@ -236,6 +236,10 @@ export async function decideSeason(id,decision,user,db=pool) {
     if (!item) throw badRequest("Temporada no encontrada.",404);
     if (item.status!=="pending") throw badRequest("La temporada ya fue revisada.",409);
     if(decision==="approved") {
+      // Serializa decisiones del mismo tipo; evita aprobaciones simultáneas
+      // con períodos idénticos o superpuestos.
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",
+        ["commercial_seasons_" + item.season_type]);
       const conflicts=await client.query(
         `SELECT id FROM public.hotel_seasons WHERE id<>$1 AND status='approved'
           AND season_type=$2 AND start_date <= $4 AND end_date >= $3 LIMIT 1`,
@@ -259,6 +263,15 @@ export async function decideRate(id,decision,user,db=pool) {
     if(!item) throw badRequest("Propuesta no encontrada.",404);
     if(item.status!=="pending") throw badRequest("La tarifa ya fue revisada.",409);
     if(decision==="approved") {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",
+        ["commercial_rates_" + item.category_slug]);
+      const overlaps=await client.query(
+        `SELECT id FROM public.hotel_rate_proposals WHERE status='approved'
+          AND id<>$1 AND category_slug=$2 AND start_date <= $4 AND end_date >= $3
+          LIMIT 1`,[id,item.category_slug,item.start_date,item.end_date]
+      );
+      if(overlaps.rows.length) throw badRequest(
+        "Ya existe una tarifa aprobada para esa categoría y fechas.",409);
       const current=await client.query(
         "SELECT price_per_night FROM public.room_categories WHERE slug=$1 AND is_active=TRUE",
         [item.category_slug]
