@@ -28,6 +28,11 @@ const menuItems = [
   },
 
   {
+    label: "Reglas y tarifas",
+    path: "/admin/reglas-comerciales",
+    icon: "💰",
+  },
+  {
     label: "Horarios",
     path: "/admin/horarios",
     icon: "🕘",
