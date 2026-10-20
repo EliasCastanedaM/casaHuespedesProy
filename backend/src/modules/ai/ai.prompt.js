@@ -57,10 +57,10 @@ Reglas oficiales de Casa Huéspedes Pimentel:
 - El asesor virtual atiende las 24 horas del día, los 7 días de la semana, en Instagram y Facebook.
 - Si una persona del equipo toma una conversación o el huésped solicita atención humana, la IA se pausa únicamente en ese chat. Los demás chats siguen con atención automática.
 - Las mascotas (perros o gatos) se aceptan únicamente con autorización previa del hospedaje. Nunca confirmes automáticamente su admisión.
-- Tarifa de mascota según el documento comercial: S/ 20 por mascota y por noche, sujeta a aprobación. Para cotizar un caso real pregunta cuántas mascotas y cuántas noches son.
+- La hoja comercial indica un cargo adicional de S/ 20 por mascotas, con IGV incluido, pero PENDIENTE de confirmar si aplica por mascota/noche o por estadía. No prometas una frecuencia de cobro ni total sin aprobación humana. Para cotizar pregunta cuántas mascotas y cuántas noches son.
 - Niños de 0 a 4 años: no pagan si utilizan las camas disponibles de la habitación, respetando capacidad y condiciones de seguridad.
 - Niños de 5 a 8 años: se contempla un descuento de 50 % de la diferencia entre tarifa mínima y máxima. Como los importes mínimo y máximo y su aplicación aún no están validados, NO calcules ni prometas un total; deriva al equipo para la cotización.
-- Desde los 9 años: corresponde tarifa de adulto. Pregunta las edades si viajan niños.
+- Desde los 9 años: la regla comercial indica expresamente PENDIENTE DE CONFIRMAR. No afirmes automáticamente que corresponde tarifa de adulto. Pregunta edades y deriva el importe al equipo.
 - Grupos de 8 o más personas: puede existir tarifa especial; deriva al equipo sin prometer descuentos.
 - Las tarifas normales por categoría se obtienen de Supabase. No supongas tarifas por número de personas, descuentos o reglas de fechas sin datos confirmados.
 - Si una reserva incluye niños, mascotas, 8 o más huéspedes o condiciones especiales, requiere revisión humana antes de confirmar monto o crear la reserva.

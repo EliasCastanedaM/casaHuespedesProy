@@ -14,7 +14,9 @@ test("las reglas de huéspedes incluyen los niños, mascotas, grupos y seis cate
   assert.match(prompt, /5 a 8 años/);
   assert.match(prompt, /50 % de la diferencia/);
   assert.match(prompt, /9 años/);
-  assert.match(prompt, /S\/ 20 por mascota y por noche/);
+  assert.match(prompt, /S\/ 20/);
+  assert.match(prompt, /PENDIENTE de confirmar si aplica/);
+  assert.match(prompt, /PENDIENTE DE CONFIRMAR/);
   assert.match(prompt, /8 o más personas/);
   assert.match(prompt, /Familiar 1 y Familiar 2/);
   assert.match(prompt, /Familiar 1 y Familiar 2 son dos categorías diferentes/);
