@@ -20,6 +20,8 @@ test("responde tramos infantiles correctamente sin inventar precio", () => {
   assert.match(six, /5 a 8 años/);
   const nine = formatPolicyInformationReply("¿Desde qué edad pagan los niños? Mi hijo tiene 9 años");
   assert.match(nine, /Desde los 9 años/);
+  assert.match(nine, /pendiente de confirmar/);
+  assert.doesNotMatch(nine, /corresponde tarifa de adulto/);
   assert.doesNotMatch(nine, /descuento equivalente/i);
   const overview = formatPolicyInformationReply("¿Qué reglas hay para niños?");
   assert.match(overview, /0 a 4 años/);
@@ -29,7 +31,10 @@ test("responde tramos infantiles correctamente sin inventar precio", () => {
 
 test("preguntas sobre mascotas y descuentos de grupo mantienen validación humana", () => {
   const pets = formatPolicyInformationReply("¿Aceptan perros y cuánto cuesta?");
-  assert.match(pets, /S\/ 20 por mascota y por noche/);
+  assert.match(pets, /S\/ 20/);
+  assert.match(pets, /IGV incluido/);
+  assert.match(pets, /pendiente confirmar/);
+  assert.doesNotMatch(pets, /S\/ 20 por mascota y por noche/);
   assert.match(pets, /autorización previa/);
   const groups = formatPolicyInformationReply("¿Hay descuento para 8 huéspedes?");
   assert.match(groups, /8 o más huéspedes/);
