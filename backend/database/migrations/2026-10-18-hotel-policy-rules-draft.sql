@@ -1,3 +1,8 @@
+-- OBSOLETO / NO EJECUTAR: este archivo fue un borrador de 18/10.
+-- Sustituido por 2026-10-19-service-catalog-and-policy-register.sql,
+-- aplicado a producción como hotel_service_catalog_commercial_rules_20261019.
+-- Mantener solo como antecedente histórico; contiene supuestos que el
+-- inventario maestro actual deja PENDIENTES (9+ años, cobro mascota/noche).
 -- Propuesta (NO ejecutar hasta validar el documento completo con propietarios).
 -- Separa reglas comerciales de tarifas de habitación ya registradas en room_categories.
 -- No modifica inventario, reservas, bloqueos ni pagos.
