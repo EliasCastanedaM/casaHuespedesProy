@@ -14,7 +14,8 @@ import {
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
 import { isHotelServicesInquiry, formatHotelServicesReply } from "./ai.services-info.js";
 import { getPublicHotelServicesService } from "../services/service.service.js";
-import { formatPolicyInformationReply } from "./ai.policy-info.js";
+import { formatPolicyInformationReply, policyInformationType } from "./ai.policy-info.js";
+import { getHotelGuestPolicyRulesService } from "../services/hotelPolicy.service.js";
 import { isRoomDetailsInquiry, formatRoomDetailsReply } from "./ai.category-info.js";
 import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
 import { handleWhatsAppMvpTurn, isWhatsAppMenuRequest } from "./ai.whatsapp-mvp.js";
@@ -532,8 +533,16 @@ async function generateAiReplyInternal({
   // Una consulta sobre reglas comerciales no equivale a modificar la reserva.
   // Responderla antes de la recolección de datos/guardias de atención humana
   // evita repetir "¿cuáles son las fechas?" cuando ya hay un borrador abierto.
-  const policyReply = formatPolicyInformationReply(message);
-  if (policyReply) {
+  if (policyInformationType(message)) {
+    let rules;
+    try {
+      rules = await getHotelGuestPolicyRulesService();
+    } catch (error) {
+      console.warn("No se pudieron consultar reglas de huéspedes:", error.message);
+      // Una indisponibilidad de la base nunca debe dar lugar a un cargo
+      // inventado. El formateador usa solo reglas conservadoras de respaldo.
+    }
+    const policyReply = formatPolicyInformationReply(message, { rules });
     return {
       reply: policyReply,
       responseId: null,
