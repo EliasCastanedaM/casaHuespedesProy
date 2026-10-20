@@ -1,4 +1,5 @@
 import test from "node:test";
+import { requireApprovalRole } from "../src/modules/commercial/commercial.routes.js";
 import assert from "node:assert/strict";
 import {
   validateRuleChanges,validateSeason,validateRate,validDate,
@@ -193,4 +194,19 @@ test("no permite dos tarifas aprobadas superpuestas para la misma categoría",as
   });
   await assert.rejects(decideRate(5,"approved",admin,db),/tarifa aprobada para esa categoría/);
   assert.ok(db.queries.includes("ROLLBACK"));
+});
+
+test("solo cuentas admin pueden aprobar; staff recibe 403",()=>{
+  const run=(role)=>{
+    let status, payload, didNext=false;
+    const res={status(n){status=n;return this;},json(body){payload=body;return this;}};
+    requireApprovalRole({user:{role}},res,()=>{didNext=true;});
+    return {status,payload,didNext};
+  };
+  const denied=run("staff");
+  assert.equal(denied.status,403);
+  assert.equal(denied.didNext,false);
+  assert.match(denied.payload.message,/Solo una persona con rol administrador/);
+  assert.equal(run("admin").didNext,true);
+  assert.equal(run(undefined).didNext,false);
 });
