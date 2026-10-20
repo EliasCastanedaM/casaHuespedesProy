@@ -46,7 +46,7 @@ export function formatPolicyInformationReply(message) {
     const rules = {
       young: "De 0 a 4 años: no pagan cargo adicional si utilizan las camas disponibles, respetando la capacidad de la habitación.",
       middle: "De 5 a 8 años: se contempla el 50 % del diferencial entre la tarifa mínima y máxima. El importe y su aplicación deben ser validados por nuestro equipo; no puedo confirmar un monto automático.",
-      adult: "Desde los 9 años: corresponde tarifa de adulto.",
+      adult: "Desde los 9 años: la condición tarifaria está pendiente de confirmar con nuestro equipo. No puedo asegurar automáticamente una tarifa de adulto ni un monto final.",
     };
     const selected = age === null ? [rules.young, rules.middle, rules.adult]
       : age <= 4 ? [rules.young] : age <= 8 ? [rules.middle] : [rules.adult];
@@ -54,7 +54,7 @@ export function formatPolicyInformationReply(message) {
       "Si deseas cotizar una estadía con niños, nuestro equipo confirmará el importe final."].join("\n");
   }
   if (type === "pets") {
-    return "Aceptamos mascotas únicamente con autorización previa del hospedaje. El cargo indicado es S/ 20 por mascota y por noche, sujeto a aprobación. Si deseas incluir una mascota en la reserva, el equipo revisará las condiciones.";
+    return "Aceptamos mascotas únicamente con autorización previa del hospedaje. La regla comercial indica un cargo adicional de S/ 20, IGV incluido, pero todavía está pendiente confirmar si se aplica por mascota y noche o por estadía. Nuestro equipo verificará el cobro antes de confirmarlo.";
   }
   if (type === "groups") {
     return "Para grupos de 8 o más huéspedes podemos evaluar una tarifa especial. El precio y las condiciones deben ser confirmados por una persona de nuestro equipo; no hay un descuento automático.";
