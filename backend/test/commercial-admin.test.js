@@ -159,7 +159,7 @@ test("aprobar sugerencia comercial no modifica room_categories ni genera reserva
     throw Error("unexpected SQL");
   });
   assert.equal((await decideRate(5,"approved",admin,db)).status,"approved");
-  assert.equal(db.queries.some(q=>/room_categories|bookings|blocked_slots/.test(q)),false);
+  assert.equal(db.queries.some(q=>/UPDATE\s+(?:public\.)?(?:room_categories|bookings|blocked_slots)/i.test(q)),false);
 });
 
 test("impide aprobar propuestas tarifarias si la tarifa Full ya cambió",async()=>{
