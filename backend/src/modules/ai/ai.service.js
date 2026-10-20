@@ -12,6 +12,8 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { isHotelLocationInquiry, formatHotelLocationReply } from "./ai.location-info.js";
+import { getPublicHotelProfileService } from "../hotel/hotelProfile.service.js";
 import { isHotelServicesInquiry, formatHotelServicesReply } from "./ai.services-info.js";
 import { getPublicHotelServicesService } from "../services/service.service.js";
 import { formatPolicyInformationReply, policyInformationType } from "./ai.policy-info.js";
@@ -528,6 +530,28 @@ async function generateAiReplyInternal({
       deterministic: true,
       mode: "outside_hotel_scope",
     };
+  }
+
+  // La dirección oficial se obtiene del perfil verificado en Supabase.
+  // La pregunta no consume ni modifica el contexto de reserva.
+  if (isHotelLocationInquiry(message)) {
+    try {
+      const profile = await getPublicHotelProfileService();
+      return {
+        reply: formatHotelLocationReply(profile, message),
+        responseId: null,
+        deterministic: true,
+        mode: "hotel_location_information",
+      };
+    } catch (error) {
+      console.warn("No se pudo consultar dirección oficial:", error.message);
+      return {
+        reply: "No puedo confirmar la dirección en este momento. Nuestro equipo puede ayudarte a llegar.",
+        responseId: null,
+        deterministic: true,
+        mode: "hotel_location_unavailable",
+      };
+    }
   }
 
   // Una consulta sobre reglas comerciales no equivale a modificar la reserva.
