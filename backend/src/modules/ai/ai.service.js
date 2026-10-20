@@ -12,6 +12,8 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { isHotelServicesInquiry, formatHotelServicesReply } from "./ai.services-info.js";
+import { getPublicHotelServicesService } from "../services/service.service.js";
 import { formatPolicyInformationReply } from "./ai.policy-info.js";
 import { isRoomDetailsInquiry, formatRoomDetailsReply } from "./ai.category-info.js";
 import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
@@ -564,6 +566,28 @@ async function generateAiReplyInternal({
   });
   if (specialQuoteReason) {
     return { reply: humanReviewReply(specialQuoteReason, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
+  }
+
+  // Responder servicios reales desde Supabase incluso mientras haya una reserva
+  // a medio completar. Las preguntas informativas no alteran el contexto.
+  if (isHotelServicesInquiry(message)) {
+    try {
+      const services = await getPublicHotelServicesService();
+      return {
+        reply: formatHotelServicesReply(services, message),
+        responseId: null,
+        deterministic: true,
+        mode: "hotel_services_information",
+      };
+    } catch (error) {
+      console.warn("No se pudo consultar el catálogo de servicios:", error.message);
+      return {
+        reply: "No puedo confirmar los servicios ahora mismo. Nuestro equipo puede revisar la información contigo.",
+        responseId: null,
+        deterministic: true,
+        mode: "hotel_services_unavailable",
+      };
+    }
   }
 
   // Las preguntas generales de precios se responden con los valores vigentes
