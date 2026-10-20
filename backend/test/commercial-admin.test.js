@@ -153,10 +153,22 @@ test("temporada aprobada del mismo tipo y fechas no permite solapamiento",async(
 
 test("aprobar sugerencia comercial no modifica room_categories ni genera reserva",async()=>{
   const db=txPool(async sql=>{
-    if(sql.includes("FROM public.hotel_rate_proposals"))return {rows:[{id:5,status:"pending"}]};
+    if(sql.includes("FROM public.hotel_rate_proposals"))return {rows:[{id:5,status:"pending",category_slug:"triple",base_price_snapshot:210}]};
+    if(sql.includes("SELECT price_per_night FROM public.room_categories"))return {rows:[{price_per_night:210}]};
     if(sql.includes("UPDATE public.hotel_rate_proposals"))return {rows:[{id:5,status:"approved"}]};
     throw Error("unexpected SQL");
   });
   assert.equal((await decideRate(5,"approved",admin,db)).status,"approved");
   assert.equal(db.queries.some(q=>/room_categories|bookings|blocked_slots/.test(q)),false);
+});
+
+test("impide aprobar propuestas tarifarias si la tarifa Full ya cambió",async()=>{
+  const db=txPool(async sql=>{
+    if(sql.includes("FROM public.hotel_rate_proposals"))return {rows:[{id:5,status:"pending",category_slug:"triple",base_price_snapshot:210}]};
+    if(sql.includes("SELECT price_per_night FROM public.room_categories"))return {rows:[{price_per_night:240}]};
+    throw Error("unexpected SQL");
+  });
+  await assert.rejects(decideRate(5,"approved",admin,db),/tarifa base cambió/);
+  assert.ok(db.queries.includes("ROLLBACK"));
+  assert.equal(db.queries.some(s=>s.includes("UPDATE public.hotel_rate_proposals")),false);
 });
