@@ -16,6 +16,7 @@ export function isHotelLocationInquiry(message) {
 
   return (
     /\b(?:direccion|ubicacion|ubicados?|ubicadas?|ubicado|ubicada|queda|quedan|llegar|llego|encuentran|situados?|donde estan|donde se ubica|como llegar)\b/.test(text) ||
+    /\b(?:donde esta(?: el| la)? (?:hotel|hospedaje|casa huespedes))\b/.test(text) ||
     /\b(?:address|location|located|where are you|how to get there|directions)\b/.test(text) ||
     /\b(?:endereco|localizacao|onde fica|como chegar|adresse|ou etes vous|comment arriver)\b/.test(text)
   ) && (
