@@ -69,7 +69,9 @@ function respond(res, status, httpCode = 200) {
     "content-type": "text/html; charset=utf-8",
     "cache-control": "no-store",
     "x-frame-options": "DENY",
-    "referrer-policy": "no-referrer",
+    // Las entregas de formularios HTML pueden enviar Origin: null con no-referrer.
+// same-origin conserva privacidad fuera de localhost y permite validar el Origin real.
+    "referrer-policy": "same-origin",
     "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
   });
   res.end(page(status));
