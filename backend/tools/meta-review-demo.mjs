@@ -34,6 +34,8 @@ function page(status = "") {
     failed: "Meta rechazó el envío. Revisa el código indicado en la terminal.",
     wait: "Espera 15 segundos entre envíos. Máximo cinco envíos por ejecución.",
     invalid: "Configuración incompleta. Revisa .env.meta-review.",
+    origin: "Solicitud bloqueada: abre http://127.0.0.1:4310/ directamente en Chrome o Edge, fuera de la vista previa de VS Code.",
+    session: "Formulario anterior o inválido. Recarga la página desde http://127.0.0.1:4310/ y vuelve a intentar.",
   };
   const note = info[status] || "Usa exclusivamente el número de prueba asignado por Meta.";
   const masked = validDigits(recipient) ? "••••" + recipient.slice(-4) : "No configurado";
@@ -103,15 +105,28 @@ async function sendTemplate() {
 const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/") return respond(res, configured() ? "" : "invalid");
   if (req.method !== "POST" || req.url !== "/send") return respond(res, "invalid", 404);
-  if (req.headers.origin !== ORIGIN) return respond(res, "invalid", 403);
+  if (req.headers.origin !== ORIGIN) {
+    console.warn("POST /send bloqueado: Origin ausente o diferente al origen local esperado.");
+    return respond(res, "origin", 403);
+  }
 
   let body = "";
   for await (const chunk of req) {
     body += chunk.toString();
-    if (body.length > 2048) return respond(res, "invalid", 413);
+    if (body.length > 2048) {
+      console.warn("POST /send bloqueado: formulario demasiado grande.");
+      return respond(res, "session", 413);
+    }
   }
   const submitted = new URLSearchParams(body).get("csrf");
-  if (submitted !== csrf || !configured()) return respond(res, "invalid", 403);
+  if (!configured()) {
+    console.warn("POST /send bloqueado: variables de prueba incompletas.");
+    return respond(res, "invalid", 403);
+  }
+  if (submitted !== csrf) {
+    console.warn("POST /send bloqueado: código CSRF ausente o caducado.");
+    return respond(res, "session", 403);
+  }
   if (sentCount >= 5 || Date.now() - lastSend < 15000) return respond(res, "wait", 429);
 
   sentCount++;
