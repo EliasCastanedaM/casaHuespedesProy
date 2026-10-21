@@ -23,7 +23,7 @@ const token = String(process.env.WA_REVIEW_ACCESS_TOKEN || "").trim();
 const wabaId = String(process.env.WA_REVIEW_WABA_ID || "").trim();
 const csrf = crypto.randomBytes(24).toString("hex");
 const template = {
-  name: "chp_confirmacion_solicitud_demo_20261021",
+  name: "chp_revision_management_video_20261021",
   language: "es",
   category: "UTILITY",
   components: [{
