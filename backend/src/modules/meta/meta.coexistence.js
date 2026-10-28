@@ -98,16 +98,14 @@ export async function persistCoexistenceEvents(body, db) {
       for (const echo of event.echoes) {
         await client.query(
           "INSERT INTO meta_conversations " +
-          "(channel, external_user_id, last_message_at, handoff_active, " +
-          "handoff_requested_at, handoff_resolved_at, resolved_at, updated_at) " +
+          "(channel, external_user_id, last_message_at, updated_at) " +
           "VALUES ('whatsapp', $1, COALESCE($2::timestamptz, CURRENT_TIMESTAMP), " +
-          "TRUE, CURRENT_TIMESTAMP, NULL, NULL, CURRENT_TIMESTAMP) " +
+          "CURRENT_TIMESTAMP) " +
           "ON CONFLICT (channel, external_user_id) DO UPDATE SET " +
           "last_message_at = GREATEST(" +
           "COALESCE(meta_conversations.last_message_at, '-infinity'::timestamptz), " +
           "COALESCE(EXCLUDED.last_message_at, CURRENT_TIMESTAMP)), " +
-          "handoff_active = TRUE, handoff_requested_at = CURRENT_TIMESTAMP, " +
-          "handoff_resolved_at = NULL, resolved_at = NULL, updated_at = CURRENT_TIMESTAMP",
+          "updated_at = CURRENT_TIMESTAMP",
           [echo.externalUserId, echo.timestamp]
         );
         const inserted = await client.query(
@@ -120,7 +118,18 @@ export async function persistCoexistenceEvents(body, db) {
           [echo.externalUserId, echo.messageId, echo.messageType,
             echo.content, echo.timestamp]
         );
-        echoes += inserted.rows.length;
+        if (inserted.rows.length) {
+          // Una nueva intervención del móvil activa atención humana; un
+          // reintento de Meta NO debe reactivar un chat ya devuelto al bot.
+          await client.query(
+            "UPDATE meta_conversations SET handoff_active = TRUE, " +
+            "handoff_requested_at = CURRENT_TIMESTAMP, handoff_resolved_at = NULL, " +
+            "resolved_at = NULL, updated_at = CURRENT_TIMESTAMP " +
+            "WHERE channel = 'whatsapp' AND external_user_id = $1",
+            [echo.externalUserId]
+          );
+          echoes += 1;
+        }
       }
     }
     if (ownTransaction) await client.query("COMMIT");
