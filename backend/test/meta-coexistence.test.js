@@ -69,6 +69,13 @@ function fakeDatabase({ failMessage = false } = {}) {
   return { db, events, messages, conversations, operations };
 }
 
+test("normaliza el destinatario E.164 como el wa_id entrante", () => {
+  const payload = echoPayload();
+  payload.entry[0].changes[0].value.message_echoes[0].to = "+51 977 777 777";
+  const [event] = parseCoexistenceEvents(payload);
+  assert.equal(event.echoes[0].externalUserId, "51977777777");
+});
+
 test("reconoce solo campos de coexistencia, sin interpretar mensajes normales", () => {
   assert.deepEqual(parseCoexistenceEvents(envelope("messages", { messages: [] })), []);
   assert.deepEqual(parseCoexistenceEvents({ object: "instagram", entry: [] }), []);
