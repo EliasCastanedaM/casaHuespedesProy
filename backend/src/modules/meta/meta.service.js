@@ -1489,6 +1489,7 @@ export async function processMetaMessage(message, overrides = {}) {
     }
 
     let reply;
+    let handoffActivatedByThisTurn = false;
     if (firstMessage && isOpeningGreetingOnly(message.text)) {
       reply = welcome;
     } else if (message.channel === "whatsapp" &&
@@ -1511,6 +1512,7 @@ export async function processMetaMessage(message, overrides = {}) {
       });
       if (result.mode === "human_review_required") {
         await dependencies.setHandoff(message.channel, message.externalUserId, true);
+        handoffActivatedByThisTurn = true;
         reply = result.reply;
       } else if (result.mode === "outside_hotel_scope") {
         reply = result.reply;
@@ -1527,6 +1529,14 @@ export async function processMetaMessage(message, overrides = {}) {
       } else {
         reply = firstMessage ? welcome + "\n\n" + result.reply : result.reply;
       }
+    }
+
+    // Un agente pudo responder desde WhatsApp Business mientras OpenAI
+    // estaba generando texto. Evitamos responder a un turno ya atendido.
+    if (!handoffActivatedByThisTurn &&
+        await dependencies.getHandoff(message.channel, message.externalUserId)) {
+      await dependencies.complete(message);
+      return { status: "handoff_active_after_generation" };
     }
 
     const outgoing = await dependencies.createOutgoing(
