@@ -19,6 +19,13 @@ function text(value) {
     : "";
 }
 
+// Meta puede incluir prefijos + en el destinatario de un eco, mientras que
+// los mensajes entrantes usan el wa_id numérico. Ambos deben coincidir.
+function normalizeWaId(value) {
+  const raw = text(value);
+  return /^\\+?[0-9 ()-]+$/.test(raw) ? raw.replace(/\\D/g, "") : raw;
+}
+
 function metaDate(timestamp) {
   const seconds = Number(timestamp);
   if (!text(timestamp) || !Number.isFinite(seconds) || seconds <= 0) return null;
@@ -56,7 +63,7 @@ export function parseCoexistenceEvents(body) {
         payload: value,
         echoes: array(echoes).map((echo) => ({
           messageId: text(echo.id),
-          externalUserId: text(echo.to),
+          externalUserId: normalizeWaId(echo.to),
           messageType: text(echo.type) || "unknown",
           content: text(echo.type) === "text"
             ? text(echo.text?.body)
