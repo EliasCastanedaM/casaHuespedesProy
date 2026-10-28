@@ -57,15 +57,19 @@ app.use(
   })
 );
 
-app.use(
-  express.json({
-    limit: "1mb",
-    verify(req, _res, buffer) {
-      // Meta firma exactamente estos bytes; se conservan para validar el webhook.
-      req.rawBody = Buffer.from(buffer);
-    },
-  })
-);
+// La sincronización inicial de WhatsApp Business App puede entregar lotes de
+// historial superiores a 1 MB. Esta excepción es SOLO para el webhook firmado.
+function captureRawMetaBody(req, _res, buffer) {
+  req.rawBody = Buffer.from(buffer);
+}
+app.use("/api/meta/webhook", express.json({
+  limit: "8mb",
+  verify: captureRawMetaBody,
+}));
+app.use(express.json({
+  limit: "1mb",
+  verify: captureRawMetaBody,
+}));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 app.get("/", (_req, res) => {

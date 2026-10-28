@@ -1,4 +1,6 @@
 import { env } from "../../config/env.js";
+import { pool } from "../../config/db.js";
+import { persistCoexistenceEvents } from "./meta.coexistence.js";
 import {
   sendInstagramMetaReply,
   sendManualInstagramMessage,
@@ -118,6 +120,11 @@ export async function receiveWebhookController(req, res, next) {
     if (!signatureIsValid) {
       return res.sendStatus(401);
     }
+
+    // Primero persistimos los eventos de coexistencia. Un eco del teléfono
+    // activa el handoff ANTES de procesar posibles mensajes del huésped.
+    // Los eventos de historial/contactos jamás disparan una respuesta IA.
+    await persistCoexistenceEvents(req.body, pool);
 
     const messages = parseMetaWebhook(req.body);
     const statusUpdates = parseMetaStatusUpdates(req.body);
