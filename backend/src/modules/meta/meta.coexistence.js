@@ -23,7 +23,7 @@ function text(value) {
 // los mensajes entrantes usan el wa_id numérico. Ambos deben coincidir.
 function normalizeWaId(value) {
   const raw = text(value);
-  return /^\\+?[0-9 ()-]+$/.test(raw) ? raw.replace(/\\D/g, "") : raw;
+  return /^\+?[0-9 ()-]+$/.test(raw) ? raw.replace(/\D/g, "") : raw;
 }
 
 function metaDate(timestamp) {
