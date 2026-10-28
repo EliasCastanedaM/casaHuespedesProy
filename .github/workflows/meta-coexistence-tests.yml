@@ -1,0 +1,28 @@
+name: Meta coexistence tests
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/modules/meta/**"
+      - "backend/src/app.js"
+      - "backend/test/meta*.test.js"
+      - "backend/database/migrations/2026-10-28-meta-coexistence-events.sql"
+      - ".github/workflows/meta-coexistence-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  webhook-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: node --test test/meta-coexistence.test.js
+      - run: node --test test/meta.test.js
