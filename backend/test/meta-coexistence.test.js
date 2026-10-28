@@ -42,7 +42,13 @@ function fakeDatabase({ failMessage = false } = {}) {
             return { rows: [{ event_id: values[0] }] };
           }
           if (cmd.startsWith("insert into meta_conversations")) {
-            conversations.set(values[0], { handoff_active: true, timestamp: values[1] });
+            if (!conversations.has(values[0])) {
+              conversations.set(values[0], { handoff_active: false, timestamp: values[1] });
+            }
+            return { rows: [] };
+          }
+          if (cmd.startsWith("update meta_conversations")) {
+            conversations.get(values[0]).handoff_active = true;
             return { rows: [] };
           }
           if (cmd.startsWith("insert into meta_messages")) {
@@ -85,6 +91,16 @@ test("ecos móviles son salientes humanos: no ingresan a la cola del bot", async
   const second = await persistCoexistenceEvents(echoPayload(), state.db);
   assert.deepEqual(second, { archived: 0, echoes: 0 });
   assert.equal(state.messages.size, 1);
+
+  // Meta puede entregar el mismo mensaje en un lote con diferente metadata:
+  // deduplicar por el ID del mensaje evita reabrir un handoff ya resuelto.
+  state.conversations.get("51977777777").handoff_active = false;
+  const altered = echoPayload();
+  altered.entry[0].changes[0].value.metadata.delivery = "retry";
+  assert.deepEqual(await persistCoexistenceEvents(altered, state.db), {
+    archived: 1, echoes: 0,
+  });
+  assert.equal(state.conversations.get("51977777777").handoff_active, false);
 });
 
 test("historial y contactos se guardan sin generar mensajes automáticos", async () => {
