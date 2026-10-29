@@ -640,3 +640,24 @@ test("la consulta informativa no sobrescribe la categoría ya seleccionada", asy
   assert.equal(result.context.category.category_slug, "matrimonial");
   assert.equal(result.context.guests_count, 2);
 });
+
+test("cotizar nunca crea reservas ni envía Culqi sin consentimiento para reservar", async () => {
+  const calls = emptyCalls();
+  const services = successfulBookingServices(calls);
+  const quote = await flow({
+    services, progressiveCollection: true, context: {},
+    message: "Cotízame la Triple para 2 personas del 10/10/2026 al 12/10/2026",
+  });
+  assert.equal(quote.mode, "quotation_ready");
+  assert.match(quote.reply, /2 noches × S\/ 218\.91 = S\/ 437\.82/);
+  assert.match(quote.reply, /Quiero reservar/);
+  assert.doesNotMatch(quote.reply, /Paga aquí|express\.culqi/);
+  assert.equal(calls.bookings.length, 0);
+
+  const approved = await flow({
+    services, progressiveCollection: true, context: quote.context,
+    message: "Quiero reservar",
+  });
+  assert.match(approved.reply, /nombre completo/i);
+  assert.equal(calls.bookings.length, 0);
+});
