@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="es-PE">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#10263f">
+  <title>Demostración administrativa | Casa Huéspedes Pimentel</title>
+  <style>
+    :root{--navy:#10263f;--navy2:#193953;--blue:#2c65b7;--ink:#182b42;--muted:#586b80;--line:#dce5ed;--surface:#f5f8fb;--green:#d4f1de;--green-ink:#126b3b;--booked:#d8e8ff;--booked-ink:#154b97;--blocked:#ffe1e3;--blocked-ink:#a42336;--maintenance:#e4e9ef;--maintenance-ink:#465569}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);background:white;font-size:16px}
+    button,input,textarea,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #2079ce;outline-offset:3px}button:disabled{opacity:.52;cursor:not-allowed}
+    .app{display:grid;grid-template-columns:245px minmax(0,1fr);min-height:100dvh}
+    .sidebar{background:linear-gradient(175deg,var(--navy),#173c5b);padding:29px 18px;color:white;display:flex;flex-direction:column;gap:32px;position:sticky;top:0;height:100dvh}
+    .brand{display:flex;align-items:center;flex-direction:column;gap:12px;text-align:center;text-transform:uppercase;letter-spacing:.07em;font-size:15px;font-weight:850;line-height:1.35}
+    .brand-symbol{width:158px;height:76px;flex:none;background:#fff;-webkit-mask-image:url("assets/logo-casa-huespedes.png?v=3");-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;mask-image:url("assets/logo-casa-huespedes.png?v=3");mask-repeat:no-repeat;mask-position:center;mask-size:contain}
+    .nav{display:flex;flex-direction:column;gap:10px}.nav button{border:0;border-radius:13px;min-height:59px;background:transparent;color:#ecf4ff;display:flex;align-items:center;gap:14px;padding:0 17px;text-align:left;font-size:19px;font-weight:700}
+    .nav button.active{background:#3065a2;color:white}.nav button:hover:not(.active){background:#ffffff17}.nav svg{width:23px;height:23px;flex:none}
+    .side-foot{margin-top:auto;border-top:1px solid #ffffff40;padding:20px 5px 0;font-size:13px;color:#d9e6f3;line-height:1.6}.side-foot strong{display:block;color:white;font-size:14px}
+    .main{min-width:0;padding:26px clamp(16px,3.2vw,54px) 40px;display:flex;flex-direction:column;min-height:100dvh}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:15px}.eyebrow{font-size:13px;letter-spacing:.12em;font-weight:850;text-transform:uppercase;color:#467292}
+    .demo-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid #a9c4d9;background:#ecf6ff;color:#265173;border-radius:99px;padding:8px 14px;font-weight:750;font-size:13px}
+    .demo-pill:before{content:"";height:8px;width:8px;background:#4b83ad;border-radius:50%}.user-chip{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:10px}.avatar{display:grid;place-items:center;width:132px;height:43px;flex:none;border-radius:10px;background:#e5eef8;padding:4px 7px}.avatar-logo{display:block;width:116px;height:35px;background:var(--navy);-webkit-mask-image:url("assets/logo-casa-huespedes.png?v=3");-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;mask-image:url("assets/logo-casa-huespedes.png?v=3");mask-repeat:no-repeat;mask-position:center;mask-size:contain}
+    .view{display:none;min-width:0;flex:1}.view.active{display:flex;flex-direction:column}
+    h1{font-family:Georgia,serif;font-weight:700;color:var(--navy);font-size:clamp(30px,3vw,43px);letter-spacing:-.03em;margin:0 0 8px}.subtitle{color:var(--muted);font-size:17px;line-height:1.5;margin:0}
+    .chat-main{width:min(900px,100%);margin:auto;flex:1;display:flex;flex-direction:column;min-height:0;padding:18px 0 8px}.chat-welcome{text-align:center;margin:auto 0}.welcome-logo{margin:0 auto 20px;width:276px;height:91px;border-radius:23px;background:#e8f0f7;display:grid;place-items:center}.welcome-logo-mark{display:block;width:244px;height:75px;background:var(--navy);-webkit-mask-image:url("assets/logo-casa-huespedes.png?v=3");-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;mask-image:url("assets/logo-casa-huespedes.png?v=3");mask-repeat:no-repeat;mask-position:center;mask-size:contain}
+    .suggestions{display:grid;grid-template-columns:repeat(2,1fr);gap:13px;margin-top:36px;text-align:left}.suggestion{min-height:78px;text-align:left;border:1px solid var(--line);border-radius:16px;padding:16px 18px;background:white;color:#28425a;font-size:16px;font-weight:650;line-height:1.45}.suggestion:hover{border-color:#8bb2dc;background:#f7fbff}
+    .messages{padding:20px 0;display:none;flex-direction:column;gap:20px;overflow-y:auto;max-height:calc(100dvh - 255px);flex:1}.messages.has-messages{display:flex}.message{max-width:85%;padding:15px 19px;border-radius:17px;line-height:1.58;font-size:17px;white-space:pre-wrap}.message.user{background:#e4f0ff;align-self:flex-end;border-bottom-right-radius:5px}.message.assistant{background:#f3f6f9;align-self:flex-start;border-bottom-left-radius:5px}.message small{display:block;margin-top:9px;color:#56708a;font-size:13px}
+    .action-card{align-self:flex-start;width:min(620px,90%);border:1px solid #cbdbe8;border-radius:15px;background:#fff;padding:16px 18px;box-shadow:0 7px 22px #10263f0c}
+    .action-card strong{display:block;color:var(--navy);font-size:16px}
+    .action-card p{margin:7px 0 13px;color:var(--muted);font-size:14px;line-height:1.55;white-space:pre-wrap}
+    .action-actions{display:flex;gap:9px;flex-wrap:wrap}
+    .action-actions button{border:0;border-radius:9px;padding:10px 14px;font-size:13px;font-weight:800}
+    .action-confirm{background:var(--navy);color:white}
+    .action-cancel{background:#edf2f6;color:#344e66}
+
+    .composer-wrap{margin-top:auto;padding-top:18px}.composer{display:flex;align-items:flex-end;gap:10px;border:2px solid #dbe6f0;border-radius:19px;padding:11px 11px 11px 19px;background:white;box-shadow:0 6px 25px #1939530a}.composer textarea{flex:1;resize:none;border:0;background:transparent;outline:0;min-height:50px;max-height:135px;line-height:1.5;font-size:17px;color:var(--ink);padding:12px 0}.send{border:none;flex:0 0 49px;width:49px;height:49px;background:var(--navy);color:white;border-radius:14px;font-size:25px}.composer-foot{text-align:center;margin:10px 0 0;color:var(--muted);font-size:13px}
+    .calendar-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:25px}.calendar-title h1{margin:0 0 5px}.cal-tabs{display:flex;border-radius:12px;background:#eaf0f6;padding:5px;gap:3px}.cal-tabs button{border:0;background:transparent;padding:13px 19px;border-radius:9px;font-size:17px;font-weight:800;min-height:49px;color:#39536f}.cal-tabs button.active{background:var(--navy);color:white;box-shadow:0 2px 10px #112e511b}
+    .calendar-tools{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;margin-bottom:22px}.date-switch{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.btn-outline{border:1px solid #cbdbe8;background:#fff;color:#254a72;border-radius:11px;min-height:49px;padding:0 16px;font-weight:800}.arrow-button{width:50px;padding:0;font-size:26px}.date-heading{font-size:20px;font-weight:850;color:var(--navy);min-width:220px;text-align:center}
+    .legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;color:#40566e;font-size:14px;font-weight:700}.legend i{height:15px;width:15px;border-radius:4px;display:inline-block;margin-right:5px;vertical-align:-2px}
+    .rooms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:16px}.room-card{border:1px solid var(--line);border-radius:16px;background:white;box-shadow:0 5px 18px #1839540b;overflow:hidden;min-width:0}.room-photo{height:116px;width:100%;object-fit:cover;display:block;background:#e3e9ef}.room-body{padding:13px 16px 16px}.room-number{font-size:25px;line-height:1.1;font-weight:900;color:var(--navy)}.room-type{font-size:15px;color:var(--muted);margin-top:3px;min-height:21px}.status{margin-top:14px;min-height:51px;padding:12px 13px;border-radius:11px;display:flex;align-items:center;gap:8px;font-size:17px;font-weight:850}.status.available{background:var(--green);color:var(--green-ink)}.status.booked{background:var(--booked);color:var(--booked-ink)}.status.blocked{background:var(--blocked);color:var(--blocked-ink)}.status.maintenance{background:var(--maintenance);color:var(--maintenance-ink)}.status svg{width:21px;height:21px;flex:none}
+    .room-meta{margin-top:9px;color:var(--muted);font-size:14px}.rooms-note{margin-top:19px;font-size:14px;color:var(--muted)}
+    .week-scroller{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:white;box-shadow:0 6px 24px #163b5a0b}.week-table{min-width:810px;width:100%;border-collapse:separate;border-spacing:0}.week-table th,.week-table td{border-bottom:1px solid #e7edf3;padding:7px 6px;text-align:center}.week-table th{background:#f5f8fb;font-size:15px;color:#294765}.week-table tbody tr:last-child td{border-bottom:0}.week-table th:first-child,.week-table td:first-child{position:sticky;left:0;z-index:1;background:white;text-align:left;min-width:175px;padding-left:16px}.week-table thead th:first-child{background:#f5f8fb;z-index:2}.week-table .room-id{font-weight:900;font-size:19px;color:var(--navy)}.week-table .room-sub{font-size:12px;color:#627489;display:block;font-weight:500}.day-name{display:block;color:#667a8c;font-size:13px}.day-num{font-size:21px;font-weight:900;display:block;padding-top:3px}.slot{display:block;border:1px solid transparent;border-radius:8px;min-height:40px;width:100%;padding:0}.slot.available{background:#cdeed9;border-color:#a3dcc0}.slot.booked{background:#76a8ef;border-color:#6398e0}.slot.blocked{background:#f7a6ac;border-color:#ea8c96}.slot.maintenance{background:#bdc8d4;border-color:#a8b6c5}.slot:focus-visible{outline:3px solid #10263f}
+    .month-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:17px}.month-card{padding:18px;border-radius:16px;border:1px solid var(--line);background:white;box-shadow:0 6px 22px #173b590b}.month-head{display:flex;align-items:center;gap:12px;margin-bottom:13px}.month-head img{width:60px;height:56px;object-fit:cover;border-radius:9px}.month-name strong{font-size:21px;color:var(--navy)}.month-name small{display:block;font-size:13px;color:var(--muted);margin-top:3px}.mini-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.mini-weekday{font-size:12px;text-align:center;font-weight:800;color:#57718b;padding:5px 0}.mini-day{aspect-ratio:1;border-radius:6px;border:1px solid #dce5ed;background:#fff;color:var(--navy);display:grid;place-items:center;font-size:12px;font-weight:800;padding:0}.mini-day.blank{border-color:transparent;background:transparent}.mini-day.available{background:var(--green);border-color:#bce6c9}.mini-day.booked{background:#8cbaf3;border-color:#75aaf0}.mini-day.blocked{background:#f5acb4;border-color:#ed9da7}.mini-day.maintenance{background:#cad3dc;border-color:#b5c1cd}.mini-day.today{outline:2px solid #173b5f;outline-offset:1px}
+    .mobile-nav{display:none}.sr-only{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden;white-space:nowrap}
+    .toast{position:fixed;right:25px;bottom:22px;background:var(--navy);color:white;padding:15px 18px;max-width:min(400px,85vw);border-radius:13px;box-shadow:0 12px 30px #061a2c4b;font-size:15px;z-index:15;display:none}.toast.show{display:block}
+    /* Movimiento editorial: refinado, breve y accesible */
+    :root{--motion-ease:cubic-bezier(.2,.75,.2,1);--motion-fast:180ms;--motion-medium:300ms}
+    @keyframes screenReveal{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes sidebarReveal{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes logoReveal{0%{opacity:0;transform:translateY(7px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes messageReveal{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes cardReveal{from{opacity:0;transform:translateY(11px) scale(.992)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes rowReveal{from{opacity:0;transform:translateX(5px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes calendarFromLeft{from{opacity:0;transform:translateX(-9px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes calendarFromRight{from{opacity:0;transform:translateX(9px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes calendarFromUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes dotPulse{0%,80%,100%{opacity:.38;transform:scale(.72)}40%{opacity:1;transform:scale(1)}}
+    .sidebar{animation:sidebarReveal .42s var(--motion-ease) both}
+    .brand-symbol{animation:logoReveal .48s .06s var(--motion-ease) both}
+    .topbar{animation:screenReveal .35s .04s var(--motion-ease) both}
+    .view.active{animation:screenReveal .32s var(--motion-ease) both}
+    .nav button{position:relative;overflow:hidden;transition:background-color .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease}
+    .nav button::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 4px 4px 0;background:#c3ddf5;transform:scaleY(0);transition:transform .22s var(--motion-ease)}
+    .nav button.active::before{transform:scaleY(1)}
+    .welcome-logo{animation:logoReveal .48s .05s var(--motion-ease) both}
+    .chat-welcome h1{animation:screenReveal .42s .08s var(--motion-ease) both}
+    .chat-welcome>.subtitle{animation:screenReveal .42s .13s var(--motion-ease) both}
+    .suggestion{transition:transform .22s var(--motion-ease),box-shadow .22s ease,border-color .22s ease,background-color .22s ease}
+    .suggestion:nth-child(1){animation:cardReveal .38s .14s var(--motion-ease) backwards}
+    .suggestion:nth-child(2){animation:cardReveal .38s .19s var(--motion-ease) backwards}
+    .suggestion:nth-child(3){animation:cardReveal .38s .24s var(--motion-ease) backwards}
+    .suggestion:nth-child(4){animation:cardReveal .38s .29s var(--motion-ease) backwards}
+    .composer{transition:border-color .22s ease,box-shadow .22s ease}
+    .composer:focus-within{border-color:#789dbd;box-shadow:0 0 0 4px #6288a51a,0 8px 26px #19395310}
+    .send{transition:transform .18s var(--motion-ease),background-color .18s ease,box-shadow .18s ease}
+    .message{animation:messageReveal .24s var(--motion-ease) both}
+    .typing-message{display:flex;align-items:center;gap:11px;color:#526980}
+    .typing-dots{display:inline-flex;align-items:center;gap:4px;flex:none}
+    .typing-dots i{display:block;width:7px;height:7px;background:#6288a5;border-radius:50%;animation:dotPulse 1.05s ease-in-out infinite}
+    .typing-dots i:nth-child(2){animation-delay:.14s}.typing-dots i:nth-child(3){animation-delay:.28s}
+    .calendar-title{animation:screenReveal .36s .04s var(--motion-ease) both}
+    .cal-tabs{box-shadow:inset 0 1px 1px #142f4708}
+    .cal-tabs button{transition:background-color .2s ease,color .2s ease,box-shadow .2s ease,transform .18s var(--motion-ease)}
+    .btn-outline{transition:background-color .18s ease,border-color .18s ease,transform .18s var(--motion-ease),box-shadow .18s ease}
+    .legend i{box-shadow:inset 0 0 0 1px #10263f0b}
+    .room-card,.month-card{animation:cardReveal .42s var(--motion-ease) backwards;animation-delay:var(--stagger,0ms);transition:transform .22s var(--motion-ease),box-shadow .22s ease,border-color .22s ease}
+    .room-photo,.month-head img{opacity:0;transition:opacity .34s ease,transform .42s var(--motion-ease)}
+    .room-photo.image-loaded,.room-photo.image-failed,.month-head img.image-loaded,.month-head img.image-failed{opacity:1}
+    .status{transition:background-color .22s ease,color .22s ease}
+    .week-table tbody tr{animation:rowReveal .3s var(--motion-ease) backwards;animation-delay:var(--stagger,0ms)}
+    .slot,.mini-day{transition:transform .16s var(--motion-ease),box-shadow .16s ease,border-color .16s ease}
+    .mini-day.today{box-shadow:0 0 0 2px var(--navy);font-weight:950}
+    .mobile-nav button{transition:background-color .2s ease,color .2s ease,transform .18s var(--motion-ease),box-shadow .2s ease}
+    #calendarContent.calendar-enter-up{animation:calendarFromUp .28s var(--motion-ease) both}
+    #calendarContent.calendar-enter-left{animation:calendarFromLeft .28s var(--motion-ease) both}
+    #calendarContent.calendar-enter-right{animation:calendarFromRight .28s var(--motion-ease) both}
+    @media(hover:hover) and (pointer:fine){
+      .nav button:hover:not(.active){background:#ffffff17;transform:translateX(2px)}
+      .suggestion:hover{transform:translateY(-2px);box-shadow:0 8px 20px #173b5910}
+      .send:hover{background:#214d72;box-shadow:0 5px 14px #10263f24;transform:translateY(-1px)}
+      .btn-outline:hover{background:#f3f8fc;border-color:#9eb9d0;box-shadow:0 3px 10px #173b590b;transform:translateY(-1px)}
+      .cal-tabs button:hover:not(.active){background:#dce6ef}
+      .room-card:hover,.month-card:hover{transform:translateY(-3px);border-color:#c4d5e4;box-shadow:0 12px 28px #173b5913}
+      .room-card:hover .room-photo{transform:scale(1.035)}
+      .month-head img:hover{transform:scale(1.035)}
+      .slot:hover,.mini-day:hover{transform:scale(1.045);box-shadow:0 3px 9px #10263f18;border-color:#52799d}
+      .mobile-nav button:hover{box-shadow:0 4px 12px #173b5910}
+    }
+    button:active:not(:disabled){transform:scale(.985)}
+    .room-card[role="button"]{cursor:pointer}
+    .room-card[role="button"]:focus-visible{outline:3px solid #2079ce;outline-offset:4px}
+    .room-card[role="button"]:hover .status.booked{box-shadow:inset 0 0 0 1px #154b9722}
+    .reservation-overlay{position:fixed;inset:0;z-index:30;background:rgba(9,25,42,.48);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s ease}
+    .reservation-overlay.open{opacity:1;visibility:visible}
+    .reservation-dialog{width:min(620px,100%);max-height:min(88dvh,820px);overflow:auto;background:#fff;border:1px solid #e0e8ef;border-radius:22px;box-shadow:0 24px 80px #071a2d42;transform:translateY(10px) scale(.99);transition:transform .24s var(--motion-ease);padding:26px}
+    .reservation-overlay.open .reservation-dialog{transform:translateY(0) scale(1)}
+    .reservation-brand-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 0 17px;margin-bottom:21px;border-bottom:1px solid #dce5ed}
+    .reservation-brand-logo{width:240px;height:67px;flex:0 1 240px;background:#10263f;-webkit-mask-image:url("assets/logo-casa-huespedes.png?v=3");-webkit-mask-repeat:no-repeat;-webkit-mask-position:left center;-webkit-mask-size:contain;mask-image:url("assets/logo-casa-huespedes.png?v=3");mask-repeat:no-repeat;mask-position:left center;mask-size:contain}
+    .reservation-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:21px}
+    .reservation-eyebrow{font-size:12px;font-weight:900;letter-spacing:.11em;text-transform:uppercase;color:#54738e;margin:0 0 7px}
+    .reservation-title{font-family:Georgia,serif;font-size:clamp(27px,4vw,34px);line-height:1.14;letter-spacing:-.025em;color:var(--navy);margin:0}
+    .reservation-code{display:inline-flex;align-items:center;gap:7px;border-radius:8px;background:#eef4f9;color:#355673;font-size:13px;font-weight:800;padding:8px 10px;margin-top:11px}
+    .reservation-close{width:46px;height:46px;flex:0 0 46px;border:1px solid #d8e2eb;border-radius:13px;background:white;color:#294765;font-size:28px;line-height:1;display:grid;place-items:center;transition:background .18s ease,transform .18s ease}
+    .reservation-demo-note{display:flex;align-items:flex-start;gap:10px;padding:13px 14px;border:1px solid #e6d9b1;background:#fff9e9;border-radius:12px;color:#6f571e;font-size:14px;line-height:1.5;margin-bottom:18px}
+    .reservation-demo-note svg{width:20px;height:20px;flex:none;margin-top:1px}
+    .reservation-section-title{font-size:15px;font-weight:900;color:#567087;text-transform:uppercase;letter-spacing:.08em;margin:22px 0 11px}
+    .guest-panel{display:flex;align-items:center;gap:14px;border:1px solid var(--line);background:#f8fafc;border-radius:15px;padding:16px}
+    .guest-avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;flex:none;background:#dceaf5;color:#234b70;font-weight:900;font-size:20px}
+    .guest-name{font-size:21px;font-weight:900;line-height:1.25;color:var(--navy)}
+    .guest-subtitle{font-size:15px;color:var(--muted);margin-top:5px}
+    .reservation-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+    .reservation-fact{border:1px solid var(--line);border-radius:13px;padding:14px;min-width:0}
+    .reservation-fact .fact-label{display:flex;align-items:center;gap:7px;color:#5d7185;font-size:14px;font-weight:700;margin-bottom:8px}
+    .reservation-fact .fact-value{font-size:18px;line-height:1.35;font-weight:850;color:var(--navy);overflow-wrap:anywhere}
+    .reservation-fact .fact-detail{font-size:13px;line-height:1.45;color:var(--muted);margin-top:5px}
+    .reservation-channel{display:inline-flex;align-items:center;gap:8px;border:1px solid #cbdce9;border-radius:99px;padding:7px 11px;color:#264f75;background:#f0f6fb;font-size:14px;font-weight:850}
+    .reservation-requests{background:#f5f8fb;border-radius:12px;padding:15px;font-size:16px;line-height:1.6;color:#344e66}
+    .reservation-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:17px;border-top:1px solid var(--line)}
+    .reservation-footer button{min-height:49px;padding:0 18px;border:0;border-radius:12px;background:var(--navy);color:white;font-weight:850}
+    .reservation-footer .secondary{border:1px solid #cbdbe8;background:#fff;color:#254a72}
+    @media(max-width:980px){.app{grid-template-columns:190px minmax(0,1fr)}.sidebar{padding:24px 12px}.main{padding:22px}.rooms-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}.calendar-head{gap:14px}}
+    @media(max-width:680px){.app{display:block}.sidebar{display:none}.main{padding:18px 15px calc(96px + env(safe-area-inset-bottom));min-height:100dvh}.topbar{margin-bottom:18px;gap:8px}.user-chip span:first-child{display:none}.demo-pill{font-size:9px;line-height:1.25;max-width:calc(100% - 100px);white-space:normal;padding:7px 8px}.avatar{width:92px;height:36px;padding:3px 5px}.avatar-logo{width:80px;height:28px}.calendar-head{display:block;margin-bottom:15px}.calendar-head h1{font-size:31px}.subtitle{font-size:16px}.cal-tabs{margin-top:19px;display:grid;grid-template-columns:repeat(3,1fr);width:100%}.cal-tabs button{padding:10px 5px;font-size:17px}.calendar-tools{align-items:flex-start;gap:12px}.date-switch{width:100%;justify-content:space-between}.date-heading{min-width:0;flex:1;font-size:17px}.legend{gap:9px 13px;font-size:13px}.rooms-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.room-photo{height:95px}.room-body{padding:11px}.room-number{font-size:24px}.room-type{font-size:13px;min-height:38px}.status{font-size:15px;min-height:58px;padding:9px 8px;gap:5px}.status svg{width:17px;height:17px}.room-meta{font-size:12px}.month-grid{grid-template-columns:1fr}.mini-day{font-size:14px}.mobile-nav{position:fixed;bottom:0;left:0;right:0;padding:9px 14px calc(9px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr;gap:10px;background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -6px 18px #173b5a12;z-index:8}.mobile-nav button{min-height:53px;background:#f0f5fa;color:var(--navy);border:0;border-radius:12px;font-size:17px;font-weight:850;display:flex;gap:9px;align-items:center;justify-content:center}.mobile-nav button.active{background:var(--navy);color:white}.mobile-nav svg{width:21px;height:21px}.chat-main{width:100%;padding:8px 0;min-height:calc(100dvh - 185px)}.chat-welcome{margin:auto 0 20px}.welcome-logo{width:226px;height:76px;border-radius:19px}.welcome-logo-mark{width:202px;height:63px}.chat-welcome h1{font-size:30px}.suggestions{grid-template-columns:1fr;gap:9px;margin-top:24px}.suggestion{min-height:53px;padding:12px 16px;font-size:15px}.messages{max-height:calc(100dvh - 315px)}.message{font-size:16px;max-width:94%}.composer-wrap{padding-top:9px}.composer{padding:7px 7px 7px 12px}.composer textarea{font-size:16px}.send{height:47px;width:47px;flex-basis:47px}.toast{bottom:95px;right:12px}}
+    @media(max-width:680px){.reservation-overlay{align-items:flex-end;padding:0}.reservation-dialog{width:100%;max-height:91dvh;border-radius:22px 22px 0 0;padding:21px 17px calc(17px + env(safe-area-inset-bottom));transform:translateY(20px)}.reservation-brand-row{padding-bottom:13px;margin-bottom:18px;gap:12px}.reservation-brand-logo{width:205px;height:57px;flex-basis:205px}.reservation-header{gap:12px}.reservation-title{font-size:29px}.reservation-close{width:48px;height:48px;flex-basis:48px}.reservation-facts{gap:9px}.reservation-fact{padding:12px}.reservation-fact .fact-value{font-size:17px}.guest-panel{padding:13px}.guest-avatar{width:48px;height:48px}.guest-name{font-size:19px}.reservation-footer{display:grid;grid-template-columns:1fr}.reservation-footer button{width:100%;min-height:52px}}
+    @media(max-width:390px){.rooms-grid{grid-template-columns:1fr}.room-photo{height:135px}.room-type{min-height:0}.date-heading{font-size:15px}.btn-outline{padding:0 10px}.calendar-head h1{font-size:27px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" aria-label="Menú principal">
+    <div class="brand"><div class="brand-symbol" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"></div></div>
+    <nav class="nav" aria-label="Pantallas"><button type="button" id="navChat" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 0 1-8 8 8 8 0 0 1-4-.9L3 20l1.9-5A8 8 0 1 1 20 11Z"/></svg>Chat</button><button type="button" id="navCalendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg>Calendario</button></nav>
+    <div class="side-foot"><strong>Prototipo de administración</strong>13 habitaciones reales del inventario. Fechas de ocupación simuladas.</div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><span class="demo-pill">DEMOSTRACIÓN · SIN DATOS REALES DE RESERVAS</span><div class="user-chip"><span>Vista para administración</span><span class="avatar" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"><span class="avatar-logo" aria-hidden="true"></span></span></div></header>
+    <section id="chatView" class="view active" aria-label="Chat administrativo">
+      <div class="chat-main">
+        <div class="chat-welcome" id="chatWelcome"><div class="welcome-logo" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"><span class="welcome-logo-mark" aria-hidden="true"></span></div><h1>¿En qué puedo ayudarte?</h1><p class="subtitle">Asistente de Casa Huéspedes Pimentel</p><div class="suggestions"><button class="suggestion" data-prompt="¿Qué habitaciones están disponibles hoy?">Consultar habitaciones disponibles hoy</button><button class="suggestion" data-prompt="Muéstrame las reservas de esta semana">Consultar reservas de esta semana</button><button class="suggestion" data-prompt="Quiero bloquear la habitación 205">Bloquear una habitación</button><button class="suggestion" data-prompt="Quiero registrar una reserva nueva">Registrar una nueva reserva</button></div></div>
+        <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Mensajes del asistente"></div>
+        <form id="chatForm" class="composer-wrap"><label class="sr-only" for="chatInput">Escribe tu solicitud</label><div class="composer"><textarea id="chatInput" rows="1" placeholder="Escribe lo que necesitas…" aria-label="Mensaje para el asistente"></textarea><button class="send" aria-label="Enviar mensaje" type="submit">↑</button></div><p class="composer-foot">Vista de demostración. Las órdenes no se ejecutan en Booking.com ni en la base de datos.</p></form>
+      </div>
+    </section>
+    <section id="calendarView" class="view" aria-label="Calendario de habitaciones">
+      <div class="calendar-head"><div class="calendar-title"><p class="eyebrow">Disponibilidad de habitaciones</p><h1>Calendario de habitaciones</h1><p class="subtitle">Consulta las 13 habitaciones, sin complicaciones.</p></div><div class="cal-tabs" role="group" aria-label="Tipo de calendario"><button class="active" data-mode="today" aria-pressed="true">Hoy</button><button data-mode="week" aria-pressed="false">Semana</button><button data-mode="month" aria-pressed="false">Mes</button></div></div>
+      <div class="calendar-tools"><div class="date-switch"><button class="btn-outline arrow-button" id="prevDate" aria-label="Periodo anterior">‹</button><span class="date-heading" id="dateLabel"></span><button class="btn-outline arrow-button" id="nextDate" aria-label="Periodo siguiente">›</button><button class="btn-outline" id="jumpToday">Ir a hoy</button></div><div class="legend" aria-label="Estados"><span><i style="background:#cdeed9"></i>Disponible</span><span><i style="background:#76a8ef"></i>Reservada</span><span><i style="background:#f7a6ac"></i>Bloqueada</span><span><i style="background:#bdc8d4"></i>Mantenimiento</span></div></div>
+      <div id="calendarContent"></div>
+      <p class="rooms-note">Las 13 fotografías proceden de las habitaciones reales registradas en la base de datos. Las ocupaciones y fechas son ejemplos: no se consultan reservas reales ni se modifica Booking.com.</p>
+    </section>
+  </main>
+</div>
+<nav class="mobile-nav" aria-label="Navegación móvil"><button id="mobileChat" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 0 1-8 8 8 8 0 0 1-4-.9L3 20l1.9-5A8 8 0 1 1 20 11Z"/></svg>Chat</button><button id="mobileCalendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg>Calendario</button></nav>
+<div id="reservationOverlay" class="reservation-overlay" aria-hidden="true">
+  <section class="reservation-dialog" role="dialog" aria-modal="true" aria-labelledby="reservationTitle" aria-describedby="reservationDemoNote" tabindex="-1">
+    <div class="reservation-brand-row">
+      <div class="reservation-brand-logo" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"></div>
+      <button id="closeReservation" class="reservation-close" type="button" aria-label="Cerrar detalle">×</button>
+    </div>
+    <header class="reservation-header">
+      <div><p class="reservation-eyebrow">Detalle de reserva</p><h2 id="reservationTitle" class="reservation-title">Habitación reservada</h2><span id="reservationCode" class="reservation-code">Código de reserva</span></div>
+    </header>
+    <div id="reservationDemoNote" class="reservation-demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7h.01"/></svg><span><strong>Datos de ejemplo.</strong> Esta ficha muestra cómo se verán los detalles. No corresponde a una reserva ni a un huésped real.</span></div>
+    <h3 class="reservation-section-title">Huésped</h3>
+    <div class="guest-panel"><div id="guestInitials" class="guest-avatar" aria-hidden="true">ME</div><div><div id="guestName" class="guest-name">Nombre de ejemplo</div><div id="guestSubtitle" class="guest-subtitle">2 huéspedes · Registro simulado</div></div></div>
+    <h3 class="reservation-section-title">Llegada y salida</h3>
+    <div class="reservation-facts">
+      <div class="reservation-fact"><div class="fact-label">↓ Llegada</div><div id="reservationCheckIn" class="fact-value">Fecha</div><div id="reservationCheckInTime" class="fact-detail">Hora de llegada</div></div>
+      <div class="reservation-fact"><div class="fact-label">↑ Salida</div><div id="reservationCheckOut" class="fact-value">Fecha</div><div id="reservationCheckOutTime" class="fact-detail">Hora de salida</div></div>
+      <div class="reservation-fact"><div class="fact-label">Plataforma</div><div id="reservationSource" class="reservation-channel">Booking.com</div></div>
+      <div class="reservation-fact"><div class="fact-label">Personas</div><div id="reservationGuests" class="fact-value">2 huéspedes</div><div class="fact-detail">Incluye adultos y niños</div></div>
+    </div>
+    <h3 class="reservation-section-title">Indicaciones para la recepción</h3>
+    <div id="reservationRequests" class="reservation-requests">Solicitud de ejemplo.</div>
+    <footer class="reservation-footer"><button id="closeReservationFooter" class="secondary" type="button">Volver al calendario</button></footer>
+  </section>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+  'use strict';
+  // Fotografías principales reales de la BD de Casa Huéspedes Pimentel.
+  // La disponibilidad del prototipo sigue siendo ficticia.
+  var photosByRoom={
+    "101": "https://res.cloudinary.com/do48g4nod/image/upload/v1784762236/casa-huespedes-pimentel/rooms/11/images/file_ajrlta.jpg",
+    "201": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240278/casa-huespedes-pimentel/rooms/cqcbc0gwblckvqpgnleq.jpg",
+    "202": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240493/casa-huespedes-pimentel/rooms/ags9mfxnpnxckzrig0ap.jpg",
+    "203": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240480/casa-huespedes-pimentel/rooms/eokc7tyne5rpxdrebzw0.jpg",
+    "205": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240399/casa-huespedes-pimentel/rooms/c5hntxuuz5qxg5z08zax.jpg",
+    "301": "https://res.cloudinary.com/do48g4nod/image/upload/v1784756258/casa-huespedes-pimentel/rooms/23/images/file_maiyjr.jpg",
+    "302": "https://res.cloudinary.com/do48g4nod/image/upload/v1784756772/casa-huespedes-pimentel/rooms/17/images/file_brqrgt.jpg",
+    "303": "https://res.cloudinary.com/do48g4nod/image/upload/v1784757088/casa-huespedes-pimentel/rooms/18/images/file_ijugo9.jpg",
+    "304": "https://res.cloudinary.com/do48g4nod/image/upload/v1784757158/casa-huespedes-pimentel/rooms/19/images/file_omhkyo.jpg",
+    "305": "https://res.cloudinary.com/do48g4nod/image/upload/v1784757440/casa-huespedes-pimentel/rooms/20/images/file_eo7cre.jpg",
+    "405": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240528/casa-huespedes-pimentel/rooms/xchf8b85qtstgp7wb0w2.jpg",
+    "407": "https://res.cloudinary.com/do48g4nod/image/upload/v1785701761/casa-huespedes-pimentel/rooms/16/images/file_ffzjoo.jpg",
+    "505": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240542/casa-huespedes-pimentel/rooms/fbjtcp0g1xcckbkqwteg.jpg"
+};
+  var rooms=[
+    ['101','Matrimonial Ejecutiva',1],['201','Doble · 2 camas',2],['202','Triple · 3 camas',3],
+    ['203','Familiar 1',4],['205','Matrimonial Estándar',0],['301','Doble · 2 camas',2],
+    ['302','Triple · 3 camas',3],['303','Triple · 3 camas',3],['304','Matrimonial Ejecutiva',1],
+    ['305','Matrimonial Estándar',0],['405','Familiar 2',4],['407','Triple · 3 camas',3],['505','Matrimonial Ejecutiva',1]
+  ];
+  var labels={available:'Disponible',booked:'Reservada',blocked:'Bloqueada',maintenance:'Mantenimiento'};
+  var icons={available:'✓',booked:'▣',blocked:'⊘',maintenance:'⚒'};
+  var tz='America/Lima';
+  function todayLocal(){
+    var parts=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    var values={};parts.forEach(function(p){values[p.type]=p.value});
+    return new Date(Number(values.year),Number(values.month)-1,Number(values.day),12);
+  }
+  var today=todayLocal();
+  var selected=new Date(today.getTime());
+  var mode='today';
+  var uiCalendar=document.getElementById('calendarContent');
+  function addDays(date,n){var d=new Date(date);d.setDate(d.getDate()+n);return d}
+  function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  function sameDay(a,b){return dateKey(a)===dateKey(b)}
+  function formatDate(d,opts){return new Intl.DateTimeFormat('es-PE',opts).format(d)}
+  function firstMonday(d){var n=(d.getDay()+6)%7;return addDays(d,-n)}
+  function getState(roomIndex,d){
+    var days=Math.round((d.getTime()-today.getTime())/86400000);
+    if(roomIndex===3 && days>=0 && days<=2)return 'blocked';
+    if(roomIndex===11 && days>=1 && days<=3)return 'maintenance';
+    if(days>=-45 && days<=48){
+      var start=((roomIndex*3+1)%10)-5;
+      if(days>=start && days<start+2+(roomIndex%2))return 'booked';
+      var second=11+(roomIndex*2)%13;
+      if(days>=second && days<second+2+(roomIndex%3))return 'booked';
+      if(roomIndex===9 && days>=-2 && days<=0)return 'blocked';
+    }
+    return 'available';
+  }
+  var tooltipTimer;
+  function toast(text){
+    var el=document.getElementById('toast');el.textContent=text;el.classList.add('show');
+    window.clearTimeout(tooltipTimer);tooltipTimer=window.setTimeout(function(){el.classList.remove('show')},4000);
+  }
+  function stateForRoom(n,d){return getState(n,d)}
+  function safeText(value){return String(value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function roomCard(room,i){
+    var state=stateForRoom(i,selected);
+    return '<article class="room-card" role="button" tabindex="0" aria-label="Habitación '+room[0]+', '+labels[state]+'. Pulsa para ver detalles" data-room="'+room[0]+'" data-day="'+dateKey(selected)+'" data-state="'+state+'" style="--stagger:'+Math.min(i,12)*32+'ms"><img class="room-photo" loading="lazy" src="'+photosByRoom[room[0]]+'" alt="Fotografía real de la habitación '+room[0]+'" /><div class="room-body"><div class="room-number">Habitación '+room[0]+'</div><div class="room-type">'+safeText(room[1])+'</div><div class="status '+state+'"><span aria-hidden="true">'+icons[state]+'</span>'+labels[state]+'</div><div class="room-meta">'+(state==='booked'?'Pulsa para ver el detalle de la reserva':formatDate(selected,{day:'numeric',month:'long'})+' · Estado de ejemplo')+'</div></div></article>';
+  }
+  function weekTable(){
+    var monday=firstMonday(selected);
+    var html='<div class="week-scroller"><table class="week-table"><thead><tr><th scope="col">Habitación</th>';
+    for(var j=0;j<7;j++){var day=addDays(monday,j);html+='<th scope="col"><span class="day-name">'+formatDate(day,{weekday:'short'})+'</span><span class="day-num">'+day.getDate()+'</span></th>'}
+    html+='</tr></thead><tbody>';
+    rooms.forEach(function(room,i){html+='<tr style="--stagger:'+Math.min(i,12)*22+'ms"><td><span class="room-id">'+room[0]+'</span><span class="room-sub">'+safeText(room[1])+'</span></td>';
+      for(var k=0;k<7;k++){var d=addDays(monday,k),s=stateForRoom(i,d);html+='<td><button type="button" class="slot '+s+'" title="Habitación '+room[0]+' · '+formatDate(d,{day:'numeric',month:'long'})+': '+labels[s]+'" aria-label="Habitación '+room[0]+', '+formatDate(d,{weekday:'long',day:'numeric',month:'long'})+': '+labels[s]+'" data-slot="'+room[0]+'" data-day="'+dateKey(d)+'" data-state="'+s+'"></button></td>';}
+      html+='</tr>';
+    });
+    return html+'</tbody></table></div>';
+  }
+  function monthCards(){
+    var first=new Date(selected.getFullYear(),selected.getMonth(),1,12),offset=(first.getDay()+6)%7;
+    var last=new Date(selected.getFullYear(),selected.getMonth()+1,0,12).getDate();
+    var html='<div class="month-grid">';
+    rooms.forEach(function(room,i){html+='<article class="month-card" style="--stagger:'+Math.min(i,12)*30+'ms"><div class="month-head"><img src="'+photosByRoom[room[0]]+'" loading="lazy" alt="Fotografía real de la habitación '+room[0]+'"><div class="month-name"><strong>Habitación '+room[0]+'</strong><small>'+safeText(room[1])+'</small></div></div><div class="mini-calendar">';
+      ['L','M','X','J','V','S','D'].forEach(function(x){html+='<span class="mini-weekday">'+x+'</span>'});
+      for(var k=0;k<offset;k++)html+='<span class="mini-day blank" aria-hidden="true"></span>';
+      for(var n=1;n<=last;n++){var date=new Date(first.getFullYear(),first.getMonth(),n,12),s=stateForRoom(i,date);html+='<button type="button" class="mini-day '+s+(sameDay(date,today)?' today':'')+'" aria-label="Habitación '+room[0]+', '+formatDate(date,{day:'numeric',month:'long'})+': '+labels[s]+'" title="'+labels[s]+'" data-slot="'+room[0]+'" data-day="'+dateKey(date)+'" data-state="'+s+'">'+n+'</button>'}
+      html+='</div></article>';
+    });
+    return html+'</div>';
+  }
+  function revealCalendarImages(){
+    uiCalendar.querySelectorAll('img').forEach(function(img){
+      function reveal(){img.classList.add('image-loaded')}
+      function failed(){img.classList.add('image-failed')}
+      if(img.complete){if(img.naturalWidth>0)reveal();else failed()}
+      else{img.addEventListener('load',reveal,{once:true});img.addEventListener('error',failed,{once:true})}
+    });
+  }
+  function renderCalendar(direction){
+    var label=mode==='today'?formatDate(selected,{weekday:'long',day:'numeric',month:'long',year:'numeric'}):mode==='week'?'Semana del '+formatDate(firstMonday(selected),{day:'numeric',month:'short'})+' al '+formatDate(addDays(firstMonday(selected),6),{day:'numeric',month:'short',year:'numeric'}):formatDate(selected,{month:'long',year:'numeric'});
+    document.getElementById('dateLabel').textContent=label.charAt(0).toUpperCase()+label.slice(1);
+    document.querySelectorAll('[data-mode]').forEach(function(b){var yes=b.dataset.mode===mode;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',String(yes))});
+    uiCalendar.classList.remove('calendar-enter-up','calendar-enter-left','calendar-enter-right');
+    if(mode==='today'){uiCalendar.innerHTML='<div class="rooms-grid">'+rooms.map(roomCard).join('')+'</div>';}
+    else if(mode==='week'){uiCalendar.innerHTML=weekTable();}
+    else {uiCalendar.innerHTML=monthCards();}
+    void uiCalendar.offsetWidth;
+    uiCalendar.classList.add('calendar-enter-'+(['left','right'].includes(direction)?direction:'up'));
+    revealCalendarImages();
+  }
+  var reservationOverlay=document.getElementById('reservationOverlay');
+  var lastReservationTrigger=null;
+  function dateFromKey(key){var p=key.split('-').map(Number);return new Date(p[0],p[1]-1,p[2],12)}
+  function formatLongDate(d){return formatDate(d,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+  function openReservationDetails(roomNumber,key,trigger){
+    var roomIndex=rooms.findIndex(function(r){return r[0]===roomNumber});
+    if(roomIndex<0)return;
+    var arrivalNight=dateFromKey(key);
+    if(stateForRoom(roomIndex,arrivalNight)!=='booked'){toast('Esta habitación no tiene una reserva de ejemplo para ese día.');return}
+    var firstNight=new Date(arrivalNight),lastNight=new Date(arrivalNight),guard=0;
+    while(guard++<7){var prev=addDays(firstNight,-1);if(stateForRoom(roomIndex,prev)!=='booked')break;firstNight=prev}
+    guard=0;
+    while(guard++<7){var next=addDays(lastNight,1);if(stateForRoom(roomIndex,next)!=='booked')break;lastNight=next}
+    var guestNames=['María Ejemplo','Carlos Demostración','Ana Muestra','José Referencial','Lucía Prueba','Diego Modelo'];
+    var initials=['ME','CD','AM','JR','LP','DM'];
+    var arrivalTimes=['14:00','15:00','16:30','17:00','18:00','19:30'];
+    var sources=['Booking.com','Web directa'];
+    var requests=['Llegada por la tarde. (Ejemplo de solicitud)','Agradece una habitación preparada antes de su llegada. (Ejemplo)','No indicó solicitudes especiales. (Ejemplo)','Confirmar hora estimada de llegada con el huésped. (Ejemplo)'];
+    var seed=roomIndex*7+Number(key.replace(/-/g,''))%997;
+    var guest=seed%guestNames.length,arrival=arrivalTimes[seed%arrivalTimes.length],departure=addDays(lastNight,1);
+    document.getElementById('reservationTitle').textContent='Habitación '+roomNumber;
+    document.getElementById('reservationCode').textContent='Código: DEMO-'+String(1000+(seed%8999));
+    document.getElementById('guestInitials').textContent=initials[guest];
+    document.getElementById('guestName').textContent=guestNames[guest];
+    document.getElementById('guestSubtitle').textContent=(2+(seed%2))+' huéspedes · Reserva de demostración';
+    document.getElementById('reservationCheckIn').textContent=formatLongDate(firstNight);
+    document.getElementById('reservationCheckInTime').textContent='Llegada estimada: '+arrival;
+    document.getElementById('reservationCheckOut').textContent=formatLongDate(departure);
+    document.getElementById('reservationCheckOutTime').textContent='Salida de ejemplo: 11:00';
+    document.getElementById('reservationSource').textContent=sources[seed% sources.length];
+    document.getElementById('reservationGuests').textContent=(2+(seed%2))+' personas';
+    document.getElementById('reservationRequests').textContent=requests[seed%requests.length];
+    lastReservationTrigger=trigger||document.activeElement;
+    reservationOverlay.classList.add('open');reservationOverlay.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+    document.getElementById('closeReservation').focus();
+  }
+  function closeReservationDetails(){
+    reservationOverlay.classList.remove('open');reservationOverlay.setAttribute('aria-hidden','true');document.body.style.overflow='';
+    if(lastReservationTrigger&&typeof lastReservationTrigger.focus==='function')lastReservationTrigger.focus();
+  }
+  document.getElementById('closeReservation').addEventListener('click',closeReservationDetails);
+  document.getElementById('closeReservationFooter').addEventListener('click',closeReservationDetails);
+  reservationOverlay.addEventListener('click',function(e){if(e.target===reservationOverlay)closeReservationDetails()});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&reservationOverlay.classList.contains('open'))closeReservationDetails()});
+  function activateReservationTarget(target){
+    if(target.matches('[data-room]')){openReservationDetails(target.dataset.room,target.dataset.day,target);return}
+    if(target.matches('[data-slot]')){
+      if(target.dataset.state==='booked'){openReservationDetails(target.dataset.slot,target.dataset.day,target)}
+      else{toast('Habitación '+target.dataset.slot+' · '+target.dataset.day+': '+labels[target.dataset.state]+'. Estado de demostración.')}
+    }
+  }
+  uiCalendar.addEventListener('click',function(e){var target=e.target.closest('[data-room],[data-slot]');if(target)activateReservationTarget(target)});
+  uiCalendar.addEventListener('keydown',function(e){var target=e.target.closest('[data-room]');if(target&&(e.key==='Enter'||e.key===' ')){e.preventDefault();activateReservationTarget(target)}});
+  document.querySelectorAll('[data-mode]').forEach(function(b){b.addEventListener('click',function(){mode=b.dataset.mode;renderCalendar('up')})});
+  document.getElementById('prevDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,-1):mode==='week'?addDays(selected,-7):new Date(selected.getFullYear(),selected.getMonth()-1,Math.min(selected.getDate(),28),12);renderCalendar('left')});
+  document.getElementById('nextDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,1):mode==='week'?addDays(selected,7):new Date(selected.getFullYear(),selected.getMonth()+1,Math.min(selected.getDate(),28),12);renderCalendar('right')});
+  document.getElementById('jumpToday').addEventListener('click',function(){selected=new Date(today);renderCalendar('up')});
+  function setScreen(screen){
+    var isChat=screen==='chat';
+    document.getElementById('chatView').classList.toggle('active',isChat);
+    document.getElementById('calendarView').classList.toggle('active',!isChat);
+    [['navChat',isChat],['navCalendar',!isChat],['mobileChat',isChat],['mobileCalendar',!isChat]].forEach(function(x){var b=document.getElementById(x[0]);b.classList.toggle('active',x[1]);if(x[1])b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+    window.scrollTo({top:0,behavior:'instant'});if(!isChat)renderCalendar('up');
+  }
+  document.getElementById('navChat').onclick=function(){setScreen('chat')};
+  document.getElementById('navCalendar').onclick=function(){setScreen('calendar')};
+  document.getElementById('mobileChat').onclick=function(){setScreen('chat')};
+  document.getElementById('mobileCalendar').onclick=function(){setScreen('calendar')};
+  var messages=document.getElementById('messages'),composer=document.getElementById('chatInput');
+  var pendingIntent=null;
+  function addMessage(text,who){
+    var div=document.createElement('div');div.className='message '+who;
+    div.textContent=text;messages.appendChild(div);messages.classList.add('has-messages');document.getElementById('chatWelcome').style.display='none';messages.scrollTop=messages.scrollHeight;
+  }
+  function roomIndexByNumber(number){return rooms.findIndex(function(room){return room[0]===String(number)})}
+  function parseDemoDate(text){
+    var s=String(text||'').toLowerCase();
+    if(s.indexOf('pasado mañana')>=0)return addDays(today,2);
+    if(s.indexOf('mañana')>=0)return addDays(today,1);
+    if(s.indexOf('hoy')>=0)return new Date(today);
+    var numeric=s.match(/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{4}))?\b/);
+    if(numeric){
+      var y=Number(numeric[3]||today.getFullYear()),m=Number(numeric[2])-1,day=Number(numeric[1]);
+      var date=new Date(y,m,day,12);
+      if(date.getFullYear()===y&&date.getMonth()===m&&date.getDate()===day)return date;
+      return null;
+    }
+    var months={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
+    var named=s.match(/\b(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)(?:\s+de\s+(\d{4}))?\b/);
+    if(named){
+      var year=Number(named[3]||today.getFullYear()),month=months[named[2]],dayNumber=Number(named[1]);
+      var namedDate=new Date(year,month,dayNumber,12);
+      if(namedDate.getFullYear()===year&&namedDate.getMonth()===month&&namedDate.getDate()===dayNumber)return namedDate;
+    }
+    return null;
+  }
+  function formatShort(d){return formatDate(d,{day:'numeric',month:'short'})}
+  function addActionCard(action){
+    var card=document.createElement('section');card.className='action-card';
+    var title=document.createElement('strong');
+    title.textContent=action.type==='block'?'Confirmar bloqueo de habitación':action.type==='booking'?'Confirmar reserva de demostración':'Confirmar liberación de habitación';
+    var summary=document.createElement('p');summary.textContent=action.summary;
+    var buttons=document.createElement('div');buttons.className='action-actions';
+    var confirm=document.createElement('button');confirm.type='button';confirm.className='action-confirm';confirm.textContent='Confirmar en la demo';
+    var cancel=document.createElement('button');cancel.type='button';cancel.className='action-cancel';cancel.textContent='Cancelar';
+    confirm.addEventListener('click',function(){
+      var index=roomIndexByNumber(action.room),start=dateFromKey(action.date);
+      if(index<0){card.remove();addMessage('No se aplicó el cambio: la habitación no pertenece al inventario activo.','assistant');return}
+      var count=action.type==='booking'?action.nights:1;
+      for(var n=0;n<count;n++){
+        var key=action.room+'|'+dateKey(addDays(start,n));
+        if(action.type==='block')manualStates[key]='blocked';
+        else if(action.type==='booking')manualStates[key]='booked';
+        else manualStates[key]='available';
+      }
+      card.remove();renderCalendar('up');
+      if(action.type==='block')addMessage('Bloqueo aplicado únicamente en esta demostración: habitación '+action.room+' · '+formatLongDate(start)+'. No se modificó Beds24 ni Booking.com.','assistant');
+      else if(action.type==='booking')addMessage('Reserva de ejemplo registrada en el calendario local: habitación '+action.room+' · '+action.nights+' noche(s). En producción se validaría y registraría en Beds24 tras la confirmación autorizada.','assistant');
+      else addMessage('La habitación '+action.room+' aparece liberada en el calendario de demostración. No se modificó ningún sistema real.','assistant');
+    });
+    cancel.addEventListener('click',function(){card.remove();addMessage('Acción cancelada. No se realizó ningún cambio.','assistant')});
+    buttons.appendChild(confirm);buttons.appendChild(cancel);card.appendChild(title);card.appendChild(summary);card.appendChild(buttons);messages.appendChild(card);messages.scrollTop=messages.scrollHeight;
+  }
+  function prepareAction(type,roomNumber,date,nights){
+    var index=roomIndexByNumber(roomNumber);
+    if(index<0)return {text:'La habitación '+roomNumber+' no forma parte del inventario activo. La habitación 406 está excluida; el inventario operativo tiene 13 habitaciones.'};
+    var state=getState(index,date);
+    if(type==='block'){
+      if(state==='booked')return {text:'No puedo preparar el bloqueo: la habitación '+roomNumber+' aparece reservada para el '+formatLongDate(date)+' en los datos de ejemplo.'};
+      if(state==='blocked')return {text:'La habitación '+roomNumber+' ya aparece bloqueada para el '+formatLongDate(date)+' en esta demostración.'};
+      if(state==='maintenance')return {text:'La habitación '+roomNumber+' ya figura en mantenimiento para esa fecha.'};
+      return {text:'He preparado el bloqueo. Revisa los datos antes de confirmar. El cambio solo afectará esta demostración.',action:{type:'block',room:roomNumber,date:dateKey(date),nights:1,summary:'Habitación '+roomNumber+' · '+formatLongDate(date)+' · Bloqueo interno de ejemplo'}};
+    }
+    if(type==='booking'){
+      var conflict=null;
+      for(var n=0;n<nights;n++){
+        var checkDate=addDays(date,n),checkState=getState(index,checkDate);
+        if(checkState!=='available'){conflict={date:checkDate,state:checkState};break}
+      }
+      if(conflict)return {text:'La habitación '+roomNumber+' no está disponible el '+formatLongDate(conflict.date)+' (estado: '+labels[conflict.state].toLowerCase()+') en esta demostración. Elige otra habitación o fecha.'};
+      return {text:'Puedo preparar la reserva. Revisa el resumen y confirma para verla reflejada en el calendario simulado.',action:{type:'booking',room:roomNumber,date:dateKey(date),nights:nights,summary:'Habitación '+roomNumber+' · llegada '+formatLongDate(date)+' · '+nights+' noche(s) · 2 adultos de ejemplo'}};
+    }
+    if(state==='available')return {text:'La habitación '+roomNumber+' ya aparece disponible para el '+formatLongDate(date)+'.'};
+    return {text:'He preparado la liberación de la habitación. Confirma para actualizar únicamente el calendario de demostración.',action:{type:'release',room:roomNumber,date:dateKey(date),nights:1,summary:'Habitación '+roomNumber+' · '+formatLongDate(date)+' · Liberación local de ejemplo'}};
+  }
+  function respond(text){
+    var s=text.toLowerCase(),roomMatch=s.match(/\b(101|201|202|203|205|301|302|303|304|305|405|407|505|406)\b/);
+    var date=parseDemoDate(s),hasDate=!!date;
+    if(pendingIntent){
+      var intent=pendingIntent;pendingIntent=null;
+      if(!roomMatch)return 'Para continuar, dime el número de habitación. Las habitaciones activas son 101, 201, 202, 203, 205, 301, 302, 303, 304, 305, 405, 407 y 505.';
+      if(roomMatch[1]==='406')return 'La habitación 406 está inactiva y excluida del inventario de reservas. El alojamiento opera con 13 habitaciones activas.';
+      if(!hasDate)return '¿Para qué fecha? Puedes indicar «hoy», «mañana» o una fecha como «30 de octubre».';
+      var pendingNights=Number((s.match(/\b([1-7])\s+noches?\b/)||[])[1]||1);
+      return prepareAction(intent,roomMatch[1],date,pendingNights);
+    }
+    if(roomMatch&&roomMatch[1]==='406')return 'La habitación 406 está inactiva y excluida del inventario de reservas. Por eso no aparece entre las 13 habitaciones operativas.';
+    if(/precio|precios|tarifa|tarifas|cu[aá]nto cuesta/.test(s)){
+      return 'Tarifas base del catálogo (IGV incluido):\n\n• Matrimonial Estándar: S/ 120 por noche\n• Matrimonial Ejecutiva: S/ 140 por noche\n• Doble · 2 camas: S/ 140 por noche\n• Triple · 3 camas: S/ 210 por noche\n• Familiar 1: S/ 250 por noche\n• Familiar 2: S/ 250 por noche\n\nEl desayuno no está incluido. Son tarifas base de referencia; el precio final depende de las fechas y reglas comerciales. Esta demo no consulta Beds24.';
+    }
+    if(/reservas?.*(semana|7 d[ií]as)|esta semana|reservas de la semana/.test(s)){
+      var arrivals=[];
+      for(var i=0;i<rooms.length;i++){
+        for(var offset=0;offset<7;offset++){
+          var day=addDays(today,offset),previous=addDays(day,-1);
+          if(getState(i,day)==='booked'&&getState(i,previous)!=='booked')arrivals.push('• Habitación '+rooms[i][0]+' · llegada '+formatShort(day));
+        }
+      }
+      return arrivals.length?'Reservas de ejemplo para los próximos 7 días:\n'+arrivals.join('\n')+'\n\nLos nombres y ocupaciones son simulados; no se han consultado reservas reales.':'No hay llegadas de ejemplo para los próximos 7 días. La información real se consultará desde Beds24 cuando la integración esté operativa.';
+    }
+    if(/llega|llegadas|check.?in|qu[ií]en llega/.test(s)){
+      var arrivalDate=date||new Date(today),arrivalList=[];
+      for(var j=0;j<rooms.length;j++)if(getState(j,arrivalDate)==='booked'&&getState(j,addDays(arrivalDate,-1))!=='booked')arrivalList.push('• Habitación '+rooms[j][0]+' · huésped de ejemplo');
+      return arrivalList.length?'Llegadas simuladas para el '+formatLongDate(arrivalDate)+':\n'+arrivalList.join('\n')+'\n\nNo corresponde a huéspedes ni reservas reales.':'No hay llegadas de ejemplo para el '+formatLongDate(arrivalDate)+'.';
+    }
+    if(/detalle|ficha|datos de la reserva/.test(s)&&roomMatch){
+      var detailIndex=roomIndexByNumber(roomMatch[1]),detailDate=date||new Date(today);
+      if(detailIndex>=0&&getState(detailIndex,detailDate)==='booked'){openReservationDetails(roomMatch[1],dateKey(detailDate),composer);return 'He abierto el detalle de reserva de demostración para la habitación '+roomMatch[1]+'.';}
+      return 'No encuentro una reserva de ejemplo para la habitación '+roomMatch[1]+' en esa fecha. Puedes revisar el calendario.';
+    }
+    if(/disponib|libres|ocupaci[oó]n|est[aá] libre/.test(s)){
+      var availabilityDate=date||new Date(today),free=rooms.filter(function(room,i){return getState(i,availabilityDate)==='available'});
+      if(roomMatch){
+        var roomIndex=roomIndexByNumber(roomMatch[1]),roomState=roomIndex>=0?getState(roomIndex,availabilityDate):null;
+        return roomIndex>=0?'La habitación '+roomMatch[1]+' aparece '+labels[roomState].toLowerCase()+' el '+formatLongDate(availabilityDate)+' en los datos de ejemplo.': 'No encuentro esa habitación en el inventario activo.';
+      }
+      return 'Para el '+formatLongDate(availabilityDate)+', la demostración muestra '+free.length+' habitaciones disponibles: '+free.map(function(room){return room[0]}).join(', ')+'.\n\nPuedes abrir Calendario para revisar el estado de las 13 habitaciones. La disponibilidad real se consultará desde Beds24 cuando se active la integración.';
+    }
+    if(/bloquea|bloquear|bloqueo|cierra la habitaci[oó]n/.test(s)){
+      if(!roomMatch){pendingIntent='block';return 'Claro. ¿Qué habitación deseas bloquear y para qué fecha? Por ejemplo: «205 mañana». La habitación 406 está excluida del inventario activo.';}
+      if(!hasDate)return '¿Para qué fecha deseas bloquear la habitación '+roomMatch[1]+'? Puedes indicar «hoy», «mañana» o una fecha concreta.';
+      return prepareAction('block',roomMatch[1],date,1);
+    }
+    if(/desbloquea|libera|cancelar reserva|cancela la reserva/.test(s)){
+      if(!roomMatch){pendingIntent='release';return '¿Qué habitación deseas liberar y para qué fecha? Por ejemplo: «205 mañana».';}
+      if(!hasDate)return '¿Para qué fecha deseas liberar la habitación '+roomMatch[1]+'?';
+      return prepareAction('release',roomMatch[1],date,1);
+    }
+    if(/reserva|reservar|registra|registrar/.test(s)){
+      if(!roomMatch){pendingIntent='booking';return 'Para preparar una reserva necesito el número de habitación y la fecha de llegada. Por ejemplo: «Reserva la habitación 205 para mañana por 2 noches».';}
+      if(!hasDate)return '¿Cuál es la fecha de llegada para la habitación '+roomMatch[1]+'?';
+      var nights=Number((s.match(/\b([1-7])\s+noches?\b/)||[])[1]||1);
+      return prepareAction('booking',roomMatch[1],date,nights);
+    }
+    return 'Puedo ayudarte a consultar disponibilidad, revisar llegadas y reservas de la semana, consultar las tarifas base y preparar reservas o bloqueos. Las operaciones requieren confirmación y, en esta demo, solo modifican datos simulados. Prueba también el Calendario para ver las 13 habitaciones.';
+  }
+  function send(text){
+    var query=text.trim();if(!query)return;
+    addMessage(query,'user');composer.value='';composer.style.height='auto';
+    var pending=document.createElement('div');pending.className='message assistant typing-message';pending.setAttribute('aria-label','Preparando respuesta de demostración');pending.innerHTML='<span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Preparando respuesta de demostración…</span>';
+    messages.appendChild(pending);messages.classList.add('has-messages');document.getElementById('chatWelcome').style.display='none';messages.scrollTop=messages.scrollHeight;
+    window.setTimeout(function(){
+      pending.remove();
+      var reply=respond(query);
+      if(typeof reply==='string')addMessage(reply,'assistant');
+      else{addMessage(reply.text,'assistant');if(reply.action)addActionCard(reply.action);}
+      messages.scrollTop=messages.scrollHeight;
+    },420);
+  }
+  document.getElementById('chatForm').addEventListener('submit',function(e){e.preventDefault();send(composer.value)});
+  composer.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,135)+'px'});
+  composer.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(composer.value)}});
+  document.querySelectorAll('[data-prompt]').forEach(function(b){b.addEventListener('click',function(){send(b.dataset.prompt)})});
+  renderCalendar();
+})();
+</script>
+</body>
+</html>
