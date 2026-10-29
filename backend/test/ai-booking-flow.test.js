@@ -351,6 +351,9 @@ test("WhatsApp solicita la estadía antes de pedir datos privados y confirma inv
   });
   assert.match(guests.reply, /nombre completo/i);
   assert.equal(calls.searches.length, 1, "Debe validar antes de solicitar PII");
+  assert.match(guests.reply, /Cotización referencial de Triple/);
+  assert.match(guests.reply, /2 noches × S\/ 218\.91 = S\/ 437\.82/);
+  assert.doesNotMatch(guests.reply, /Paga aquí|express\.culqi/);
   assert.equal(calls.bookings.length, 0);
 
   const name = await flow({
