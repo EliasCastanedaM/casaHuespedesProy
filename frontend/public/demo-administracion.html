@@ -71,13 +71,23 @@
 <script>
 (function(){
   'use strict';
-  var photos=[
-    'https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=620&q=75',
-    'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=620&q=75',
-    'https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=620&q=75',
-    'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=620&q=75',
-    'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=620&q=75',
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=620&q=75'];
+  // Fotografías principales reales de la BD de Casa Huéspedes Pimentel.
+  // La disponibilidad del prototipo sigue siendo ficticia.
+  var photosByRoom={
+    "101": "https://res.cloudinary.com/do48g4nod/image/upload/v1784762236/casa-huespedes-pimentel/rooms/11/images/file_ajrlta.jpg",
+    "201": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240278/casa-huespedes-pimentel/rooms/cqcbc0gwblckvqpgnleq.jpg",
+    "202": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240493/casa-huespedes-pimentel/rooms/ags9mfxnpnxckzrig0ap.jpg",
+    "203": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240480/casa-huespedes-pimentel/rooms/eokc7tyne5rpxdrebzw0.jpg",
+    "205": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240399/casa-huespedes-pimentel/rooms/c5hntxuuz5qxg5z08zax.jpg",
+    "301": "https://res.cloudinary.com/do48g4nod/image/upload/v1784756258/casa-huespedes-pimentel/rooms/23/images/file_maiyjr.jpg",
+    "302": "https://res.cloudinary.com/do48g4nod/image/upload/v1784756772/casa-huespedes-pimentel/rooms/17/images/file_brqrgt.jpg",
+    "303": "https://res.cloudinary.com/do48g4nod/image/upload/v1784757088/casa-huespedes-pimentel/rooms/18/images/file_ijugo9.jpg",
+    "304": "https://res.cloudinary.com/do48g4nod/image/upload/v1784757158/casa-huespedes-pimentel/rooms/19/images/file_omhkyo.jpg",
+    "305": "https://res.cloudinary.com/do48g4nod/image/upload/v1784757440/casa-huespedes-pimentel/rooms/20/images/file_eo7cre.jpg",
+    "405": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240528/casa-huespedes-pimentel/rooms/xchf8b85qtstgp7wb0w2.jpg",
+    "407": "https://res.cloudinary.com/do48g4nod/image/upload/v1785701761/casa-huespedes-pimentel/rooms/16/images/file_ffzjoo.jpg",
+    "505": "https://res.cloudinary.com/do48g4nod/image/upload/v1784240542/casa-huespedes-pimentel/rooms/fbjtcp0g1xcckbkqwteg.jpg"
+};
   var rooms=[
     ['101','Matrimonial Ejecutiva',1],['201','Doble · 2 camas',2],['202','Triple · 3 camas',3],
     ['203','Familiar 1',4],['205','Matrimonial Estándar',0],['301','Doble · 2 camas',2],
@@ -123,7 +133,7 @@
   function safeText(value){return String(value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function roomCard(room,i){
     var state=stateForRoom(i,selected);
-    return '<article class="room-card"><img class="room-photo" loading="lazy" src="'+photos[room[2]]+'" alt="Fotografía referencial de una habitación" /><div class="room-body"><div class="room-number">Habitación '+room[0]+'</div><div class="room-type">'+safeText(room[1])+'</div><div class="status '+state+'"><span aria-hidden="true">'+icons[state]+'</span>'+labels[state]+'</div><div class="room-meta">'+formatDate(selected,{day:'numeric',month:'long'})+' · Estado de ejemplo</div></div></article>';
+    return '<article class="room-card"><img class="room-photo" loading="lazy" src="'+photosByRoom[room[0]]+'" alt="Fotografía real de la habitación '+room[0]+'" /><div class="room-body"><div class="room-number">Habitación '+room[0]+'</div><div class="room-type">'+safeText(room[1])+'</div><div class="status '+state+'"><span aria-hidden="true">'+icons[state]+'</span>'+labels[state]+'</div><div class="room-meta">'+formatDate(selected,{day:'numeric',month:'long'})+' · Estado de ejemplo</div></div></article>';
   }
   function weekTable(){
     var monday=firstMonday(selected);
@@ -140,7 +150,7 @@
     var first=new Date(selected.getFullYear(),selected.getMonth(),1,12),offset=(first.getDay()+6)%7;
     var last=new Date(selected.getFullYear(),selected.getMonth()+1,0,12).getDate();
     var html='<div class="month-grid">';
-    rooms.forEach(function(room,i){html+='<article class="month-card"><div class="month-head"><img src="'+photos[room[2]]+'" loading="lazy" alt="Fotografía referencial"><div class="month-name"><strong>Habitación '+room[0]+'</strong><small>'+safeText(room[1])+'</small></div></div><div class="mini-calendar">';
+    rooms.forEach(function(room,i){html+='<article class="month-card"><div class="month-head"><img src="'+photosByRoom[room[0]]+'" loading="lazy" alt="Fotografía real de la habitación '+room[0]+'"><div class="month-name"><strong>Habitación '+room[0]+'</strong><small>'+safeText(room[1])+'</small></div></div><div class="mini-calendar">';
       ['L','M','X','J','V','S','D'].forEach(function(x){html+='<span class="mini-weekday">'+x+'</span>'});
       for(var k=0;k<offset;k++)html+='<span class="mini-day blank" aria-hidden="true"></span>';
       for(var n=1;n<=last;n++){var date=new Date(first.getFullYear(),first.getMonth(),n,12),s=stateForRoom(i,date);html+='<button type="button" class="mini-day '+s+(sameDay(date,today)?' today':'')+'" aria-label="Habitación '+room[0]+', '+formatDate(date,{day:'numeric',month:'long'})+': '+labels[s]+'" title="'+labels[s]+'" data-slot="'+room[0]+'" data-day="'+dateKey(date)+'" data-state="'+s+'">'+n+'</button>'}
