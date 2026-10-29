@@ -59,10 +59,10 @@
     .chat-welcome h1{animation:screenReveal .42s .08s var(--motion-ease) both}
     .chat-welcome>.subtitle{animation:screenReveal .42s .13s var(--motion-ease) both}
     .suggestion{transition:transform .22s var(--motion-ease),box-shadow .22s ease,border-color .22s ease,background-color .22s ease}
-    .suggestion:nth-child(1){animation:cardReveal .38s .14s var(--motion-ease) both}
-    .suggestion:nth-child(2){animation:cardReveal .38s .19s var(--motion-ease) both}
-    .suggestion:nth-child(3){animation:cardReveal .38s .24s var(--motion-ease) both}
-    .suggestion:nth-child(4){animation:cardReveal .38s .29s var(--motion-ease) both}
+    .suggestion:nth-child(1){animation:cardReveal .38s .14s var(--motion-ease) backwards}
+    .suggestion:nth-child(2){animation:cardReveal .38s .19s var(--motion-ease) backwards}
+    .suggestion:nth-child(3){animation:cardReveal .38s .24s var(--motion-ease) backwards}
+    .suggestion:nth-child(4){animation:cardReveal .38s .29s var(--motion-ease) backwards}
     .composer{transition:border-color .22s ease,box-shadow .22s ease}
     .composer:focus-within{border-color:#789dbd;box-shadow:0 0 0 4px #6288a51a,0 8px 26px #19395310}
     .send{transition:transform .18s var(--motion-ease),background-color .18s ease,box-shadow .18s ease}
@@ -76,11 +76,11 @@
     .cal-tabs button{transition:background-color .2s ease,color .2s ease,box-shadow .2s ease,transform .18s var(--motion-ease)}
     .btn-outline{transition:background-color .18s ease,border-color .18s ease,transform .18s var(--motion-ease),box-shadow .18s ease}
     .legend i{box-shadow:inset 0 0 0 1px #10263f0b}
-    .room-card,.month-card{animation:cardReveal .42s var(--motion-ease) both;animation-delay:var(--stagger,0ms);transition:transform .22s var(--motion-ease),box-shadow .22s ease,border-color .22s ease}
+    .room-card,.month-card{animation:cardReveal .42s var(--motion-ease) backwards;animation-delay:var(--stagger,0ms);transition:transform .22s var(--motion-ease),box-shadow .22s ease,border-color .22s ease}
     .room-photo,.month-head img{opacity:0;transition:opacity .34s ease,transform .42s var(--motion-ease)}
     .room-photo.image-loaded,.room-photo.image-failed,.month-head img.image-loaded,.month-head img.image-failed{opacity:1}
     .status{transition:background-color .22s ease,color .22s ease}
-    .week-table tbody tr{animation:rowReveal .3s var(--motion-ease) both;animation-delay:var(--stagger,0ms)}
+    .week-table tbody tr{animation:rowReveal .3s var(--motion-ease) backwards;animation-delay:var(--stagger,0ms)}
     .slot,.mini-day{transition:transform .16s var(--motion-ease),box-shadow .16s ease,border-color .16s ease}
     .mini-day.today{box-shadow:0 0 0 2px var(--navy);font-weight:950}
     .mobile-nav button{transition:background-color .2s ease,color .2s ease,transform .18s var(--motion-ease),box-shadow .2s ease}
