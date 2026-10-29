@@ -143,21 +143,37 @@
     .reservation-footer button{min-height:49px;padding:0 18px;border:0;border-radius:12px;background:var(--navy);color:white;font-weight:850}
     .reservation-footer .secondary{border:1px solid #cbdbe8;background:#fff;color:#254a72}
     @media(max-width:980px){.app{grid-template-columns:190px minmax(0,1fr)}.sidebar{padding:24px 12px}.main{padding:22px}.rooms-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}.calendar-head{gap:14px}}
-    @media(max-width:680px){.app{display:block}.sidebar{display:none}.main{padding:18px 15px calc(96px + env(safe-area-inset-bottom));min-height:100dvh}.topbar{margin-bottom:18px;gap:8px}.topbar-brand{gap:7px;flex:1}.topbar-logo{width:88px;height:42px}.user-chip span:first-child{display:none}.demo-pill{font-size:9px;line-height:1.25;max-width:calc(100% - 95px);white-space:normal;padding:7px 8px}.avatar{width:82px;height:36px;padding:3px 5px}.avatar-logo{width:70px;height:28px}.calendar-head{display:block;margin-bottom:15px}.calendar-head h1{font-size:31px}.subtitle{font-size:16px}.cal-tabs{margin-top:19px;display:grid;grid-template-columns:repeat(3,1fr);width:100%}.cal-tabs button{padding:10px 5px;font-size:17px}.calendar-tools{align-items:flex-start;gap:12px}.date-switch{width:100%;justify-content:space-between}.date-heading{min-width:0;flex:1;font-size:17px}.legend{gap:9px 13px;font-size:13px}.rooms-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.room-photo{height:95px}.room-body{padding:11px}.room-number{font-size:24px}.room-type{font-size:13px;min-height:38px}.status{font-size:15px;min-height:58px;padding:9px 8px;gap:5px}.status svg{width:17px;height:17px}.room-meta{font-size:12px}.month-grid{grid-template-columns:1fr}.mini-day{font-size:14px}.mobile-nav{position:fixed;bottom:0;left:0;right:0;padding:9px 14px calc(9px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr;gap:10px;background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -6px 18px #173b5a12;z-index:8}.mobile-nav button{min-height:53px;background:#f0f5fa;color:var(--navy);border:0;border-radius:12px;font-size:17px;font-weight:850;display:flex;gap:9px;align-items:center;justify-content:center}.mobile-nav button.active{background:var(--navy);color:white}.mobile-nav svg{width:21px;height:21px}.chat-main{width:100%;padding:8px 0;min-height:calc(100dvh - 185px)}.chat-welcome{margin:auto 0 20px}.welcome-logo{width:226px;height:76px;border-radius:19px}.welcome-logo-mark{width:202px;height:63px}.chat-welcome h1{font-size:30px}.suggestions{grid-template-columns:1fr;gap:9px;margin-top:24px}.suggestion{min-height:53px;padding:12px 16px;font-size:15px}.messages{max-height:calc(100dvh - 315px)}.message{font-size:16px;max-width:94%}.composer-wrap{padding-top:9px}.composer{padding:7px 7px 7px 12px}.composer textarea{font-size:16px}.send{height:47px;width:47px;flex-basis:47px}.toast{bottom:95px;right:12px}}
+    @media(max-width:680px){.calendar-head{display:block}.calendar-head h1{font-size:31px}.subtitle{font-size:16px}.cal-tabs{display:grid;grid-template-columns:repeat(3,1fr);width:100%}.cal-tabs button{padding:10px 5px;font-size:17px}.room-body{padding:11px}.room-number{font-size:24px}.status{font-size:15px;padding:9px 8px;gap:5px}.room-meta{font-size:12px}.mini-day{font-size:14px}.welcome-logo{width:226px;height:76px;border-radius:19px}.welcome-logo-mark{width:202px;height:63px}.chat-welcome h1{font-size:30px}.message{font-size:16px}.toast{right:12px}}
     @media(max-width:680px){.reservation-overlay{align-items:flex-end;padding:0}.reservation-dialog{width:100%;max-height:91dvh;border-radius:22px 22px 0 0;padding:21px 17px calc(17px + env(safe-area-inset-bottom));transform:translateY(20px)}.reservation-brand-row{padding-bottom:13px;margin-bottom:18px;gap:12px}.reservation-brand-logo{width:205px;height:57px;flex-basis:205px}.reservation-header{gap:12px}.reservation-title{font-size:29px}.reservation-close{width:48px;height:48px;flex-basis:48px}.reservation-facts{gap:9px}.reservation-fact{padding:12px}.reservation-fact .fact-value{font-size:17px}.guest-panel{padding:13px}.guest-avatar{width:48px;height:48px}.guest-name{font-size:19px}.reservation-footer{display:grid;grid-template-columns:1fr}.reservation-footer button{width:100%;min-height:52px}}
     @media(max-width:390px){.rooms-grid{grid-template-columns:1fr}.room-photo{height:135px}.room-type{min-height:0}.date-heading{font-size:15px}.btn-outline{padding:0 10px}.calendar-head h1{font-size:27px}}
+    .menu-toggle,.menu-close,.menu-backdrop,.week-mobile{display:none}
+    .week-card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:15px;min-width:0}
+    .week-card-heading{display:flex;align-items:baseline;gap:9px;margin-bottom:12px}.week-card-heading strong{font-size:20px;color:var(--navy)}.week-card-heading span{font-size:13px;color:var(--muted)}
+    .week-days{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.week-day{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:10px;min-height:59px;padding:6px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:800}.week-day strong{font-size:16px}.week-day.available{background:var(--green)}.week-day.booked{background:var(--booked)}.week-day.blocked{background:var(--blocked)}.week-day.maintenance{background:var(--maintenance)}
+    .room-card.photo-unavailable::before{content:"Fotografía no disponible";display:grid;place-items:center;height:var(--room-photo-height,116px);background:#e3e9ef;color:#52677d;font-size:13px;text-align:center}.month-head.photo-unavailable::before{content:"Sin foto";display:grid;place-items:center;width:60px;height:56px;flex:none;background:#e3e9ef;color:#52677d;font-size:11px;text-align:center;border-radius:9px}
+    @media(max-width:980px){
+      .app{display:block}.sidebar{display:flex;position:fixed;inset:0 auto 0 0;width:min(310px,calc(100vw - 48px));height:100dvh;z-index:41;padding:24px 18px;transform:translateX(-105%);transition:transform .25s ease;animation:none;overflow-y:auto;visibility:hidden}.sidebar.open{transform:translateX(0);visibility:visible}.menu-backdrop:not([hidden]){display:block;position:fixed;inset:0;background:#071a2d91;z-index:40}.menu-toggle,.menu-close{display:grid;place-items:center;width:46px;height:46px;min-width:46px;border:1px solid #cbdbe8;border-radius:11px;background:#fff;color:var(--navy);font-size:26px}.menu-close{align-self:flex-end;background:#ffffff17;border-color:#ffffff66;color:#fff;margin-bottom:-20px}.menu-toggle svg{width:23px;height:23px}.main{padding:22px clamp(16px,3vw,32px) 36px}.rooms-grid{grid-template-columns:repeat(auto-fill,minmax(224px,1fr))}
+    }
+    @media(max-width:680px){
+      .main{padding:12px 14px 28px;min-height:100dvh}.topbar{gap:9px;margin-bottom:13px}.topbar-brand{flex:1;min-width:0;flex-wrap:wrap;gap:6px}.topbar-logo{width:92px;height:42px}.demo-pill{max-width:100%;font-size:10px;padding:5px 8px;line-height:1.25}.user-chip{display:none}
+      .chat-screen .main{position:fixed;left:0;right:0;top:var(--viewport-offset-top,0px);height:var(--app-viewport-height,100dvh);min-height:0;overflow:hidden;padding-bottom:max(10px,env(safe-area-inset-bottom))}.chat-screen #chatView{min-height:0}.chat-main{width:100%;min-height:0;margin:0 auto;padding:0}.chat-welcome{min-height:0;max-height:100%;overflow-y:auto;overscroll-behavior:contain;padding:5px 0 12px;margin:auto 0}.suggestions{grid-template-columns:1fr;margin-top:16px;gap:8px}.suggestion{min-height:48px;padding:10px 13px}.messages{min-height:0;max-height:none;overscroll-behavior:contain;gap:12px;padding:12px 0}.message{max-width:95%;overflow-wrap:anywhere;padding:11px 13px}.action-card{width:100%;padding:13px}.action-actions button{min-height:44px}.composer-wrap{flex:none;padding-top:6px}.composer{padding:5px 6px 5px 11px;gap:5px}.composer textarea{min-width:0;min-height:43px;padding:9px 0}.composer-foot{font-size:11px;line-height:1.3;margin:6px 0 0}.send{min-width:46px;min-height:46px}
+      .rooms-grid{grid-template-columns:1fr;gap:12px}.room-card{--room-photo-height:160px}.room-photo{height:160px}.room-type{min-height:0}.status{min-height:48px}.month-grid{grid-template-columns:1fr}.calendar-head{margin-bottom:15px}.cal-tabs{margin-top:15px}.calendar-tools{gap:12px}.date-switch{display:grid;grid-template-columns:46px minmax(0,1fr) 46px;gap:7px;width:100%}.date-heading{grid-column:2;grid-row:1;min-width:0;font-size:clamp(14px,4vw,17px);line-height:1.3}.date-switch #prevDate{grid-column:1;grid-row:1}.date-switch #nextDate{grid-column:3;grid-row:1}.date-switch #jumpToday{grid-column:1/-1;grid-row:2;min-height:44px}.legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;font-size:13px}.week-scroller{display:none}.week-mobile{display:grid;gap:12px}.reservation-dialog{max-height:calc(var(--app-viewport-height,100dvh) - 8px);padding-bottom:max(17px,env(safe-area-inset-bottom))}.reservation-facts{grid-template-columns:1fr 1fr}.toast{bottom:15px}
+    }
+    @media(max-width:360px){.topbar-logo{width:82px}.demo-pill{font-size:9px}.reservation-facts{grid-template-columns:1fr}.reservation-brand-logo{min-width:0;flex:1}.month-card{padding:12px}.mini-calendar{gap:3px}.mini-day{min-height:36px}}
+    body.menu-open,body.dialog-open{overflow:hidden}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
   </style>
 </head>
 <body>
 <div class="app">
-  <aside class="sidebar" aria-label="Menú principal">
+  <aside id="sidebar" class="sidebar" aria-label="Menú principal">
+    <button id="closeMenu" class="menu-close" type="button" aria-label="Cerrar menú">×</button>
     <div class="brand"><div class="brand-symbol" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"></div></div>
     <nav class="nav" aria-label="Pantallas"><button type="button" id="navChat" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 0 1-8 8 8 8 0 0 1-4-.9L3 20l1.9-5A8 8 0 1 1 20 11Z"/></svg>Chat</button><button type="button" id="navCalendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg>Calendario</button></nav>
     <div class="side-foot"><strong>Prototipo de administración</strong>13 habitaciones reales del inventario. Fechas de ocupación simuladas.</div>
   </aside>
   <main class="main">
-    <header class="topbar"><div class="topbar-brand"><span class="topbar-logo" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"></span><span class="demo-pill">DEMOSTRACIÓN · SIN DATOS REALES DE RESERVAS</span></div><div class="user-chip"><span>Vista para administración</span><span class="avatar" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"><span class="avatar-logo" aria-hidden="true"></span></span></div></header>
+    <header class="topbar"><button id="menuToggle" class="menu-toggle" type="button" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><div class="topbar-brand"><span class="topbar-logo" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"></span><span class="demo-pill">DEMOSTRACIÓN · SIN DATOS REALES DE RESERVAS</span></div><div class="user-chip"><span>Vista para administración</span><span class="avatar" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"><span class="avatar-logo" aria-hidden="true"></span></span></div></header>
     <section id="chatView" class="view active" aria-label="Chat administrativo">
       <div class="chat-main">
         <div class="chat-welcome" id="chatWelcome"><div class="welcome-logo" role="img" aria-label="Logotipo oficial de Casa Huéspedes Pimentel"><span class="welcome-logo-mark" aria-hidden="true"></span></div><h1>¿En qué puedo ayudarte?</h1><p class="subtitle">Asistente de Casa Huéspedes Pimentel</p><div class="suggestions"><button class="suggestion" data-prompt="¿Qué habitaciones están disponibles hoy?">Consultar habitaciones disponibles hoy</button><button class="suggestion" data-prompt="Muéstrame las reservas de esta semana">Consultar reservas de esta semana</button><button class="suggestion" data-prompt="Quiero bloquear la habitación 205">Bloquear una habitación</button><button class="suggestion" data-prompt="Quiero registrar una reserva nueva">Registrar una nueva reserva</button></div></div>
@@ -173,7 +189,7 @@
     </section>
   </main>
 </div>
-<nav class="mobile-nav" aria-label="Navegación móvil"><button id="mobileChat" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 0 1-8 8 8 8 0 0 1-4-.9L3 20l1.9-5A8 8 0 1 1 20 11Z"/></svg>Chat</button><button id="mobileCalendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/></svg>Calendario</button></nav>
+<div id="menuBackdrop" class="menu-backdrop" hidden></div>
 <div id="reservationOverlay" class="reservation-overlay" aria-hidden="true">
   <section class="reservation-dialog" role="dialog" aria-modal="true" aria-labelledby="reservationTitle" aria-describedby="reservationDemoNote" tabindex="-1">
     <div class="reservation-brand-row">
@@ -267,7 +283,7 @@
   function safeText(value){return String(value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function roomCard(room,i){
     var state=stateForRoom(i,selected);
-    return '<article class="room-card" role="button" tabindex="0" aria-label="Habitación '+room[0]+', '+labels[state]+'. Pulsa para ver detalles" data-room="'+room[0]+'" data-day="'+dateKey(selected)+'" data-state="'+state+'" style="--stagger:'+Math.min(i,12)*32+'ms"><img class="room-photo" loading="lazy" src="'+photosByRoom[room[0]]+'" alt="Fotografía real de la habitación '+room[0]+'" /><div class="room-body"><div class="room-number">Habitación '+room[0]+'</div><div class="room-type">'+safeText(room[1])+'</div><div class="status '+state+'"><span aria-hidden="true">'+icons[state]+'</span>'+labels[state]+'</div><div class="room-meta">'+(state==='booked'?'Pulsa para ver el detalle de la reserva':formatDate(selected,{day:'numeric',month:'long'})+' · Estado de ejemplo')+'</div></div></article>';
+    return '<article class="room-card" role="button" tabindex="0" data-room="'+room[0]+'" data-day="'+dateKey(selected)+'" data-state="'+state+'" style="--stagger:'+Math.min(i,12)*32+'ms"><img class="room-photo" loading="lazy" decoding="async" src="'+photosByRoom[room[0]]+'" alt="Fotografía real de la habitación '+room[0]+'" /><div class="room-body"><div class="room-number">Habitación '+room[0]+'</div><div class="room-type">'+safeText(room[1])+'</div><div class="status '+state+'"><span aria-hidden="true">'+icons[state]+'</span>'+labels[state]+'</div><div class="room-meta">'+(state==='booked'?'Pulsa para ver el detalle de la reserva':formatDate(selected,{day:'numeric',month:'long'})+' · Estado de ejemplo')+'</div></div></article>';
   }
   function weekTable(){
     var monday=firstMonday(selected);
@@ -280,11 +296,23 @@
     });
     return html+'</tbody></table></div>';
   }
+  function weekCards(){
+    var monday=firstMonday(selected),html='<div class="week-mobile">';
+    rooms.forEach(function(room,i){
+      html+='<section class="week-card" aria-label="Habitación '+room[0]+'"><div class="week-card-heading"><strong>Habitación '+room[0]+'</strong><span>'+safeText(room[1])+'</span></div><div class="week-days">';
+      for(var j=0;j<7;j++){
+        var date=addDays(monday,j),state=stateForRoom(i,date);
+        html+='<button type="button" class="week-day '+state+'" data-slot="'+room[0]+'" data-day="'+dateKey(date)+'" data-state="'+state+'" aria-label="Habitación '+room[0]+', '+formatDate(date,{weekday:'long',day:'numeric',month:'long'})+': '+labels[state]+'"><span>'+formatDate(date,{weekday:'short'})+'</span><strong>'+date.getDate()+'</strong></button>';
+      }
+      html+='</div></section>';
+    });
+    return html+'</div>';
+  }
   function monthCards(){
     var first=new Date(selected.getFullYear(),selected.getMonth(),1,12),offset=(first.getDay()+6)%7;
     var last=new Date(selected.getFullYear(),selected.getMonth()+1,0,12).getDate();
     var html='<div class="month-grid">';
-    rooms.forEach(function(room,i){html+='<article class="month-card" style="--stagger:'+Math.min(i,12)*30+'ms"><div class="month-head"><img src="'+photosByRoom[room[0]]+'" loading="lazy" alt="Fotografía real de la habitación '+room[0]+'"><div class="month-name"><strong>Habitación '+room[0]+'</strong><small>'+safeText(room[1])+'</small></div></div><div class="mini-calendar">';
+    rooms.forEach(function(room,i){html+='<article class="month-card" style="--stagger:'+Math.min(i,12)*30+'ms"><div class="month-head"><img src="'+photosByRoom[room[0]]+'" loading="lazy" decoding="async" alt="Fotografía real de la habitación '+room[0]+'"><div class="month-name"><strong>Habitación '+room[0]+'</strong><small>'+safeText(room[1])+'</small></div></div><div class="mini-calendar">';
       ['L','M','X','J','V','S','D'].forEach(function(x){html+='<span class="mini-weekday">'+x+'</span>'});
       for(var k=0;k<offset;k++)html+='<span class="mini-day blank" aria-hidden="true"></span>';
       for(var n=1;n<=last;n++){var date=new Date(first.getFullYear(),first.getMonth(),n,12),s=stateForRoom(i,date);html+='<button type="button" class="mini-day '+s+(sameDay(date,today)?' today':'')+'" aria-label="Habitación '+room[0]+', '+formatDate(date,{day:'numeric',month:'long'})+': '+labels[s]+'" title="'+labels[s]+'" data-slot="'+room[0]+'" data-day="'+dateKey(date)+'" data-state="'+s+'">'+n+'</button>'}
@@ -295,7 +323,7 @@
   function revealCalendarImages(){
     uiCalendar.querySelectorAll('img').forEach(function(img){
       function reveal(){img.classList.add('image-loaded')}
-      function failed(){img.classList.add('image-failed')}
+      function failed(){img.classList.add('image-failed');img.parentElement.classList.add('photo-unavailable');img.style.display='none'}
       if(img.complete){if(img.naturalWidth>0)reveal();else failed()}
       else{img.addEventListener('load',reveal,{once:true});img.addEventListener('error',failed,{once:true})}
     });
@@ -306,7 +334,7 @@
     document.querySelectorAll('[data-mode]').forEach(function(b){var yes=b.dataset.mode===mode;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',String(yes))});
     uiCalendar.classList.remove('calendar-enter-up','calendar-enter-left','calendar-enter-right');
     if(mode==='today'){uiCalendar.innerHTML='<div class="rooms-grid">'+rooms.map(roomCard).join('')+'</div>';}
-    else if(mode==='week'){uiCalendar.innerHTML=weekTable();}
+    else if(mode==='week'){uiCalendar.innerHTML=weekTable()+weekCards();}
     else {uiCalendar.innerHTML=monthCards();}
     void uiCalendar.offsetWidth;
     uiCalendar.classList.add('calendar-enter-'+(['left','right'].includes(direction)?direction:'up'));
@@ -345,17 +373,25 @@
     document.getElementById('reservationGuests').textContent=(2+(seed%2))+' personas';
     document.getElementById('reservationRequests').textContent=requests[seed%requests.length];
     lastReservationTrigger=trigger||document.activeElement;
-    reservationOverlay.classList.add('open');reservationOverlay.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+    reservationOverlay.classList.add('open');reservationOverlay.setAttribute('aria-hidden','false');document.body.classList.add('dialog-open');
     document.getElementById('closeReservation').focus();
   }
   function closeReservationDetails(){
-    reservationOverlay.classList.remove('open');reservationOverlay.setAttribute('aria-hidden','true');document.body.style.overflow='';
+    reservationOverlay.classList.remove('open');reservationOverlay.setAttribute('aria-hidden','true');document.body.classList.remove('dialog-open');
     if(lastReservationTrigger&&typeof lastReservationTrigger.focus==='function')lastReservationTrigger.focus();
   }
   document.getElementById('closeReservation').addEventListener('click',closeReservationDetails);
   document.getElementById('closeReservationFooter').addEventListener('click',closeReservationDetails);
   reservationOverlay.addEventListener('click',function(e){if(e.target===reservationOverlay)closeReservationDetails()});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&reservationOverlay.classList.contains('open'))closeReservationDetails()});
+  document.addEventListener('keydown',function(e){
+    if(!reservationOverlay.classList.contains('open'))return;
+    if(e.key==='Escape'){closeReservationDetails();return}
+    if(e.key==='Tab'){
+      var controls=Array.from(reservationOverlay.querySelectorAll('button:not(:disabled)'));
+      if(e.shiftKey&&document.activeElement===controls[0]){e.preventDefault();controls[controls.length-1].focus()}
+      else if(!e.shiftKey&&document.activeElement===controls[controls.length-1]){e.preventDefault();controls[0].focus()}
+    }
+  });
   function activateReservationTarget(target){
     if(target.matches('[data-room]')){openReservationDetails(target.dataset.room,target.dataset.day,target);return}
     if(target.matches('[data-slot]')){
@@ -365,21 +401,54 @@
   }
   uiCalendar.addEventListener('click',function(e){var target=e.target.closest('[data-room],[data-slot]');if(target)activateReservationTarget(target)});
   uiCalendar.addEventListener('keydown',function(e){var target=e.target.closest('[data-room]');if(target&&(e.key==='Enter'||e.key===' ')){e.preventDefault();activateReservationTarget(target)}});
-  document.querySelectorAll('[data-mode]').forEach(function(b){b.addEventListener('click',function(){mode=b.dataset.mode;renderCalendar('up')})});
-  document.getElementById('prevDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,-1):mode==='week'?addDays(selected,-7):new Date(selected.getFullYear(),selected.getMonth()-1,Math.min(selected.getDate(),28),12);renderCalendar('left')});
-  document.getElementById('nextDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,1):mode==='week'?addDays(selected,7):new Date(selected.getFullYear(),selected.getMonth()+1,Math.min(selected.getDate(),28),12);renderCalendar('right')});
+  document.querySelectorAll('[data-mode]').forEach(function(b){b.addEventListener('click',function(){mode=b.dataset.mode;renderCalendar('up');window.scrollTo({top:0,behavior:'instant'})})});
+  document.getElementById('prevDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,-1):mode==='week'?addDays(selected,-7):new Date(selected.getFullYear(),selected.getMonth()-1,1,12);renderCalendar('left')});
+  document.getElementById('nextDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,1):mode==='week'?addDays(selected,7):new Date(selected.getFullYear(),selected.getMonth()+1,1,12);renderCalendar('right')});
   document.getElementById('jumpToday').addEventListener('click',function(){selected=new Date(today);renderCalendar('up')});
   function setScreen(screen){
     var isChat=screen==='chat';
     document.getElementById('chatView').classList.toggle('active',isChat);
     document.getElementById('calendarView').classList.toggle('active',!isChat);
-    [['navChat',isChat],['navCalendar',!isChat],['mobileChat',isChat],['mobileCalendar',!isChat]].forEach(function(x){var b=document.getElementById(x[0]);b.classList.toggle('active',x[1]);if(x[1])b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+    document.body.classList.toggle('chat-screen',isChat);
+    [['navChat',isChat],['navCalendar',!isChat]].forEach(function(x){var b=document.getElementById(x[0]);b.classList.toggle('active',x[1]);if(x[1])b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+    closeMenu(false);
     window.scrollTo({top:0,behavior:'instant'});if(!isChat)renderCalendar('up');
   }
+  var sidebar=document.getElementById('sidebar'),menuToggle=document.getElementById('menuToggle'),menuBackdrop=document.getElementById('menuBackdrop');
+  var menuQuery=window.matchMedia('(max-width:980px)');
+  function syncMenuAccessibility(){sidebar.inert=menuQuery.matches&&!sidebar.classList.contains('open')}
+  function closeMenu(restoreFocus){
+    var wasOpen=sidebar.classList.contains('open');sidebar.classList.remove('open');menuBackdrop.hidden=true;
+    document.body.classList.remove('menu-open');menuToggle.setAttribute('aria-expanded','false');menuToggle.setAttribute('aria-label','Abrir menú');syncMenuAccessibility();
+    if(restoreFocus&&wasOpen)menuToggle.focus();
+  }
+  function openMenu(){
+    sidebar.classList.add('open');menuBackdrop.hidden=false;document.body.classList.add('menu-open');
+    menuToggle.setAttribute('aria-expanded','true');menuToggle.setAttribute('aria-label','Cerrar menú');syncMenuAccessibility();
+    document.getElementById('closeMenu').focus();
+  }
+  menuToggle.addEventListener('click',function(){sidebar.classList.contains('open')?closeMenu(true):openMenu()});
+  document.getElementById('closeMenu').addEventListener('click',function(){closeMenu(true)});
+  menuBackdrop.addEventListener('click',function(){closeMenu(true)});
+  document.addEventListener('keydown',function(e){
+    if(!sidebar.classList.contains('open')||reservationOverlay.classList.contains('open'))return;
+    if(e.key==='Escape'){closeMenu(true);return}
+    if(e.key==='Tab'){
+      var controls=Array.from(sidebar.querySelectorAll('button'));
+      if(e.shiftKey&&document.activeElement===controls[0]){e.preventDefault();controls[controls.length-1].focus()}
+      else if(!e.shiftKey&&document.activeElement===controls[controls.length-1]){e.preventDefault();controls[0].focus()}
+    }
+  });
+  menuQuery.addEventListener('change',function(){closeMenu(false)});syncMenuAccessibility();
+  function syncViewport(){
+    var viewport=window.visualViewport;
+    document.documentElement.style.setProperty('--app-viewport-height',(viewport?viewport.height:window.innerHeight)+'px');
+    document.documentElement.style.setProperty('--viewport-offset-top',(viewport?viewport.offsetTop:0)+'px');
+  }
+  if(window.visualViewport){window.visualViewport.addEventListener('resize',syncViewport);window.visualViewport.addEventListener('scroll',syncViewport)}
+  window.addEventListener('resize',syncViewport);syncViewport();document.body.classList.add('chat-screen');
   document.getElementById('navChat').onclick=function(){setScreen('chat')};
   document.getElementById('navCalendar').onclick=function(){setScreen('calendar')};
-  document.getElementById('mobileChat').onclick=function(){setScreen('chat')};
-  document.getElementById('mobileCalendar').onclick=function(){setScreen('calendar')};
   var messages=document.getElementById('messages'),composer=document.getElementById('chatInput');
   var pendingIntent=null;
   function addMessage(text,who){
@@ -421,6 +490,11 @@
       var index=roomIndexByNumber(action.room),start=dateFromKey(action.date);
       if(index<0){card.remove();addMessage('No se aplicó el cambio: la habitación no pertenece al inventario activo.','assistant');return}
       var count=action.type==='booking'?action.nights:1;
+      for(var check=0;check<count;check++){
+        var current=getState(index,addDays(start,check));
+        var valid=action.type==='booking'?current==='available':action.type==='block'?current==='available':current==='booked'||current==='blocked';
+        if(!valid){card.remove();addMessage('No se aplicó el cambio: el estado de ejemplo ya no permite esta acción. Consulta nuevamente la habitación y la fecha.','assistant');return}
+      }
       for(var n=0;n<count;n++){
         var key=action.room+'|'+dateKey(addDays(start,n));
         if(action.type==='block')manualStates[key]='blocked';
@@ -455,18 +529,21 @@
       return {text:'Puedo preparar la reserva. Revisa el resumen y confirma para verla reflejada en el calendario simulado.',action:{type:'booking',room:roomNumber,date:dateKey(date),nights:nights,summary:'Habitación '+roomNumber+' · llegada '+formatLongDate(date)+' · '+nights+' noche(s) · 2 adultos de ejemplo'}};
     }
     if(state==='available')return {text:'La habitación '+roomNumber+' ya aparece disponible para el '+formatLongDate(date)+'.'};
+    if(state==='maintenance')return {text:'La habitación '+roomNumber+' figura en mantenimiento para esa fecha. No se puede liberar desde esta demostración.'};
     return {text:'He preparado la liberación de la habitación. Confirma para actualizar únicamente el calendario de demostración.',action:{type:'release',room:roomNumber,date:dateKey(date),nights:1,summary:'Habitación '+roomNumber+' · '+formatLongDate(date)+' · Liberación local de ejemplo'}};
   }
   function respond(text){
     var s=text.toLowerCase(),roomMatch=s.match(/\b(101|201|202|203|205|301|302|303|304|305|405|407|505|406)\b/);
     var date=parseDemoDate(s),hasDate=!!date;
     if(pendingIntent){
-      var intent=pendingIntent;pendingIntent=null;
-      if(!roomMatch)return 'Para continuar, dime el número de habitación. Las habitaciones activas son 101, 201, 202, 203, 205, 301, 302, 303, 304, 305, 405, 407 y 505.';
-      if(roomMatch[1]==='406')return 'La habitación 406 está inactiva y excluida del inventario de reservas. El alojamiento opera con 13 habitaciones activas.';
-      if(!hasDate)return '¿Para qué fecha? Puedes indicar «hoy», «mañana» o una fecha como «30 de octubre».';
-      var pendingNights=Number((s.match(/\b([1-7])\s+noches?\b/)||[])[1]||1);
-      return prepareAction(intent,roomMatch[1],date,pendingNights);
+      if(/^(cancelar|olvidar|salir)$/.test(s.trim())){pendingIntent=null;return 'Solicitud cancelada. No se realizó ningún cambio en esta demostración.';}
+      var intent=pendingIntent.type,room=roomMatch?roomMatch[1]:pendingIntent.room;
+      if(!room)return 'Para continuar, dime el número de habitación. Las habitaciones activas son 101, 201, 202, 203, 205, 301, 302, 303, 304, 305, 405, 407 y 505.';
+      if(room==='406')return 'La habitación 406 está inactiva y excluida del inventario de reservas. El alojamiento opera con 13 habitaciones activas.';
+      if(!hasDate){pendingIntent={type:intent,room:room,nights:Number((s.match(/\b([1-7])\s+noches?\b/)||[])[1]||pendingIntent.nights||1)};return '¿Para qué fecha? Puedes indicar «hoy», «mañana» o una fecha como «30 de octubre».';}
+      var pendingNights=Number((s.match(/\b([1-7])\s+noches?\b/)||[])[1]||pendingIntent.nights||1);
+      pendingIntent=null;
+      return prepareAction(intent,room,date,pendingNights);
     }
     if(roomMatch&&roomMatch[1]==='406')return 'La habitación 406 está inactiva y excluida del inventario de reservas. Por eso no aparece entre las 13 habitaciones operativas.';
     if(/precio|precios|tarifa|tarifas|cu[aá]nto cuesta/.test(s)){
@@ -500,19 +577,19 @@
       }
       return 'Para el '+formatLongDate(availabilityDate)+', la demostración muestra '+free.length+' habitaciones disponibles: '+free.map(function(room){return room[0]}).join(', ')+'.\n\nPuedes abrir Calendario para revisar el estado de las 13 habitaciones. La disponibilidad real se consultará desde Beds24 cuando se active la integración.';
     }
-    if(/bloquea|bloquear|bloqueo|cierra la habitaci[oó]n/.test(s)){
-      if(!roomMatch){pendingIntent='block';return 'Claro. ¿Qué habitación deseas bloquear y para qué fecha? Por ejemplo: «205 mañana». La habitación 406 está excluida del inventario activo.';}
-      if(!hasDate)return '¿Para qué fecha deseas bloquear la habitación '+roomMatch[1]+'? Puedes indicar «hoy», «mañana» o una fecha concreta.';
-      return prepareAction('block',roomMatch[1],date,1);
-    }
     if(/desbloquea|libera|cancelar reserva|cancela la reserva/.test(s)){
-      if(!roomMatch){pendingIntent='release';return '¿Qué habitación deseas liberar y para qué fecha? Por ejemplo: «205 mañana».';}
-      if(!hasDate)return '¿Para qué fecha deseas liberar la habitación '+roomMatch[1]+'?';
+      if(!roomMatch){pendingIntent={type:'release'};return '¿Qué habitación deseas liberar y para qué fecha? Por ejemplo: «205 mañana».';}
+      if(!hasDate){pendingIntent={type:'release',room:roomMatch[1]};return '¿Para qué fecha deseas liberar la habitación '+roomMatch[1]+'?';}
       return prepareAction('release',roomMatch[1],date,1);
     }
+    if(/bloquea|bloquear|bloqueo|cierra la habitaci[oó]n/.test(s)){
+      if(!roomMatch){pendingIntent={type:'block'};return 'Claro. ¿Qué habitación deseas bloquear y para qué fecha? Por ejemplo: «205 mañana». La habitación 406 está excluida del inventario activo.';}
+      if(!hasDate){pendingIntent={type:'block',room:roomMatch[1]};return '¿Para qué fecha deseas bloquear la habitación '+roomMatch[1]+'? Puedes indicar «hoy», «mañana» o una fecha concreta.';}
+      return prepareAction('block',roomMatch[1],date,1);
+    }
     if(/reserva|reservar|registra|registrar/.test(s)){
-      if(!roomMatch){pendingIntent='booking';return 'Para preparar una reserva necesito el número de habitación y la fecha de llegada. Por ejemplo: «Reserva la habitación 205 para mañana por 2 noches».';}
-      if(!hasDate)return '¿Cuál es la fecha de llegada para la habitación '+roomMatch[1]+'?';
+      if(!roomMatch){pendingIntent={type:'booking'};return 'Para preparar una reserva necesito el número de habitación y la fecha de llegada. Por ejemplo: «Reserva la habitación 205 para mañana por 2 noches».';}
+      if(!hasDate){pendingIntent={type:'booking',room:roomMatch[1],nights:Number((s.match(/\b([1-7])\s+noches?\b/)||[])[1]||1)};return '¿Cuál es la fecha de llegada para la habitación '+roomMatch[1]+'?';}
       var nights=Number((s.match(/\b([1-7])\s+noches?\b/)||[])[1]||1);
       return prepareAction('booking',roomMatch[1],date,nights);
     }
