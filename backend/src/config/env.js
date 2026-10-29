@@ -69,6 +69,9 @@ export const env = {
     timeZone: cleanEnvValue(process.env.AI_SERVICE_TIMEZONE) || "America/Lima",
     serviceStart: cleanEnvValue(process.env.AI_SERVICE_START) || "23:00",
     serviceEnd: cleanEnvValue(process.env.AI_SERVICE_END) || "08:00",
+    // Seguridad: solo habilitar reservas por WhatsApp con inventario externo conciliado.
+    whatsappDirectBookingEnabled: cleanEnvValue(process.env.WHATSAPP_DIRECT_BOOKING_ENABLED).toLowerCase() === "true",
+    channelInventoryVerified: cleanEnvValue(process.env.HOTEL_CHANNEL_INVENTORY_VERIFIED).toLowerCase() === "true",
   },
 
   hotel: {
