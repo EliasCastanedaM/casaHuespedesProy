@@ -36,6 +36,70 @@
     .month-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:17px}.month-card{padding:18px;border-radius:16px;border:1px solid var(--line);background:white;box-shadow:0 6px 22px #173b590b}.month-head{display:flex;align-items:center;gap:12px;margin-bottom:13px}.month-head img{width:60px;height:56px;object-fit:cover;border-radius:9px}.month-name strong{font-size:21px;color:var(--navy)}.month-name small{display:block;font-size:13px;color:var(--muted);margin-top:3px}.mini-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.mini-weekday{font-size:12px;text-align:center;font-weight:800;color:#57718b;padding:5px 0}.mini-day{aspect-ratio:1;border-radius:6px;border:1px solid #dce5ed;background:#fff;color:var(--navy);display:grid;place-items:center;font-size:12px;font-weight:800;padding:0}.mini-day.blank{border-color:transparent;background:transparent}.mini-day.available{background:var(--green);border-color:#bce6c9}.mini-day.booked{background:#8cbaf3;border-color:#75aaf0}.mini-day.blocked{background:#f5acb4;border-color:#ed9da7}.mini-day.maintenance{background:#cad3dc;border-color:#b5c1cd}.mini-day.today{outline:2px solid #173b5f;outline-offset:1px}
     .mobile-nav{display:none}.sr-only{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden;white-space:nowrap}
     .toast{position:fixed;right:25px;bottom:22px;background:var(--navy);color:white;padding:15px 18px;max-width:min(400px,85vw);border-radius:13px;box-shadow:0 12px 30px #061a2c4b;font-size:15px;z-index:15;display:none}.toast.show{display:block}
+    /* Movimiento editorial: refinado, breve y accesible */
+    :root{--motion-ease:cubic-bezier(.2,.75,.2,1);--motion-fast:180ms;--motion-medium:300ms}
+    @keyframes screenReveal{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes sidebarReveal{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes logoReveal{0%{opacity:0;transform:translateY(7px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes messageReveal{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes cardReveal{from{opacity:0;transform:translateY(11px) scale(.992)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes rowReveal{from{opacity:0;transform:translateX(5px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes calendarFromLeft{from{opacity:0;transform:translateX(-9px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes calendarFromRight{from{opacity:0;transform:translateX(9px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes calendarFromUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes dotPulse{0%,80%,100%{opacity:.38;transform:scale(.72)}40%{opacity:1;transform:scale(1)}}
+    .sidebar{animation:sidebarReveal .42s var(--motion-ease) both}
+    .brand-symbol{animation:logoReveal .48s .06s var(--motion-ease) both}
+    .topbar{animation:screenReveal .35s .04s var(--motion-ease) both}
+    .view.active{animation:screenReveal .32s var(--motion-ease) both}
+    .nav button{position:relative;overflow:hidden;transition:background-color .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease}
+    .nav button::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 4px 4px 0;background:#c3ddf5;transform:scaleY(0);transition:transform .22s var(--motion-ease)}
+    .nav button.active::before{transform:scaleY(1)}
+    .welcome-logo{animation:logoReveal .48s .05s var(--motion-ease) both}
+    .chat-welcome h1{animation:screenReveal .42s .08s var(--motion-ease) both}
+    .chat-welcome>.subtitle{animation:screenReveal .42s .13s var(--motion-ease) both}
+    .suggestion{transition:transform .22s var(--motion-ease),box-shadow .22s ease,border-color .22s ease,background-color .22s ease}
+    .suggestion:nth-child(1){animation:cardReveal .38s .14s var(--motion-ease) both}
+    .suggestion:nth-child(2){animation:cardReveal .38s .19s var(--motion-ease) both}
+    .suggestion:nth-child(3){animation:cardReveal .38s .24s var(--motion-ease) both}
+    .suggestion:nth-child(4){animation:cardReveal .38s .29s var(--motion-ease) both}
+    .composer{transition:border-color .22s ease,box-shadow .22s ease}
+    .composer:focus-within{border-color:#789dbd;box-shadow:0 0 0 4px #6288a51a,0 8px 26px #19395310}
+    .send{transition:transform .18s var(--motion-ease),background-color .18s ease,box-shadow .18s ease}
+    .message{animation:messageReveal .24s var(--motion-ease) both}
+    .typing-message{display:flex;align-items:center;gap:11px;color:#526980}
+    .typing-dots{display:inline-flex;align-items:center;gap:4px;flex:none}
+    .typing-dots i{display:block;width:7px;height:7px;background:#6288a5;border-radius:50%;animation:dotPulse 1.05s ease-in-out infinite}
+    .typing-dots i:nth-child(2){animation-delay:.14s}.typing-dots i:nth-child(3){animation-delay:.28s}
+    .calendar-title{animation:screenReveal .36s .04s var(--motion-ease) both}
+    .cal-tabs{box-shadow:inset 0 1px 1px #142f4708}
+    .cal-tabs button{transition:background-color .2s ease,color .2s ease,box-shadow .2s ease,transform .18s var(--motion-ease)}
+    .btn-outline{transition:background-color .18s ease,border-color .18s ease,transform .18s var(--motion-ease),box-shadow .18s ease}
+    .legend i{box-shadow:inset 0 0 0 1px #10263f0b}
+    .room-card,.month-card{animation:cardReveal .42s var(--motion-ease) both;animation-delay:var(--stagger,0ms);transition:transform .22s var(--motion-ease),box-shadow .22s ease,border-color .22s ease}
+    .room-photo,.month-head img{opacity:0;transition:opacity .34s ease,transform .42s var(--motion-ease)}
+    .room-photo.image-loaded,.room-photo.image-failed,.month-head img.image-loaded,.month-head img.image-failed{opacity:1}
+    .status{transition:background-color .22s ease,color .22s ease}
+    .week-table tbody tr{animation:rowReveal .3s var(--motion-ease) both;animation-delay:var(--stagger,0ms)}
+    .slot,.mini-day{transition:transform .16s var(--motion-ease),box-shadow .16s ease,border-color .16s ease}
+    .mini-day.today{box-shadow:0 0 0 2px var(--navy);font-weight:950}
+    .mobile-nav button{transition:background-color .2s ease,color .2s ease,transform .18s var(--motion-ease),box-shadow .2s ease}
+    #calendarContent.calendar-enter-up{animation:calendarFromUp .28s var(--motion-ease) both}
+    #calendarContent.calendar-enter-left{animation:calendarFromLeft .28s var(--motion-ease) both}
+    #calendarContent.calendar-enter-right{animation:calendarFromRight .28s var(--motion-ease) both}
+    @media(hover:hover) and (pointer:fine){
+      .nav button:hover:not(.active){background:#ffffff17;transform:translateX(2px)}
+      .suggestion:hover{transform:translateY(-2px);box-shadow:0 8px 20px #173b5910}
+      .send:hover{background:#214d72;box-shadow:0 5px 14px #10263f24;transform:translateY(-1px)}
+      .btn-outline:hover{background:#f3f8fc;border-color:#9eb9d0;box-shadow:0 3px 10px #173b590b;transform:translateY(-1px)}
+      .cal-tabs button:hover:not(.active){background:#dce6ef}
+      .room-card:hover,.month-card:hover{transform:translateY(-3px);border-color:#c4d5e4;box-shadow:0 12px 28px #173b5913}
+      .room-card:hover .room-photo{transform:scale(1.035)}
+      .month-head img:hover{transform:scale(1.035)}
+      .slot:hover,.mini-day:hover{transform:scale(1.045);box-shadow:0 3px 9px #10263f18;border-color:#52799d}
+      .mobile-nav button:hover{box-shadow:0 4px 12px #173b5910}
+    }
+    button:active:not(:disabled){transform:scale(.985)}
     @media(max-width:980px){.app{grid-template-columns:190px minmax(0,1fr)}.sidebar{padding:24px 12px}.main{padding:22px}.rooms-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}.calendar-head{gap:14px}}
     @media(max-width:680px){.app{display:block}.sidebar{display:none}.main{padding:18px 15px calc(96px + env(safe-area-inset-bottom));min-height:100dvh}.topbar{margin-bottom:18px}.user-chip span:last-child{display:none}.demo-pill{font-size:11px;padding:7px 9px}.avatar{width:34px;height:34px}.calendar-head{display:block;margin-bottom:15px}.calendar-head h1{font-size:31px}.subtitle{font-size:16px}.cal-tabs{margin-top:19px;display:grid;grid-template-columns:repeat(3,1fr);width:100%}.cal-tabs button{padding:10px 5px;font-size:17px}.calendar-tools{align-items:flex-start;gap:12px}.date-switch{width:100%;justify-content:space-between}.date-heading{min-width:0;flex:1;font-size:17px}.legend{gap:9px 13px;font-size:13px}.rooms-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.room-photo{height:95px}.room-body{padding:11px}.room-number{font-size:24px}.room-type{font-size:13px;min-height:38px}.status{font-size:15px;min-height:58px;padding:9px 8px;gap:5px}.status svg{width:17px;height:17px}.room-meta{font-size:12px}.month-grid{grid-template-columns:1fr}.mini-day{font-size:14px}.mobile-nav{position:fixed;bottom:0;left:0;right:0;padding:9px 14px calc(9px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr;gap:10px;background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -6px 18px #173b5a12;z-index:8}.mobile-nav button{min-height:53px;background:#f0f5fa;color:var(--navy);border:0;border-radius:12px;font-size:17px;font-weight:850;display:flex;gap:9px;align-items:center;justify-content:center}.mobile-nav button.active{background:var(--navy);color:white}.mobile-nav svg{width:21px;height:21px}.chat-main{width:100%;padding:8px 0;min-height:calc(100dvh - 185px)}.chat-welcome{margin:auto 0 20px}.welcome-logo{width:67px;height:67px;font-size:28px}.chat-welcome h1{font-size:30px}.suggestions{grid-template-columns:1fr;gap:9px;margin-top:24px}.suggestion{min-height:53px;padding:12px 16px;font-size:15px}.messages{max-height:calc(100dvh - 315px)}.message{font-size:16px;max-width:94%}.composer-wrap{padding-top:9px}.composer{padding:7px 7px 7px 12px}.composer textarea{font-size:16px}.send{height:47px;width:47px;flex-basis:47px}.toast{bottom:95px;right:12px}}
     @media(max-width:390px){.rooms-grid{grid-template-columns:1fr}.room-photo{height:135px}.room-type{min-height:0}.date-heading{font-size:15px}.btn-outline{padding:0 10px}.calendar-head h1{font-size:27px}}
@@ -133,14 +197,14 @@
   function safeText(value){return String(value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function roomCard(room,i){
     var state=stateForRoom(i,selected);
-    return '<article class="room-card"><img class="room-photo" loading="lazy" src="'+photosByRoom[room[0]]+'" alt="Fotografía real de la habitación '+room[0]+'" /><div class="room-body"><div class="room-number">Habitación '+room[0]+'</div><div class="room-type">'+safeText(room[1])+'</div><div class="status '+state+'"><span aria-hidden="true">'+icons[state]+'</span>'+labels[state]+'</div><div class="room-meta">'+formatDate(selected,{day:'numeric',month:'long'})+' · Estado de ejemplo</div></div></article>';
+    return '<article class="room-card" style="--stagger:'+Math.min(i,12)*32+'ms"><img class="room-photo" loading="lazy" src="'+photosByRoom[room[0]]+'" alt="Fotografía real de la habitación '+room[0]+'" /><div class="room-body"><div class="room-number">Habitación '+room[0]+'</div><div class="room-type">'+safeText(room[1])+'</div><div class="status '+state+'"><span aria-hidden="true">'+icons[state]+'</span>'+labels[state]+'</div><div class="room-meta">'+formatDate(selected,{day:'numeric',month:'long'})+' · Estado de ejemplo</div></div></article>';
   }
   function weekTable(){
     var monday=firstMonday(selected);
     var html='<div class="week-scroller"><table class="week-table"><thead><tr><th scope="col">Habitación</th>';
     for(var j=0;j<7;j++){var day=addDays(monday,j);html+='<th scope="col"><span class="day-name">'+formatDate(day,{weekday:'short'})+'</span><span class="day-num">'+day.getDate()+'</span></th>'}
     html+='</tr></thead><tbody>';
-    rooms.forEach(function(room,i){html+='<tr><td><span class="room-id">'+room[0]+'</span><span class="room-sub">'+safeText(room[1])+'</span></td>';
+    rooms.forEach(function(room,i){html+='<tr style="--stagger:'+Math.min(i,12)*22+'ms"><td><span class="room-id">'+room[0]+'</span><span class="room-sub">'+safeText(room[1])+'</span></td>';
       for(var k=0;k<7;k++){var d=addDays(monday,k),s=stateForRoom(i,d);html+='<td><button type="button" class="slot '+s+'" title="Habitación '+room[0]+' · '+formatDate(d,{day:'numeric',month:'long'})+': '+labels[s]+'" aria-label="Habitación '+room[0]+', '+formatDate(d,{weekday:'long',day:'numeric',month:'long'})+': '+labels[s]+'" data-slot="'+room[0]+'" data-day="'+dateKey(d)+'" data-state="'+s+'"></button></td>';}
       html+='</tr>';
     });
@@ -150,7 +214,7 @@
     var first=new Date(selected.getFullYear(),selected.getMonth(),1,12),offset=(first.getDay()+6)%7;
     var last=new Date(selected.getFullYear(),selected.getMonth()+1,0,12).getDate();
     var html='<div class="month-grid">';
-    rooms.forEach(function(room,i){html+='<article class="month-card"><div class="month-head"><img src="'+photosByRoom[room[0]]+'" loading="lazy" alt="Fotografía real de la habitación '+room[0]+'"><div class="month-name"><strong>Habitación '+room[0]+'</strong><small>'+safeText(room[1])+'</small></div></div><div class="mini-calendar">';
+    rooms.forEach(function(room,i){html+='<article class="month-card" style="--stagger:'+Math.min(i,12)*30+'ms"><div class="month-head"><img src="'+photosByRoom[room[0]]+'" loading="lazy" alt="Fotografía real de la habitación '+room[0]+'"><div class="month-name"><strong>Habitación '+room[0]+'</strong><small>'+safeText(room[1])+'</small></div></div><div class="mini-calendar">';
       ['L','M','X','J','V','S','D'].forEach(function(x){html+='<span class="mini-weekday">'+x+'</span>'});
       for(var k=0;k<offset;k++)html+='<span class="mini-day blank" aria-hidden="true"></span>';
       for(var n=1;n<=last;n++){var date=new Date(first.getFullYear(),first.getMonth(),n,12),s=stateForRoom(i,date);html+='<button type="button" class="mini-day '+s+(sameDay(date,today)?' today':'')+'" aria-label="Habitación '+room[0]+', '+formatDate(date,{day:'numeric',month:'long'})+': '+labels[s]+'" title="'+labels[s]+'" data-slot="'+room[0]+'" data-day="'+dateKey(date)+'" data-state="'+s+'">'+n+'</button>'}
@@ -158,25 +222,37 @@
     });
     return html+'</div>';
   }
-  function renderCalendar(){
+  function revealCalendarImages(){
+    uiCalendar.querySelectorAll('img').forEach(function(img){
+      function reveal(){img.classList.add('image-loaded')}
+      function failed(){img.classList.add('image-failed')}
+      if(img.complete){if(img.naturalWidth>0)reveal();else failed()}
+      else{img.addEventListener('load',reveal,{once:true});img.addEventListener('error',failed,{once:true})}
+    });
+  }
+  function renderCalendar(direction){
     var label=mode==='today'?formatDate(selected,{weekday:'long',day:'numeric',month:'long',year:'numeric'}):mode==='week'?'Semana del '+formatDate(firstMonday(selected),{day:'numeric',month:'short'})+' al '+formatDate(addDays(firstMonday(selected),6),{day:'numeric',month:'short',year:'numeric'}):formatDate(selected,{month:'long',year:'numeric'});
     document.getElementById('dateLabel').textContent=label.charAt(0).toUpperCase()+label.slice(1);
     document.querySelectorAll('[data-mode]').forEach(function(b){var yes=b.dataset.mode===mode;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',String(yes))});
+    uiCalendar.classList.remove('calendar-enter-up','calendar-enter-left','calendar-enter-right');
     if(mode==='today'){uiCalendar.innerHTML='<div class="rooms-grid">'+rooms.map(roomCard).join('')+'</div>';}
     else if(mode==='week'){uiCalendar.innerHTML=weekTable();}
     else {uiCalendar.innerHTML=monthCards();}
+    void uiCalendar.offsetWidth;
+    uiCalendar.classList.add('calendar-enter-'+(['left','right'].includes(direction)?direction:'up'));
+    revealCalendarImages();
   }
   uiCalendar.addEventListener('click',function(e){var b=e.target.closest('[data-slot]');if(b){toast('Habitación '+b.dataset.slot+' · '+b.dataset.day+': '+labels[b.dataset.state]+'. Estado de demostración.')}});
-  document.querySelectorAll('[data-mode]').forEach(function(b){b.addEventListener('click',function(){mode=b.dataset.mode;renderCalendar()})});
-  document.getElementById('prevDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,-1):mode==='week'?addDays(selected,-7):new Date(selected.getFullYear(),selected.getMonth()-1,Math.min(selected.getDate(),28),12);renderCalendar()});
-  document.getElementById('nextDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,1):mode==='week'?addDays(selected,7):new Date(selected.getFullYear(),selected.getMonth()+1,Math.min(selected.getDate(),28),12);renderCalendar()});
-  document.getElementById('jumpToday').addEventListener('click',function(){selected=new Date(today);renderCalendar()});
+  document.querySelectorAll('[data-mode]').forEach(function(b){b.addEventListener('click',function(){mode=b.dataset.mode;renderCalendar('up')})});
+  document.getElementById('prevDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,-1):mode==='week'?addDays(selected,-7):new Date(selected.getFullYear(),selected.getMonth()-1,Math.min(selected.getDate(),28),12);renderCalendar('left')});
+  document.getElementById('nextDate').addEventListener('click',function(){selected=mode==='today'?addDays(selected,1):mode==='week'?addDays(selected,7):new Date(selected.getFullYear(),selected.getMonth()+1,Math.min(selected.getDate(),28),12);renderCalendar('right')});
+  document.getElementById('jumpToday').addEventListener('click',function(){selected=new Date(today);renderCalendar('up')});
   function setScreen(screen){
     var isChat=screen==='chat';
     document.getElementById('chatView').classList.toggle('active',isChat);
     document.getElementById('calendarView').classList.toggle('active',!isChat);
     [['navChat',isChat],['navCalendar',!isChat],['mobileChat',isChat],['mobileCalendar',!isChat]].forEach(function(x){var b=document.getElementById(x[0]);b.classList.toggle('active',x[1]);if(x[1])b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
-    window.scrollTo({top:0,behavior:'instant'});if(!isChat)renderCalendar();
+    window.scrollTo({top:0,behavior:'instant'});if(!isChat)renderCalendar('up');
   }
   document.getElementById('navChat').onclick=function(){setScreen('chat')};
   document.getElementById('navCalendar').onclick=function(){setScreen('calendar')};
@@ -200,9 +276,13 @@
   }
   function send(text){
     var query=text.trim();if(!query)return;
-    addMessage(query,'user');composer.value='';addMessage(respond(query),'assistant');
+    addMessage(query,'user');composer.value='';composer.style.height='auto';
+    var pending=document.createElement('div');pending.className='message assistant typing-message';pending.setAttribute('aria-label','Preparando respuesta de demostración');pending.innerHTML='<span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Preparando respuesta de demostración…</span>';
+    messages.appendChild(pending);messages.classList.add('has-messages');document.getElementById('chatWelcome').style.display='none';messages.scrollTop=messages.scrollHeight;
+    window.setTimeout(function(){pending.classList.remove('typing-message');pending.removeAttribute('aria-label');pending.textContent=respond(query);messages.scrollTop=messages.scrollHeight;},420);
   }
   document.getElementById('chatForm').addEventListener('submit',function(e){e.preventDefault();send(composer.value)});
+  composer.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,135)+'px'});
   composer.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(composer.value)}});
   document.querySelectorAll('[data-prompt]').forEach(function(b){b.addEventListener('click',function(){send(b.dataset.prompt)})});
   renderCalendar();
