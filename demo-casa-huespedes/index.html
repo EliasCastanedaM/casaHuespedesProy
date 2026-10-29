@@ -424,7 +424,7 @@
         else if(action.type==='booking')manualStates[key]='booked';
         else manualStates[key]='available';
       }
-      card.remove();renderCalendar('up');
+      card.remove();selected=new Date(start);renderCalendar('up');
       if(action.type==='block')addMessage('Bloqueo aplicado únicamente en esta demostración: habitación '+action.room+' · '+formatLongDate(start)+'. No se modificó Beds24 ni Booking.com.','assistant');
       else if(action.type==='booking')addMessage('Reserva de ejemplo registrada en el calendario local: habitación '+action.room+' · '+action.nights+' noche(s). En producción se validaría y registraría en Beds24 tras la confirmación autorizada.','assistant');
       else addMessage('La habitación '+action.room+' aparece liberada en el calendario de demostración. No se modificó ningún sistema real.','assistant');
