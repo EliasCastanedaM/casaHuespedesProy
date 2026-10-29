@@ -33,6 +33,7 @@ import {
   handleDeterministicBookingFlow,
   isNewReservationIntent,
   isReservationIntent,
+  isQuotationIntent,
   isWhatsAppBookingStep,
   mergeAvailabilityIntoBookingContext,
 } from "./ai.booking-flow.js";
@@ -599,7 +600,7 @@ async function generateAiReplyInternal({
 
   // Las excepciones de Instagram y Facebook siguen con sus reglas de revisión.
   const specialQuoteReason = requiresManualReview(message, {
-    hasReservationIntent: isReservationIntent(message) || isCategoryPriceInquiry(message),
+    hasReservationIntent: isReservationIntent(message) || isQuotationIntent(message) || isCategoryPriceInquiry(message),
   });
   if (specialQuoteReason) {
     return { reply: humanReviewReply(specialQuoteReason, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
