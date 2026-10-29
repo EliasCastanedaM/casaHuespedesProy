@@ -239,7 +239,10 @@
   function sameDay(a,b){return dateKey(a)===dateKey(b)}
   function formatDate(d,opts){return new Intl.DateTimeFormat('es-PE',opts).format(d)}
   function firstMonday(d){var n=(d.getDay()+6)%7;return addDays(d,-n)}
+  var manualStates={};
   function getState(roomIndex,d){
+    var overrideKey=rooms[roomIndex][0]+'|'+dateKey(d);
+    if(Object.prototype.hasOwnProperty.call(manualStates,overrideKey))return manualStates[overrideKey];
     var days=Math.round((d.getTime()-today.getTime())/86400000);
     if(roomIndex===3 && days>=0 && days<=2)return 'blocked';
     if(roomIndex===11 && days>=1 && days<=3)return 'maintenance';
