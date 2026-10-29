@@ -800,8 +800,8 @@ export async function handleDeterministicBookingFlow({
         (nextContext.check_out || nextContext.nights) &&
         nextContext.guests_count
       );
+      let preliminaryAvailability;
       if (hasStayDetails) {
-        let preliminaryAvailability;
         try {
           preliminaryAvailability = await services.searchAvailableRooms({
             check_in: nextContext.check_in,
