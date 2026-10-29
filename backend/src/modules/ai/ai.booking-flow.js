@@ -837,11 +837,27 @@ export async function handleDeterministicBookingFlow({
         }
       }
 
+      // Cotizar la estadía antes de solicitar datos personales; usar solo la
+      // tarifa vigente y las noches devueltas por el servicio de disponibilidad.
+      // Es una referencia, no una reserva ni una garantía frente a OTAs.
+      let quoteLine = "";
+      if (hasStayDetails && missing.includes("nombre completo")) {
+        const categorySlug = inferCategorySlug(nextContext.category);
+        const quotedCategory = (preliminaryAvailability?.categories || []).find(
+          (item) => item.slug === categorySlug && Number(item.available_quantity || 0) > 0
+        );
+        const nightlyRate = Number(quotedCategory?.price_per_night);
+        const nights = Number(preliminaryAvailability?.nights);
+        if (Number.isFinite(nightlyRate) && nightlyRate > 0 &&
+            Number.isInteger(nights) && nights > 0) {
+          quoteLine = `Cotización referencial de ${categoryLabel(nextContext.category)}: ${nights} ${nights === 1 ? "noche" : "noches"} × ${formatMoney(nightlyRate)} = ${formatMoney(nightlyRate * nights)} (tarifa base, sin extras). La pre-reserva se confirma solo después de verificar disponibilidad y pago.`;
+        }
+      }
       return {
         handled: true,
         context: nextContext,
         mode: "booking_details_required",
-        reply: progressiveMissingDataReply(missing, nextContext),
+        reply: [quoteLine, progressiveMissingDataReply(missing, nextContext)].filter(Boolean).join("\n"),
       };
     }
     return {
