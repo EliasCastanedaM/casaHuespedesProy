@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10263f">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Demo de gestión hotelera | Casa Huéspedes Pimentel</title>
+  <style>
+    :root{
+      --navy:#10263f;--navy-2:#193953;--blue:#2c65b7;--steel:#6288a5;
+      --ink:#182b42;--muted:#63758a;--line:#dce5ed;--surface:#f4f7fa;
+      --white:#fff;--green:#d9f1e1;--green-ink:#17683c;--booked:#dceaff;
+      --booked-ink:#174d94;--blocked:#ffe4e6;--blocked-ink:#a52b3c;
+      --maintenance:#e8edf2;--maintenance-ink:#46586a;--gold:#d7b58f;
+      --shadow:0 12px 35px rgba(16,38,63,.08);--radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#f7f9fb}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #79a9d2;outline-offset:2px}
+    .demo-notice{display:flex;align-items:center;justify-content:center;gap:9px;padding:9px 16px;background:#fff8e9;color:#76501f;border-bottom:1px solid #f0dfbd;font-size:12px;font-weight:800;letter-spacing:.035em;text-align:center}
+    .demo-notice .dot{width:8px;height:8px;border-radius:50%;background:#c58a32;flex:none}
+    .app-shell{min-height:calc(100vh - 37px);display:grid;grid-template-columns:248px minmax(0,1fr)}
+    .sidebar{position:sticky;top:0;height:calc(100vh - 37px);min-height:640px;background:linear-gradient(175deg,var(--navy),#173d5c);color:white;padding:25px 17px 18px;display:flex;flex-direction:column;gap:28px;z-index:5}
+    .brand{display:flex;align-items:center;gap:12px;padding:3px 8px 20px;border-bottom:1px solid #ffffff24}
+    .brand-logo{width:53px;height:53px;border-radius:14px;background:#fff;display:grid;place-items:center;padding:5px;overflow:hidden;flex:none}
+    .brand-logo img{width:100%;height:100%;object-fit:contain}
+    .brand-name{font-family:Georgia,serif;font-size:17px;line-height:1.18;font-weight:700}
+    .brand-name small{display:block;font:700 9px/1.4 Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#c7d8e8;margin-top:5px}
+    .nav-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#a9bfd2;font-weight:800;padding:0 12px;margin-bottom:7px}
+    .nav{display:grid;gap:7px}
+    .nav-btn{width:100%;border:0;background:transparent;color:#e9f1f8;border-radius:12px;display:flex;align-items:center;gap:13px;padding:13px 14px;text-align:left;font-size:14px;font-weight:750;transition:.18s}
+    .nav-btn:hover{background:#ffffff14}
+    .nav-btn.active{background:#2f6190;color:white;box-shadow:inset 3px 0 #d7b58f}
+    .nav-icon{width:22px;height:22px;display:grid;place-items:center;flex:none}
+    .nav-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .sidebar-foot{margin-top:auto;border-top:1px solid #ffffff24;padding:17px 9px 0;color:#c5d4e2;font-size:11px;line-height:1.6}
+    .sidebar-foot strong{display:block;color:#fff;font-size:12px}
+    .main{min-width:0;padding:24px clamp(17px,3vw,42px) 38px;display:flex;flex-direction:column}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:27px}
+    .crumb{color:var(--muted);font-size:12px;font-weight:700}
+    .user-area{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;font-weight:700}
+    .avatar{width:35px;height:35px;border-radius:50%;background:#e1ebf5;color:#244e75;display:grid;place-items:center;font-size:12px;font-weight:900}
+    .view{display:none;min-width:0;flex:1}.view.active{display:block;animation:appear .25s ease}
+    @keyframes appear{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+    .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--steel);font-weight:900;margin:0 0 8px}
+    h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(29px,3vw,40px);letter-spacing:-.035em;line-height:1.08;color:var(--navy);margin:0}
+    .subtitle{color:var(--muted);font-size:14px;line-height:1.6;margin:9px 0 0;max-width:720px}
+    .view-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:22px}
+    .demo-tag{display:inline-flex;align-items:center;gap:7px;background:#edf5fb;border:1px solid #d6e4f0;border-radius:99px;padding:8px 12px;color:#315a7b;font-size:11px;font-weight:850;white-space:nowrap}
+    .demo-tag span{width:7px;height:7px;background:#6b9abb;border-radius:50%}
+    /* Chat */
+    .chat-layout{max-width:1060px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 245px;gap:18px;align-items:stretch}
+    .chat-panel{min-height:620px;height:calc(100vh - 215px);max-height:820px;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+    .chat-panel-head{padding:17px 20px;border-bottom:1px solid #e9eef3;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .assistant-id{display:flex;align-items:center;gap:11px}
+    .assistant-avatar{width:42px;height:42px;border-radius:14px;background:#e8f0f7;color:var(--navy);display:grid;place-items:center}
+    .assistant-avatar svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .assistant-id strong{display:block;color:var(--navy);font-size:14px}
+    .assistant-id small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+    .online{display:inline-flex;align-items:center;gap:6px;color:#367b54;font-size:10px;font-weight:850}
+    .online:before{content:"";width:7px;height:7px;background:#4ca66c;border-radius:50%}
+    .chat-content{flex:1;min-height:0;display:flex;flex-direction:column;padding:20px}
+    .welcome{margin:auto 0;text-align:center;padding:20px 0}
+    .welcome-mark{width:68px;height:68px;border-radius:20px;background:#edf3f8;color:var(--navy);display:grid;place-items:center;margin:0 auto 17px}
+    .welcome-mark svg{width:33px;height:33px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+    .welcome h2{font-family:Georgia,serif;color:var(--navy);font-size:27px;margin:0}
+    .welcome p{font-size:13px;line-height:1.6;color:var(--muted);max-width:470px;margin:9px auto 0}
+    .suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-width:610px;margin:25px auto 0;text-align:left}
+    .suggestion{background:white;border:1px solid var(--line);border-radius:13px;padding:12px 13px;min-height:65px;color:#304c66;font-size:12px;font-weight:700;line-height:1.45;text-align:left;transition:.18s}
+    .suggestion:hover{border-color:#9dbbd5;background:#f8fbfe;transform:translateY(-1px)}
+    .suggestion span{display:block;color:var(--steel);font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+    .messages{display:none;flex:1;min-height:0;overflow:auto;flex-direction:column;gap:13px;padding:4px 3px 16px}
+    .messages.active{display:flex}
+    .message{max-width:min(84%,620px);padding:12px 15px;border-radius:16px;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;animation:appear .18s ease}
+    .message.user{align-self:flex-end;background:#e5f0fb;color:#1d4267;border-bottom-right-radius:5px}
+    .message.assistant{align-self:flex-start;background:#f2f5f8;color:#2d4054;border-bottom-left-radius:5px}
+    .message .meta{display:block;font-size:9px;color:#728397;margin-top:6px}
+    .action-card{align-self:flex-start;max-width:88%;border:1px solid #c9d9e7;background:#f8fbfe;border-radius:14px;padding:13px 15px;color:#27445e;font-size:12px;line-height:1.5}
+    .action-card strong{display:block;font-size:13px;color:var(--navy);margin-bottom:4px}
+    .action-actions{display:flex;gap:8px;margin-top:11px}
+    .btn-primary,.btn-secondary{border:0;border-radius:9px;padding:9px 13px;font-size:11px;font-weight:850}
+    .btn-primary{background:var(--navy);color:#fff}.btn-primary:hover{background:#214c70}
+    .btn-secondary{background:#e8eef4;color:#3e5870}.btn-secondary:hover{background:#dce6ef}
+    .composer-wrap{border-top:1px solid #e9eef3;padding:14px 17px 11px;background:#fff}
+    .composer{display:flex;align-items:flex-end;gap:9px;border:1.5px solid #d8e3ed;border-radius:15px;padding:8px 9px 8px 14px;background:#fff}
+    .composer:focus-within{border-color:#8eafca;box-shadow:0 0 0 3px #6288a51a}
+    .composer textarea{flex:1;min-width:0;resize:none;border:0;outline:0;background:transparent;color:var(--ink);font-size:13px;line-height:1.5;min-height:42px;max-height:110px;padding:10px 0}
+    .send-btn{width:41px;height:41px;border:0;border-radius:11px;background:var(--navy);color:white;font-size:19px;display:grid;place-items:center;flex:none}
+    .send-btn:hover{background:#234e72}
+    .composer-note{text-align:center;font-size:9px;color:#8a98a8;margin-top:8px}
+    .chat-aside{display:flex;flex-direction:column;gap:13px}
+    .aside-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:16px;box-shadow:0 5px 18px rgba(16,38,63,.035)}
+    .aside-card h3{font-family:Georgia,serif;color:var(--navy);font-size:17px;margin:0 0 11px}
+    .aside-row{display:flex;align-items:flex-start;gap:9px;color:#50657a;font-size:11px;line-height:1.5;margin:10px 0}
+    .aside-row b{color:#294762}
+    .aside-icon{width:25px;height:25px;border-radius:8px;background:#edf3f8;color:#315c7f;display:grid;place-items:center;flex:none;font-size:12px}
+    .aside-note{font-size:10px;line-height:1.55;color:#7b8998;margin:10px 0 0}
+    /* Calendar */
+    .calendar-toolbar{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin:22px 0 17px}
+    .date-controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .outline-btn{height:37px;border:1px solid #d3dee8;background:white;color:#2c4b68;border-radius:9px;padding:0 12px;font-size:11px;font-weight:850}
+    .outline-btn:hover{background:#f3f7fa;border-color:#9db5ca}
+    .arrow-btn{width:37px;padding:0;font-size:19px}
+    .date-label{font-size:14px;font-weight:900;color:var(--navy);min-width:180px;text-align:center}
+    .date-picker{height:37px;border:1px solid #d3dee8;border-radius:9px;padding:0 9px;color:#3a526b;background:white;font-size:11px}
+    .view-tabs{display:flex;gap:3px;background:#eaf0f5;padding:4px;border-radius:10px}
+    .view-tab{border:0;background:transparent;color:#4b6176;border-radius:7px;padding:8px 13px;font-size:11px;font-weight:850}
+    .view-tab.active{background:var(--navy);color:white;box-shadow:0 2px 8px #10263f20}
+    .legend{display:flex;align-items:center;gap:13px;flex-wrap:wrap;color:#63758a;font-size:10px;font-weight:750}
+    .legend span{display:inline-flex;align-items:center;gap:5px}
+    .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+    .legend .l-free{background:#bde6ca}.legend .l-booked{background:#9fc2f0}.legend .l-blocked{background:#f1a9b1}.legend .l-maint{background:#c7d0d9}
+    .calendar-surface{background:white;border:1px solid var(--line);border-radius:17px;box-shadow:0 6px 22px rgba(16,38,63,.045);overflow:hidden}
+    .calendar-caption{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:1px solid #e9eef3;color:#62758a;font-size:10px}
+    .calendar-caption strong{color:#294762;font-size:12px}
+    .day-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px}
+    .room-card{border:1px solid #e1e8ef;border-radius:13px;overflow:hidden;background:white;min-width:0}
+    .room-card-top{display:flex;gap:10px;align-items:center;padding:11px}
+    .room-thumb{width:54px;height:46px;object-fit:cover;border-radius:8px;background:#edf1f5;flex:none}
+    .room-card-top strong{display:block;color:var(--navy);font-size:13px}
+    .room-card-top small{display:block;color:#718196;font-size:10px;margin-top:3px}
+    .room-state{margin:0 10px 10px;border-radius:8px;padding:9px 10px;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:10px;font-weight:850}
+    .room-state.free{background:var(--green);color:var(--green-ink)}
+    .room-state.booked{background:var(--booked);color:var(--booked-ink)}
+    .room-state.blocked{background:var(--blocked);color:var(--blocked-ink)}
+    .room-state.maintenance{background:var(--maintenance);color:var(--maintenance-ink)}
+    .room-detail{font-size:9px;font-weight:600;opacity:.8}
+    .room-card button{width:calc(100% - 20px);margin:0 10px 10px;border:1px solid #dce5ed;background:#fff;color:#456078;border-radius:8px;padding:7px;font-size:10px;font-weight:800}
+    .room-card button:hover{background:#f4f8fb}
+    .week-wrap{overflow:auto}
+    .week-table{width:100%;min-width:760px;border-collapse:separate;border-spacing:0}
+    .week-table th,.week-table td{border-bottom:1px solid #e8edf2;border-right:1px solid #eef2f6;padding:7px 6px;text-align:center}
+    .week-table th{background:#f6f8fa;color:#52677c;font-size:10px;font-weight:850}
+    .week-table th:first-child,.week-table td:first-child{position:sticky;left:0;z-index:2;background:#fff;text-align:left;min-width:178px;padding-left:14px}
+    .week-table thead th:first-child{background:#f6f8fa}
+    .week-table tbody tr:last-child td{border-bottom:0}
+    .week-room strong{display:block;color:var(--navy);font-size:12px}
+    .week-room small{display:block;color:#7a8998;font-size:9px;margin-top:3px}
+    .week-day{display:block;color:#7c8b9a;font-size:9px}
+    .week-num{display:block;font-size:15px;color:#294762;margin-top:3px}
+    .slot{width:100%;min-width:55px;height:35px;border:1px solid transparent;border-radius:7px;font-size:9px;font-weight:850}
+    .slot.free{background:#d8f0df;border-color:#bfe4ca;color:#246541}
+    .slot.booked{background:#c6dcf8;border-color:#aac9ef;color:#1b4c83}
+    .slot.blocked{background:#f8d0d4;border-color:#efb6bd;color:#9d3443}
+    .slot.maintenance{background:#e0e5ea;border-color:#cbd4dc;color:#566575}
+    .month-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px}
+    .month-card{border:1px solid #e1e8ef;border-radius:13px;padding:11px;min-width:0}
+    .month-card-head{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+    .month-card-head img{width:39px;height:35px;border-radius:7px;object-fit:cover}
+    .month-card-head strong{display:block;font-size:11px;color:var(--navy)}
+    .month-card-head small{display:block;color:#7a8998;font-size:9px;margin-top:2px}
+    .mini-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+    .mini-cal .weekday{font-size:8px;text-align:center;color:#8190a0;font-weight:800;padding:3px 0}
+    .mini-day{aspect-ratio:1;border:0;border-radius:5px;background:#f0f3f6;color:#5b6c7e;font-size:8px;font-weight:800;padding:0}
+    .mini-day.blank{background:transparent}
+    .mini-day.free{background:#d8f0df;color:#246541}
+    .mini-day.booked{background:#c6dcf8;color:#1b4c83}
+    .mini-day.blocked{background:#f8d0d4;color:#9d3443}
+    .mini-day.maintenance{background:#e0e5ea;color:#566575}
+    .mini-day.today{outline:2px solid var(--navy);outline-offset:1px}
+    .calendar-footnote{padding:12px 16px;border-top:1px solid #e9eef3;color:#7a8998;font-size:10px;line-height:1.5}
+    /* Modal + toast */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(8,22,37,.48);z-index:20;display:none;align-items:center;justify-content:center;padding:18px}
+    .modal-backdrop.show{display:flex}
+    .modal{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 25px 80px #061a2c50}
+    .modal-head{padding:18px 21px;border-bottom:1px solid #e8edf2;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .modal-head h2{font-family:Georgia,serif;font-size:22px;color:var(--navy);margin:0}
+    .modal-head p{font-size:10px;color:#7b8998;margin:5px 0 0}
+    .close-modal{width:31px;height:31px;border:0;border-radius:9px;background:#eef2f6;color:#516579;font-size:18px}
+    .modal-body{padding:18px 21px}
+    .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .detail-item{background:#f6f8fa;border:1px solid #edf1f4;border-radius:11px;padding:11px}
+    .detail-item small{display:block;color:#8190a0;font-size:9px;text-transform:uppercase;letter-spacing:.08em;font-weight:850;margin-bottom:5px}
+    .detail-item strong{display:block;color:#294762;font-size:12px;line-height:1.45}
+    .detail-note{margin-top:11px;padding:12px;border-radius:10px;background:#f5f8fb;color:#63758a;font-size:10px;line-height:1.6}
+    .modal-actions{padding:14px 21px 18px;border-top:1px solid #e8edf2;display:flex;justify-content:flex-end;gap:8px}
+    .toast{position:fixed;right:18px;bottom:18px;z-index:30;max-width:min(380px,90vw);background:var(--navy);color:#fff;border-radius:12px;padding:12px 15px;font-size:11px;line-height:1.5;box-shadow:0 12px 30px #061a2c35;display:none}
+    .toast.show{display:block}
+    .mobile-nav{display:none}
+    @media(max-width:1100px){.chat-layout{grid-template-columns:minmax(0,1fr)}.chat-aside{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.day-grid,.month-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:760px){
+      .app-shell{display:block;min-height:calc(100vh - 37px)}
+      .sidebar{display:none}
+      .main{padding:18px 13px 90px}
+      .topbar{margin-bottom:20px}
+      .view-heading{align-items:flex-start;flex-direction:column}
+      .chat-panel{height:calc(100dvh - 230px);min-height:510px;border-radius:17px}
+      .chat-content{padding:14px}
+      .suggestions{grid-template-columns:1fr;gap:7px;margin-top:18px}
+      .suggestion{min-height:51px}
+      .welcome h2{font-size:23px}
+      .chat-aside{grid-template-columns:1fr 1fr}
+      .aside-card{padding:12px}
+      .calendar-toolbar{align-items:flex-start}
+      .date-controls{width:100%}
+      .date-label{min-width:0;flex:1;text-align:left}
+      .date-picker{flex:1;min-width:130px}
+      .legend{gap:8px}
+      .day-grid,.month-grid{grid-template-columns:1fr;padding:10px}
+      .mobile-nav{position:fixed;bottom:0;left:0;right:0;z-index:10;display:grid;grid-template-columns:1fr 1fr;background:#fff;border-top:1px solid var(--line);padding:7px 12px calc(7px + env(safe-area-inset-bottom));box-shadow:0 -5px 20px #10263f0b}
+      .mobile-nav button{border:0;background:transparent;color:#61758a;padding:7px;border-radius:10px;font-size:10px;font-weight:850;display:grid;justify-items:center;gap:3px}
+      .mobile-nav button.active{background:#edf3f8;color:var(--navy)}
+      .mobile-nav svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+      .demo-notice{font-size:10px;line-height:1.4}
+    }
+    @media(max-width:430px){.chat-aside{grid-template-columns:1fr}.user-area .user-label{display:none}.detail-grid{grid-template-columns:1fr 1fr}.calendar-toolbar .view-tabs{width:100%}.view-tab{flex:1}}
+  </style>
+</head>
+<body>
+  <div class="demo-notice"><span class="dot"></span> DEMOSTRACIÓN INTERACTIVA · DATOS FICTICIOS · NO CONECTADA A BEDS24 NI BOOKING.COM</div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo"><img src="/img/brand/logo-casa-huespedes.png" alt="Logo Casa Huéspedes Pimentel"></div>
+        <div class="brand-name">Casa Huéspedes<small>Pimentel · Gestión inteligente</small></div>
+      </div>
+      <div>
+        <div class="nav-label">Espacio de trabajo</div>
+        <nav class="nav" aria-label="Navegación principal">
+          <button class="nav-btn active" data-view="chat"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 21l1.9-5.5a9 9 0 0 1-.9-4A8.5 8.5 0 0 1 12.5 3H13a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg></span>Asesor IA</button>
+          <button class="nav-btn" data-view="calendar"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 14h3M8 17h6"/></svg></span>Calendario hotelero</button>
+        </nav>
+      </div>
+      <div class="sidebar-foot"><strong>Entorno de demostración</strong>La información y las acciones de esta página son ilustrativas. No modifican reservas reales.</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">Casa Huéspedes Pimentel <span aria-hidden="true">/</span> <strong id="crumbCurrent">Asesor IA</strong></div>
+        <div class="user-area"><span class="demo-tag"><span></span> Modo demostración</span><span class="avatar">CH</span><span class="user-label">Equipo del alojamiento</span></div>
+      </header>
+
+      <section class="view active" id="chatView">
+        <div class="view-heading">
+          <div><p class="eyebrow">Asistente de operaciones</p><h1>¿En qué puedo ayudarte?</h1><p class="subtitle">Consulta la operación del alojamiento o escribe una instrucción. En esta demostración, las respuestas y acciones se simulan con datos de ejemplo.</p></div>
+          <span class="demo-tag"><span></span> Chat interactivo de muestra</span>
+        </div>
+        <div class="chat-layout">
+          <section class="chat-panel" aria-label="Chat de demostración">
+            <div class="chat-panel-head">
+              <div class="assistant-id">
+                <div class="assistant-avatar"><svg viewBox="0 0 24 24"><path d="M12 3v3M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z"/><path d="M8 13h.01M16 13h.01M9 16h6"/></svg></div>
+                <div><strong>Asesor IA · Casa Huéspedes</strong><small>Asistente para gestión hotelera</small></div>
+              </div>
+              <span class="online">Disponible en demo</span>
+            </div>
+            <div class="chat-content">
+              <div class="welcome" id="welcome">
+                <div class="welcome-mark"><svg viewBox="0 0 24 24"><path d="M12 3v3M5 8h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z"/><path d="M8 13h.01M16 13h.01M9 16h6"/></svg></div>
+                <h2>Hola, soy tu asesor operativo.</h2>
+                <p>Puedes consultarme sobre disponibilidad, reservas y habitaciones. También puedes probar instrucciones para bloquear una habitación o preparar una reserva.</p>
+                <div class="suggestions">
+                  <button class="suggestion" data-prompt="¿Qué habitaciones están disponibles hoy?"><span>Disponibilidad</span>¿Qué habitaciones están libres hoy?</button>
+                  <button class="suggestion" data-prompt="¿Quién llega hoy al alojamiento?"><span>Recepción</span>¿Quién llega hoy?</button>
+                  <button class="suggestion" data-prompt="Bloquea la habitación 204 para mañana"><span>Operación</span>Bloquea la habitación 204 para mañana</button>
+                  <button class="suggestion" data-prompt="¿Cuáles son los precios de las habitaciones?"><span>Tarifas</span>¿Cuáles son los precios?</button>
+                </div>
+              </div>
+              <div class="messages" id="messages" aria-live="polite" aria-label="Mensajes del chat"></div>
+            </div>
+            <div class="composer-wrap">
+              <form class="composer" id="chatForm">
+                <textarea id="chatInput" rows="1" placeholder="Escribe una consulta o instrucción..." aria-label="Escribe tu mensaje"></textarea>
+                <button class="send-btn" type="submit" aria-label="Enviar mensaje">➤</button>
+              </form>
+              <div class="composer-note">Prueba: «Bloquea la habitación 204 para mañana» · «¿Qué habitaciones están libres?»</div>
+            </div>
+          </section>
+
+          <aside class="chat-aside">
+            <div class="aside-card">
+              <h3>¿Qué puedes probar?</h3>
+              <div class="aside-row"><span class="aside-icon">⌕</span><span><b>Consultar</b><br>Disponibilidad, llegadas y estado de habitaciones.</span></div>
+              <div class="aside-row"><span class="aside-icon">▣</span><span><b>Gestionar</b><br>Preparar reservas y bloqueos con confirmación.</span></div>
+              <div class="aside-row"><span class="aside-icon">S/</span><span><b>Revisar tarifas</b><br>Consultar cómo se presentaría la información de precios.</span></div>
+            </div>
+            <div class="aside-card">
+              <h3>Conexión prevista</h3>
+              <div class="aside-row"><span class="aside-icon">B</span><span><b>Beds24</b><br>Fuente operativa prevista para reservas, tarifas e inventario.</span></div>
+              <div class="aside-row"><span class="aside-icon">↔</span><span><b>Booking.com</b><br>Sincronización sujeta a configuración y validación.</span></div>
+              <p class="aside-note">La integración real se implementará por separado. Esta demo no consulta ni modifica sistemas externos.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" id="calendarView">
+        <div class="view-heading">
+          <div><p class="eyebrow">Control de habitaciones</p><h1>Calendario hotelero</h1><p class="subtitle">Revisa el estado de las habitaciones, identifica reservas y visualiza fechas disponibles, bloqueadas o en mantenimiento.</p></div>
+          <span class="demo-tag"><span></span> Inventario de ejemplo</span>
+        </div>
+        <div class="calendar-toolbar">
+          <div class="date-controls">
+            <button class="outline-btn arrow-btn" id="prevDate" aria-label="Periodo anterior">‹</button>
+            <button class="outline-btn" id="todayDate">Hoy</button>
+            <button class="outline-btn arrow-btn" id="nextDate" aria-label="Periodo siguiente">›</button>
+            <span class="date-label" id="periodLabel"></span>
+            <input class="date-picker" type="date" id="datePicker" aria-label="Seleccionar fecha">
+          </div>
+          <div class="view-tabs" role="group" aria-label="Vista del calendario">
+            <button class="view-tab" data-mode="day">Día</button>
+            <button class="view-tab active" data-mode="week">Semana</button>
+            <button class="view-tab" data-mode="month">Mes</button>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i class="l-free"></i>Disponible</span>
+          <span><i class="l-booked"></i>Reservada</span>
+          <span><i class="l-blocked"></i>Bloqueada</span>
+          <span><i class="l-maint"></i>Mantenimiento</span>
+        </div>
+        <div class="calendar-surface" style="margin-top:13px">
+          <div class="calendar-caption"><strong id="calendarCaption">Ocupación de habitaciones</strong><span>Selecciona una reserva para ver su detalle</span></div>
+          <div id="calendarCanvas"></div>
+          <div class="calendar-footnote">Los nombres, reservas, fechas y estados mostrados son ficticios y se utilizan únicamente para ilustrar la interfaz. Las acciones de chat solo modifican esta demostración local.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Navegación móvil">
+    <button class="active" data-view="chat"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 21l1.9-5.5a9 9 0 0 1-.9-4A8.5 8.5 0 0 1 12.5 3H13a8.5 8.5 0 0 1 8 8v.5Z"/></svg>Asesor IA</button>
+    <button data-view="calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>Calendario</button>
+  </nav>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-head"><div><h2 id="modalTitle">Detalle de reserva</h2><p id="modalSubtitle">Información de demostración</p></div><button class="close-modal" id="closeModal" aria-label="Cerrar">×</button></div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-actions"><button class="btn-secondary" id="closeModalBottom">Cerrar</button></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function(){
+      "use strict";
+      const $ = (selector, root) => (root || document).querySelector(selector);
+      const $$ = (selector, root) => Array.from((root || document).querySelectorAll(selector));
+      const today = new Date(); today.setHours(0,0,0,0);
+      let currentDate = new Date(today);
+      let calendarMode = "week";
+      let activeView = "chat";
+      let toastTimer = null;
+      let messages = [];
+      let pendingActions = [];
+      const imagePaths = ["/img/galeria/galeria-1.jpg","/img/galeria/galeria-2.jpg","/img/galeria/galeria-3.jpg","/img/galeria/galeria-4.jpg"];
+      const rooms = [
+        {number:"101",type:"Standard Double or Twin Room",image:0},
+        {number:"102",type:"Standard Double or Twin Room",image:1},
+        {number:"103",type:"Standard Double or Twin Room",image:2},
+        {number:"201",type:"Deluxe Twin Room",image:3},
+        {number:"202",type:"Deluxe Twin Room",image:0},
+        {number:"203",type:"Deluxe Twin Room",image:1},
+        {number:"204",type:"Deluxe Twin Room",image:2},
+        {number:"301",type:"Standard Double Room",image:3},
+        {number:"302",type:"Standard Double Room",image:0},
+        {number:"303",type:"Standard Double Room",image:1},
+        {number:"401",type:"Family Room",image:2},
+        {number:"402",type:"Family Room",image:3}
+      ];
+      const iso = d => [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
+      const fromISO = s => {const p=s.split("-").map(Number);return new Date(p[0],p[1]-1,p[2]);};
+      const addDays = (d,n) => {const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+      const daysBetween = (a,b) => Math.round((fromISO(b)-fromISO(a))/86400000);
+      const dateLong = d => new Intl.DateTimeFormat("es-PE",{day:"numeric",month:"long",year:"numeric"}).format(d);
+      const dateShort = d => new Intl.DateTimeFormat("es-PE",{day:"2-digit",month:"2-digit"}).format(d);
+      const weekday = d => new Intl.DateTimeFormat("es-PE",{weekday:"short"}).format(d).replace(".","");
+      const monthName = d => new Intl.DateTimeFormat("es-PE",{month:"long",year:"numeric"}).format(d);
+      const escapeHTML = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+      const makeBooking = (id,room,offset,nights,guest,adults,children,source,amount,note) => {
+        const start=iso(addDays(today,offset));
+        const end=iso(addDays(today,offset+nights));
+        return {id,room,start,end,guest,adults,children,source,amount,note,status:"Confirmada",phone:"+51 900 000 000"};
+      };
+      let bookings = [
+        makeBooking("DEMO-2401","101",-1,2,"María Torres",2,0,"Booking.com","S/ 320","Llegada estimada por la tarde."),
+        makeBooking("DEMO-2402","102",1,3,"Carlos Mendoza",2,0,"Reserva directa","S/ 480","Solicita una almohada adicional."),
+        makeBooking("DEMO-2403","201",2,2,"Lucía Fernández",2,0,"Booking.com","S/ 390",""),
+        makeBooking("DEMO-2404","202",4,3,"Jorge Ramírez",2,0,"Reserva directa","S/ 540",""),
+        makeBooking("DEMO-2405","301",0,1,"Andrea Salazar",1,0,"Booking.com","S/ 180","Salida prevista al mediodía."),
+        makeBooking("DEMO-2406","302",6,2,"Familia Rojas",2,1,"Reserva directa","S/ 520","Viaja con un niño."),
+        makeBooking("DEMO-2407","401",3,2,"Pedro Castillo",2,2,"Booking.com","S/ 620",""),
+        makeBooking("DEMO-2408","103",8,2,"Valeria Díaz",2,0,"Reserva directa","S/ 340","")
+      ];
+      let blocks = [
+        {room:"203",date:iso(addDays(today,1)),kind:"maintenance",reason:"Mantenimiento preventivo"},
+        {room:"402",date:iso(addDays(today,5)),kind:"blocked",reason:"Bloqueo interno de demostración"}
+      ];
+      function roomByNumber(n){return rooms.find(r=>r.number===String(n));}
+      function bookingAt(room,date){
+        const key=iso(date);
+        return bookings.find(b=>b.room===String(room)&&b.start<=key&&key<b.end);
+      }
+      function blockAt(room,date){
+        const key=iso(date);
+        return blocks.find(b=>(b.room===String(room)||b.room==="*")&&b.date===key);
+      }
+      function stateAt(room,date){
+        const booking=bookingAt(room,date);
+        if(booking)return {state:"booked",booking:booking};
+        const block=blockAt(room,date);
+        if(block)return {state:block.kind==="maintenance"?"maintenance":"blocked",block:block};
+        return {state:"free"};
+      }
+      function availableRooms(date){return rooms.filter(r=>stateAt(r.number,date).state==="free");}
+      function showToast(text){
+        const el=$("#toast");el.textContent=text;el.classList.add("show");
+        clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),3400);
+      }
+      function setView(view){
+        activeView=view;
+        $("#chatView").classList.toggle("active",view==="chat");
+        $("#calendarView").classList.toggle("active",view==="calendar");
+        $$(".nav-btn,.mobile-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+        $("#crumbCurrent").textContent=view==="chat"?"Asesor IA":"Calendario hotelero";
+        if(view==="calendar")renderCalendar();
+      }
+      $$(".nav-btn,.mobile-nav button").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+      function weekStart(date){
+        const d=new Date(date);const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d;
+      }
+      function roomImage(room){return imagePaths[room.image%imagePaths.length];}
+      function statusLabel(s){return ({free:"Disponible",booked:"Reservada",blocked:"Bloqueada",maintenance:"Mantenimiento"})[s];}
+      function renderDay(){
+        const grid=document.createElement("div");grid.className="day-grid";
+        rooms.forEach(room=>{
+          const state=stateAt(room.number,currentDate);
+          const card=document.createElement("article");card.className="room-card";
+          let detail="Lista para recibir una reserva";
+          if(state.booking)detail=escapeHTML(state.booking.guest)+" · "+dateShort(fromISO(state.booking.start))+"–"+dateShort(fromISO(state.booking.end));
+          else if(state.block)detail=escapeHTML(state.block.reason);
+          card.innerHTML='<div class="room-card-top"><img class="room-thumb" src="'+roomImage(room)+'" alt="" onerror="this.style.visibility=\'hidden\'"><div><strong>Habitación '+room.number+'</strong><small>'+escapeHTML(room.type)+'</small></div></div><div class="room-state '+state.state+'"><span>'+statusLabel(state.state)+'</span><span class="room-detail">'+detail+'</span></div><button type="button" data-room="'+room.number+'" data-state="'+state.state+'">'+(state.booking?"Ver reserva":state.block?"Ver bloqueo":"Ver habitación")+'</button>';
+          const btn=$("button",card);
+          btn.addEventListener("click",()=>{
+            if(state.booking)openBooking(state.booking);
+            else if(state.block)showToast("Bloqueo de ejemplo: "+state.block.reason+".");
+            else showToast("La habitación "+room.number+" aparece disponible en esta demostración.");
+          });
+          grid.appendChild(card);
+        });
+        $("#calendarCanvas").innerHTML="";$("#calendarCanvas").appendChild(grid);
+      }
+      function renderWeek(){
+        const start=weekStart(currentDate);const dates=Array.from({length:7},(_,i)=>addDays(start,i));
+        let html='<div class="week-wrap"><table class="week-table"><thead><tr><th>Habitación</th>';
+        dates.forEach(d=>{html+='<th><span class="week-day">'+weekday(d)+'</span><span class="week-num">'+d.getDate()+'</span></th>';});
+        html+='</tr></thead><tbody>';
+        rooms.forEach(room=>{
+          html+='<tr><td class="week-room"><strong>'+room.number+'</strong><small>'+escapeHTML(room.type)+'</small></td>';
+          dates.forEach(d=>{
+            const state=stateAt(room.number,d);
+            let label=state.state==="booked"?"Reserva":state.state==="free"?"Libre":state.state==="blocked"?"Bloqueo":"Mant.";
+            let action=state.booking?'data-booking="'+state.booking.id+'"': 'data-room="'+room.number+'" data-date="'+iso(d)+'" data-state="'+state.state+'"';
+            html+='<td><button class="slot '+state.state+'" '+action+' title="'+room.number+' · '+dateLong(d)+'">'+label+'</button></td>';
+          });
+          html+='</tr>';
+        });
+        html+='</tbody></table></div>';
+        $("#calendarCanvas").innerHTML=html;
+        $$(".slot",$("#calendarCanvas")).forEach(btn=>btn.addEventListener("click",()=>{
+          if(btn.dataset.booking){const b=bookings.find(x=>x.id===btn.dataset.booking);if(b)openBooking(b);}
+          else if(btn.dataset.state==="free")showToast("Habitación "+btn.dataset.room+" disponible el "+dateLong(fromISO(btn.dataset.date))+".");
+          else showToast(btn.dataset.state==="maintenance"?"Habitación en mantenimiento (demo).":"Habitación bloqueada (demo).");
+        }));
+      }
+      function renderMonth(){
+        const year=currentDate.getFullYear(),month=currentDate.getMonth();
+        const first=new Date(year,month,1),offset=(first.getDay()+6)%7,daysInMonth=new Date(year,month+1,0).getDate();
+        const weekdays=["L","M","X","J","V","S","D"];
+        let html='<div class="month-grid">';
+        rooms.forEach(room=>{
+          html+='<article class="month-card"><div class="month-card-head"><img src="'+roomImage(room)+'" alt="" onerror="this.style.visibility=\'hidden\'"><div><strong>Habitación '+room.number+'</strong><small>'+escapeHTML(room.type)+'</small></div></div><div class="mini-cal">';
+          weekdays.forEach(d=>html+='<span class="weekday">'+d+'</span>');
+          for(let i=0;i<offset;i++)html+='<span class="mini-day blank"></span>';
+          for(let day=1;day<=daysInMonth;day++){
+            const date=new Date(year,month,day);const state=stateAt(room.number,date);
+            const isToday=iso(date)===iso(today);
+            html+='<button class="mini-day '+state.state+(isToday?" today":"")+'" data-room="'+room.number+'" data-date="'+iso(date)+'" data-state="'+state.state+'" title="Habitación '+room.number+' · '+dateLong(date)+' · '+statusLabel(state.state)+'">'+day+'</button>';
+          }
+          html+='</div></article>';
+        });
+        html+='</div>';$("#calendarCanvas").innerHTML=html;
+        $$(".mini-day:not(.blank)",$("#calendarCanvas")).forEach(btn=>btn.addEventListener("click",()=>{
+          const d=fromISO(btn.dataset.date);const state=stateAt(btn.dataset.room,d);
+          if(state.booking)openBooking(state.booking);
+          else showToast("Habitación "+btn.dataset.room+" · "+dateLong(d)+" · "+statusLabel(state.state)+".");
+        }));
+      }
+      function renderCalendar(){
+        $("#periodLabel").textContent=calendarMode==="day"?dateLong(currentDate):calendarMode==="week"?(dateShort(weekStart(currentDate))+" – "+dateShort(addDays(weekStart(currentDate),6))):monthName(currentDate);
+        $("#calendarCaption").textContent=calendarMode==="day"?"Estado de habitaciones · "+dateLong(currentDate):calendarMode==="week"?"Ocupación semanal · "+monthName(currentDate):"Vista mensual · "+monthName(currentDate);
+        $("#datePicker").value=iso(currentDate);
+        $$(".view-tab").forEach(b=>b.classList.toggle("active",b.dataset.mode===calendarMode));
+        if(calendarMode==="day")renderDay();else if(calendarMode==="week")renderWeek();else renderMonth();
+      }
+      $$(".view-tab").forEach(b=>b.addEventListener("click",()=>{calendarMode=b.dataset.mode;renderCalendar();}));
+      $("#prevDate").addEventListener("click",()=>{currentDate=calendarMode==="day"?addDays(currentDate,-1):calendarMode==="week"?addDays(currentDate,-7):new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1);renderCalendar();});
+      $("#nextDate").addEventListener("click",()=>{currentDate=calendarMode==="day"?addDays(currentDate,1):calendarMode==="week"?addDays(currentDate,7):new Date(currentDate.getFullYear(),currentDate.getMonth()+1,1);renderCalendar();});
+      $("#todayDate").addEventListener("click",()=>{currentDate=new Date(today);renderCalendar();});
+      $("#datePicker").addEventListener("change",e=>{if(e.target.value){currentDate=fromISO(e.target.value);renderCalendar();}});
+      function openBooking(b){
+        const room=roomByNumber(b.room);
+        $("#modalTitle").textContent="Detalle de reserva";
+        $("#modalSubtitle").textContent="Código "+b.id+" · Información ficticia";
+        const rows=[
+          ["Huésped",b.guest],["Teléfono",b.phone],["Habitación","N.º "+b.room],["Categoría",room?room.type:"No especificada"],
+          ["Llegada",dateLong(fromISO(b.start))],["Salida",dateLong(fromISO(b.end))],["Ocupación",b.adults+" adulto(s) · "+b.children+" niño(s)"],
+          ["Estado",b.status],["Canal de reserva",b.source],["Importe de ejemplo",b.amount]
+        ];
+        $("#modalBody").innerHTML='<div class="detail-grid">'+rows.map(r=>'<div class="detail-item"><small>'+escapeHTML(r[0])+'</small><strong>'+escapeHTML(r[1])+'</strong></div>').join("")+'</div><div class="detail-note"><b>Observaciones:</b> '+(b.note?escapeHTML(b.note):"Sin observaciones registradas en este ejemplo.")+'<br><br>Esta ficha ilustra los campos que se podrán mostrar al recuperar una reserva real desde Beds24, según los permisos y datos disponibles.</div>';
+        $("#modalBackdrop").classList.add("show");
+      }
+      function closeModal(){$("#modalBackdrop").classList.remove("show");}
+      $("#closeModal").addEventListener("click",closeModal);$("#closeModalBottom").addEventListener("click",closeModal);
+      $("#modalBackdrop").addEventListener("click",e=>{if(e.target.id==="modalBackdrop")closeModal();});
+      document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+
+      function addMessage(role,text,action){
+        messages.push({role,text,action:action||null});
+        if(messages.length>80)messages=messages.slice(-80);
+        renderMessages();
+      }
+      function renderMessages(){
+        $("#welcome").style.display=messages.length?"none":"block";
+        $("#messages").classList.toggle("active",messages.length>0);
+        $("#messages").innerHTML=messages.map((m,i)=>{
+          const body='<div class="message '+m.role+'">'+escapeHTML(m.text).replace(/\n/g,"<br>")+'<span class="meta">'+(m.role==="user"?"Tú":"Asesor IA · demo")+'</span></div>';
+          if(!m.action)return body;
+          const a=m.action;
+          return body+'<div class="action-card"><strong>'+(a.type==="block"?"Confirmar bloqueo de habitación":"Confirmar reserva de demostración")+'</strong>'+escapeHTML(a.summary)+'<div class="action-actions"><button class="btn-primary" data-confirm="'+i+'">Confirmar acción</button><button class="btn-secondary" data-cancel="'+i+'">Cancelar</button></div></div>';
+        }).join("");
+        $("#messages").scrollTop=$("#messages").scrollHeight;
+        $$("[data-confirm]",$("#messages")).forEach(btn=>btn.addEventListener("click",()=>confirmAction(Number(btn.dataset.confirm))));
+        $$("[data-cancel]",$("#messages")).forEach(btn=>btn.addEventListener("click",()=>cancelAction(Number(btn.dataset.cancel))));
+      }
+      function dateFromPrompt(text){
+        const t=text.toLowerCase();
+        if(t.includes("pasado mañana"))return addDays(today,2);
+        if(t.includes("mañana"))return addDays(today,1);
+        if(t.includes("hoy"))return new Date(today);
+        return new Date(currentDate);
+      }
+      function confirmAction(index){
+        const msg=messages[index];if(!msg||!msg.action||msg.action.done)return;
+        const a=msg.action;
+        if(a.type==="block"){
+          blocks.push({room:a.room,date:a.date,kind:"blocked",reason:"Bloqueo solicitado desde el chat (demo)"});
+          a.done=true;a.summary+=" · Bloqueo aplicado en esta demostración.";
+          addMessage("assistant","Listo. La habitación "+a.room+" quedó bloqueada para el "+dateLong(fromISO(a.date))+" en el calendario de demostración. No se modificó ningún sistema real.");
+        }else{
+          const id="DEMO-"+String(2500+bookings.length);
+          bookings.push({id,room:a.room,start:a.date,end:iso(addDays(fromISO(a.date),2)),guest:"Nuevo huésped (demo)",adults:2,children:0,source:"Registro desde chat (demo)",amount:"Por confirmar",note:"Reserva creada únicamente en la demostración.",status:"Pendiente",phone:"No registrado"});
+          a.done=true;a.summary+=" · Reserva creada en esta demostración.";
+          addMessage("assistant","La reserva de demostración quedó registrada para la habitación "+a.room+". En una integración real se validaría y registraría en Beds24.");
+        }
+        renderMessages();if(activeView==="calendar")renderCalendar();
+      }
+      function cancelAction(index){
+        const msg=messages[index];if(!msg||!msg.action||msg.action.done)return;
+        msg.action.done=true;msg.action.summary+=" · Acción cancelada.";
+        addMessage("assistant","De acuerdo. No se realizó ningún cambio.");
+      }
+      function respondTo(text){
+        const t=text.toLowerCase();
+        if(/precio|precios|tarifa|tarifas|cu[aá]nto cuesta/.test(t)){
+          return {text:"Para mostrar un precio correcto necesito consultar la tarifa vigente de Beds24 según la categoría, las fechas y la cantidad de huéspedes. Esta demostración no consulta tarifas reales; al conectar Beds24, el asesor podrá recuperar esos importes."};
+        }
+        if(/disponib|libres|libre|habitaciones vac[ií]as/.test(t)){
+          const d=dateFromPrompt(text);const free=availableRooms(d);
+          return {text:"Para el "+dateLong(d)+", en los datos ficticios de esta demostración aparecen "+free.length+" habitaciones disponibles: "+(free.length?free.map(r=>r.number+" ("+r.type+")").join(", "):"ninguna")+".\n\nEn producción, esta consulta se contrastará con el inventario y las reservas de Beds24."};
+        }
+        if(/llega|llegadas|check.?in|qu[ií]en llega/.test(t)){
+          const key=iso(dateFromPrompt(text));const arrivals=bookings.filter(b=>b.start===key);
+          return {text:arrivals.length?"Llegadas de ejemplo para el "+dateLong(fromISO(key))+":\n"+arrivals.map(b=>"• "+b.guest+" · habitación "+b.room+" · "+b.adults+" adulto(s)").join("\n"):"No hay llegadas registradas en los datos de ejemplo para esa fecha."};
+        }
+        if(/bloquea|bloquear|bloqueo|cierra la habitaci[oó]n/.test(t)){
+          const match=t.match(/\b(101|102|103|201|202|203|204|301|302|303|401|402)\b/);
+          if(!match)return {text:"Claro. ¿Qué número de habitación deseas bloquear y para qué fecha? Por ejemplo: «Bloquea la habitación 204 para mañana»."};
+          const room=match[1],d=dateFromPrompt(text),state=stateAt(room,d);
+          if(state.state==="booked")return {text:"No puedo proponer el bloqueo de la habitación "+room+" para el "+dateLong(d)+" porque aparece ocupada en esta demostración. Primero habría que revisar la reserva existente."};
+          return {text:"He preparado la solicitud. Revisa los datos y confirma si deseas aplicar el bloqueo en esta demostración.",action:{type:"block",room:room,date:iso(d),summary:"Habitación "+room+" · "+dateLong(d)}};
+        }
+        if(/reserva|reservar|registra|registrar/.test(t)){
+          const match=t.match(/\b(101|102|103|201|202|203|204|301|302|303|401|402)\b/);
+          const d=dateFromPrompt(text);const room=match?roomByNumber(match[1]):availableRooms(d)[0];
+          if(!room)return {text:"No encuentro habitaciones libres en los datos de ejemplo para esa fecha. Prueba con otra fecha o revisa el calendario."};
+          const state=stateAt(room.number,d);
+          if(state.state!=="free")return {text:"La habitación "+room.number+" no aparece disponible para el "+dateLong(d)+" en esta demostración. Revisa el calendario antes de continuar."};
+          return {text:"Puedo preparar una reserva de ejemplo para la habitación "+room.number+". Antes de registrarla en un sistema real habría que completar el nombre del huésped, fechas de entrada y salida, ocupación y tarifa. ¿Deseas probar el registro local de dos noches?",action:{type:"booking",room:room.number,date:iso(d),summary:"Habitación "+room.number+" · llegada "+dateLong(d)+" · 2 noches · 2 adultos (datos de ejemplo)"}};
+        }
+        if(/ayuda|qu[eé] puedes|funciones|hacer/.test(t)){
+          return {text:"Puedo ayudarte a consultar disponibilidad, revisar llegadas, mostrar el estado de habitaciones y preparar solicitudes de bloqueo o reserva. También puedo orientar sobre tarifas, aunque en esta demo no se consultan precios reales. Prueba una de las sugerencias o escribe una instrucción."};
+        }
+        return {text:"Entiendo tu solicitud. En la versión conectada, el asesor interpretará la instrucción y utilizará las funciones autorizadas de Beds24 para consultar o ejecutar la operación. En esta demostración puedes probar consultas de disponibilidad, llegadas, precios y solicitudes de bloqueo o reserva."};
+      }
+      function sendMessage(value){
+        const text=value.trim();if(!text)return;
+        addMessage("user",text);$("#chatInput").value="";$("#chatInput").style.height="42px";
+        const reply=respondTo(text);
+        window.setTimeout(()=>addMessage("assistant",reply.text,reply.action),220);
+      }
+      $("#chatForm").addEventListener("submit",e=>{e.preventDefault();sendMessage($("#chatInput").value);});
+      $("#chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage(e.currentTarget.value);}});
+      $("#chatInput").addEventListener("input",e=>{e.currentTarget.style.height="42px";e.currentTarget.style.height=Math.min(e.currentTarget.scrollHeight,110)+"px";});
+      $$(".suggestion").forEach(btn=>btn.addEventListener("click",()=>sendMessage(btn.dataset.prompt)));
+      renderCalendar();
+    })();
+  </script>
+</body>
+</html>
