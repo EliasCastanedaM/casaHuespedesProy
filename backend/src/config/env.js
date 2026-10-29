@@ -78,6 +78,13 @@ export const env = {
   },
 
   meta: {
+    appId: cleanEnvValue(process.env.META_APP_ID),
+    embeddedSignupConfigId: cleanEnvValue(
+      process.env.META_EMBEDDED_SIGNUP_CONFIG_ID
+    ),
+    embeddedSignupEnabled:
+      cleanEnvValue(process.env.META_EMBEDDED_SIGNUP_ENABLED).toLowerCase() ===
+      "true",
     verifyToken: cleanEnvValue(process.env.META_VERIFY_TOKEN),
     appSecret: cleanEnvValue(process.env.META_APP_SECRET),
     instagramAppSecret: cleanEnvValue(process.env.INSTAGRAM_APP_SECRET),
@@ -100,8 +107,7 @@ export const env = {
       process.env.INSTAGRAM_ACCESS_TOKEN
     ),
     instagramAccountId: cleanEnvValue(
-      process.env.INSTAGRAM_ACCOUNT_ID ||
-        process.env.META_INSTAGRAM_ACCOUNT_ID
+      process.env.INSTAGRAM_ACCOUNT_ID || process.env.META_INSTAGRAM_ACCOUNT_ID
     ),
   },
 
