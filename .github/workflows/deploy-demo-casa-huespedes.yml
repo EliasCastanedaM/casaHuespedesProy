@@ -1,0 +1,48 @@
+name: Deploy demo Casa Huéspedes Pimentel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "demo-casa-huespedes/**"
+      - "frontend/public/img/brand/logo-casa-huespedes.png"
+      - ".github/workflows/deploy-demo-casa-huespedes.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-demo-casa-huespedes"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar sitio de demostración
+        run: |
+          mkdir -p _site/demo-casa-huespedes/assets
+          cp demo-casa-huespedes/index.html _site/demo-casa-huespedes/index.html
+          cp frontend/public/img/brand/logo-casa-huespedes.png _site/demo-casa-huespedes/assets/logo-casa-huespedes.png
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Cargar artefacto de Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Publicar demostración
+        id: deployment
+        uses: actions/deploy-pages@v4
