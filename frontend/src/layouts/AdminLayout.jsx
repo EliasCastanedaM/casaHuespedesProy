@@ -22,11 +22,15 @@ const menuItems = [
     icon: "📨",
   },
   {
+    label: "Coexistencia WhatsApp",
+    path: "/admin/coexistencia-whatsapp",
+    icon: "🔗",
+  },
+  {
     label: "Habitaciones",
     path: "/admin/habitaciones",
     icon: "🛏️",
   },
-
   {
     label: "Reglas y tarifas",
     path: "/admin/reglas-comerciales",

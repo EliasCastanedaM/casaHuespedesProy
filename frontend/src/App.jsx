@@ -28,6 +28,7 @@ import RoomsAdmin from "./pages/admin/RoomsAdmin";
 import GalleryAdmin from "./pages/admin/GalleryAdmin";
 import MessagesAdmin from "./pages/admin/MessagesAdmin";
 import CommercialAdmin from "./pages/admin/CommercialAdmin";
+import WhatsAppCoexistenceAdmin from "./pages/admin/WhatsAppCoexistenceAdmin";
 
 export default function App() {
   return (
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="reservas" element={<BookingsAdmin />} />
             <Route path="consultas" element={<InquiriesAdmin />} />
             <Route path="mensajes" element={<MessagesAdmin />} />
+            <Route path="coexistencia-whatsapp" element={<WhatsAppCoexistenceAdmin />} />
             <Route path="horarios" element={<ScheduleAdmin />} />
             <Route path="reglas-comerciales" element={<CommercialAdmin />} />
             <Route path="clientes" element={<CustomersAdmin />} />
