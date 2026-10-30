@@ -139,6 +139,12 @@ function extractDateTokens(message, now = new Date(), afterDate = null) {
   return parsed.slice(0, 2).map((item) => item.value);
 }
 
+function normalizeStoredDate(value, now = new Date(), afterDate = null) {
+  const raw = String(value || "").trim();
+  if (!raw || /^\\d{4}-\\d{2}-\\d{2}$/.test(raw)) return raw;
+  return extractDateTokens(raw, now, afterDate)[0] || raw;
+}
+
 function namedCount(text, words) {
   const before = text.match(new RegExp("\\b(" + COUNT_TOKEN_PATTERN + ")\\s*(?:" + words + ")\\b"));
   const after = text.match(new RegExp("\\b(?:" + words + ")\\s*[:#-]?\\s*(" + COUNT_TOKEN_PATTERN + ")\\b"));
@@ -188,6 +194,10 @@ function mentionsNoCategory(text, words) {
 function collect(message, previous = {}, now = new Date()) {
   const text = normalize(message);
   const next = { ...previous };
+  // Normaliza también borradores guardados por versiones anteriores, que
+  // podían conservar fechas como "10/12" sin año.
+  if (next.check_in) next.check_in = normalizeStoredDate(next.check_in, now);
+  if (next.check_out) next.check_out = normalizeStoredDate(next.check_out, now, next.check_in);
 
   if (previous.awaiting === "children") {
     if (isNegativeAnswer(text) || mentionsNoCategory(text, CHILD_WORDS)) next.children = 0;
