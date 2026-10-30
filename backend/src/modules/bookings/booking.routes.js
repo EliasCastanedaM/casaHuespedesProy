@@ -12,7 +12,7 @@ import {
   updateBookingStatusController,
 } from "./booking.controller.js";
 
-import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
+import { requireAdminAuth, requireAdminRole } from "../../middlewares/authMiddleware.js";
 
 // Creamos router de reservas
 const router = Router();
@@ -46,6 +46,7 @@ router.get(
 router.put(
   "/:id/status",
   requireAdminAuth,
+  requireAdminRole,
   updateBookingStatusController
 );
 
@@ -53,6 +54,7 @@ router.put(
 router.delete(
   "/:id",
   requireAdminAuth,
+  requireAdminRole,
   deleteBookingController
 );
 
