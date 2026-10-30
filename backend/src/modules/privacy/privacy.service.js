@@ -75,21 +75,3 @@ export async function getPrivacyRetentionPreview(db = pool) {
   };
 }
 
-// This query is only for a privileged, separately approved CLI maintenance.
-// Never clear a draft while staff has an active human handoff.
-export const EXPIRED_AI_CONTEXTS_SQL = `
-  UPDATE public.ai_conversations a
-  SET booking_context = '{}'::jsonb,
-      booking_context_expires_at = NULL,
-      updated_at = now()
-  WHERE a.booking_context <> '{}'::jsonb
-    AND (a.booking_context_expires_at <= now()
-         OR a.booking_context_expires_at IS NULL)
-    AND NOT EXISTS (
-      SELECT 1 FROM public.meta_conversations m
-      WHERE m.channel = a.channel
-        AND m.external_user_id = a.external_user_id
-        AND m.handoff_active = true
-    )
-  RETURNING a.channel;
-`;
