@@ -107,6 +107,8 @@ export default function MessagesAdmin() {
   const [draft, setDraft] = useState("");
   const [confirmAmount, setConfirmAmount] = useState("");
   const [confirmCategory, setConfirmCategory] = useState("");
+  const [confirmPetsAuthorized, setConfirmPetsAuthorized] = useState(false);
+  const [confirmChildBedAvailability, setConfirmChildBedAvailability] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
@@ -356,6 +358,8 @@ export default function MessagesAdmin() {
         ? String(reservation.staff_confirmation.total_amount)
         : ""
     );
+    setConfirmPetsAuthorized(false);
+    setConfirmChildBedAvailability(false);
   }, [
     selectedId,
     reservation?.recommended_category?.slug,
@@ -370,11 +374,26 @@ export default function MessagesAdmin() {
       setError("Selecciona una categoría e indica el importe total confirmado.");
       return;
     }
+    if (Number(reservation?.pets || 0) > 0 && !confirmPetsAuthorized) {
+      setError("Confirma primero la autorización de las mascotas.");
+      return;
+    }
+    const hasChildrenUsingAvailableBeds = Array.isArray(reservation?.child_ages) &&
+      reservation.child_ages.some((age) => Number(age) <= 4);
+    if (hasChildrenUsingAvailableBeds && !confirmChildBedAvailability) {
+      setError("Confirma que los niños de 0 a 4 años utilizarán camas disponibles.");
+      return;
+    }
     try {
       setSaving(true);
       const response = await api.post(
         conversationPath(selected) + "/confirm-reservation",
-        { category_slug: confirmCategory, total_amount: amount }
+        {
+          category_slug: confirmCategory,
+          total_amount: amount,
+          pet_authorized: confirmPetsAuthorized,
+          child_bed_availability_confirmed: confirmChildBedAvailability,
+        }
       );
       if (!response.data?.success) {
         throw new Error(response.data?.message || "No se pudo confirmar la disponibilidad.");
@@ -703,6 +722,30 @@ export default function MessagesAdmin() {
                         <option value="familiar-2">Familiar 2</option>
                       </select>
                     </label>
+                    {Number(reservation.pets || 0) > 0 && (
+                      <label className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-[#52636a]">
+                        <input
+                          type="checkbox"
+                          checked={confirmPetsAuthorized}
+                          onChange={(event) => setConfirmPetsAuthorized(event.target.checked)}
+                          disabled={saving}
+                          className="mt-0.5"
+                        />
+                        <span>Confirmo que el hospedaje autorizó previamente las mascotas (S/ 20 por mascota/noche).</span>
+                      </label>
+                    )}
+                    {Array.isArray(reservation.child_ages) && reservation.child_ages.some((age) => Number(age) <= 4) && (
+                      <label className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-[#52636a]">
+                        <input
+                          type="checkbox"
+                          checked={confirmChildBedAvailability}
+                          onChange={(event) => setConfirmChildBedAvailability(event.target.checked)}
+                          disabled={saving}
+                          className="mt-0.5"
+                        />
+                        <span>Confirmo que los niños de 0 a 4 años utilizarán camas disponibles, sin cargo adicional.</span>
+                      </label>
+                    )}
                     <label className="mt-3 block text-xs font-semibold text-[#52636a]">
                       Importe total confirmado (S/)
                       <input
@@ -719,7 +762,11 @@ export default function MessagesAdmin() {
                     <button
                       type="button"
                       onClick={confirmReservation}
-                      disabled={saving || !confirmCategory || !confirmAmount || Number(confirmAmount) <= 0}
+                      disabled={saving || !confirmCategory || !confirmAmount || Number(confirmAmount) <= 0 ||
+                        (Number(reservation.pets || 0) > 0 && !confirmPetsAuthorized) ||
+                        (Array.isArray(reservation.child_ages) &&
+                          reservation.child_ages.some((age) => Number(age) <= 4) &&
+                          !confirmChildBedAvailability)}
                       className="mt-3 w-full border border-[#003647] bg-[#003647] px-3 py-2.5 text-xs font-bold text-white hover:bg-[#075a78] disabled:opacity-40"
                     >
                       {saving ? "Procesando..." : "Confirmar disponibilidad y continuar"}
