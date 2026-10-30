@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import {
   handleWhatsAppMvpTurn,
   formatWhatsAppHandoffSummary,
+  prepareWhatsAppMvpReservation,
 } from "../src/modules/ai/ai.whatsapp-mvp.js";
 
-function turn(message, context = {}, now = new Date()) {
-  return handleWhatsAppMvpTurn({ message, context, now });
+function turn(message, context = {}, now = new Date(), extra = {}) {
+  return handleWhatsAppMvpTurn({ message, context, now, ...extra });
 }
 
 test("MVP pregunta solamente los datos pendientes antes de pasar al equipo", () => {
@@ -29,7 +30,7 @@ test("MVP pregunta solamente los datos pendientes antes de pasar al equipo", () 
   const summary = formatWhatsAppHandoffSummary(done.context.whatsapp_mvp);
   assert.match(summary, /20\/11\/2026/);
   assert.match(summary, /22\/11\/2026/);
-  assert.match(summary, /SIN reserva creada/);
+  assert.match(summary, /todavía no existe reserva/);
 });
 
 test("intención tras consulta de habitaciones retiene datos sin iniciar reserva prematuramente", () => {
@@ -58,11 +59,12 @@ test("reserva en inglés recoge datos y deriva en su idioma", () => {
   assert.match(details.reply, /I'll connect you with our team/);
 });
 
-test("el MVP nunca crea reservas aunque el cliente entregue todos los datos", () => {
+test("el MVP no ofrece pago ni registra reserva antes de la aprobación humana", () => {
   const result = turn("Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin mascotas y sin niños");
   assert.equal(result.mode, "human_review_required");
   assert.match(result.reply, /confirmar disponibilidad/);
-  assert.doesNotMatch(result.reply, /pre-reserva creada|pago|confirmada/i);
+  assert.doesNotMatch(result.reply, /Pagar en el establecimiento|Pagar ahora|enlace de Culqi/i);
+  assert.equal(result.context.whatsapp_mvp.state, "handoff");
 });
 
 test("reserva con niños sin edad pregunta antes de escalar", () => {
@@ -212,4 +214,191 @@ test("actualiza una corrección después de derivar y responde el total de hués
   const information = turn("¿Puedo llegar un poco antes del horario habitual?", correction.context);
   assert.equal(information.handled, false);
   assert.deepEqual(information.context, correction.context);
+});
+
+
+test("la recomendación elige la categoría de menor capacidad que admite al grupo", () => {
+  const categories = [
+    { slug: "familiar", name: "Familiar 1", capacity: 5, price_per_night: 250 },
+    { slug: "triple", name: "Triple", capacity: 3, price_per_night: 210 },
+    { slug: "matrimonial", name: "Matrimonial", capacity: 2, price_per_night: 120 },
+  ];
+  const start = turn(
+    "Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos y 1 niño sin mascotas",
+    {},
+    new Date("2026-10-30T15:00:00.000Z"),
+    { categories }
+  );
+  const done = turn("6 años", start.context, new Date("2026-10-30T15:00:00.000Z"), { categories });
+  const handoff = done;
+  assert.equal(handoff.context.whatsapp_mvp.recommended_category.slug, "triple");
+  assert.match(handoff.reply, /Triple/);
+  const summary = formatWhatsAppHandoffSummary(handoff.context.whatsapp_mvp);
+  assert.match(summary, /50 % del diferencial/);
+});
+
+test("la aprobación humana habilita datos del huésped y dos métodos de pago", () => {
+  const request = turn(
+    "Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas"
+  );
+  const approved = prepareWhatsAppMvpReservation({
+    context: request.context,
+    category: { slug: "matrimonial", name: "Matrimonial Estándar", capacity: 2, price_per_night: 120 },
+    totalAmount: 240,
+    externalUserId: "51987654321",
+  });
+  assert.equal(approved.context.whatsapp_mvp.state, "awaiting_customer_name");
+  assert.ok(approved.reply.includes("S/ 240.00"));
+
+  const name = turn("Ana Torres", approved.context, new Date(), { externalUserId: "51987654321" });
+  assert.equal(name.context.whatsapp_mvp.customer_name, "Ana Torres");
+  assert.match(name.reply, /correo electrónico/i);
+
+  const email = turn("ana@example.com", name.context, new Date(), { externalUserId: "51987654321" });
+  assert.equal(email.context.whatsapp_mvp.customer_email, "ana@example.com");
+  assert.match(email.reply, /Pagar en el establecimiento/);
+  assert.match(email.reply, /Pagar ahora/);
+
+  const onSite = turn("1", email.context, new Date(), { externalUserId: "51987654321" });
+  assert.equal(onSite.action, "create_booking");
+  assert.equal(onSite.paymentMethod, "pay_at_property");
+  assert.equal(onSite.context.whatsapp_mvp.state, "creating_booking");
+
+  const online = turn("2", email.context, new Date(), { externalUserId: "51987654321" });
+  assert.equal(online.action, "create_booking");
+  assert.equal(online.paymentMethod, "culqi_link");
+});
+
+test("si WhatsApp no entrega un teléfono numérico, el asesor lo solicita", () => {
+  const request = turn(
+    "Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas"
+  );
+  const approved = prepareWhatsAppMvpReservation({
+    context: request.context,
+    category: { slug: "matrimonial", name: "Matrimonial Estándar", capacity: 2, price_per_night: 120 },
+    totalAmount: 240,
+    externalUserId: "bsuid-example",
+  });
+  const name = turn("Ana Torres", approved.context, new Date(), { externalUserId: "bsuid-example" });
+  assert.equal(name.context.whatsapp_mvp.state, "awaiting_customer_phone");
+  const phone = turn("+51 987 654 321", name.context, new Date(), { externalUserId: "bsuid-example" });
+  assert.equal(phone.context.whatsapp_mvp.customer_phone, "51987654321");
+  assert.match(phone.reply, /correo electrónico/i);
+});
+
+test("una modificación posterior a la aprobación invalida la validación y devuelve el caso al equipo", () => {
+  const request = turn(
+    "Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas"
+  );
+  const approved = prepareWhatsAppMvpReservation({
+    context: request.context,
+    category: { slug: "matrimonial", name: "Matrimonial Estándar", capacity: 2, price_per_night: 120 },
+    totalAmount: 240,
+    externalUserId: "51987654321",
+  });
+  const changed = turn("Del 21/11/2026 al 23/11/2026", approved.context, new Date(), { externalUserId: "51987654321" });
+  assert.equal(changed.mode, "human_review_required");
+  assert.equal(changed.context.whatsapp_mvp.state, "handoff");
+  assert.equal(changed.context.whatsapp_mvp.staff_confirmation, undefined);
+});
+
+test("los grupos de 8 o más no pueden usar el registro automático de una sola habitación", () => {
+  const request = turn(
+    "Quiero reservar del 20/11/2026 al 22/11/2026 para 8 adultos sin niños y sin mascotas"
+  );
+  assert.equal(request.mode, "human_review_required");
+  assert.match(request.reply, /8 o más/);
+  assert.throws(() => prepareWhatsAppMvpReservation({
+    context: request.context,
+    category: { slug: "familiar", name: "Familiar 1", capacity: 5, price_per_night: 250 },
+    totalAmount: 1000,
+    externalUserId: "51987654321",
+  }), /gestión manual/);
+});
+
+test("un aviso de pago genera una acción de reporte solo para una reserva Culqi", () => {
+  const context = {
+    state: "whatsapp_mvp",
+    whatsapp_mvp: {
+      state: "booked",
+      language: "es",
+      intent_id: "22222222-2222-4222-8222-222222222222",
+      payment_method: "culqi_link",
+    },
+  };
+  const reported = turn("Ya pagué", context);
+  assert.equal(reported.action, "report_payment");
+  const onSiteContext = {
+    state: "whatsapp_mvp",
+    whatsapp_mvp: { ...context.whatsapp_mvp, payment_method: "pay_at_property" },
+  };
+  const onSite = turn("Ya pagué", onSiteContext);
+  assert.equal(onSite.action, undefined);
+  assert.match(onSite.reply, /pago quedó pendiente/i);
+});
+
+
+test("grupos que superan la capacidad máxima actual también requieren varias habitaciones", () => {
+  const categories = [
+    { slug: "familiar", name: "Familiar 1", capacity: 5, price_per_night: 250 },
+    { slug: "triple", name: "Triple", capacity: 3, price_per_night: 210 },
+  ];
+  const result = turn(
+    "Quiero reservar del 20/11/2026 al 22/11/2026 para 6 adultos sin niños y sin mascotas",
+    {},
+    new Date("2026-10-30T15:00:00.000Z"),
+    { categories }
+  );
+  assert.equal(result.context.whatsapp_mvp.max_single_room_capacity, 5);
+  assert.match(result.reply, /más de un cuarto|varias habitaciones/i);
+  assert.throws(() => prepareWhatsAppMvpReservation({
+    context: result.context,
+    category: { slug: "familiar", name: "Familiar 1", capacity: 5, price_per_night: 250 },
+    totalAmount: 500,
+    externalUserId: "51987654321",
+  }), /varias habitaciones/);
+});
+
+test("una pregunta sobre pagar en el establecimiento no se interpreta como elección", () => {
+  const context = {
+    state: "whatsapp_mvp",
+    whatsapp_mvp: {
+      state: "awaiting_payment_choice",
+      language: "es",
+      staff_confirmation: { total_amount: 240 },
+      customer_name: "Ana Torres",
+      customer_email: "ana@example.com",
+      customer_phone: "51987654321",
+    },
+  };
+  const result = turn("¿Qué pasa si pago en el establecimiento?", context);
+  assert.equal(result.handled, false);
+  assert.equal(result.action, undefined);
+  assert.equal(result.context, context);
+});
+
+
+test("la aprobación humana exige autorizar mascotas y verificar camas para niños de 0 a 4 años", () => {
+  const request = turn(
+    "Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos, 1 niño de 3 años y 1 mascota"
+  );
+  assert.equal(request.context.whatsapp_mvp.state, "handoff");
+  const base = {
+    context: request.context,
+    category: { slug: "triple", name: "Triple", capacity: 3, price_per_night: 210 },
+    totalAmount: 500,
+    externalUserId: "51987654321",
+  };
+  assert.throws(() => prepareWhatsAppMvpReservation(base), /autorización previa/);
+  assert.throws(() => prepareWhatsAppMvpReservation({
+    ...base,
+    petAuthorized: true,
+  }), /camas disponibles/);
+  const approved = prepareWhatsAppMvpReservation({
+    ...base,
+    petAuthorized: true,
+    childBedAvailabilityConfirmed: true,
+  });
+  assert.equal(approved.context.whatsapp_mvp.staff_confirmation.pet_authorized, true);
+  assert.equal(approved.context.whatsapp_mvp.staff_confirmation.child_bed_availability_confirmed, true);
 });

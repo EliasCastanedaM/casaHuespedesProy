@@ -8,6 +8,7 @@ import {
   listMessagesController,
   receiveWebhookController,
   sendManualMessageController,
+  confirmWhatsAppMvpReservationController,
   updateHandoffController,
   verifyWebhookController,
 } from "./meta.controller.js";
@@ -50,6 +51,11 @@ router.post(
   "/conversations/:channel/:externalUserId/messages",
   requireAdminAuth,
   sendManualMessageController
+);
+router.post(
+  "/conversations/:channel/:externalUserId/confirm-reservation",
+  requireAdminAuth,
+  confirmWhatsAppMvpReservationController
 );
 router.patch(
   "/conversations/:channel/:externalUserId/resolved",

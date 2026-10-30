@@ -1,5 +1,7 @@
-// Flujo seguro y progresivo de WhatsApp MVP, sin crear reservas ni consultar stock.
-// El contexto se guarda en ai_conversations.booking_context por conversación.
+import { randomUUID } from "node:crypto";
+
+// Flujo progresivo de WhatsApp MVP. La disponibilidad y el importe requieren aprobación humana;
+// después de esa aprobación, el backend registra la reserva y procesa el método de pago elegido.
 const MENU = "También puedo ayudarte con: 1) Habitaciones y tarifas 2) Servicios 3) Ubicación y cómo llegar 4) Políticas y preguntas frecuentes 5) Reserva.";
 
 function normalize(value) {
@@ -342,6 +344,15 @@ function formatHandoffUpdateReply(data = {}, changed = []) {
     const pets = Number(data.pets ?? 0);
     parts.push(pets === 0 ? "sin mascotas" : pets + (pets === 1 ? " mascota" : " mascotas"));
   }
+  if (changed.includes("child_ages")) {
+    parts.push("edades de niños: " + (Array.isArray(data.child_ages) ? data.child_ages.join(", ") : "pendientes"));
+  }
+  if (changed.includes("category_slug")) {
+    parts.push("categoría solicitada: " + (data.category_slug || "sin preferencia"));
+  }
+  if (changed.includes("preferences")) {
+    parts.push("preferencias actualizadas");
+  }
   return "Gracias por la aclaración. Actualicé tu solicitud: " + parts.join("; ") +
     ". La disponibilidad y la confirmación final siguen pendientes del equipo.";
 }
@@ -354,6 +365,13 @@ const labels = {
     ages: "¿Qué edades tienen los niños?",
     pets: "¿Llevarán mascotas? Si es así, ¿cuántas?",
     handoff: "¡Perfecto! 😊 Voy a comunicarte con una persona de nuestro equipo para confirmar disponibilidad y ayudarte a cerrar la reserva. Ya tiene los datos que compartiste; no necesitas repetirlos.",
+    largeGroupHandoff: "¡Perfecto! 😊 Para grupos de 8 o más personas, nuestro equipo revisará la tarifa especial y la distribución de habitaciones. Ya tiene los datos que compartiste; no necesitas repetirlos.",
+    multiRoomHandoff: "¡Perfecto! 😊 Por la cantidad de huéspedes, nuestro equipo debe revisar la distribución de varias habitaciones y confirmar la tarifa. Ya tiene los datos que compartiste.",
+    customerName: "Para registrar la reserva, ¿me indicas tu nombre completo?",
+    customerEmail: "Gracias. ¿Cuál es tu correo electrónico para enviarte los detalles de la reserva y el estado del pago?",
+    customerEmailInvalid: "No pude reconocer ese correo. Escríbelo nuevamente, por ejemplo: nombre@correo.com.",
+    customerPhone: "¿Me compartes un número de celular con código de país para asociarlo a la reserva?",
+    customerPhoneInvalid: "No pude reconocer el número. Envíalo con código de país, por ejemplo +51987654321.",
     menu: MENU
   },
   en: {
@@ -363,6 +381,13 @@ const labels = {
     ages: "How old are the children?",
     pets: "Will you bring any pets? If so, how many?",
     handoff: "Perfect! 😊 I'll connect you with our team to check availability and complete the reservation. They will have the details you already shared.",
+    largeGroupHandoff: "Perfect! 😊 For groups of 8 or more, our team will review the special rate and room allocation. They already have your details.",
+    multiRoomHandoff: "Perfect! 😊 Your group needs more than one room. Our team will review the room allocation and confirm the rate; they already have your details.",
+    customerName: "To register the reservation, may I have your full name?",
+    customerEmail: "Thank you. What email address should receive your reservation and payment updates?",
+    customerEmailInvalid: "I couldn't recognize that email. Please enter it again, for example: name@example.com.",
+    customerPhone: "Please share a phone number with country code so we can attach it to the reservation.",
+    customerPhoneInvalid: "I couldn't recognize that number. Please include the country code, for example +51987654321.",
     menu: "I can also help with: 1) Rooms and rates 2) Services 3) Location and directions 4) Policies and FAQs 5) Reservations."
   },
   pt: {
@@ -372,6 +397,13 @@ const labels = {
     ages: "Quais são as idades das crianças?",
     pets: "Vocês trarão animais de estimação? Quantos?",
     handoff: "Perfeito! 😊 Vou encaminhar você à nossa equipe para confirmar a disponibilidade e concluir a reserva. Não será necessário repetir os dados.",
+    largeGroupHandoff: "Perfeito! 😊 Para grupos de 8 ou mais pessoas, nossa equipe avaliará a tarifa especial e a distribuição dos quartos.",
+    multiRoomHandoff: "Perfeito! 😊 Seu grupo precisa de mais de um quarto. Nossa equipe avaliará a distribuição e confirmará a tarifa.",
+    customerName: "Para registrar a reserva, qual é seu nome completo?",
+    customerEmail: "Obrigado. Qual é seu e-mail para receber os detalhes da reserva e do pagamento?",
+    customerEmailInvalid: "Não reconheci esse e-mail. Envie novamente, por exemplo: nome@exemplo.com.",
+    customerPhone: "Informe um telefone com código do país para associarmos à reserva.",
+    customerPhoneInvalid: "Não reconheci o telefone. Inclua o código do país, por exemplo +51987654321.",
     menu: "Posso ajudar com: 1) Quartos e tarifas 2) Serviços 3) Localização 4) Políticas e perguntas frequentes 5) Reserva."
   },
   fr: {
@@ -381,6 +413,13 @@ const labels = {
     ages: "Quel âge ont les enfants ?",
     pets: "Voyagez-vous avec des animaux ? Si oui, combien ?",
     handoff: "Parfait ! 😊 Je vous mets en relation avec notre équipe pour vérifier les disponibilités et terminer la réservation. Vous n'aurez pas à répéter les informations.",
+    largeGroupHandoff: "Parfait ! 😊 Pour les groupes de 8 personnes ou plus, notre équipe vérifiera le tarif spécial et la répartition des chambres.",
+    multiRoomHandoff: "Parfait ! 😊 Votre groupe nécessite plusieurs chambres. Notre équipe vérifiera leur répartition et le tarif.",
+    customerName: "Pour enregistrer la réservation, quel est votre nom complet ?",
+    customerEmail: "Merci. Quelle adresse e-mail doit recevoir les détails de la réservation et du paiement ?",
+    customerEmailInvalid: "Je n'ai pas reconnu cette adresse e-mail. Veuillez la saisir à nouveau.",
+    customerPhone: "Veuillez indiquer un numéro de téléphone avec l'indicatif du pays.",
+    customerPhoneInvalid: "Je n'ai pas reconnu ce numéro. Veuillez inclure l'indicatif du pays.",
     menu: "Je peux vous aider : 1) Chambres et tarifs 2) Services 3) Localisation 4) Règlement 5) Réservation."
   }
 };
@@ -388,7 +427,7 @@ const labels = {
 function missingQuestion(data, l) {
   const dictionary = labels[l] || labels.es;
   if (!data.check_in || !data.check_out) return dictionary.dates;
-  if (data.total_guests == null && data.adults == null) return dictionary.guests;
+  if (data.adults == null) return dictionary.guests;
   if (data.children == null) return dictionary.children;
   if (data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length < data.children)) return dictionary.ages;
   if (data.pets == null) return dictionary.pets;
@@ -403,21 +442,214 @@ function formatSummaryDate(value) {
 export function formatWhatsAppHandoffSummary(data = {}) {
   const v = (value) => value === undefined || value === null || value === "" ? "Pendiente" : String(value);
   const ages = Array.isArray(data.child_ages) ? data.child_ages.join(", ") || "No aplica" : "Pendiente";
+  const nights = data.check_in && data.check_out
+    ? Math.max(0, Math.round((Date.parse(data.check_out + "T00:00:00Z") - Date.parse(data.check_in + "T00:00:00Z")) / 86400000))
+    : null;
+  const childPolicy = Array.isArray(data.child_ages)
+    ? data.child_ages.map((age) => age <= 4 ? age + " años: sin cargo si usa cama disponible"
+      : age <= 8 ? age + " años: 50 % del diferencial de tarifa; validar importe"
+      : age + " años: tarifa de adulto").join("; ") || "No aplica"
+    : "Pendiente";
+  const petCharge = Number(data.pets || 0) > 0 && nights
+    ? "S/ " + (20 * Number(data.pets) * nights).toFixed(2) + " estimado (" + data.pets + " mascota(s) × S/ 20 × " + nights + " noche(s)); autorización previa"
+    : Number(data.pets || 0) > 0 ? "S/ 20 por mascota/noche; autorización previa" : "No aplica";
+  const recommendation = data.recommended_category
+    ? data.recommended_category.name + " (capacidad " + data.recommended_category.capacity + ")"
+    : "Pendiente de recomendación";
   return [
     "SOLICITUD DE RESERVA — VALIDACIÓN HUMANA",
     "Ingreso: " + v(formatSummaryDate(data.check_in)),
     "Salida: " + v(formatSummaryDate(data.check_out)),
+    "Noches: " + v(nights),
     "Adultos: " + v(data.adults),
     "Niños: " + v(data.children) + " · edades: " + ages,
+    "Regla infantil: " + childPolicy,
     "Huéspedes totales: " + v(data.total_guests),
-    "Mascotas: " + v(data.pets),
-    "Categoría: " + v(data.category_slug),
+    "Mascotas: " + v(data.pets) + " · cargo de referencia: " + petCharge,
+    "Categoría solicitada: " + v(data.category_slug),
+    "Categoría sugerida: " + recommendation,
+    "Capacidad máxima de una habitación: " + v(data.max_single_room_capacity),
     "Preferencias: " + v(data.preferences),
-    "Estado: SIN disponibilidad confirmada; SIN reserva creada.",
+    Number(data.total_guests || 0) >= 8
+      ? "ATENCIÓN: grupo de 8 o más; tarifa especial y distribución de varias habitaciones a cargo del equipo."
+      : "Estado: disponibilidad e importe pendientes de validación humana; todavía no existe reserva.",
   ].join("\n");
 }
 
-export function handleWhatsAppMvpTurn({ message, context = {}, now = new Date() }) {
+
+function recommendCategory(categories, guests) {
+  const count = Number(guests || 0);
+  if (!count || count >= 8 || !Array.isArray(categories)) return null;
+  const active = categories
+    .filter((item) => item?.slug && Number(item.capacity) >= count)
+    .sort((a, b) =>
+      Number(a.capacity) - Number(b.capacity) ||
+      Number(a.price_per_night || 0) - Number(b.price_per_night || 0)
+    );
+  const item = active[0];
+  return item ? {
+    slug: String(item.slug),
+    name: String(item.name || item.slug),
+    capacity: Number(item.capacity),
+    price_per_night: Number(item.price_per_night || 0),
+  } : null;
+}
+
+function validPhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length >= 8 && digits.length <= 15 ? digits : null;
+}
+
+function validEmail(value) {
+  const candidate = String(value || "").trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(candidate) ? candidate : null;
+}
+
+function paymentChoice(text) {
+  if (/[?¿]/.test(String(text || ""))) return null;
+  const value = normalize(text).replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  if (/^(?:1|opcion 1|opcion uno|la primera|la primera opcion|primera opcion|prefiero la primera)$/.test(value) ||
+      /(?:pagar|pago).*(?:establecimiento|hospedaje|al llegar|hotel|presencial|en persona|efectivo)|pay at (?:the )?hotel|pay at property|pay on arrival|no estabelecimento|pagar no hotel|payer sur place|sur place/.test(value)) {
+    return "pay_at_property";
+  }
+  if (/^(?:2|opcion 2|opcion dos|la segunda|la segunda opcion|segunda opcion|prefiero la segunda)$/.test(value) ||
+      /(?:pagar|pago).*(?:ahora|online|en linea|culqi)|pay now|pay online|pay with culqi|pagar agora|payer maintenant/.test(value)) {
+    return "culqi_link";
+  }
+  return null;
+}
+
+function paymentReportedMessage(text) {
+  return /\b(?:ya pague|he pagado|pago realizado|pague|ya realice el pago|ya hice el pago|paid|i have paid|payment sent|payment completed|ja paguei|paguei|j ai paye|j ai deja paye)\b/.test(normalize(text));
+}
+
+function asksBookingStatus(text) {
+  return /\b(?:estado de mi reserva|como va mi reserva|mi reserva esta|esta confirmada|ya esta confirmada|confirmaron mi reserva|booking status|is my reservation|is it confirmed|reservation status|status da reserva|minha reserva|etat de ma reservation|ma reservation est)\b/.test(normalize(text));
+}
+
+function paymentOptionsReply(data, language = "es") {
+  const amount = Number(data?.staff_confirmation?.total_amount || 0);
+  const amountText = amount > 0 ? " Total confirmado: S/ " + amount.toFixed(2) + "." : "";
+  const messages = {
+    es: "¿Cómo prefieres realizar el pago?\\n1) Pagar en el establecimiento: registraremos tu reserva y pagarás al llegar.\\n2) Pagar ahora: te enviaremos un enlace seguro de Culqi." + amountText,
+    en: "How would you like to pay?\\n1) Pay at the property: we will register your reservation and you will pay when you arrive.\\n2) Pay now: we will send you a secure Culqi payment link." + amountText,
+    pt: "Como prefere pagar?\\n1) Pagar no estabelecimento: registraremos sua reserva e você pagará na chegada.\\n2) Pagar agora: enviaremos um link seguro da Culqi." + amountText,
+    fr: "Comment souhaitez-vous payer ?\\n1) Payer sur place : nous enregistrerons votre réservation et vous paierez à votre arrivée.\\n2) Payer maintenant : nous vous enverrons un lien de paiement sécurisé Culqi." + amountText,
+  };
+  return messages[language] || messages.es;
+}
+
+function postApprovalReply(language, categoryName, amount) {
+  const formatted = "S/ " + Number(amount).toFixed(2);
+  const messages = {
+    es: "¡Listo! Nuestro equipo verificó la disponibilidad de " + categoryName + " y confirmó el importe total de " + formatted + ". Para registrar tu reserva, ¿me indicas tu nombre completo?",
+    en: "Great! Our team checked availability for " + categoryName + " and confirmed the total amount of " + formatted + ". To register your reservation, may I have your full name?",
+    pt: "Perfeito! Nossa equipe verificou a disponibilidade de " + categoryName + " e confirmou o valor total de " + formatted + ". Para registrar sua reserva, qual é seu nome completo?",
+    fr: "Parfait ! Notre équipe a vérifié la disponibilité de " + categoryName + " et confirmé le montant total de " + formatted + ". Pour enregistrer votre réservation, quel est votre nom complet ?",
+  };
+  return messages[language] || messages.es;
+}
+
+function paymentStatusReply(language, status) {
+  const confirmed = status === "confirmed";
+  const messages = {
+    es: confirmed
+      ? "¡Tu reserva está confirmada! El equipo verificó el pago. Gracias por elegir Casa Huéspedes Pimentel."
+      : "Tu aviso de pago ya fue recibido. El equipo debe verificar el movimiento en Culqi; la reserva todavía no está confirmada. Te avisaremos cuando termine la revisión.",
+    en: confirmed
+      ? "Your reservation is confirmed. Our team verified the payment. Thank you for choosing Casa Huéspedes Pimentel."
+      : "We received your payment notice. Our team must verify the transaction in Culqi; the reservation is not confirmed yet. We will notify you when the review is complete.",
+    pt: confirmed
+      ? "Sua reserva está confirmada. Nossa equipe verificou o pagamento. Obrigado por escolher a Casa Huéspedes Pimentel."
+      : "Recebemos seu aviso de pagamento. Nossa equipe precisa verificar a transação na Culqi; a reserva ainda não está confirmada.",
+    fr: confirmed
+      ? "Votre réservation est confirmée. Notre équipe a vérifié le paiement. Merci d'avoir choisi Casa Huéspedes Pimentel."
+      : "Nous avons reçu votre avis de paiement. Notre équipe doit vérifier la transaction dans Culqi ; la réservation n'est pas encore confirmée.",
+  };
+  return messages[language] || messages.es;
+}
+
+export function prepareWhatsAppMvpReservation({ context = {}, category, totalAmount, externalUserId, petAuthorized = false, childBedAvailabilityConfirmed = false }) {
+  const current = context.whatsapp_mvp || {};
+  const amount = Number(totalAmount);
+  const categorySlug = String(category?.slug || "").trim().toLowerCase();
+  const categoryName = String(category?.name || categorySlug).trim();
+  if (current.state !== "handoff") {
+    const error = new Error("La solicitud no está esperando validación humana.");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (Number(current.total_guests || 0) >= 8) {
+    const error = new Error("Los grupos de 8 o más huéspedes requieren gestión manual de varias habitaciones y tarifa especial.");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (Number(current.max_single_room_capacity || 0) > 0 &&
+      Number(current.total_guests || 0) > Number(current.max_single_room_capacity)) {
+    const error = new Error("La solicitud requiere varias habitaciones y debe gestionarse manualmente.");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (!current.check_in || !current.check_out || !current.adults && !current.total_guests ||
+      current.children == null || current.pets == null ||
+      (Number(current.children) > 0 && (!Array.isArray(current.child_ages) || current.child_ages.length < Number(current.children)))) {
+    const error = new Error("Faltan datos de la solicitud para confirmar disponibilidad.");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (!categorySlug || !Number.isFinite(amount) || amount <= 0) {
+    const error = new Error("Debes indicar una categoría y un importe total válidos.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (Number(current.pets || 0) > 0 && petAuthorized !== true) {
+    const error = new Error("Las mascotas requieren autorización previa del hospedaje.");
+    error.statusCode = 409;
+    throw error;
+  }
+  const hasChildrenUsingAvailableBeds = Array.isArray(current.child_ages) &&
+    current.child_ages.some((age) => Number(age) <= 4);
+  if (hasChildrenUsingAvailableBeds && childBedAvailabilityConfirmed !== true) {
+    const error = new Error("Debes confirmar que los niños de 0 a 4 años utilizarán camas disponibles.");
+    error.statusCode = 409;
+    throw error;
+  }
+  const language = current.language || "es";
+  const next = {
+    ...current,
+    category_slug: categorySlug,
+    recommended_category: {
+      slug: categorySlug,
+      name: categoryName,
+      capacity: Number(category.capacity),
+      price_per_night: Number(category.price_per_night || 0),
+    },
+    customer_phone: current.customer_phone || validPhone(externalUserId),
+    staff_confirmation: {
+      confirmed: true,
+      category_slug: categorySlug,
+      category_name: categoryName,
+      total_amount: amount,
+      pet_authorized: Number(current.pets || 0) > 0 ? true : null,
+      child_bed_availability_confirmed: hasChildrenUsingAvailableBeds ? true : null,
+      confirmed_at: new Date().toISOString(),
+    },
+    state: "awaiting_customer_name",
+    awaiting: "customer_name",
+  };
+  return {
+    context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: next },
+    reply: postApprovalReply(language, categoryName, amount),
+  };
+}
+
+export function handleWhatsAppMvpTurn({
+  message,
+  context = {},
+  now = new Date(),
+  externalUserId = "",
+  categories = [],
+}) {
   const text = normalize(message);
   const state = context.whatsapp_mvp || null;
   const language = detectLanguage(message, state?.language || "es");
@@ -426,11 +658,30 @@ export function handleWhatsAppMvpTurn({ message, context = {}, now = new Date() 
   if (isWhatsAppMenuRequest(message)) {
     return { handled: true, reply: dictionary.menu, mode: "whatsapp_mvp_menu", context };
   }
+
   if (state?.state === "handoff") {
     const updated = collect(message, state, now);
     updated.language = language;
     updated.state = "handoff";
     delete updated.awaiting;
+    const maxCapacity = Array.isArray(categories) && categories.length
+      ? Math.max(...categories.map((item) => Number(item.capacity || 0)))
+      : Number(updated.max_single_room_capacity || 0);
+    if (maxCapacity > 0) updated.max_single_room_capacity = maxCapacity;
+    const suggested = recommendCategory(categories, updated.total_guests);
+    if (Number(updated.total_guests || 0) < 8 && suggested) {
+      const selected = categories.find((item) => item.slug === updated.category_slug);
+      updated.recommended_category = selected && Number(selected.capacity) >= Number(updated.total_guests)
+        ? {
+            slug: String(selected.slug),
+            name: String(selected.name || selected.slug),
+            capacity: Number(selected.capacity),
+            price_per_night: Number(selected.price_per_night || 0),
+          }
+        : suggested;
+    } else if (Number(updated.total_guests || 0) >= 8) {
+      updated.recommended_category = null;
+    }
     const changed = changedBookingFields(state, updated);
     if (changed.length > 0) {
       return {
@@ -448,10 +699,117 @@ export function handleWhatsAppMvpTurn({ message, context = {}, now = new Date() 
         mode: "whatsapp_mvp_summary",
       };
     }
-    // El equipo ya recibió la solicitud. Las preguntas informativas pueden
-    // continuar por los manejadores normales, sin volver a derivar al huésped.
     return { handled: false, context };
   }
+
+  if (["awaiting_customer_name", "awaiting_customer_email", "awaiting_customer_phone", "awaiting_payment_choice"].includes(state?.state)) {
+    if (/[¿?]/.test(String(message || "")) &&
+        !containsStructuredBookingAnswer(message, state, now)) {
+      return { handled: false, context };
+    }
+    const updatedBooking = collect(message, state, now);
+    const changed = changedBookingFields(state, updatedBooking);
+    if (changed.length > 0) {
+      const reset = { ...updatedBooking, state: "handoff" };
+      delete reset.awaiting;
+      delete reset.staff_confirmation;
+      return {
+        handled: true,
+        context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: reset },
+        reply: formatHandoffUpdateReply(reset, changed) + " El equipo debe validar nuevamente la disponibilidad y el importe.",
+        mode: "human_review_required",
+      };
+    }
+
+    const next = { ...state, language };
+    if (state.state === "awaiting_customer_name") {
+      const name = String(message || "").trim().replace(/\s+/g, " ");
+      if (name.length < 3 || name.length > 120 || /@/.test(name) || /^\d+$/.test(name)) {
+        return { handled: true, context, reply: labels[language]?.customerName || labels.es.customerName, mode: "whatsapp_mvp_collecting" };
+      }
+      next.customer_name = name;
+      const phone = validPhone(externalUserId) || validPhone(next.customer_phone);
+      if (phone) {
+        next.customer_phone = phone;
+        next.state = "awaiting_customer_email";
+        next.awaiting = "customer_email";
+        return { handled: true, context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: next }, reply: labels[language]?.customerEmail || labels.es.customerEmail, mode: "whatsapp_mvp_collecting" };
+      }
+      next.state = "awaiting_customer_phone";
+      next.awaiting = "customer_phone";
+      return { handled: true, context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: next }, reply: labels[language]?.customerPhone || labels.es.customerPhone, mode: "whatsapp_mvp_collecting" };
+    }
+
+    if (state.state === "awaiting_customer_email") {
+      const email = validEmail(message);
+      if (!email) {
+        return { handled: true, context, reply: labels[language]?.customerEmailInvalid || labels.es.customerEmailInvalid, mode: "whatsapp_mvp_collecting" };
+      }
+      next.customer_email = email;
+      next.state = "awaiting_payment_choice";
+      next.awaiting = "payment_choice";
+      return { handled: true, context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: next }, reply: paymentOptionsReply(next, language), mode: "whatsapp_mvp_payment_choice" };
+    }
+
+    if (state.state === "awaiting_customer_phone") {
+      const phone = validPhone(message);
+      if (!phone) {
+        return { handled: true, context, reply: labels[language]?.customerPhoneInvalid || labels.es.customerPhoneInvalid, mode: "whatsapp_mvp_collecting" };
+      }
+      next.customer_phone = phone;
+      next.state = "awaiting_customer_email";
+      next.awaiting = "customer_email";
+      return { handled: true, context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: next }, reply: labels[language]?.customerEmail || labels.es.customerEmail, mode: "whatsapp_mvp_collecting" };
+    }
+
+    const selectedMethod = paymentChoice(text);
+    if (!selectedMethod) {
+      return { handled: true, context, reply: paymentOptionsReply(state, language), mode: "whatsapp_mvp_payment_choice" };
+    }
+    const selectedContext = {
+      ...context,
+      state: "whatsapp_mvp",
+      whatsapp_mvp: {
+        ...state,
+        language,
+        payment_method: selectedMethod,
+        state: "creating_booking",
+      },
+    };
+    return {
+      handled: true,
+      action: "create_booking",
+      paymentMethod: selectedMethod,
+      context: selectedContext,
+      mode: "whatsapp_mvp_create_booking",
+    };
+  }
+
+  if (["booked", "payment_reported", "confirmed"].includes(state?.state)) {
+    if (state.payment_method === "culqi_link" && paymentReportedMessage(text)) {
+      if (state.state === "payment_reported") {
+        return {
+          handled: true,
+          context,
+          reply: paymentStatusReply(language, "payment_reported"),
+          mode: "whatsapp_mvp_payment_reported",
+        };
+      }
+      return { handled: true, action: "report_payment", context, mode: "whatsapp_mvp_report_payment" };
+    }
+    if (state.payment_method === "pay_at_property" && paymentReportedMessage(text)) {
+      return {
+        handled: true,
+        context,
+        reply: "Tu reserva ya está registrada y el pago quedó pendiente para realizarse directamente en el establecimiento.",
+        mode: "whatsapp_mvp_booking_created",
+      };
+    }
+    if (asksBookingStatus(text)) {
+      return { handled: true, action: "refresh_booking_status", context, mode: "whatsapp_mvp_booking_status" };
+    }
+  }
+
   if (!state && !intent) {
     const preliminary = collect(message, {}, now);
     const hasDetails = ["check_in", "total_guests", "adults", "children", "pets", "category_slug", "preferences"]
@@ -474,9 +832,6 @@ export function handleWhatsAppMvpTurn({ message, context = {}, now = new Date() 
       },
     };
   }
-  // Una pregunta informativa intermedia no debe reiniciar la reserva ni
-  // forzar el siguiente paso del formulario. Las respuestas estructuradas,
-  // incluso con números escritos o signos de interrogación, sí se procesan.
   if (state?.state === "collecting" && !intent && /[¿?]/.test(String(message)) &&
       !containsStructuredBookingAnswer(message, state, now)) {
     return { handled: false, context };
@@ -485,22 +840,57 @@ export function handleWhatsAppMvpTurn({ message, context = {}, now = new Date() 
   const data = collect(message, state || {}, now);
   data.language = language;
   data.state = "collecting";
+  data.intent_id = state?.intent_id || randomUUID();
   delete data.awaiting;
+
+  const maxCapacity = Array.isArray(categories) && categories.length
+    ? Math.max(...categories.map((item) => Number(item.capacity || 0)))
+    : Number(data.max_single_room_capacity || 0);
+  if (maxCapacity > 0) data.max_single_room_capacity = maxCapacity;
+  const suggested = recommendCategory(categories, data.total_guests);
+  if (data.total_guests != null && Number(data.total_guests) < 8 && suggested) {
+    const selected = categories.find((item) => item.slug === data.category_slug);
+    data.recommended_category = selected && Number(selected.capacity) >= Number(data.total_guests)
+      ? {
+          slug: String(selected.slug),
+          name: String(selected.name || selected.slug),
+          capacity: Number(selected.capacity),
+          price_per_night: Number(selected.price_per_night || 0),
+        }
+      : suggested;
+  } else if (Number(data.total_guests || 0) >= 8) {
+    data.recommended_category = null;
+  }
+
   const nextContext = { ...context, whatsapp_mvp: data, state: "whatsapp_mvp" };
   const question = missingQuestion(data, language);
   if (question) {
     data.awaiting = !data.check_in || !data.check_out ? "dates"
-      : data.total_guests == null && data.adults == null ? "guests"
+      : data.adults == null ? "guests"
       : data.children == null ? "children"
       : data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length < data.children) ? "ages"
       : "pets";
     return { handled: true, context: nextContext, reply: question, mode: "whatsapp_mvp_collecting" };
   }
+
   data.state = "handoff";
+  const largeGroup = Number(data.total_guests || 0) >= 8;
+  const needsMultipleRooms = Number(data.max_single_room_capacity || 0) > 0 &&
+    Number(data.total_guests || 0) > Number(data.max_single_room_capacity);
+  let handoffReply = largeGroup
+    ? (labels[language]?.largeGroupHandoff || labels.es.largeGroupHandoff)
+    : needsMultipleRooms
+      ? (labels[language]?.multiRoomHandoff || labels.es.multiRoomHandoff)
+      : dictionary.handoff;
+  if (!largeGroup && data.recommended_category) {
+    const recommendation = data.recommended_category.name;
+    handoffReply += " Por el tamaño del grupo, la categoría que mejor se ajusta es " + recommendation +
+      " (capacidad " + data.recommended_category.capacity + "). Esto no confirma disponibilidad.";
+  }
   return {
     handled: true,
     context: nextContext,
-    reply: dictionary.handoff,
+    reply: handoffReply,
     mode: "human_review_required",
     internalSummary: formatWhatsAppHandoffSummary(data),
   };

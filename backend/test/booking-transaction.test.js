@@ -154,11 +154,11 @@ function createBookingPool({ failPayment = false } = {}) {
               guests_count: Number(params[7]),
               nights: Number(params[8]),
               total_amount: Number(params[9]),
-              status: "pending_payment",
-              source: params[10],
-              special_requests: params[11],
-              public_token: params[12],
-              booking_intent_id: params[13],
+              status: params[10],
+              source: params[11],
+              special_requests: params[12],
+              public_token: params[13],
+              booking_intent_id: params[14],
             };
             source.bookings.push(booking);
             return { rows: [{ ...booking }] };
@@ -171,8 +171,8 @@ function createBookingPool({ failPayment = false } = {}) {
           if (normalized.startsWith("insert into payments")) {
             if (failPayment) throw new Error("fallo simulado al crear payment");
             source.payments.push({
-              id: source.nextPaymentId++, booking_id: Number(params[0]), amount: Number(params[1]),
-              payment_provider: "culqi_link", currency: "PEN", status: "pending", payment_url: params[2],
+              id: source.nextPaymentId++, booking_id: Number(params[0]), amount: Number(params[2]),
+              payment_provider: params[1], currency: "PEN", status: "pending", payment_url: params[3],
             });
             return { rows: [] };
           }
@@ -192,11 +192,12 @@ function createBookingPool({ failPayment = false } = {}) {
   };
 }
 
-function createDependencies(fakePool, emailCalls) {
+function createDependencies(fakePool, emailCalls, onSiteCalls = []) {
   return {
     pool: fakePool,
     checkAvailabilityService: async () => ({ available: true }),
     sendBookingPendingEmails: async (details) => { emailCalls.push(details.id); },
+    sendBookingOnSiteConfirmedEmails: async (details) => { onSiteCalls.push(details.id); },
   };
 }
 
@@ -225,6 +226,46 @@ test("misma booking_intent_id secuencial crea un solo booking y un solo correo",
     JSON.stringify(snapshot.contexts[0].booking_context),
     /Ana|ana@example|987654321|public_token|payment_url|culqi/i
   );
+});
+
+test("pago en el establecimiento crea una reserva confirmada sin enlace Culqi y mantiene el pago pendiente", async () => {
+  const fakePool = createBookingPool();
+  const culqiEmails = [];
+  const onSiteEmails = [];
+  const result = await createBookingService(
+    bookingInput,
+    {
+      ...options,
+      paymentMethod: "pay_at_property",
+      staffConfirmed: true,
+      finalAmount: 500,
+    },
+    createDependencies(fakePool, culqiEmails, onSiteEmails)
+  );
+  const snapshot = fakePool.snapshot();
+  assert.equal(snapshot.bookings.length, 1);
+  assert.equal(snapshot.bookings[0].status, "confirmed");
+  assert.equal(snapshot.bookings[0].total_amount, 500);
+  assert.equal(snapshot.payments[0].payment_provider, "pay_at_property");
+  assert.equal(snapshot.payments[0].status, "pending");
+  assert.equal(snapshot.payments[0].payment_url, null);
+  assert.equal(result.payment_url, null);
+  assert.equal(result.booking.payment_method, "pay_at_property");
+  assert.equal(culqiEmails.length, 0);
+  assert.equal(onSiteEmails.length, 1);
+});
+
+test("pago presencial e importe final no pueden utilizarse sin aprobación humana", async () => {
+  const fakePool = createBookingPool();
+  await assert.rejects(
+    createBookingService(bookingInput, { ...options, paymentMethod: "pay_at_property" }, createDependencies(fakePool, [])),
+    /confirmación humana previa/
+  );
+  await assert.rejects(
+    createBookingService(bookingInput, { ...options, finalAmount: 500 }, createDependencies(fakePool, [])),
+    /validación humana/
+  );
+  assert.equal(fakePool.snapshot().bookings.length, 0);
 });
 
 test("dos ejecuciones concurrentes de la misma intención crean un solo booking", async () => {
