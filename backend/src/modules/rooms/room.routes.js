@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { uploadImage } from "../../middlewares/uploads/uploadImage.js";
+import { MEDIA_LIMITS } from "../../middlewares/uploads/mediaSecurity.js";
 import {
   uploadRoomImages,
   uploadRoomVideos,
@@ -52,7 +53,7 @@ router.post(
   "/:id/images",
   requireAdminAuth,
   requireAdminRole,
-  uploadRoomImages.array("files", 30),
+  uploadRoomImages.array("files", MEDIA_LIMITS.imageCount),
   uploadRoomImagesController
 );
 
@@ -61,7 +62,7 @@ router.post(
   "/:id/videos",
   requireAdminAuth,
   requireAdminRole,
-  uploadRoomVideos.array("files", 10),
+  uploadRoomVideos.array("files", MEDIA_LIMITS.videoCount),
   uploadRoomVideosController
 );
 

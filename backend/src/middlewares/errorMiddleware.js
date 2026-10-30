@@ -5,9 +5,11 @@ function safeErrorCode(value) {
 }
 
 export function errorMiddleware(error, req, res, next) {
-  const statusCode = Number.isInteger(error?.statusCode)
-    ? error.statusCode
-    : 500;
+  const uploadLimitExceeded = error?.name === "MulterError" &&
+    ["LIMIT_FILE_SIZE", "LIMIT_FILE_COUNT", "LIMIT_UNEXPECTED_FILE", "LIMIT_FIELD_COUNT"].includes(error.code);
+  const statusCode = uploadLimitExceeded
+    ? (error.code === "LIMIT_UNEXPECTED_FILE" ? 400 : 413)
+    : Number.isInteger(error?.statusCode) ? error.statusCode : 500;
   const routePath = typeof req.route?.path === "string" ? req.route.path : null;
 
   // No registrar error.message, stack, URL original, query params ni body:
@@ -23,9 +25,9 @@ export function errorMiddleware(error, req, res, next) {
   }));
 
   const isDevelopment = process.env.NODE_ENV === "development";
-  const message = statusCode < 500
-    ? error?.message || "Solicitud no válida"
-    : "Error interno del servidor";
+  const message = uploadLimitExceeded
+    ? "El lote de archivos supera los límites de cantidad o tamaño admitidos."
+    : statusCode < 500 ? error?.message || "Solicitud no válida" : "Error interno del servidor";
   const payload = { success: false, message };
 
   if (isDevelopment && error?.stack) {
