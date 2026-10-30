@@ -689,6 +689,10 @@ export function handleWhatsAppMvpTurn({
   }
 
   if (["awaiting_customer_name", "awaiting_customer_email", "awaiting_customer_phone", "awaiting_payment_choice"].includes(state?.state)) {
+    if (/[¿?]/.test(String(message || "")) &&
+        !containsStructuredBookingAnswer(message, state, now)) {
+      return { handled: false, context };
+    }
     const updatedBooking = collect(message, state, now);
     const changed = changedBookingFields(state, updatedBooking);
     if (changed.length > 0) {
