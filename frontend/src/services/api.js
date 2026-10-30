@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAdminToken, clearAdminSession } from "./adminSession.js";
 
 const defaultApiUrl = import.meta.env.DEV
   ? "http://localhost:4000/api"
@@ -9,7 +10,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("adminToken");
+  const token = getAdminToken();
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -17,6 +18,35 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // En una sesión revocada, eliminar el token; jamás enviar credenciales
+    // antiguas al backend. No redirigir por un 401 del propio login.
+    const isLogin = error.config?.url?.includes("/auth/login");
+    if (error.response?.status === 401 && !isLogin && getAdminToken()) {
+      clearAdminSession();
+      if (window.location.pathname.startsWith("/admin")) {
+        window.location.assign("/admin/login");
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export async function getCurrentAdminSession() {
+  const response = await api.get("/auth/session");
+  return response.data.data;
+}
+
+export async function logoutAdmin() {
+  return api.post("/auth/logout");
+}
+
+export async function logoutAllAdminSessions() {
+  return api.post("/auth/logout-all");
+}
 
 export default api;
 
