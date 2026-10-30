@@ -537,7 +537,7 @@ export async function setHandoffState(
          SET booking_context = jsonb_set(
            booking_context,
            '{whatsapp_mvp}',
-           (booking_context->'whatsapp_mvp' - 'awaiting') || '{"state":"browsing"}'::jsonb,
+           ((booking_context -> 'whatsapp_mvp') - 'awaiting'::text) || '{"state":"browsing"}'::jsonb,
            false
          ),
          updated_at = CURRENT_TIMESTAMP
