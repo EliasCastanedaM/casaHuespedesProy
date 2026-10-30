@@ -32,15 +32,15 @@ export function formatHotelLocationReply(profile, message = "") {
   }
   const text = normalize(message);
   const mapsUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address);
-  if (/\\b(?:where|address|location|directions|located|how to get)\\b/.test(text)) {
+  if (/\b(?:where|address|location|directions|located|how to get)\b/.test(text)) {
     return "Casa Huéspedes Pimentel is located at " + address +
       ". Google Maps: " + mapsUrl;
   }
-  if (/\\b(?:onde|endereco|localizacao|chegar)\\b/.test(text)) {
+  if (/\b(?:onde|endereco|localizacao|chegar)\b/.test(text)) {
     return "Casa Huéspedes Pimentel fica em " + address +
       ". Google Maps: " + mapsUrl;
   }
-  if (/\\b(?:adresse|comment arriver|ou etes)\\b/.test(text)) {
+  if (/\b(?:adresse|comment arriver|ou etes)\b/.test(text)) {
     return "Casa Huéspedes Pimentel se trouve à " + address +
       ". Google Maps : " + mapsUrl;
   }
