@@ -569,7 +569,7 @@ function paymentStatusReply(language, status) {
   return messages[language] || messages.es;
 }
 
-export function prepareWhatsAppMvpReservation({ context = {}, category, totalAmount, externalUserId }) {
+export function prepareWhatsAppMvpReservation({ context = {}, category, totalAmount, externalUserId, petAuthorized = false, childBedAvailabilityConfirmed = false }) {
   const current = context.whatsapp_mvp || {};
   const amount = Number(totalAmount);
   const categorySlug = String(category?.slug || "").trim().toLowerCase();
@@ -602,6 +602,18 @@ export function prepareWhatsAppMvpReservation({ context = {}, category, totalAmo
     error.statusCode = 400;
     throw error;
   }
+  if (Number(current.pets || 0) > 0 && petAuthorized !== true) {
+    const error = new Error("Las mascotas requieren autorización previa del hospedaje.");
+    error.statusCode = 409;
+    throw error;
+  }
+  const hasChildrenUsingAvailableBeds = Array.isArray(current.child_ages) &&
+    current.child_ages.some((age) => Number(age) <= 4);
+  if (hasChildrenUsingAvailableBeds && childBedAvailabilityConfirmed !== true) {
+    const error = new Error("Debes confirmar que los niños de 0 a 4 años utilizarán camas disponibles.");
+    error.statusCode = 409;
+    throw error;
+  }
   const language = current.language || "es";
   const next = {
     ...current,
@@ -618,6 +630,8 @@ export function prepareWhatsAppMvpReservation({ context = {}, category, totalAmo
       category_slug: categorySlug,
       category_name: categoryName,
       total_amount: amount,
+      pet_authorized: Number(current.pets || 0) > 0 ? true : null,
+      child_bed_availability_confirmed: hasChildrenUsingAvailableBeds ? true : null,
       confirmed_at: new Date().toISOString(),
     },
     state: "awaiting_customer_name",
