@@ -698,10 +698,11 @@ async function createBookingTransaction(
       ? onSiteEmailSender
       : pendingEmailSender;
     void emailSender(details).catch((emailError) => {
-      console.error(
-        "La reserva fue creada, pero no se pudo enviar su correo:",
-        emailError.message
-      );
+      console.error(JSON.stringify({
+        component: "booking_notification",
+        event: "send_failed",
+        errorType: String(emailError?.name || "Error").slice(0, 60),
+      }));
     });
   }
 
