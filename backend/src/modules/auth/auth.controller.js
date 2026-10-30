@@ -1,4 +1,5 @@
 import { loginService } from "./auth.service.js";
+import { env } from "../../config/env.js";
 import { changeAdminPassword, requestAdminPasswordRecovery, confirmAdminPasswordRecovery } from "./auth.passwords.js";
 import { revokeAdminSession, revokeAllAdminSessions } from "./auth.sessions.js";
 
@@ -78,6 +79,9 @@ export async function requestPasswordRecoveryController(req, res, next) {
 
 export async function confirmPasswordRecoveryController(req, res, next) {
   try {
+    if (!env.auth.passwordRecoveryEnabled) {
+      return res.status(503).json({ success: false, message: "La recuperación de acceso no está habilitada actualmente." });
+    }
     await confirmAdminPasswordRecovery(req.body?.token, req.body?.newPassword);
     res.setHeader("Cache-Control", "no-store");
     return res.json({ success: true, message: "Contraseña actualizada. Inicia sesión de nuevo." });
