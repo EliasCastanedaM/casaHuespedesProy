@@ -21,11 +21,11 @@ export async function getPrivacyRetentionPreview(db = pool) {
              count(*) FILTER (WHERE created_at < now() - interval '90 days')::integer
       FROM public.ai_processed_messages
       UNION ALL
-      SELECT 'customers', count(*)::integer, 0::integer FROM public.customers
+      SELECT 'customers', count(*)::integer, NULL::integer FROM public.customers
       UNION ALL
-      SELECT 'bookings', count(*)::integer, 0::integer FROM public.bookings
+      SELECT 'bookings', count(*)::integer, NULL::integer FROM public.bookings
       UNION ALL
-      SELECT 'inquiries', count(*)::integer, 0::integer FROM public.inquiries
+      SELECT 'inquiries', count(*)::integer, NULL::integer FROM public.inquiries
       ORDER BY category;
     `),
     db.query(`
@@ -58,7 +58,7 @@ export async function getPrivacyRetentionPreview(db = pool) {
     records: records.rows.map(({ category, total, older_than_90d }) => ({
       category,
       total: Number(total),
-      olderThan90Days: Number(older_than_90d),
+      olderThan90Days: older_than_90d == null ? null : Number(older_than_90d),
     })),
     bookingContext: {
       populated: Number(contexts.rows[0]?.populated || 0),
