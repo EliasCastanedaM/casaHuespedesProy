@@ -17,27 +17,27 @@ export function isHotelServicesInquiry(message) {
 
 export function formatHotelServicesReply(services, message) {
   const text = normalized(message);
-  if (/\\bdesayuno\\b/.test(text)) {
+  if (/\bdesayuno\b/.test(text)) {
     return "El desayuno no está incluido en la tarifa de habitación. Si deseas consultar opciones de desayuno, el equipo puede confirmar si hay alguna disponible y cuánto cuesta.";
   }
 
   const all = (Array.isArray(services) ? services : [])
     .filter((service) => service && service.name);
   const matchers = [
-    [/\\b(?:wifi|internet)\\b/, /wifi/i],
-    [/\\bcocina\\b/, /cocina/i],
-    [/\\bterraza\\b/, /terraza/i],
-    [/\\blavanderia\\b|\\bplanchado\\b/, /lavander/i],
-    [/\\blimpieza\\b/, /limpieza/i],
-    [/\\bestacionamiento\\b/, /estacionamiento/i],
-    [/\\b(?:taxi|movilidad)\\b/, /taxi|movilidad/i],
-    [/\\b(?:turismo|orientacion turistica)\\b/, /turism|orientaci[oó]n/i],
-    [/\\bsalon\\b/, /sal[oó]n/i],
+    [/\b(?:wifi|internet)\b/, /wifi/i],
+    [/\bcocina\b/, /cocina/i],
+    [/\bterraza\b/, /terraza/i],
+    [/\blavanderia\b|\bplanchado\b/, /lavander/i],
+    [/\blimpieza\b/, /limpieza/i],
+    [/\bestacionamiento\b/, /estacionamiento/i],
+    [/\b(?:taxi|movilidad)\b/, /taxi|movilidad/i],
+    [/\b(?:turismo|orientacion turistica)\b/, /turism|orientaci[oó]n/i],
+    [/\bsalon\b/, /sal[oó]n/i],
   ];
   const matched = matchers.find(([pattern]) => pattern.test(text));
   const chosen = matched ? all.filter((service) => matched[1].test(service.name)) : all;
   if (!chosen.length) {
-    return "No tengo ese servicio confirmado en la información del hospedaje. El equipo puede revisar tu consulta.";
+    return "No tengo un servicio confirmado para esa consulta. El equipo puede revisar tu consulta.";
   }
 
   if (matched && /estacionamiento/i.test(chosen[0].name)) {
@@ -84,5 +84,5 @@ export function formatHotelServicesReply(services, message) {
     ] : []),
     "",
     "El desayuno no está incluido en la tarifa de habitación. El equipo confirma disponibilidad y tarifas de los servicios que requieren coordinación.",
-  ].join("\\n");
+  ].join("\n");
 }
