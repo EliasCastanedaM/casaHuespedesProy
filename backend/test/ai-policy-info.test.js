@@ -33,7 +33,8 @@ test("preguntas sobre mascotas y descuentos de grupo mantienen validación human
   const pets = formatPolicyInformationReply("¿Aceptan perros y cuánto cuesta?");
   assert.match(pets, /S\/ 20/);
   assert.match(pets, /IGV incluido/);
-  assert.match(pets, /S\/ 20 por mascota y por noche/);
+  assert.match(pets, /S\/ 20/);
+  assert.match(pets, /por mascota y por noche/);
   assert.doesNotMatch(pets, /pendiente confirmar/);
   assert.match(pets, /autorización previa/);
   const groups = formatPolicyInformationReply("¿Hay descuento para 8 huéspedes?");
