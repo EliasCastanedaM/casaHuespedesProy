@@ -20,7 +20,6 @@ import customerRoutes from "./modules/customers/customer.routes.js";
 import galleryRoutes from "./modules/gallery/gallery.routes.js";
 import inquiryRoutes from "./modules/inquiries/inquiry.routes.js";
 import metaRoutes from "./modules/meta/meta.routes.js";
-import mobileRoutes from "./modules/mobile/mobile.routes.js";
 import roomRoutes from "./modules/rooms/room.routes.js";
 import serviceRoutes from "./modules/services/service.routes.js";
 import commercialRoutes from "./modules/commercial/commercial.routes.js";
@@ -92,9 +91,6 @@ app.get("/api/health", (_req, res) => {
 
 // Meta puede entregar ráfagas y reintentos; no usa el limitador genérico.
 app.use("/api/meta", metaRoutes);
-
-// API interna para la aplicación móvil de recepción.
-app.use("/api/mobile", apiLimiter, mobileRoutes);
 
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/ai", aiLimiter, aiRoutes);
