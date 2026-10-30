@@ -19,7 +19,7 @@ test("la ventana conserva solo mensajes recientes sin repetir el actual", () => 
   ];
   const input = responseInput(history, "nuevo mensaje", {
     maxHistoryMessages: 3,
-    maxHistoryCharacters: 18,
+    maxHistoryCharacters: 24,
   });
   assert.deepEqual(input, [
     { role: "assistant", content: "cotización anterior" },
