@@ -336,3 +336,43 @@ test("un aviso de pago genera una acción de reporte solo para una reserva Culqi
   assert.equal(onSite.action, undefined);
   assert.match(onSite.reply, /pago quedó pendiente/i);
 });
+
+
+test("grupos que superan la capacidad máxima actual también requieren varias habitaciones", () => {
+  const categories = [
+    { slug: "familiar", name: "Familiar 1", capacity: 5, price_per_night: 250 },
+    { slug: "triple", name: "Triple", capacity: 3, price_per_night: 210 },
+  ];
+  const result = turn(
+    "Quiero reservar del 20/11/2026 al 22/11/2026 para 6 adultos sin niños y sin mascotas",
+    {},
+    new Date("2026-10-30T15:00:00.000Z"),
+    { categories }
+  );
+  assert.equal(result.context.whatsapp_mvp.max_single_room_capacity, 5);
+  assert.match(result.reply, /más de un cuarto|varias habitaciones/i);
+  assert.throws(() => prepareWhatsAppMvpReservation({
+    context: result.context,
+    category: { slug: "familiar", name: "Familiar 1", capacity: 5, price_per_night: 250 },
+    totalAmount: 500,
+    externalUserId: "51987654321",
+  }), /varias habitaciones/);
+});
+
+test("una pregunta sobre pagar en el establecimiento no se interpreta como elección", () => {
+  const context = {
+    state: "whatsapp_mvp",
+    whatsapp_mvp: {
+      state: "awaiting_payment_choice",
+      language: "es",
+      staff_confirmation: { total_amount: 240 },
+      customer_name: "Ana Torres",
+      customer_email: "ana@example.com",
+      customer_phone: "51987654321",
+    },
+  };
+  const result = turn("¿Qué pasa si pago en el establecimiento?", context);
+  assert.equal(result.action, undefined);
+  assert.equal(result.context, context);
+  assert.match(result.reply, /Pagar en el establecimiento/);
+});
