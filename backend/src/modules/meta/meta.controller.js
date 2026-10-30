@@ -54,12 +54,11 @@ function metaErrorAudit(error) {
   return {
     errorType: error?.name || "Error",
     errorCode: error?.code || null,
-    graphHttpStatus: Number(message.match(/Meta respondió (\\d{3})/)?.[1]) || null,
-    graphErrorCode: Number(message.match(/"code"\\s*:\\s*(\\d+)/)?.[1]) || null,
-    graphErrorType: message.match(/"type"\\s*:\\s*"([^"]+)"/)?.[1] || null,
+    graphHttpStatus: Number(message.match(/Meta respondió (\d{3})/)?.[1]) || null,
+    graphErrorCode: Number(message.match(/"code"\s*:\s*(\d+)/)?.[1]) || null,
+    graphErrorType: message.match(/"type"\s*:\s*"([^"]+)"/)?.[1] || null,
   };
 }
-
 function webhookEnvelopeAudit(body) {
   const entries = Array.isArray(body?.entry) ? body.entry : [];
   const changes = entries.flatMap((entry) => Array.isArray(entry?.changes) ? entry.changes : []);
