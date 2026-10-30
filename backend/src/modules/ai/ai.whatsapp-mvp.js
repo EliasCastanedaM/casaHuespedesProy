@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 // Flujo progresivo de WhatsApp MVP. La disponibilidad y el importe requieren aprobación humana;
 // después de esa aprobación, el backend registra la reserva y procesa el método de pago elegido.
 const MENU = "También puedo ayudarte con: 1) Habitaciones y tarifas 2) Servicios 3) Ubicación y cómo llegar 4) Políticas y preguntas frecuentes 5) Reserva.";
