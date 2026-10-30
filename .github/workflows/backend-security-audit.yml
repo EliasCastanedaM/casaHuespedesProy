@@ -1,0 +1,76 @@
+name: Backend Dependency Security Audit
+
+on:
+  push:
+    branches:
+      - main
+      - 'security/**'
+      - 'fix/**'
+      - 'feat/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '23 10 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit
+      - name: Audit all production and development dependencies
+        shell: bash
+        run: |
+          npm audit --json > dependency-audit.json || true
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync('dependency-audit.json', 'utf8'));
+          if (report.error || !report.metadata?.vulnerabilities) {
+            console.error('No se pudo obtener un informe completo de npm audit.');
+            process.exit(2);
+          }
+          const totals = report.metadata.vulnerabilities;
+          console.log('AUDIT COUNTS', JSON.stringify(totals));
+          for (const [name, record] of Object.entries(report.vulnerabilities || {})) {
+            const advisoryNames = (record.via || [])
+              .filter((via) => typeof via === 'object')
+              .map((via) => via.title || via.name)
+              .slice(0, 4);
+            console.log('PACKAGE', JSON.stringify({
+              name,
+              severity: record.severity,
+              range: record.range,
+              direct: Boolean(record.isDirect),
+              via: advisoryNames,
+              fixAvailable: record.fixAvailable,
+            }));
+          }
+          if ((totals.critical || 0) + (totals.high || 0) > 0) {
+            console.error('BLOQUEADO: dependencias con vulnerabilidades altas o críticas.');
+            process.exitCode = 1;
+          }
+          JS
+      - name: Upload detailed report (for maintainers)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-npm-audit
+          path: backend/dependency-audit.json
+          retention-days: 7
+          if-no-files-found: ignore
