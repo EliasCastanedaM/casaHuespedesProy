@@ -42,8 +42,8 @@ function requestedAge(text) {
 const FALLBACK = {
   ninos_0_4: { review_status: "verified", config: { no_charge_when_using_existing_beds: true } },
   ninos_5_8: { review_status: "verified", config: { percent_of_min_max_differential: 50 } },
-  ninos_9_mas: { review_status: "pending_review", config: { adult_rate_confirmed: false } },
-  mascotas: { review_status: "pending_review", config: { amount_pen: 20, vat_included: true, charge_frequency: null } },
+  ninos_9_mas: { review_status: "verified", config: { adult_rate_confirmed: true, quote_requires_manual_review: false } },
+  mascotas: { review_status: "verified", config: { amount_pen: 20, vat_included: true, charge_frequency: "pet_per_night", approval_required: true, automatic_final_quote: false } },
   grupos_8: { review_status: "verified", config: { min_total_guests: 8 } },
 };
 
