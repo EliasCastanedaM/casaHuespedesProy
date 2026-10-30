@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS payments (
     -- Reserva asociada al pago
     booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
 
-    -- Proveedor de pago: mercado_pago, culqi, izipay, niubiz, manual
+    -- Proveedor de pago: culqi_link, pay_at_property, mercado_pago, culqi, izipay, niubiz, manual
     payment_provider VARCHAR(50) NOT NULL,
 
     -- ID de transacción entregado por la pasarela de pago
