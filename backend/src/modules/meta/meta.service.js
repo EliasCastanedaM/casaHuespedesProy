@@ -1411,6 +1411,43 @@ export async function sendManualMetaMessage(
   }
 }
 
+export async function sendAssistantMetaMessage(
+  channel,
+  externalUserId,
+  text,
+  db = pool
+) {
+  validateConversation(channel, externalUserId);
+  const reply = cleanText(text);
+  if (!reply || reply.length > 4000) {
+    const error = new Error("El mensaje debe tener entre 1 y 4000 caracteres.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const target = normalizedMessage({
+    channel,
+    externalUserId,
+    messageId: "",
+    text: reply,
+    messageType: "text",
+    timestamp: "",
+  });
+  const outgoing = await createOutgoingMessage(target, reply, "assistant", null, db);
+  return deliverPersistedOutgoing(
+    target,
+    outgoing,
+    {
+      db,
+      sendReply: sendMetaReply,
+      recordOutgoing: recordOutgoingMessage,
+      sleep: (milliseconds) =>
+        new Promise((resolve) => setTimeout(resolve, milliseconds)),
+    },
+    "assistant"
+  );
+}
+
 export async function processMetaMessage(message, overrides = {}) {
   const mockedPersistence = overrides.claim !== undefined;
   const dependencies = {
