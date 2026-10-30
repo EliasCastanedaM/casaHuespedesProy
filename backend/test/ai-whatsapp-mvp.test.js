@@ -5,8 +5,8 @@ import {
   formatWhatsAppHandoffSummary,
 } from "../src/modules/ai/ai.whatsapp-mvp.js";
 
-function turn(message, context = {}) {
-  return handleWhatsAppMvpTurn({ message, context });
+function turn(message, context = {}, now = new Date()) {
+  return handleWhatsAppMvpTurn({ message, context, now });
 }
 
 test("MVP pregunta solamente los datos pendientes antes de pasar al equipo", () => {
@@ -96,4 +96,75 @@ test("una consulta de información no reinicia una reserva en curso", () => {
   const resumed = turn("20/11/2026 al 22/11/2026", info.context);
   assert.equal(resumed.mode, "whatsapp_mvp_collecting");
   assert.match(resumed.reply, /personas/i);
+});
+
+
+test("reconoce números escritos con palabras y conserva el contexto de la reserva", () => {
+  const now = new Date("2026-10-30T15:00:00.000Z");
+  const start = turn("Me podría ayudar a reservar por favor", {}, now);
+  const dates = turn("Fecha: 8/12 Salida: 10/12", start.context, now);
+  assert.equal(dates.context.whatsapp_mvp.check_in, "2026-12-08");
+  assert.equal(dates.context.whatsapp_mvp.check_out, "2026-12-10");
+  const guests = turn("Dos adultos, sin niños", dates.context, now);
+  assert.equal(guests.context.whatsapp_mvp.adults, 2);
+  assert.equal(guests.context.whatsapp_mvp.children, 0);
+  assert.equal(guests.context.whatsapp_mvp.total_guests, 2);
+  assert.match(guests.reply, /mascotas/i);
+  const done = turn("No llevamos mascotas", guests.context, now);
+  assert.equal(done.mode, "human_review_required");
+  assert.equal(done.context.whatsapp_mvp.pets, 0);
+  const summary = formatWhatsAppHandoffSummary(done.context.whatsapp_mvp);
+  assert.match(summary, /Adultos: 2/);
+  assert.match(summary, /Niños: 0/);
+  assert.match(summary, /Huéspedes totales: 2/);
+});
+
+test("interpreta respuestas cortas, edades con años y preguntas con número escrito", () => {
+  const now = new Date("2026-10-30T15:00:00.000Z");
+  const start = turn("Quiero reservar", {}, now);
+  const dates = turn("20/11/2026 al 22/11/2026", start.context, now);
+  const guests = turn("Somos dos adultos y dos niños", dates.context, now);
+  assert.match(guests.reply, /edades/i);
+  const ages = turn("5 años y 7 años", guests.context, now);
+  assert.deepEqual(ages.context.whatsapp_mvp.child_ages, [5, 7]);
+  assert.match(ages.reply, /mascotas/i);
+  const done = turn("No.", ages.context, now);
+  assert.equal(done.mode, "human_review_required");
+  assert.equal(done.context.whatsapp_mvp.total_guests, 4);
+});
+
+test("infiere el año siguiente para fechas sin año y acepta 'dos adultos?' como respuesta", () => {
+  const now = new Date("2026-10-30T15:00:00.000Z");
+  const start = turn("Quiero reservar", {}, now);
+  const dates = turn("8/1 al 10/1", start.context, now);
+  assert.equal(dates.context.whatsapp_mvp.check_in, "2027-01-08");
+  assert.equal(dates.context.whatsapp_mvp.check_out, "2027-01-10");
+  const guests = turn("Dos adultos?", dates.context, now);
+  assert.equal(guests.context.whatsapp_mvp.adults, 2);
+  assert.match(guests.reply, /niños/i);
+  const noChildren = turn("No hay niños", guests.context, now);
+  assert.equal(noChildren.context.whatsapp_mvp.children, 0);
+  assert.match(noChildren.reply, /mascotas/i);
+});
+
+
+test("normaliza fechas sin año que ya estaban guardadas en el contexto", () => {
+  const now = new Date("2026-10-30T15:00:00.000Z");
+  const context = {
+    state: "whatsapp_mvp",
+    whatsapp_mvp: {
+      state: "collecting",
+      awaiting: "guests",
+      check_in: "10/12",
+      check_out: "12/12",
+      children: 0,
+      child_ages: [],
+      language: "es"
+    }
+  };
+  const result = turn("Dos adultos", context, now);
+  assert.equal(result.context.whatsapp_mvp.check_in, "2026-12-10");
+  assert.equal(result.context.whatsapp_mvp.check_out, "2026-12-12");
+  assert.equal(result.context.whatsapp_mvp.adults, 2);
+  assert.match(result.reply, /mascotas/i);
 });

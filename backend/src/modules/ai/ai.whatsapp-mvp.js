@@ -25,50 +25,204 @@ export function isWhatsAppMenuRequest(message) {
   return /^(?:menu|opciones|opcoes|options|choix|mostrar menu|ver menu|show menu|show me the menu|que opciones hay|que opciones hay en el menu|cuales son las opciones|que opciones tienes|what are the options|me muestras el menu|me das el menu)$/.test(cleaned);
 }
 
-function extractDateTokens(message) {
+const NUMBER_WORDS = Object.freeze({
+  cero: 0, zero: 0,
+  un: 1, uno: 1, una: 1, one: 1, um: 1, uma: 1, une: 1,
+  dos: 2, two: 2, dois: 2, duas: 2, deux: 2,
+  tres: 3, three: 3, trois: 3,
+  cuatro: 4, four: 4, quatre: 4,
+  cinco: 5, five: 5, cinq: 5,
+  seis: 6, six: 6,
+  siete: 7, seven: 7, sete: 7, sept: 7,
+  ocho: 8, eight: 8, oito: 8, huit: 8,
+  nueve: 9, nine: 9, nove: 9, neuf: 9,
+  diez: 10, ten: 10, dez: 10, dix: 10,
+  once: 11, eleven: 11, onze: 11,
+  doce: 12, twelve: 12, doze: 12, douze: 12,
+  trece: 13, thirteen: 13, treize: 13,
+  catorce: 14, fourteen: 14, quatorze: 14,
+  quince: 15, fifteen: 15, quinze: 15,
+  dieciseis: 16, sixteen: 16, dezesseis: 16, seize: 16,
+  diecisiete: 17, seventeen: 17,
+  dieciocho: 18, eighteen: 18, dezoito: 18,
+  diecinueve: 19, nineteen: 19, dezenove: 19,
+  veinte: 20, twenty: 20, vinte: 20, vingt: 20,
+  veintiuno: 21, veintiun: 21, veintiuna: 21,
+  veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
+  treinta: 30
+});
+
+const COUNT_WORD_PATTERN = Object.keys(NUMBER_WORDS)
+  .sort((a, b) => b.length - a.length)
+  .join("|");
+const COUNT_TOKEN_PATTERN = "(?:\\d{1,2}|" + COUNT_WORD_PATTERN + ")";
+const ADULT_WORDS = "adultos?|adults?|adultes?";
+const CHILD_WORDS = "nin[oa]s?|ninos?|children|kids?|criancas?|enfants?|filhos?";
+const TOTAL_WORDS = "personas?|huespedes?|guests?|people|pessoas?|hospedes?";
+const PET_WORDS = "mascotas?|perros?|gatos?|pets?|dogs?|cats?|cachorros?|animais?";
+
+function parseCountToken(value) {
+  const token = normalize(value);
+  if (Object.hasOwn(NUMBER_WORDS, token)) return NUMBER_WORDS[token];
+  if (/^\d{1,2}$/.test(token)) return Number(token);
+  return null;
+}
+
+function limaToday(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Lima",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const year = Number(values.year);
+  const month = Number(values.month);
+  const day = Number(values.day);
+  return {
+    year,
+    iso: String(year) + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0"),
+  };
+}
+
+function datePartsToIso(day, month, year) {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getUTCDate() !== day ||
+    date.getUTCMonth() + 1 !== month ||
+    date.getUTCFullYear() !== year
+  ) return null;
+  return String(year) + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+}
+
+function addIsoYear(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  return datePartsToIso(day, month, year + 1);
+}
+
+function parseDateToken(token, now = new Date()) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(token)) {
+    const [year, month, day] = token.split("-").map(Number);
+    return { value: datePartsToIso(day, month, year), explicitYear: true };
+  }
+
+  const parts = token.split(/[/-]/).map(Number);
+  if (parts.length < 2 || parts.length > 3) return null;
+  const [day, month] = parts;
+  const today = limaToday(now);
+  const explicitYear = parts.length === 3;
+  let year = explicitYear ? (parts[2] < 100 ? parts[2] + 2000 : parts[2]) : today.year;
+  let value = datePartsToIso(day, month, year);
+  if (!value) return null;
+
+  // Si no se indicó año, se interpreta como la próxima fecha futura en Perú.
+  if (!explicitYear && value < today.iso) {
+    year += 1;
+    value = datePartsToIso(day, month, year);
+  }
+  return { value, explicitYear };
+}
+
+function extractDateTokens(message, now = new Date(), afterDate = null) {
   const pattern = /\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)\b/g;
-  const matches = String(message || "").match(pattern) || [];
-  const valid = matches.filter((v) => {
-    if (/^\d{4}-/.test(v)) {
-      const d = new Date(v + "T12:00:00Z");
-      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
-    }
-    const parts = v.split(/[/-]/).map(Number);
-    if (parts.length === 2) return parts[0] >= 1 && parts[0] <= 31 && parts[1] >= 1 && parts[1] <= 12;
-    if (parts.length !== 3) return false;
-    const year = parts[2] < 100 ? parts[2] + 2000 : parts[2];
-    const d = new Date(Date.UTC(year, parts[1] - 1, parts[0]));
-    return d.getUTCDate() === parts[0] && d.getUTCMonth() + 1 === parts[1];
-  });
-  return valid.slice(0, 2);
+  const tokens = String(message || "").match(pattern) || [];
+  const parsed = tokens.map((token) => parseDateToken(token, now)).filter((item) => item?.value);
+
+  if (parsed.length >= 2 && parsed[1].value <= parsed[0].value && !parsed[1].explicitYear) {
+    parsed[1].value = addIsoYear(parsed[1].value) || parsed[1].value;
+  } else if (parsed.length === 1 && afterDate && parsed[0].value <= afterDate && !parsed[0].explicitYear) {
+    parsed[0].value = addIsoYear(parsed[0].value) || parsed[0].value;
+  }
+
+  return parsed.slice(0, 2).map((item) => item.value);
+}
+
+function normalizeStoredDate(value, now = new Date(), afterDate = null) {
+  const raw = String(value || "").trim();
+  if (!raw || /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  return extractDateTokens(raw, now, afterDate)[0] || raw;
 }
 
 function namedCount(text, words) {
-  const a = text.match(new RegExp("\\b(\\d{1,2})\\s*(?:" + words + ")\\b"));
-  const b = text.match(new RegExp("\\b(?:" + words + ")\\s*[:#-]?\\s*(\\d{1,2})\\b"));
-  return a || b ? Number((a || b)[1]) : null;
+  const before = text.match(new RegExp("\\b(" + COUNT_TOKEN_PATTERN + ")\\s*(?:" + words + ")\\b"));
+  const after = text.match(new RegExp("\\b(?:" + words + ")\\s*[:#-]?\\s*(" + COUNT_TOKEN_PATTERN + ")\\b"));
+  const match = before || after;
+  return match ? parseCountToken(match[1]) : null;
 }
 
-function collect(message, previous = {}) {
+function parseStandaloneCount(text) {
+  const cleaned = normalize(text)
+    .replace(/[.,!?¡¿]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const match = cleaned.match(new RegExp(
+    "^(?:(?:somos|son|seremos|vamos|para|en total|total de|we are|there are|for|nous sommes)\\s+)?(" +
+    COUNT_TOKEN_PATTERN +
+    ")(?:\\s+(?:personas?|huespedes?|guests?|people|adultos?|adults?))?$"
+  ));
+  return match ? parseCountToken(match[1]) : null;
+}
+
+function parseAgeList(text) {
+  const cleaned = normalize(text)
+    .replace(/\b(?:tienen|tiene|son|edad(?:es)?|anos?|years?|year|ages?|age|de|y|and|e|et)\b/g, " ")
+    .replace(/[,:;]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!/^(?:\d{1,2}\s*)+$/.test(cleaned)) return null;
+  const ages = cleaned.split(/\s+/).map(Number);
+  if (!ages.length || ages.some((age) => !Number.isInteger(age) || age < 0 || age > 17)) return null;
+  return ages;
+}
+
+function isNegativeAnswer(text) {
+  const cleaned = normalize(text).replace(/[.,!?¡¿]/g, " ").replace(/\s+/g, " ").trim();
+  return /^(?:no|nope|ningun[oa]?|ninguna|ninguno|sem|nao|non|none|not any)$/.test(cleaned);
+}
+
+function mentionsNoCategory(text, words) {
+  const value = normalize(text);
+  return new RegExp(
+    "\\b(?:sin|no|ningun[oa]?|without|sem|sans)\\s+(?:(?:hay|viajan|tenemos|llevamos|bring|have)\\s+)?(?:" + words + ")\\b"
+  ).test(value) || new RegExp(
+    "\\bno\\s+(?:hay|viajan|tenemos|llevamos|bring|have)\\s+(?:" + words + ")\\b"
+  ).test(value);
+}
+
+function collect(message, previous = {}, now = new Date()) {
   const text = normalize(message);
   const next = { ...previous };
+  // Normaliza también borradores guardados por versiones anteriores, que
+  // podían conservar fechas como "10/12" sin año.
+  if (next.check_in) next.check_in = normalizeStoredDate(next.check_in, now);
+  if (next.check_out) next.check_out = normalizeStoredDate(next.check_out, now, next.check_in);
+
   if (previous.awaiting === "children") {
-    if (/^(?:no|ninguna|ninguno|nope|sem|nao|non)$/i.test(text)) next.children = 0;
-    if (/^(?:uno|una|un|one|um|uma)$/i.test(text)) next.children = 1;
-    if (/^\d{1,2}$/.test(text)) next.children = Number(text);
+    if (isNegativeAnswer(text) || mentionsNoCategory(text, CHILD_WORDS)) next.children = 0;
+    else {
+      const count = namedCount(text, CHILD_WORDS) ?? parseStandaloneCount(text);
+      if (count !== null) next.children = count;
+    }
   }
   if (previous.awaiting === "pets") {
-    if (/^(?:no|ninguna|ninguno|nope|sem|nao|non)$/i.test(text)) next.pets = 0;
-    if (/^(?:uno|una|un|one|um|uma|one pet|um animal)$/i.test(text)) next.pets = 1;
-    if (/^\d{1,2}$/.test(text)) next.pets = Number(text);
+    if (isNegativeAnswer(text) || mentionsNoCategory(text, PET_WORDS)) next.pets = 0;
+    else {
+      const count = namedCount(text, PET_WORDS) ?? parseStandaloneCount(text);
+      if (count !== null) next.pets = count;
+    }
   }
-  if (previous.awaiting === "ages" && /^\d{1,2}(?:\s*(?:,|y|and|e|et)\s*\d{1,2})*$/.test(text)) {
-    next.child_ages = (text.match(/\d{1,2}/g) || []).map(Number);
+  if (previous.awaiting === "guests") {
+    const count = parseStandaloneCount(text);
+    if (count !== null) next.total_guests = count;
   }
-  if (previous.awaiting === "guests" && /^\d{1,2}$/.test(text)) {
-    next.total_guests = Number(text);
+  if (previous.awaiting === "ages") {
+    const ages = parseAgeList(text);
+    if (ages) next.child_ages = ages;
   }
-  const dates = extractDateTokens(message);
+
+  const dates = extractDateTokens(message, now, previous.check_in);
   if (dates.length === 2) {
     next.check_in = dates[0];
     next.check_out = dates[1];
@@ -77,25 +231,36 @@ function collect(message, previous = {}) {
     else if (!next.check_out && dates[0] !== next.check_in) next.check_out = dates[0];
   }
 
-  const adults = namedCount(text, "adultos?|adults?|adultes?");
-  const children = namedCount(text, "nin[oa]s?|ninos?|children|kids?|criancas?|enfants?");
-  const total = namedCount(text, "personas?|huespedes?|guests?|people|pessoas?|hospedes?");
-  const pets = namedCount(text, "mascotas?|perros?|gatos?|pets?|dogs?|cats?|cachorros?");
+  const adults = namedCount(text, ADULT_WORDS);
+  const children = namedCount(text, CHILD_WORDS);
+  const total = namedCount(text, TOTAL_WORDS);
+  const pets = namedCount(text, PET_WORDS);
   if (adults !== null) next.adults = adults;
   if (children !== null) next.children = children;
   if (total !== null) next.total_guests = total;
   if (pets !== null) next.pets = pets;
-  if (/\b(?:sin|no|ningun|ninguna|without|sem|sans)\s+(?:mascotas?|perros?|gatos?|pets?|dogs?|cats?|cachorros?)\b/.test(text)) next.pets = 0;
-  if (/\b(?:sin|no|ningun|ninguna|without|sem|sans)\s+(?:nin[oa]s?|ninos?|children|kids?|criancas?|enfants?)\b/.test(text)) next.children = 0;
-  if (/\b(?:no llevamos|no tenemos)\s+(?:mascotas?|perros?|gatos?)\b/.test(text)) next.pets = 0;
 
-  const ageText = text.match(/\b(?:nin[oa]s?|ninos?|children|kids?|criancas?|enfants?)\s+(?:de|aged?|ages?)\s+(\d{1,2})(?:\s*(?:y|and|e|,)\s*(\d{1,2}))?/);
+  if (mentionsNoCategory(text, PET_WORDS)) next.pets = 0;
+  if (mentionsNoCategory(text, CHILD_WORDS)) next.children = 0;
+  if (/\b(?:no llevamos|no tenemos|no hay)\s+(?:mascotas?|perros?|gatos?|pets?|dogs?|cats?|cachorros?)\b/.test(text)) next.pets = 0;
+  if (/\b(?:no hay|no viajan|no tenemos)\s+(?:nin[oa]s?|ninos?|children|kids?|criancas?|enfants?)\b/.test(text)) next.children = 0;
+
+  const ageText = text.match(
+    /\b(?:nin[oa]s?|ninos?|children|kids?|criancas?|enfants?)\s+(?:de|aged?|ages?)\s+((?:\d{1,2})(?:\s*(?:,|y|and|e|et)\s*\d{1,2})*)/
+  )?.[1];
   if (ageText) {
-    next.child_ages = [ageText[1], ageText[2]].filter(Boolean).map(Number);
+    next.child_ages = (ageText.match(/\d{1,2}/g) || []).map(Number);
     if (next.children === undefined) next.children = next.child_ages.length;
   }
+
   if (next.children === 0) next.child_ages = [];
-  if (next.children != null && next.adults != null) next.total_guests = next.adults + next.children;
+  if (next.adults == null && next.total_guests != null && next.children != null) {
+    const inferredAdults = next.total_guests - next.children;
+    if (inferredAdults >= 0) next.adults = inferredAdults;
+  }
+  if (next.children != null && next.adults != null) {
+    next.total_guests = next.adults + next.children;
+  }
 
   const categories = [
     ["matrimonial-ejecutiva", /\bmatrimonial\s+ejecutiva\b/],
@@ -112,6 +277,20 @@ function collect(message, previous = {}) {
     next.preferences = String(message).slice(0, 300);
   }
   return next;
+}
+
+function containsStructuredBookingAnswer(message, state = {}, now = new Date()) {
+  const text = normalize(message);
+  return extractDateTokens(message, now, state?.check_in).length > 0 ||
+    namedCount(text, ADULT_WORDS) !== null ||
+    namedCount(text, CHILD_WORDS) !== null ||
+    namedCount(text, TOTAL_WORDS) !== null ||
+    namedCount(text, PET_WORDS) !== null ||
+    parseStandaloneCount(text) !== null ||
+    mentionsNoCategory(text, CHILD_WORDS) ||
+    mentionsNoCategory(text, PET_WORDS) ||
+    (["children", "pets"].includes(state?.awaiting) && isNegativeAnswer(text)) ||
+    (state?.awaiting === "ages" && parseAgeList(text) !== null);
 }
 
 const labels = {
@@ -163,13 +342,18 @@ function missingQuestion(data, l) {
   return null;
 }
 
+function formatSummaryDate(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? match[3] + "/" + match[2] + "/" + match[1] : value;
+}
+
 export function formatWhatsAppHandoffSummary(data = {}) {
   const v = (value) => value === undefined || value === null || value === "" ? "Pendiente" : String(value);
   const ages = Array.isArray(data.child_ages) ? data.child_ages.join(", ") || "No aplica" : "Pendiente";
   return [
     "SOLICITUD DE RESERVA — VALIDACIÓN HUMANA",
-    "Ingreso: " + v(data.check_in),
-    "Salida: " + v(data.check_out),
+    "Ingreso: " + v(formatSummaryDate(data.check_in)),
+    "Salida: " + v(formatSummaryDate(data.check_out)),
     "Adultos: " + v(data.adults),
     "Niños: " + v(data.children) + " · edades: " + ages,
     "Huéspedes totales: " + v(data.total_guests),
@@ -180,7 +364,7 @@ export function formatWhatsAppHandoffSummary(data = {}) {
   ].join("\n");
 }
 
-export function handleWhatsAppMvpTurn({ message, context = {} }) {
+export function handleWhatsAppMvpTurn({ message, context = {}, now = new Date() }) {
   const text = normalize(message);
   const state = context.whatsapp_mvp || null;
   const language = detectLanguage(message, state?.language || "es");
@@ -190,7 +374,7 @@ export function handleWhatsAppMvpTurn({ message, context = {} }) {
     return { handled: true, reply: dictionary.menu, mode: "whatsapp_mvp_menu", context };
   }
   if (!state && !intent) {
-    const preliminary = collect(message);
+    const preliminary = collect(message, {}, now);
     const hasDetails = ["check_in", "total_guests", "adults", "children", "pets", "category_slug", "preferences"]
       .some((key) => preliminary[key] !== undefined);
     if (!hasDetails) return { handled: false, context };
@@ -207,18 +391,19 @@ export function handleWhatsAppMvpTurn({ message, context = {} }) {
       handled: false,
       context: {
         ...context,
-        whatsapp_mvp: { ...collect(message, state), language, state: "browsing" },
+        whatsapp_mvp: { ...collect(message, state, now), language, state: "browsing" },
       },
     };
   }
   // Una pregunta informativa intermedia no debe reiniciar la reserva ni
-  // forzar el siguiente paso del formulario: responde la IA y conserva datos.
+  // forzar el siguiente paso del formulario. Las respuestas estructuradas,
+  // incluso con números escritos o signos de interrogación, sí se procesan.
   if (state?.state === "collecting" && !intent && /[¿?]/.test(String(message)) &&
-      extractDateTokens(message).length === 0 &&
-      !/\b\d{1,2}\s*(?:adultos?|adults?|ninos?|nin[oa]s?|children|guests?|huespedes?|personas?)\b/.test(text)) {
+      !containsStructuredBookingAnswer(message, state, now)) {
     return { handled: false, context };
   }
-  const data = collect(message, state || {});
+
+  const data = collect(message, state || {}, now);
   data.language = language;
   data.state = "collecting";
   delete data.awaiting;
