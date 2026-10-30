@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
+import { requireAdminAuth, requireAdminRole } from "../../middlewares/authMiddleware.js";
 import { getOpenAiUsageDashboard } from "./ai.usage.js";
 
 const router = Router();
 
-router.get("/", requireAdminAuth, async (req, res, next) => {
+router.get("/", requireAdminAuth, requireAdminRole, async (req, res, next) => {
   try {
     const days = Number(req.query.days);
     const report = await getOpenAiUsageDashboard(days);
