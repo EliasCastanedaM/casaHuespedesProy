@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
 import app from "../src/app.js";
 import { env } from "../src/config/env.js";
+import { pool } from "../src/config/db.js";
 import { requireRole } from "../src/middlewares/authMiddleware.js";
 
 test("el middleware de roles conserva acciones de staff pero limita administración", () => {
@@ -28,8 +29,19 @@ test("rutas sensibles deniegan JWT staff sin ejecutar consultas ni modificacione
   await new Promise((resolve) => server.once("listening", resolve));
   t.after(() => new Promise((resolve, reject) => server.close((e) => e ? reject(e) : resolve())));
   const base = "http://127.0.0.1:" + server.address().port;
-  const staff = jwt.sign({ id: 42, role: "staff" }, env.jwtSecret, { expiresIn: "5m" });
-  const admin = jwt.sign({ id: 43, role: "admin" }, env.jwtSecret, { expiresIn: "5m" });
+  const originalQuery = pool.query;
+  pool.query = async (sql, params) => {
+    if (sql.includes("FROM public.admin_sessions s")) {
+      const userId = Number(params[1]);
+      return { rows: [{ id: userId, name: "Test", email: "test@example.invalid",
+        role: userId === 42 ? "staff" : "admin" }] };
+    }
+    throw new Error("Consulta inesperada en prueba aislada");
+  };
+  t.after(() => { pool.query = originalQuery; });
+  const options = { expiresIn: "5m", issuer: "casa-huespedes-pimentel", audience: "hotel-admin" };
+  const staff = jwt.sign({ id: 42, sid: "s".repeat(43) }, env.jwtSecret, options);
+  const admin = jwt.sign({ id: 43, sid: "a".repeat(43) }, env.jwtSecret, options);
 
   const sensitive = [
     ["DELETE", "/api/bookings/123"],
