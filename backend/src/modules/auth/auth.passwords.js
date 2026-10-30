@@ -41,7 +41,7 @@ export async function changeAdminPassword(userId, oldPassword, newPassword, db =
     );
     const user = result.rows[0];
     if (!user || !(await bcrypt.compare(oldPassword, user.password_hash))) {
-      throw credentialError("La contraseña actual es incorrecta.", 401);
+      throw credentialError("La contraseña actual es incorrecta.", 400);
     }
     if (await bcrypt.compare(newPassword, user.password_hash)) {
       throw credentialError("La nueva contraseña debe ser diferente de la actual.");
