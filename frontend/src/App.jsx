@@ -1,4 +1,5 @@
 import StatisticsAdmin from "./pages/admin/StatisticsAdmin";
+import AiUsageAdmin from "./pages/admin/AiUsageAdmin";
 import ScrollToHash from "./components/ScrollToHash";
 import SeoManager from "./components/SeoManager";
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="habitaciones" element={<RoomsAdmin />} />
             <Route path="galeria" element={<GalleryAdmin />} />
             <Route path="estadisticas" element={<StatisticsAdmin />} />
+            <Route path="consumo-ia" element={<AiUsageAdmin />} />
           </Route>
         </Route>
       </Routes>

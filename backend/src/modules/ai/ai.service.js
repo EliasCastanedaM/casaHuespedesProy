@@ -12,6 +12,7 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { recordOpenAiUsage } from "./ai.usage.js";
 import { isHotelLocationInquiry, formatHotelLocationReply } from "./ai.location-info.js";
 import { getPublicHotelProfileService } from "../hotel/hotelProfile.service.js";
 import { isHotelServicesInquiry, formatHotelServicesReply } from "./ai.services-info.js";
@@ -729,9 +730,15 @@ function responseInput(history, message) {
   return input;
 }
 
+async function trackedResponse(openai, request, meta) {
+  const response = await openai.responses.create(request);
+  await recordOpenAiUsage(response, meta);
+  return response;
+}
+
 async function createFirstResponse(
   openai,
-  { message, previousResponseId, history, recoveryHistory, channel }
+  { message, previousResponseId, history, recoveryHistory, channel, externalUserId }
 ) {
   const request = {
     model: env.openai.model,
@@ -746,19 +753,19 @@ async function createFirstResponse(
     store: true,
   };
 
-  if (!previousResponseId) return openai.responses.create(request);
+  if (!previousResponseId) return trackedResponse(openai, request, { channel, externalUserId, operation: "assistant_response" });
 
   try {
-    return await openai.responses.create({
+    return await trackedResponse(openai, {
       ...request,
       previous_response_id: previousResponseId,
-    });
+    }, { channel, externalUserId, operation: "assistant_response" });
   } catch {
     // Si OpenAI perdió el id previo, reconstruye el contexto desde Supabase.
-    return openai.responses.create({
+    return trackedResponse(openai, {
       ...request,
       input: responseInput(recoveryHistory, message),
-    });
+    }, { channel, externalUserId, operation: "assistant_response" });
   }
 }
 
@@ -838,7 +845,7 @@ async function generateAiReplyInternal({
   const hotelScope = await isHotelRelatedMessage(message, {
     history: history.length ? history : await loadStoredHistory(channel, externalUserId, message),
     classify: async ({ message: currentMessage, history: recentHistory }) => {
-      const classification = await getClient().responses.create({
+      const classification = await trackedResponse(getClient(), {
         model: env.openai.model,
         instructions: HOTEL_SCOPE_CLASSIFIER_PROMPT,
         input: JSON.stringify({
@@ -847,7 +854,7 @@ async function generateAiReplyInternal({
         }),
         max_output_tokens: 128,
         store: false,
-      });
+      }, { channel, externalUserId, operation: "scope_classifier" });
       return classification.output_text;
     },
   });
@@ -1070,6 +1077,7 @@ async function generateAiReplyInternal({
     history,
     recoveryHistory,
     channel,
+    externalUserId,
   });
 
   for (let round = 0; round < 4; round += 1) {
@@ -1098,7 +1106,7 @@ async function generateAiReplyInternal({
       }))
     );
 
-    response = await openai.responses.create({
+    response = await trackedResponse(openai, {
       model: env.openai.model,
       instructions: buildHotelAssistantPrompt({ channel }),
       previous_response_id: response.id,
@@ -1107,7 +1115,7 @@ async function generateAiReplyInternal({
       parallel_tool_calls: false,
       max_output_tokens: env.ai.maxOutputTokens,
       store: true,
-    });
+    }, { channel, externalUserId, operation: "tool_followup" });
   }
 
   await savePreviousResponseId(channel, externalUserId, response.id);
