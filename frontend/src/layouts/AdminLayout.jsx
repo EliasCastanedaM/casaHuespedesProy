@@ -46,6 +46,11 @@ const menuItems = [
     path: "/admin/estadisticas",
     icon: "📈",
   },
+  {
+    label: "Consumo IA",
+    path: "/admin/consumo-ia",
+    icon: "📉",
+  },
 ];
 
 export default function AdminLayout() {
