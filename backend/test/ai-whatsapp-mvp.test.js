@@ -296,7 +296,7 @@ test("una modificación posterior a la aprobación invalida la validación y dev
     totalAmount: 240,
     externalUserId: "51987654321",
   });
-  const changed = turn("En realidad, entraremos el 21/11/2026", approved.context, new Date(), { externalUserId: "51987654321" });
+  const changed = turn("Del 21/11/2026 al 23/11/2026", approved.context, new Date(), { externalUserId: "51987654321" });
   assert.equal(changed.mode, "human_review_required");
   assert.equal(changed.context.whatsapp_mvp.state, "handoff");
   assert.equal(changed.context.whatsapp_mvp.staff_confirmation, undefined);
