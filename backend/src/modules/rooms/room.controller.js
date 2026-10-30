@@ -1,4 +1,7 @@
 import cloudinary from "../../config/cloudinary.js";
+import { createReadStream } from "node:fs";
+import { pipeline } from "node:stream/promises";
+import { assertImageSignature, assertVideoSignature, removeTemporaryMedia, safeMediaTitle } from "../../middlewares/uploads/mediaSecurity.js";
 
 import {
   getPublicRoomsService,
@@ -34,6 +37,16 @@ function uploadBufferToCloudinary(file, options) {
     );
 
     stream.end(file.buffer);
+  });
+}
+
+function uploadDiskVideoToCloudinary(file, options) {
+  return new Promise((resolve, reject) => {
+    const upload = cloudinary.uploader.upload_stream(options, (error, result) =>
+      error ? reject(error) : resolve(result)
+    );
+    const source = createReadStream(file.path);
+    pipeline(source, upload).catch(reject);
   });
 }
 
@@ -221,10 +234,11 @@ export async function uploadRoomImageController(req, res, next) {
       });
     }
 
+    assertImageSignature(req.file);
     const result = await uploadBufferToCloudinary(req.file, {
       folder: `casa-huespedes-pimentel/rooms/${id}/images`,
       resource_type: "image",
-      use_filename: true,
+      use_filename: false,
       unique_filename: true,
       overwrite: false,
     });
@@ -282,11 +296,12 @@ export async function uploadRoomImagesController(req, res, next) {
       });
     }
 
+    files.forEach(assertImageSignature);
     for (const file of files) {
       const result = await uploadBufferToCloudinary(file, {
         folder: `casa-huespedes-pimentel/rooms/${id}/images`,
         resource_type: "image",
-        use_filename: true,
+        use_filename: false,
         unique_filename: true,
         overwrite: false,
       });
@@ -294,8 +309,8 @@ export async function uploadRoomImagesController(req, res, next) {
       uploadedImages.push({
         url: result.secure_url,
         publicId: result.public_id,
-        title: file.originalname.replace(/\.[^.]+$/, ""),
-        altText: `${room.name} - ${file.originalname.replace(/\.[^.]+$/, "")}`,
+        title: safeMediaTitle(file.originalname),
+        altText: `${room.name} - ${safeMediaTitle(file.originalname)}`,
       });
     }
 
@@ -339,11 +354,12 @@ export async function uploadRoomVideosController(req, res, next) {
       });
     }
 
+    for (const file of files) await assertVideoSignature(file);
     for (const file of files) {
-      const result = await uploadBufferToCloudinary(file, {
+      const result = await uploadDiskVideoToCloudinary(file, {
         folder: `casa-huespedes-pimentel/rooms/${id}/videos`,
         resource_type: "video",
-        use_filename: true,
+        use_filename: false,
         unique_filename: true,
         overwrite: false,
       });
@@ -358,7 +374,7 @@ export async function uploadRoomVideosController(req, res, next) {
       uploadedVideos.push({
         url: result.secure_url,
         publicId: result.public_id,
-        title: file.originalname.replace(/\.[^.]+$/, ""),
+        title: safeMediaTitle(file.originalname),
         posterUrl,
       });
     }
@@ -374,8 +390,9 @@ export async function uploadRoomVideosController(req, res, next) {
     if (uploadedVideos.length > 0) {
       await removeUploadedFiles(uploadedVideos, "video");
     }
-
     return next(error);
+  } finally {
+    await removeTemporaryMedia(req.files);
   }
 }
 
