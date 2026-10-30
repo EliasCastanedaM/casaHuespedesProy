@@ -344,6 +344,15 @@ function formatHandoffUpdateReply(data = {}, changed = []) {
     const pets = Number(data.pets ?? 0);
     parts.push(pets === 0 ? "sin mascotas" : pets + (pets === 1 ? " mascota" : " mascotas"));
   }
+  if (changed.includes("child_ages")) {
+    parts.push("edades de niños: " + (Array.isArray(data.child_ages) ? data.child_ages.join(", ") : "pendientes"));
+  }
+  if (changed.includes("category_slug")) {
+    parts.push("categoría solicitada: " + (data.category_slug || "sin preferencia"));
+  }
+  if (changed.includes("preferences")) {
+    parts.push("preferencias actualizadas");
+  }
   return "Gracias por la aclaración. Actualicé tu solicitud: " + parts.join("; ") +
     ". La disponibilidad y la confirmación final siguen pendientes del equipo.";
 }
@@ -414,7 +423,7 @@ const labels = {
 function missingQuestion(data, l) {
   const dictionary = labels[l] || labels.es;
   if (!data.check_in || !data.check_out) return dictionary.dates;
-  if (data.total_guests == null && data.adults == null) return dictionary.guests;
+  if (data.adults == null) return dictionary.guests;
   if (data.children == null) return dictionary.children;
   if (data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length < data.children)) return dictionary.ages;
   if (data.pets == null) return dictionary.pets;
@@ -627,6 +636,20 @@ export function handleWhatsAppMvpTurn({
     updated.language = language;
     updated.state = "handoff";
     delete updated.awaiting;
+    const suggested = recommendCategory(categories, updated.total_guests);
+    if (Number(updated.total_guests || 0) < 8 && suggested) {
+      const selected = categories.find((item) => item.slug === updated.category_slug);
+      updated.recommended_category = selected && Number(selected.capacity) >= Number(updated.total_guests)
+        ? {
+            slug: String(selected.slug),
+            name: String(selected.name || selected.slug),
+            capacity: Number(selected.capacity),
+            price_per_night: Number(selected.price_per_night || 0),
+          }
+        : suggested;
+    } else if (Number(updated.total_guests || 0) >= 8) {
+      updated.recommended_category = null;
+    }
     const changed = changedBookingFields(state, updated);
     if (changed.length > 0) {
       return {
@@ -803,7 +826,7 @@ export function handleWhatsAppMvpTurn({
   const question = missingQuestion(data, language);
   if (question) {
     data.awaiting = !data.check_in || !data.check_out ? "dates"
-      : data.total_guests == null && data.adults == null ? "guests"
+      : data.adults == null ? "guests"
       : data.children == null ? "children"
       : data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length < data.children) ? "ages"
       : "pets";
