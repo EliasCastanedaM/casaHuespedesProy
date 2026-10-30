@@ -245,8 +245,9 @@ export async function sendBookingPendingEmails(details) {
     <p style="color:#6f6258;line-height:1.6;margin:0;">
       En Culqi debes ingresar exactamente
       <strong>${escapeHtml(formatMoney(details.total_amount))}</strong>.
-      Después, regresa a la página y presiona “Ya pagué, avisar al hospedaje”.
-      La reserva se confirmará cuando el hospedaje verifique el pago.
+      ${details.source === "whatsapp"
+        ? "Después, vuelve a este chat de WhatsApp y escribe “Ya pagué”. El equipo verificará el movimiento en Culqi antes de confirmar la reserva."
+        : "Después, regresa a la página y presiona “Ya pagué, avisar al hospedaje”. La reserva se confirmará cuando el hospedaje verifique el pago."}
     </p>
   `;
 
@@ -280,6 +281,50 @@ export async function sendBookingPendingEmails(details) {
       to: env.hotelNotificationEmail,
       subject: `${details.booking_code} · Nueva solicitud de reserva`,
       html: emailShell("Nueva solicitud de reserva", hotelContent),
+    }),
+  ]);
+}
+
+export async function sendBookingOnSiteConfirmedEmails(details) {
+  const guestContent = `
+    <p style="font-size:16px;line-height:1.65;margin:0;">
+      Hola ${escapeHtml(details.customer_name)}, tu reserva quedó registrada y confirmada.
+      El pago se realizará directamente en Casa Huéspedes Pimentel al llegar.
+    </p>
+
+    ${bookingSummary(details)}
+
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:16px;padding:18px;font-weight:700;line-height:1.55;">
+      Tu reserva está confirmada. El importe pendiente se abonará en el establecimiento.
+      Guarda el código ${escapeHtml(details.booking_code)} para tu llegada.
+    </div>
+  `;
+
+  const hotelContent = `
+    <p style="font-size:16px;line-height:1.65;margin:0;">
+      Se registró una reserva confirmada con pago pendiente en el establecimiento.
+    </p>
+
+    ${bookingSummary(details, { internal: true })}
+
+    <div style="background:#fbf7ef;border:1px solid #eadfce;border-radius:16px;padding:18px;">
+      <p style="margin:0 0 10px;"><strong>Cliente:</strong> ${escapeHtml(details.customer_name)}</p>
+      <p style="margin:0 0 10px;"><strong>Celular:</strong> ${escapeHtml(details.customer_phone)}</p>
+      <p style="margin:0 0 10px;"><strong>Correo:</strong> ${escapeHtml(details.customer_email)}</p>
+      <p style="margin:0;"><strong>Pago:</strong> Pendiente en el establecimiento</p>
+    </div>
+  `;
+
+  return Promise.all([
+    sendEmailSafely({
+      to: details.customer_email,
+      subject: `${details.booking_code} · Reserva confirmada · Pago en el establecimiento`,
+      html: emailShell("Reserva confirmada", guestContent),
+    }),
+    sendEmailSafely({
+      to: env.hotelNotificationEmail,
+      subject: `${details.booking_code} · Reserva confirmada · Pago presencial`,
+      html: emailShell("Reserva confirmada con pago presencial", hotelContent),
     }),
   ]);
 }
