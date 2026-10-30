@@ -2,7 +2,7 @@
 // Las decisiones inciertas se clasifican con el modelo, sin usar herramientas
 // de reservas ni generar una respuesta libre.
 export const OUT_OF_HOTEL_SCOPE_REPLY =
-  "Soy el asistente virtual de Casa Huéspedes Pimentel. 😊 Solo puedo ayudarte con información sobre nuestro hospedaje, habitaciones, tarifas, servicios y reservas. ¿Te gustaría consultar alguna de nuestras habitaciones?";
+  "Este canal está destinado a consultas sobre Casa Huéspedes Pimentel: habitaciones, tarifas, servicios y reservas. ¿Qué información del hospedaje necesitas?";
 
 export const HOTEL_SCOPE_CLASSIFIER_PROMPT = `Eres un filtro de alcance, no un asistente conversacional.
 Tu única tarea es clasificar el mensaje actual en HOTEL o FUERA.
