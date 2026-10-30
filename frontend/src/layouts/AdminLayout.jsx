@@ -4,6 +4,11 @@ import { clearAdminSession } from "../services/adminSession.js";
 
 const menuItems = [
   {
+    label: "Seguridad",
+    path: "/admin/seguridad",
+    icon: "🔒",
+  },
+  {
     label: "Dashboard",
     path: "/admin/dashboard",
     icon: "📊",

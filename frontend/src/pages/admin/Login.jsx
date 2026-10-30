@@ -176,6 +176,11 @@ export default function Login() {
                 </button>
               </form>
 
+              {import.meta.env.VITE_ADMIN_PASSWORD_RECOVERY_ENABLED === "true" && (
+                <Link to="/admin/restablecer-clave" className="block mt-5 text-center text-sm font-bold text-[#6f6258] underline">
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              )}
               <div className="mt-7 pt-6 border-t border-[#eadfce] flex items-center justify-between gap-4">
                 <Link
                   to="/"

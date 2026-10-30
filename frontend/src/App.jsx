@@ -22,6 +22,8 @@ import TermsAndConditions from "./pages/public/TermsAndConditions";
 import DataDeletion from "./pages/public/DataDeletion";
 
 import Login from "./pages/admin/Login";
+import SecurityAdmin from "./pages/admin/SecurityAdmin";
+import RecoverAdminPassword from "./pages/admin/RecoverAdminPassword";
 import Dashboard from "./pages/admin/Dashboard";
 import BookingsAdmin from "./pages/admin/BookingsAdmin";
 import CustomersAdmin from "./pages/admin/CustomersAdmin";
@@ -62,10 +64,12 @@ export default function App() {
         </Route>
 
         <Route path="/admin/login" element={<Login />} />
+        <Route path="/admin/restablecer-clave" element={<RecoverAdminPassword />} />
 
         <Route element={<ProtectedAdminRoute />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="seguridad" element={<SecurityAdmin />} />
             <Route path="reservas" element={<BookingsAdmin />} />
             <Route path="consultas" element={<InquiriesAdmin />} />
             <Route path="mensajes" element={<MessagesAdmin />} />
