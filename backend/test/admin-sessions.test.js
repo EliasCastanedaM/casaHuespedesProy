@@ -55,7 +55,7 @@ test("cerrar sesión revoca el JWT del lado del servidor inmediatamente", async 
   });
   const server = app.listen(0, "127.0.0.1");
   await new Promise((resolve) => server.once("listening", resolve));
-  t.after(() => new Promise((resolve, reject) => server.close((e) => e ? reject(e) : resolve()));
+  t.after(() => new Promise((resolve, reject) => server.close((e) => e ? reject(e) : resolve())));
   const base = "http://127.0.0.1:" + server.address().port;
   const headers = { Authorization: "Bearer " + token };
   let response = await fetch(base + "/api/auth/session", { headers });
