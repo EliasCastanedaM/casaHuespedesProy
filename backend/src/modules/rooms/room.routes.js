@@ -20,7 +20,7 @@ import {
   deleteRoomImageController,
   deleteRoomVideoController,
 } from "./room.controller.js";
-import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
+import { requireAdminAuth, requireAdminRole } from "../../middlewares/authMiddleware.js";
 
 const router = Router();
 
@@ -32,9 +32,7 @@ router.get("/categories/:slug", getPublicRoomCategoryBySlugController);
 router.put(
   "/categories/:slug",
   requireAdminAuth,
-  (req,res,next) => req.user?.role === "admin"
-    ? next()
-    : res.status(403).json({success:false,message:"Solo administración puede cambiar la tarifa Full. Utiliza una propuesta comercial."}),
+  requireAdminRole,
   updateRoomCategoryController
 );
 router.get("/admin", requireAdminAuth, getAllRoomsController);
@@ -44,6 +42,7 @@ router.get("/:id", requireAdminAuth, getRoomByIdController);
 router.post(
   "/:id/image",
   requireAdminAuth,
+  requireAdminRole,
   uploadImage.single("image"),
   uploadRoomImageController
 );
@@ -52,6 +51,7 @@ router.post(
 router.post(
   "/:id/images",
   requireAdminAuth,
+  requireAdminRole,
   uploadRoomImages.array("files", 30),
   uploadRoomImagesController
 );
@@ -60,6 +60,7 @@ router.post(
 router.post(
   "/:id/videos",
   requireAdminAuth,
+  requireAdminRole,
   uploadRoomVideos.array("files", 10),
   uploadRoomVideosController
 );
@@ -68,16 +69,18 @@ router.post(
 router.delete(
   "/:roomId/images/:imageId",
   requireAdminAuth,
+  requireAdminRole,
   deleteRoomImageController
 );
 router.delete(
   "/:roomId/videos/:videoId",
   requireAdminAuth,
+  requireAdminRole,
   deleteRoomVideoController
 );
 
-router.post("/", requireAdminAuth, createRoomController);
-router.put("/:id", requireAdminAuth, updateRoomController);
-router.delete("/:id", requireAdminAuth, deleteRoomController);
+router.post("/", requireAdminAuth, requireAdminRole, createRoomController);
+router.put("/:id", requireAdminAuth, requireAdminRole, updateRoomController);
+router.delete("/:id", requireAdminAuth, requireAdminRole, deleteRoomController);
 
 export default router;
