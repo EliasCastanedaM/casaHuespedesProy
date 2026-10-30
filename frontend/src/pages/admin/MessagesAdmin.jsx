@@ -105,6 +105,8 @@ export default function MessagesAdmin() {
   const [selectedId, setSelectedId] = useState("");
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
+  const [confirmAmount, setConfirmAmount] = useState("");
+  const [confirmCategory, setConfirmCategory] = useState("");
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
@@ -342,6 +344,63 @@ export default function MessagesAdmin() {
   }
 
   const reservation = selected?.reservation_context;
+
+  useEffect(() => {
+    setConfirmCategory(
+      reservation?.recommended_category?.slug ||
+      reservation?.category_slug ||
+      ""
+    );
+    setConfirmAmount(
+      reservation?.staff_confirmation?.total_amount
+        ? String(reservation.staff_confirmation.total_amount)
+        : ""
+    );
+  }, [
+    selectedId,
+    reservation?.recommended_category?.slug,
+    reservation?.category_slug,
+    reservation?.staff_confirmation?.total_amount,
+  ]);
+
+  async function confirmReservation() {
+    const amount = Number(confirmAmount);
+    if (!selected || selected.channel !== "whatsapp" || saving ||
+        !confirmCategory || !Number.isFinite(amount) || amount <= 0) {
+      setError("Selecciona una categoría e indica el importe total confirmado.");
+      return;
+    }
+    try {
+      setSaving(true);
+      const response = await api.post(
+        conversationPath(selected) + "/confirm-reservation",
+        { category_slug: confirmCategory, total_amount: amount }
+      );
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "No se pudo confirmar la disponibilidad.");
+      }
+      setConversations((items) => items.map((item) =>
+        conversationId(item) === selectedId
+          ? { ...item, handoff_active: false }
+          : item
+      ));
+      setError("");
+      await Promise.all([
+        loadDashboard(),
+        loadConversations({ quiet: true }),
+        loadMessages(selected, true),
+      ]);
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+        requestError.message ||
+        "No se pudo confirmar la disponibilidad."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const channelLabel = CHANNELS.find((item) => item.id === channel)?.label || "Todas";
   const maxBars = Math.max(1, ...CHANNELS.filter((item) => item.id !== "all")
     .map((item) => dashboard.channels[item.id]?.total || 0));
@@ -571,17 +630,91 @@ export default function MessagesAdmin() {
               <div className="border-b border-[#ded4c4] bg-[#fdf3dc] p-4">
                 <h3 className="text-sm font-bold">Resumen interno de recepción</h3>
                 <p className="mt-1 text-xs text-[#876b3b]">
-                  Datos recopilados; no constituyen una reserva confirmada.
+                  {["booked", "payment_reported", "confirmed"].includes(reservation.state)
+                    ? "Reserva registrada. Consulta el estado y el método de pago."
+                    : ["awaiting_customer_name", "awaiting_customer_email", "awaiting_customer_phone", "awaiting_payment_choice"].includes(reservation.state)
+                      ? "El equipo confirmó disponibilidad e importe; el asesor continúa en este mismo chat."
+                      : "Datos recopilados; disponibilidad e importe pendientes de validación humana."}
                 </p>
                 <dl className="mt-2">
-                  <DetailRow label="Categoría consultada" value={reservation.category_slug} />
                   <DetailRow label="Ingreso" value={reservation.check_in} />
                   <DetailRow label="Salida" value={reservation.check_out} />
                   <DetailRow label="Adultos" value={reservation.adults === undefined ? "" : String(reservation.adults)} />
                   <DetailRow label="Niños" value={reservation.children === undefined ? "" : String(reservation.children)} />
+                  <DetailRow label="Edades de niños" value={Array.isArray(reservation.child_ages) ? reservation.child_ages.join(", ") : ""} />
+                  <DetailRow label="Huéspedes totales" value={reservation.total_guests === undefined ? "" : String(reservation.total_guests)} />
                   <DetailRow label="Mascotas" value={reservation.pets === undefined ? "" : String(reservation.pets)} />
+                  <DetailRow label="Categoría solicitada" value={reservation.category_slug} />
+                  <DetailRow label="Categoría sugerida" value={reservation.recommended_category?.name
+                    ? reservation.recommended_category.name + " (capacidad " + reservation.recommended_category.capacity + ")"
+                    : ""} />
                   <DetailRow label="Preferencias" value={reservation.preferences} />
+                  <DetailRow label="Nombre" value={reservation.customer_name} />
+                  <DetailRow label="Correo" value={reservation.customer_email} />
+                  <DetailRow label="Código de reserva" value={reservation.booking?.booking_code} />
+                  <DetailRow label="Método de pago" value={reservation.payment_method === "pay_at_property"
+                    ? "Pagar en el establecimiento"
+                    : reservation.payment_method === "culqi_link" ? "Culqi" : ""} />
+                  <DetailRow label="Estado de reserva" value={reservation.booking?.status || reservation.state} />
+                  {reservation.staff_confirmation && (
+                    <DetailRow label="Importe confirmado" value={"S/ " + Number(reservation.staff_confirmation.total_amount).toFixed(2)} />
+                  )}
                 </dl>
+
+                {reservation.state === "handoff" && selected.handoff_active && Number(reservation.total_guests || 0) >= 8 && (
+                  <div className="mt-3 border border-[#d9b77a] bg-white p-3 text-xs leading-relaxed text-[#77521e]">
+                    Los grupos de 8 o más huéspedes requieren cotización especial y distribución manual de varias habitaciones. Este flujo automático de una sola habitación no debe utilizarse.
+                  </div>
+                )}
+
+                {reservation.state === "handoff" && selected.handoff_active && Number(reservation.total_guests || 0) < 8 && (
+                  <div className="mt-3 border border-[#d9b77a] bg-white p-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-[#77521e]">
+                      Validación humana previa
+                    </h4>
+                    <p className="mt-1 text-xs leading-relaxed text-[#6c6255]">
+                      Usa esta acción únicamente después de comprobar manualmente la disponibilidad y el importe final. El asesor pedirá nombre y correo y luego ofrecerá pago presencial o Culqi.
+                    </p>
+                    <label className="mt-3 block text-xs font-semibold text-[#52636a]">
+                      Categoría confirmada
+                      <select
+                        value={confirmCategory}
+                        onChange={(event) => setConfirmCategory(event.target.value)}
+                        disabled={saving}
+                        className="mt-1 w-full border border-[#d2c8ba] bg-white px-2 py-2 text-sm text-[#163f4c]"
+                      >
+                        <option value="">Selecciona una categoría</option>
+                        <option value="matrimonial-ejecutiva">Matrimonial Ejecutiva</option>
+                        <option value="matrimonial">Matrimonial Estándar</option>
+                        <option value="doble">Doble</option>
+                        <option value="triple">Triple</option>
+                        <option value="familiar">Familiar 1</option>
+                        <option value="familiar-2">Familiar 2</option>
+                      </select>
+                    </label>
+                    <label className="mt-3 block text-xs font-semibold text-[#52636a]">
+                      Importe total confirmado (S/)
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={confirmAmount}
+                        onChange={(event) => setConfirmAmount(event.target.value)}
+                        disabled={saving}
+                        placeholder="Ej. 350.00"
+                        className="mt-1 w-full border border-[#d2c8ba] bg-white px-2 py-2 text-sm text-[#163f4c]"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={confirmReservation}
+                      disabled={saving || !confirmCategory || !confirmAmount || Number(confirmAmount) <= 0}
+                      className="mt-3 w-full border border-[#003647] bg-[#003647] px-3 py-2.5 text-xs font-bold text-white hover:bg-[#075a78] disabled:opacity-40"
+                    >
+                      {saving ? "Procesando..." : "Confirmar disponibilidad y continuar"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
