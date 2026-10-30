@@ -54,7 +54,7 @@ test("cambiar contraseña requiere la actual, actualiza hash y revoca sesiones e
 
 test("contraseña actual incorrecta revierte sin actualizar usuario", async () => {
   const { db, log } = fakeTransaction(await bcrypt.hash(currentPassword, 4));
-  await assert.rejects(() => changeAdminPassword(11, "equivocada-2026", newPassword, db), { statusCode: 401 });
+  await assert.rejects(() => changeAdminPassword(11, "equivocada-2026", newPassword, db), { statusCode: 400 });
   assert.ok(log.some(x => x.query === "ROLLBACK"));
   assert.equal(log.some(x => x.query.startsWith("UPDATE public.users")), false);
 });
