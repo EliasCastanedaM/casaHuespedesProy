@@ -91,7 +91,7 @@ export async function recordOpenAiUsage(response, { channel = "other", operation
 
 function normalizedRollup(row) {
   const result = { ...row };
-  for (const key of ["requests", "conversations", "input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens", "estimated_cost_usd"]) {
+  for (const key of ["requests", "conversations", "unpriced_requests", "input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens", "estimated_cost_usd"]) {
     if (Object.hasOwn(result, key)) result[key] = Number(result[key] || 0);
   }
   return result;
@@ -103,6 +103,7 @@ export async function getOpenAiUsageDashboard(days = 7, db = pool) {
   const [breakdown, daily, conversations] = await Promise.all([
     db.query(`SELECT channel, model, operation, COUNT(*)::int AS requests,
       COUNT(DISTINCT conversation_tag)::int AS conversations,
+      COUNT(*) FILTER (WHERE estimated_cost_usd IS NULL)::int AS unpriced_requests,
       COALESCE(SUM(input_tokens),0)::bigint AS input_tokens,
       COALESCE(SUM(cached_input_tokens),0)::bigint AS cached_input_tokens,
       COALESCE(SUM(output_tokens),0)::bigint AS output_tokens,
