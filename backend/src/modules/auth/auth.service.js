@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool } from "../../config/db.js";
 import { env } from "../../config/env.js";
+import { registerAdminSession, SESSION_SECONDS } from "./auth.sessions.js";
 
 export async function loginService(email, password) {
   const result = await pool.query(
@@ -30,15 +31,22 @@ export async function loginService(email, password) {
     throw error;
   }
 
+  if (!["admin", "staff"].includes(user.role)) {
+    const error = new Error("Usuario o contraseña incorrectos.");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  // Crear la sesión antes de emitir el token: si falla la base, no hay acceso.
+  const sid = await registerAdminSession(user.id);
   const token = jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    },
+    { id: user.id, sid },
     env.jwtSecret,
     {
-      expiresIn: "8h",
+      expiresIn: SESSION_SECONDS,
+      algorithm: "HS256",
+      issuer: "casa-huespedes-pimentel",
+      audience: "hotel-admin",
     }
   );
 
