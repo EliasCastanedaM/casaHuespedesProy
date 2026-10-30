@@ -8,7 +8,6 @@ import { notFoundMiddleware } from "./middlewares/notFoundMiddleware.js";
 import {
   aiLimiter,
   apiLimiter,
-  authLimiter,
 } from "./middlewares/rateLimiters.js";
 
 import authRoutes from "./modules/auth/auth.routes.js";
@@ -92,7 +91,7 @@ app.get("/api/health", (_req, res) => {
 // Meta puede entregar ráfagas y reintentos; no usa el limitador genérico.
 app.use("/api/meta", metaRoutes);
 
-app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/auth", apiLimiter, authRoutes);
 app.use("/api/ai", aiLimiter, aiRoutes);
 app.use("/api/admin/ai-usage", apiLimiter, aiUsageRoutes);
 app.use("/api/rooms", apiLimiter, roomRoutes);
