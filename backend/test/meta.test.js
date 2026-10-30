@@ -1187,6 +1187,11 @@ test("los endpoints de mensajes exigen autenticación administrativa", async () 
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message: "Hola" }),
       }),
+      fetch(baseUrl + "/api/meta/conversations/whatsapp/51999999999/confirm-reservation", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ category_slug: "matrimonial", total_amount: 250 }),
+      }),
     ]);
 
     for (const response of responses) assert.equal(response.status, 401);
