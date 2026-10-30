@@ -289,7 +289,13 @@ export async function updateWhatsAppMvpContextForHandoff({
   }
   const current = await loadBookingContext(channel, externalUserId);
   if (!current?.whatsapp_mvp) return false;
-  const progress = handleWhatsAppMvpTurn({ message, context: current });
+  let categories = [];
+  try {
+    categories = await getPublicRoomCategoriesService();
+  } catch (error) {
+    console.warn("No se pudieron cargar categorías al actualizar el handoff:", error.message);
+  }
+  const progress = handleWhatsAppMvpTurn({ message, context: current, categories, externalUserId });
   if (JSON.stringify(current) === JSON.stringify(progress.context)) return false;
   await saveBookingContext(channel, externalUserId, progress.context);
   return true;
@@ -767,10 +773,12 @@ async function generateAiReplyInternal({
   if (channel === "whatsapp" && !policyInformationType(message)) {
     const current = await loadBookingContext(channel, externalUserId);
     let categories = [];
-    try {
-      categories = await getPublicRoomCategoriesService();
-    } catch (error) {
-      console.warn("No se pudieron cargar categorías para recomendar habitación:", error.message);
+    if (current?.whatsapp_mvp || isReservationIntent(message)) {
+      try {
+        categories = await getPublicRoomCategoriesService();
+      } catch (error) {
+        console.warn("No se pudieron cargar categorías para recomendar habitación:", error.message);
+      }
     }
     const progress = handleWhatsAppMvpTurn({
       message,
