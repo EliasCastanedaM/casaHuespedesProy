@@ -366,6 +366,7 @@ const labels = {
     pets: "¿Llevarán mascotas? Si es así, ¿cuántas?",
     handoff: "¡Perfecto! 😊 Voy a comunicarte con una persona de nuestro equipo para confirmar disponibilidad y ayudarte a cerrar la reserva. Ya tiene los datos que compartiste; no necesitas repetirlos.",
     largeGroupHandoff: "¡Perfecto! 😊 Para grupos de 8 o más personas, nuestro equipo revisará la tarifa especial y la distribución de habitaciones. Ya tiene los datos que compartiste; no necesitas repetirlos.",
+    multiRoomHandoff: "¡Perfecto! 😊 Por la cantidad de huéspedes, nuestro equipo debe revisar la distribución de varias habitaciones y confirmar la tarifa. Ya tiene los datos que compartiste.",
     customerName: "Para registrar la reserva, ¿me indicas tu nombre completo?",
     customerEmail: "Gracias. ¿Cuál es tu correo electrónico para enviarte los detalles de la reserva y el estado del pago?",
     customerEmailInvalid: "No pude reconocer ese correo. Escríbelo nuevamente, por ejemplo: nombre@correo.com.",
@@ -381,6 +382,7 @@ const labels = {
     pets: "Will you bring any pets? If so, how many?",
     handoff: "Perfect! 😊 I'll connect you with our team to check availability and complete the reservation. They will have the details you already shared.",
     largeGroupHandoff: "Perfect! 😊 For groups of 8 or more, our team will review the special rate and room allocation. They already have your details.",
+    multiRoomHandoff: "Perfect! 😊 Your group needs more than one room. Our team will review the room allocation and confirm the rate; they already have your details.",
     customerName: "To register the reservation, may I have your full name?",
     customerEmail: "Thank you. What email address should receive your reservation and payment updates?",
     customerEmailInvalid: "I couldn't recognize that email. Please enter it again, for example: name@example.com.",
@@ -396,6 +398,7 @@ const labels = {
     pets: "Vocês trarão animais de estimação? Quantos?",
     handoff: "Perfeito! 😊 Vou encaminhar você à nossa equipe para confirmar a disponibilidade e concluir a reserva. Não será necessário repetir os dados.",
     largeGroupHandoff: "Perfeito! 😊 Para grupos de 8 ou mais pessoas, nossa equipe avaliará a tarifa especial e a distribuição dos quartos.",
+    multiRoomHandoff: "Perfeito! 😊 Seu grupo precisa de mais de um quarto. Nossa equipe avaliará a distribuição e confirmará a tarifa.",
     customerName: "Para registrar a reserva, qual é seu nome completo?",
     customerEmail: "Obrigado. Qual é seu e-mail para receber os detalhes da reserva e do pagamento?",
     customerEmailInvalid: "Não reconheci esse e-mail. Envie novamente, por exemplo: nome@exemplo.com.",
@@ -411,6 +414,7 @@ const labels = {
     pets: "Voyagez-vous avec des animaux ? Si oui, combien ?",
     handoff: "Parfait ! 😊 Je vous mets en relation avec notre équipe pour vérifier les disponibilités et terminer la réservation. Vous n'aurez pas à répéter les informations.",
     largeGroupHandoff: "Parfait ! 😊 Pour les groupes de 8 personnes ou plus, notre équipe vérifiera le tarif spécial et la répartition des chambres.",
+    multiRoomHandoff: "Parfait ! 😊 Votre groupe nécessite plusieurs chambres. Notre équipe vérifiera leur répartition et le tarif.",
     customerName: "Pour enregistrer la réservation, quel est votre nom complet ?",
     customerEmail: "Merci. Quelle adresse e-mail doit recevoir les détails de la réservation et du paiement ?",
     customerEmailInvalid: "Je n'ai pas reconnu cette adresse e-mail. Veuillez la saisir à nouveau.",
@@ -464,6 +468,7 @@ export function formatWhatsAppHandoffSummary(data = {}) {
     "Mascotas: " + v(data.pets) + " · cargo de referencia: " + petCharge,
     "Categoría solicitada: " + v(data.category_slug),
     "Categoría sugerida: " + recommendation,
+    "Capacidad máxima de una habitación: " + v(data.max_single_room_capacity),
     "Preferencias: " + v(data.preferences),
     Number(data.total_guests || 0) >= 8
       ? "ATENCIÓN: grupo de 8 o más; tarifa especial y distribución de varias habitaciones a cargo del equipo."
@@ -502,10 +507,12 @@ function validEmail(value) {
 
 function paymentChoice(text) {
   const value = normalize(text).replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-  if (/^(?:1|pagar en el establecimiento|pago en el establecimiento|establecimiento|pagar al llegar|pago al llegar|pay at (?:the )?hotel|pay at property|pay on arrival|at the hotel|no estabelecimento|pagar no hotel|payer sur place|sur place)$/.test(value)) {
+  if (/^(?:1|opcion 1|opcion uno|la primera|primera opcion)$/.test(value) ||
+      /(?:pagar|pago).*(?:establecimiento|hospedaje|al llegar|hotel)|pay at (?:the )?hotel|pay at property|pay on arrival|no estabelecimento|pagar no hotel|payer sur place|sur place/.test(value)) {
     return "pay_at_property";
   }
-  if (/^(?:2|pagar ahora|pago ahora|pagar en linea|pagar online|culqi|pagar con culqi|pay now|pay online|pay with culqi|pagar agora|payer maintenant)$/.test(value)) {
+  if (/^(?:2|opcion 2|opcion dos|la segunda|segunda opcion)$/.test(value) ||
+      /(?:pagar|pago).*(?:ahora|online|en linea|culqi)|pay now|pay online|pay with culqi|pagar agora|payer maintenant/.test(value)) {
     return "culqi_link";
   }
   return null;
@@ -572,7 +579,13 @@ export function prepareWhatsAppMvpReservation({ context = {}, category, totalAmo
     throw error;
   }
   if (Number(current.total_guests || 0) >= 8) {
-    const error = new Error("Los grupos de 8 o más huéspedes requieren gestión manual de varias habitaciones.");
+    const error = new Error("Los grupos de 8 o más huéspedes requieren gestión manual de varias habitaciones y tarifa especial.");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (Number(current.max_single_room_capacity || 0) > 0 &&
+      Number(current.total_guests || 0) > Number(current.max_single_room_capacity)) {
+    const error = new Error("La solicitud requiere varias habitaciones y debe gestionarse manualmente.");
     error.statusCode = 409;
     throw error;
   }
@@ -636,6 +649,10 @@ export function handleWhatsAppMvpTurn({
     updated.language = language;
     updated.state = "handoff";
     delete updated.awaiting;
+    const maxCapacity = Array.isArray(categories) && categories.length
+      ? Math.max(...categories.map((item) => Number(item.capacity || 0)))
+      : Number(updated.max_single_room_capacity || 0);
+    if (maxCapacity > 0) updated.max_single_room_capacity = maxCapacity;
     const suggested = recommendCategory(categories, updated.total_guests);
     if (Number(updated.total_guests || 0) < 8 && suggested) {
       const selected = categories.find((item) => item.slug === updated.category_slug);
@@ -807,6 +824,10 @@ export function handleWhatsAppMvpTurn({
   data.intent_id = state?.intent_id || randomUUID();
   delete data.awaiting;
 
+  const maxCapacity = Array.isArray(categories) && categories.length
+    ? Math.max(...categories.map((item) => Number(item.capacity || 0)))
+    : Number(data.max_single_room_capacity || 0);
+  if (maxCapacity > 0) data.max_single_room_capacity = maxCapacity;
   const suggested = recommendCategory(categories, data.total_guests);
   if (data.total_guests != null && Number(data.total_guests) < 8 && suggested) {
     const selected = categories.find((item) => item.slug === data.category_slug);
@@ -835,9 +856,13 @@ export function handleWhatsAppMvpTurn({
 
   data.state = "handoff";
   const largeGroup = Number(data.total_guests || 0) >= 8;
+  const needsMultipleRooms = Number(data.max_single_room_capacity || 0) > 0 &&
+    Number(data.total_guests || 0) > Number(data.max_single_room_capacity);
   let handoffReply = largeGroup
     ? (labels[language]?.largeGroupHandoff || labels.es.largeGroupHandoff)
-    : dictionary.handoff;
+    : needsMultipleRooms
+      ? (labels[language]?.multiRoomHandoff || labels.es.multiRoomHandoff)
+      : dictionary.handoff;
   if (!largeGroup && data.recommended_category) {
     const recommendation = data.recommended_category.name;
     handoffReply += " Por el tamaño del grupo, la categoría que mejor se ajusta es " + recommendation +
