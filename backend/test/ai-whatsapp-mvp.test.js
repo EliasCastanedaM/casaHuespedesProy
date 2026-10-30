@@ -376,3 +376,29 @@ test("una pregunta sobre pagar en el establecimiento no se interpreta como elecc
   assert.equal(result.action, undefined);
   assert.equal(result.context, context);
 });
+
+
+test("la aprobación humana exige autorizar mascotas y verificar camas para niños de 0 a 4 años", () => {
+  const request = turn(
+    "Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos, 1 niño de 3 años y 1 mascota"
+  );
+  assert.equal(request.context.whatsapp_mvp.state, "handoff");
+  const base = {
+    context: request.context,
+    category: { slug: "triple", name: "Triple", capacity: 3, price_per_night: 210 },
+    totalAmount: 500,
+    externalUserId: "51987654321",
+  };
+  assert.throws(() => prepareWhatsAppMvpReservation(base), /autorización previa/);
+  assert.throws(() => prepareWhatsAppMvpReservation({
+    ...base,
+    petAuthorized: true,
+  }), /camas disponibles/);
+  const approved = prepareWhatsAppMvpReservation({
+    ...base,
+    petAuthorized: true,
+    childBedAvailabilityConfirmed: true,
+  });
+  assert.equal(approved.context.whatsapp_mvp.staff_confirmation.pet_authorized, true);
+  assert.equal(approved.context.whatsapp_mvp.staff_confirmation.child_bed_availability_confirmed, true);
+});
