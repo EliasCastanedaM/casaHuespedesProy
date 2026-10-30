@@ -55,6 +55,7 @@ test("rutas sensibles deniegan JWT staff sin ejecutar consultas ni modificacione
     ["POST", "/api/gallery"],
     ["DELETE", "/api/gallery/1"],
     ["GET", "/api/admin/ai-usage?days=7"],
+    ["GET", "/api/admin/privacy/retention-preview"],
     ["POST", "/api/meta/embedded-signup/complete"],
     ["POST", "/api/meta/conversations/whatsapp/123/confirm-reservation"],
   ];

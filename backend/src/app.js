@@ -13,6 +13,7 @@ import {
 import authRoutes from "./modules/auth/auth.routes.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
 import aiUsageRoutes from "./modules/ai/ai.usage.routes.js";
+import privacyRoutes from "./modules/privacy/privacy.routes.js";
 import blockedSlotRoutes from "./modules/blockedSlots/blockedSlot.routes.js";
 import bookingRoutes from "./modules/bookings/booking.routes.js";
 import customerRoutes from "./modules/customers/customer.routes.js";
@@ -94,6 +95,7 @@ app.use("/api/meta", metaRoutes);
 app.use("/api/auth", apiLimiter, authRoutes);
 app.use("/api/ai", aiLimiter, aiRoutes);
 app.use("/api/admin/ai-usage", apiLimiter, aiUsageRoutes);
+app.use("/api/admin/privacy", apiLimiter, privacyRoutes);
 app.use("/api/rooms", apiLimiter, roomRoutes);
 app.use("/api/services", apiLimiter, serviceRoutes);
 app.use("/api/admin/commercial", apiLimiter, commercialRoutes);

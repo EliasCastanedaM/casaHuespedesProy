@@ -198,18 +198,13 @@ async function sendEmail({ to, subject, html }) {
   }
 
   if (!response.ok) {
-    throw new Error(
-      `Brevo respondió ${response.status}: ${
-        result.message || "No se pudo enviar el correo."
-      }`
-    );
+    // La respuesta del proveedor puede contener direcciones o metadatos privados.
+    throw new Error(`El proveedor de correo rechazó el envío (${Number(response.status)})`);
   }
 
-  console.log(
-    `Correo enviado correctamente por Brevo: ${subject} -> ${to} (${
-      result.messageId || "sin identificador"
-    })`
-  );
+  // No imprimir correo del destinatario, asunto (incluye código de reserva),
+  // contenido del mensaje ni el ID del proveedor.
+  console.info(JSON.stringify({ component: "email_delivery", status: "sent" }));
 
   return true;
 }
@@ -218,7 +213,11 @@ async function sendEmailSafely(emailData) {
   try {
     return await sendEmail(emailData);
   } catch (error) {
-    console.error("No se pudo enviar el correo automático:", error.message);
+    console.error(JSON.stringify({
+      component: "email_delivery",
+      status: "failed",
+      errorType: String(error?.name || "Error").slice(0, 60),
+    }));
     return false;
   }
 }
