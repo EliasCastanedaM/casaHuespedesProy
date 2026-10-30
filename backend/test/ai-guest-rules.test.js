@@ -15,20 +15,20 @@ test("las reglas de huéspedes incluyen los niños, mascotas, grupos y seis cate
   assert.match(prompt, /50 % de la diferencia/);
   assert.match(prompt, /9 años/);
   assert.match(prompt, /S\/ 20/);
-  assert.match(prompt, /PENDIENTE de confirmar si aplica/);
-  assert.match(prompt, /PENDIENTE DE CONFIRMAR/);
+  assert.match(prompt, /S\\/ 20 por mascota y por noche/);
+  assert.match(prompt, /Desde los 9 años: corresponde tarifa de adulto/);
   assert.match(prompt, /8 o más personas/);
   assert.match(prompt, /Familiar 1 y Familiar 2/);
   assert.match(prompt, /Familiar 1 y Familiar 2 son dos categorías diferentes/);
   assert.match(prompt, /No escribas símbolos de Markdown/);
   assert.match(prompt, /no traduzcas, abrevies ni combines los nombres/);
-  assert.match(prompt, /NO calcules ni prometas un total/);
+  assert.match(prompt, /no confirmes su admisión sin autorización humana/);
 });
 
 test("las reglas del WhatsApp MVP impiden prometer reservas o disponibilidad", () => {
   const prompt = buildHotelAssistantPrompt({ channel: "whatsapp" });
   assert.match(prompt, /MVP WhatsApp/);
-  assert.match(prompt, /no confirmes disponibilidad ni crees reservas/);
+  assert.match(prompt, /nunca confirmes disponibilidad por tu cuenta/);
   assert.match(prompt, /el menú es opcional/);
   assert.match(prompt, /deriva a una persona/);
   const instagram = buildHotelAssistantPrompt({ channel: "instagram" });
