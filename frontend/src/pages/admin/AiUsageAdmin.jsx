@@ -50,7 +50,8 @@ export default function AiUsageAdmin() {
     output: total.output + row.output_tokens,
     reasoning: total.reasoning + row.reasoning_output_tokens,
     cost: total.cost + row.estimated_cost_usd,
-  }), { requests: 0, input: 0, cached: 0, output: 0, reasoning: 0, cost: 0 }), [report]);
+    unpriced: total.unpriced + (row.unpriced_requests || 0),
+  }), { requests: 0, input: 0, cached: 0, output: 0, reasoning: 0, cost: 0, unpriced: 0 }), [report]);
 
   const daily = useMemo(() => {
     const aggregate = new Map();
@@ -91,7 +92,7 @@ export default function AiUsageAdmin() {
             <TokensCard label="Solicitudes a OpenAI" value={nf.format(totals.requests)} />
             <TokensCard label="Tokens de entrada" value={nf.format(totals.input)} note={nf.format(totals.cached) + " recuperados de caché"} />
             <TokensCard label="Tokens de salida" value={nf.format(totals.output)} note={nf.format(totals.reasoning) + " de razonamiento (incluidos)"} />
-            <TokensCard label="Costo estimado" value={"US$ " + mf.format(totals.cost)} note="No es la factura oficial" />
+            <TokensCard label="Costo estimado" value={"US$ " + mf.format(totals.cost)} note={totals.unpriced ? nf.format(totals.unpriced) + " solicitudes sin precio; no es la factura oficial" : "No es la factura oficial"} />
           </section>
 
           <section className="grid gap-5 lg:grid-cols-5">
