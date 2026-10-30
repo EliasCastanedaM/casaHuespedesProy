@@ -1,5 +1,6 @@
-// Reglas comerciales especiales: nunca deducir tarifas infantiles no validadas.
-// Este guard impide convertir solicitudes excepcionales en pre-reservas automáticas.
+// Reglas comerciales confirmadas: 0–4 años sin cargo con cama disponible,
+// 5–8 años al 50 % del diferencial de tarifa y desde 9 años tarifa de adulto.
+// Niños, mascotas y grupos especiales conservan validación humana antes del cierre.
 function normalize(value) {
   return String(value || "")
     .normalize("NFD")
