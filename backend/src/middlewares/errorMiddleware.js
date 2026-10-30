@@ -1,12 +1,36 @@
-// Middleware global para manejar errores del backend
-export function errorMiddleware(error, req, res, next) {
-  // Mostramos el error completo en la terminal del backend
-  console.error("ERROR BACKEND:", error);
+// Middleware global para manejar errores del backend sin registrar datos sensibles.
+function safeErrorCode(value) {
+  const normalized = String(value ?? "");
+  return /^[A-Z0-9_-]{1,40}$/i.test(normalized) ? normalized : null;
+}
 
-  // Respondemos al frontend con un mensaje más claro en desarrollo
-  res.status(error.statusCode || 500).json({
-    success: false,
-    message: error.message || "Error interno del servidor",
-    detail: process.env.NODE_ENV === "development" ? error.stack : undefined,
-  });
+export function errorMiddleware(error, req, res, next) {
+  const statusCode = Number.isInteger(error?.statusCode)
+    ? error.statusCode
+    : 500;
+  const routePath = typeof req.route?.path === "string" ? req.route.path : null;
+
+  // No registrar error.message, stack, URL original, query params ni body:
+  // pueden contener teléfonos, tokens, WAMID o contenido del huésped.
+  console.error(JSON.stringify({
+    component: "http_error",
+    method: String(req.method || "").slice(0, 10),
+    baseUrl: String(req.baseUrl || "").slice(0, 100),
+    route: routePath,
+    statusCode,
+    errorType: String(error?.name || "Error").slice(0, 80),
+    ...(safeErrorCode(error?.code) ? { errorCode: safeErrorCode(error.code) } : {}),
+  }));
+
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const message = statusCode < 500
+    ? error?.message || "Solicitud no válida"
+    : "Error interno del servidor";
+  const payload = { success: false, message };
+
+  if (isDevelopment && error?.stack) {
+    payload.detail = error.stack;
+  }
+
+  return res.status(statusCode).json(payload);
 }
