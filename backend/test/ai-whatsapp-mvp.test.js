@@ -5,8 +5,8 @@ import {
   formatWhatsAppHandoffSummary,
 } from "../src/modules/ai/ai.whatsapp-mvp.js";
 
-function turn(message, context = {}) {
-  return handleWhatsAppMvpTurn({ message, context });
+function turn(message, context = {}, now = new Date()) {
+  return handleWhatsAppMvpTurn({ message, context, now });
 }
 
 test("MVP pregunta solamente los datos pendientes antes de pasar al equipo", () => {
@@ -145,4 +145,26 @@ test("infiere el año siguiente para fechas sin año y acepta 'dos adultos?' com
   const noChildren = turn("No hay niños", guests.context, now);
   assert.equal(noChildren.context.whatsapp_mvp.children, 0);
   assert.match(noChildren.reply, /mascotas/i);
+});
+
+
+test("normaliza fechas sin año que ya estaban guardadas en el contexto", () => {
+  const now = new Date("2026-10-30T15:00:00.000Z");
+  const context = {
+    state: "whatsapp_mvp",
+    whatsapp_mvp: {
+      state: "collecting",
+      awaiting: "guests",
+      check_in: "10/12",
+      check_out: "12/12",
+      children: 0,
+      child_ages: [],
+      language: "es"
+    }
+  };
+  const result = turn("Dos adultos", context, now);
+  assert.equal(result.context.whatsapp_mvp.check_in, "2026-12-10");
+  assert.equal(result.context.whatsapp_mvp.check_out, "2026-12-12");
+  assert.equal(result.context.whatsapp_mvp.adults, 2);
+  assert.match(result.reply, /mascotas/i);
 });
