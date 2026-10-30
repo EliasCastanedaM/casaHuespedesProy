@@ -153,7 +153,7 @@ function namedCount(text, words) {
 }
 
 function additionalAdultRelativeCount(text) {
-  return /\\b(?:y|ademas|tambien)\\s+(?:mi\\s+)?(?:mama|madre|papa|padre|abuela|abuelo)\\b/.test(text)
+  return /\b(?:y|ademas|tambien)\s+(?:mi\s+)?(?:mama|madre|papa|padre|abuela|abuelo)\b/.test(text)
     ? 1
     : 0;
 }
@@ -311,8 +311,8 @@ function changedBookingFields(previous, next) {
 }
 
 function isGuestCountQuestion(text) {
-  return /\\b(?:cuantas|cuantos)\\b/.test(text) &&
-    /\\b(?:personas|huespedes|serian|somos|total)\\b/.test(text);
+  return /\b(?:cuantas|cuantos)\b/.test(text) &&
+    /\b(?:personas|huespedes|serian|somos|total)\b/.test(text);
 }
 
 function formatGuestCountReply(data = {}) {
