@@ -110,8 +110,8 @@ function parseWhatsApp(body, onIgnored) {
         const externalUserId = cleanText(message?.from);
         if (!message || !externalUserId) {
           onIgnored?.({
-            messageId: cleanText(message?.id), reason: "missing_sender",
-            wabaId, phoneNumberId,
+            messageId: cleanText(message?.id), externalUserId,
+            reason: "missing_sender", wabaId, phoneNumberId,
           });
           continue;
         }
@@ -122,8 +122,8 @@ function parseWhatsApp(body, onIgnored) {
 
         if (messageType === "text" && !text) {
           onIgnored?.({
-            messageId: cleanText(message.id), reason: "empty_text",
-            wabaId, phoneNumberId,
+            messageId: cleanText(message.id), externalUserId,
+            reason: "empty_text", wabaId, phoneNumberId,
           });
           continue;
         }
@@ -238,6 +238,12 @@ export function parseMetaStatusUpdates(body = {}) {
         const errorDetail = cleanText(
           firstError?.message || firstError?.title || firstError?.error_data?.details
         );
+        const parsedErrorCode = Number(firstError?.code);
+        const errorCode = Number.isInteger(parsedErrorCode) && parsedErrorCode > 0
+          ? parsedErrorCode
+          : null;
+        const errorType = cleanText(firstError?.type);
+        const errorTitle = cleanText(firstError?.title).slice(0, 120);
 
         updates.push({
           channel: "whatsapp",
@@ -245,6 +251,9 @@ export function parseMetaStatusUpdates(body = {}) {
           status: state,
           timestamp: cleanText(status?.timestamp),
           errorDetail: errorDetail.slice(0, 1000),
+          errorCode,
+          errorType,
+          errorTitle,
         });
       }
     }
