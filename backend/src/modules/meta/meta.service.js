@@ -101,13 +101,20 @@ function parseWhatsApp(body, onIgnored) {
       for (const rawContact of asArray(value?.contacts)) {
         const contact = asObject(rawContact);
         const waId = cleanText(contact?.wa_id);
+        const businessUserId = cleanText(contact?.user_id);
         const name = cleanText(asObject(contact?.profile)?.name);
         if (waId && name) contactNames.set(waId, name);
+        if (businessUserId && name) contactNames.set(businessUserId, name);
       }
 
       for (const item of asArray(value?.messages)) {
         const message = asObject(item);
-        const externalUserId = cleanText(message?.from);
+        // Meta may omit the phone-based from value when a user hides their
+        // number behind a WhatsApp username. from_user_id (BSUID) is then
+        // the routable sender identity.
+        const phoneBasedUserId = cleanText(message?.from);
+        const businessUserId = cleanText(message?.from_user_id);
+        const externalUserId = phoneBasedUserId || businessUserId;
         if (!message || !externalUserId) {
           onIgnored?.({
             messageId: cleanText(message?.id), externalUserId,
@@ -941,6 +948,16 @@ async function graphPost(path, accessToken, payload) {
   }
 }
 
+function whatsappRecipientAddress(externalUserId) {
+  const recipientId = cleanText(externalUserId);
+  if (!recipientId) throw new Error("Falta el identificador del destinatario de WhatsApp.");
+
+  // Phone-based WhatsApp IDs continue using to. BSUIDs use recipient.
+  return /^\+?\d+$/.test(recipientId)
+    ? { to: recipientId }
+    : { recipient: recipientId };
+}
+
 async function sendWhatsApp(externalUserId, reply) {
   if (!env.meta.whatsappPhoneNumberId) {
     throw new Error("Falta WHATSAPP_PHONE_NUMBER_ID.");
@@ -952,7 +969,7 @@ async function sendWhatsApp(externalUserId, reply) {
     {
       messaging_product: "whatsapp",
       recipient_type: "individual",
-      to: externalUserId,
+      ...whatsappRecipientAddress(externalUserId),
       type: "text",
       text: { preview_url: false, body: reply },
     }

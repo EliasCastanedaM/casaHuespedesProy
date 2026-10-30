@@ -267,6 +267,48 @@ test("extrae y normaliza mensajes de WhatsApp", () => {
   assert.deepEqual(messages, [message()]);
 });
 
+test("extrae BSUID cuando Meta omite from y mantiene compatibilidad con números", () => {
+  const messages = parseMetaWebhook({
+    object: "whatsapp_business_account",
+    entry: [{
+      id: "waba-1",
+      changes: [{
+        field: "messages",
+        value: {
+          metadata: { phone_number_id: "phone-1" },
+          contacts: [
+            { user_id: "PE.13491208655302741918", profile: { name: "Usuario BSUID" } },
+            { wa_id: "51988888888", user_id: "PE.123456789", profile: { name: "Usuario con teléfono" } },
+          ],
+          messages: [
+            {
+              id: "wamid.bsuid",
+              from_user_id: "PE.13491208655302741918",
+              timestamp: "1780000000",
+              type: "text",
+              text: { body: "Hola desde username" },
+            },
+            {
+              id: "wamid.phone",
+              from: "51988888888",
+              from_user_id: "PE.123456789",
+              timestamp: "1780000001",
+              type: "text",
+              text: { body: "Hola desde teléfono" },
+            },
+          ],
+        },
+      }],
+    }],
+  });
+
+  assert.equal(messages.length, 2);
+  assert.equal(messages[0].externalUserId, "PE.13491208655302741918");
+  assert.equal(messages[0].customerName, "Usuario BSUID");
+  assert.equal(messages[1].externalUserId, "51988888888");
+  assert.equal(messages[1].customerName, "Usuario con teléfono");
+});
+
 test("registra descartes de WhatsApp y conserva los IDs necesarios para rastrear cada evento", () => {
   const ignored = [];
   const messages = parseMetaWebhook({
@@ -684,6 +726,48 @@ test("envía la respuesta al endpoint y formato correctos de cada canal", async 
       "https://graph.instagram.com/v26.0/ig-account-id/messages"
     );
     assert.equal(requests[2].body.recipient.id, "igsid");
+  } finally {
+    globalThis.fetch = previousFetch;
+    Object.assign(env.meta, previousConfig);
+  }
+});
+
+test("envía respuestas WhatsApp a BSUID mediante recipient sin alterar el envío por teléfono", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousConfig = { ...env.meta };
+  const requests = [];
+
+  Object.assign(env.meta, {
+    graphApiVersion: "v26.0",
+    whatsappAccessToken: "wa-token",
+    whatsappPhoneNumberId: "wa-phone-id",
+  });
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url, body: JSON.parse(options.body) });
+    return new Response("{}", { status: 200 });
+  };
+
+  try {
+    await sendMetaReply(
+      message({ externalUserId: "PE.13491208655302741918" }),
+      "Respuesta a usuario con username"
+    );
+    await sendMetaReply(message(), "Respuesta a número tradicional");
+
+    assert.deepEqual(requests[0].body, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      recipient: "PE.13491208655302741918",
+      type: "text",
+      text: { preview_url: false, body: "Respuesta a usuario con username" },
+    });
+    assert.deepEqual(requests[1].body, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: "51999999999",
+      type: "text",
+      text: { preview_url: false, body: "Respuesta a número tradicional" },
+    });
   } finally {
     globalThis.fetch = previousFetch;
     Object.assign(env.meta, previousConfig);
