@@ -1,3 +1,6 @@
+import { env } from "../../config/env.js";
+import { canUseWhatsAppDirectBooking } from "./ai.channel-capabilities.js";
+
 function normalizeMessage(value) {
   return String(value || "")
     .normalize("NFD")
@@ -83,7 +86,7 @@ export function formatCategoryPricesReply(categories, message, { channel = "inst
     "Estas son nuestras tarifas vigentes por categoría:",
     ...rows,
     "",
-    channel === "whatsapp"
+    channel === "whatsapp" && !canUseWhatsAppDirectBooking(env.ai)
       ? "Si deseas solicitar una reserva, indícame fechas y número de huéspedes; una persona de nuestro equipo confirmará disponibilidad y precio final."
       : "Para confirmar disponibilidad y el total de tu estadía, indícame fecha de entrada, fecha de salida y número de huéspedes.",
   ].join("\n");

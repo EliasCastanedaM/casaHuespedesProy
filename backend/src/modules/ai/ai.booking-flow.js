@@ -161,6 +161,11 @@ export function isReservationIntent(message) {
   ].some((pattern) => pattern.test(text));
 }
 
+// Distingue una solicitud de precio de una autorización para reservar.
+export function isQuotationIntent(message) {
+  return /\b(?:cotizacion|cotizar|cotizame|cotizarnos|presupuesto)\b/.test(normalizedText(message));
+}
+
 export function isNewReservationIntent(message) {
   const text = normalizedText(message);
   return [
@@ -651,7 +656,9 @@ export async function handleDeterministicBookingFlow({
   const startsNewReservation = isNewReservationIntent(message);
   const baseContext =
     startsNewReservation && !newIntentPrepared ? {} : safeInitialContext;
-  const intent = startsNewReservation || isReservationIntent(message);
+  const reservationIntent = startsNewReservation || isReservationIntent(message);
+  const quotationIntent = isQuotationIntent(message);
+  const intent = reservationIntent || quotationIntent;
 
   // La recomendación es una consulta informativa incluso si quedó un borrador
   // de reserva activo en este chat. No obliga a completar el borrador previo.
@@ -743,6 +750,9 @@ export async function handleDeterministicBookingFlow({
   let nextContext = mergeMessageData(baseContext, message);
   nextContext = {
     ...nextContext,
+    // Una consulta de presupuesto jamás autoriza por sí misma una reserva.
+    quote_only: (quotationIntent && !reservationIntent) ||
+      (baseContext.quote_only === true && !reservationIntent),
     state: "draft",
     intent_id: nextContext.intent_id || createIntentId(),
   };
@@ -789,6 +799,63 @@ export async function handleDeterministicBookingFlow({
     };
   }
 
+  // Cotización sin pre-reserva: nunca pedir datos personales ni crear un cobro.
+  // Solo la petición posterior y explícita «Quiero reservar» habilita ese flujo.
+  if (nextContext.quote_only) {
+    const missingStay = missingFields(nextContext).filter((field) =>
+      !["nombre completo", "correo", "celular"].includes(field)
+    );
+    if (missingStay.length > 0) {
+      return {
+        handled: true, mode: "quotation_details_required", context: nextContext,
+        reply: progressiveMissingDataReply(missingStay, nextContext),
+      };
+    }
+    let availability;
+    try {
+      availability = await services.searchAvailableRooms({
+        check_in: nextContext.check_in,
+        check_out: nextContext.check_out || undefined,
+        nights: nextContext.check_out ? undefined : nextContext.nights,
+        guests_count: nextContext.guests_count,
+      });
+    } catch {
+      return {
+        handled: true, mode: "quotation_unavailable", context: nextContext,
+        reply: "No puedo calcular la cotización porque la disponibilidad no responde. No se creó ninguna reserva ni enlace de pago.",
+      };
+    }
+    const slug = inferCategorySlug(nextContext.category);
+    const category = (availability?.categories || []).find((item) =>
+      item.slug === slug && Number(item.available_quantity || 0) > 0
+    );
+    if (!category) {
+      return {
+        handled: true, mode: "quotation_unavailable",
+        context: { ...nextContext, category: null },
+        reply: "No hay disponibilidad para la categoría y fechas solicitadas. No se creó una reserva.\n" +
+          availableAlternativesReply(availability),
+      };
+    }
+    const nights = Number(availability.nights);
+    const nightlyRate = Number(category.price_per_night);
+    if (!Number.isInteger(nights) || nights <= 0 ||
+        !Number.isFinite(nightlyRate) || nightlyRate <= 0) {
+      return {
+        handled: true, mode: "quotation_requires_human", context: nextContext,
+        reply: "Nuestro equipo debe revisar el precio para esas fechas. No se creó ninguna reserva ni enlace de pago.",
+      };
+    }
+    const line = "Cotización referencial para " + categoryLabel(category) +
+      ": " + nights + (nights === 1 ? " noche" : " noches") +
+      " × " + formatMoney(nightlyRate) + " = " + formatMoney(nights * nightlyRate) +
+      " (tarifa base; extras sujetos a revisión).";
+    return {
+      handled: true, mode: "quotation_ready", context: nextContext,
+      reply: line + "\nEsta cotización no crea una reserva ni genera un pago. Si estás de acuerdo, escribe «Quiero reservar» para continuar.",
+    };
+  }
+
   const missing = missingFields(nextContext);
   if (missing.length > 0) {
     if (progressiveCollection) {
@@ -800,8 +867,8 @@ export async function handleDeterministicBookingFlow({
         (nextContext.check_out || nextContext.nights) &&
         nextContext.guests_count
       );
+      let preliminaryAvailability;
       if (hasStayDetails) {
-        let preliminaryAvailability;
         try {
           preliminaryAvailability = await services.searchAvailableRooms({
             check_in: nextContext.check_in,
@@ -837,11 +904,27 @@ export async function handleDeterministicBookingFlow({
         }
       }
 
+      // Cotizar la estadía antes de solicitar datos personales; usar solo la
+      // tarifa vigente y las noches devueltas por el servicio de disponibilidad.
+      // Es una referencia, no una reserva ni una garantía frente a OTAs.
+      let quoteLine = "";
+      if (hasStayDetails && missing.includes("nombre completo")) {
+        const categorySlug = inferCategorySlug(nextContext.category);
+        const quotedCategory = (preliminaryAvailability?.categories || []).find(
+          (item) => item.slug === categorySlug && Number(item.available_quantity || 0) > 0
+        );
+        const nightlyRate = Number(quotedCategory?.price_per_night);
+        const nights = Number(preliminaryAvailability?.nights);
+        if (Number.isFinite(nightlyRate) && nightlyRate > 0 &&
+            Number.isInteger(nights) && nights > 0) {
+          quoteLine = `Cotización referencial de ${categoryLabel(nextContext.category)}: ${nights} ${nights === 1 ? "noche" : "noches"} × ${formatMoney(nightlyRate)} = ${formatMoney(nightlyRate * nights)} (tarifa base, sin extras). La pre-reserva se confirma solo después de verificar disponibilidad y pago.`;
+        }
+      }
       return {
         handled: true,
         context: nextContext,
         mode: "booking_details_required",
-        reply: progressiveMissingDataReply(missing, nextContext),
+        reply: [quoteLine, progressiveMissingDataReply(missing, nextContext)].filter(Boolean).join("\n"),
       };
     }
     return {

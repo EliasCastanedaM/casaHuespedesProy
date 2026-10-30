@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
+import { canUseWhatsAppDirectBooking } from "./ai.channel-capabilities.js";
 import { pool } from "../../config/db.js";
 import {
   getPublicRoomCategoriesService,
@@ -32,9 +33,12 @@ import {
   handleDeterministicBookingFlow,
   isNewReservationIntent,
   isReservationIntent,
+  isQuotationIntent,
   isWhatsAppBookingStep,
   mergeAvailabilityIntoBookingContext,
 } from "./ai.booking-flow.js";
+
+const isWhatsAppFullBookingEnabled = () => canUseWhatsAppDirectBooking(env.ai);
 
 const memoryResponses = new Map();
 const memoryBookingContexts = new Map();
@@ -468,7 +472,8 @@ async function createFirstResponse(
       previousResponseId ? history : recoveryHistory,
       message
     ),
-    tools: channel === "whatsapp" ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
+    tools: channel === "whatsapp" && !isWhatsAppFullBookingEnabled()
+      ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
     parallel_tool_calls: false,
     max_output_tokens: env.ai.maxOutputTokens,
     store: true,
@@ -593,7 +598,7 @@ async function generateAiReplyInternal({
 
   // WhatsApp MVP: recoger los datos mínimos progresivamente y pasar a humano
   // solo después de guardarlos. No consultar stock, crear reservas ni pedir PII.
-  if (channel === "whatsapp") {
+  if (channel === "whatsapp" && !isWhatsAppFullBookingEnabled()) {
     const current = await loadBookingContext(channel, externalUserId);
     const progress = handleWhatsAppMvpTurn({ message, context: current });
     if (JSON.stringify(current) !== JSON.stringify(progress.context)) {
@@ -611,7 +616,7 @@ async function generateAiReplyInternal({
 
   // Las excepciones de Instagram y Facebook siguen con sus reglas de revisión.
   const specialQuoteReason = requiresManualReview(message, {
-    hasReservationIntent: isReservationIntent(message) || isCategoryPriceInquiry(message),
+    hasReservationIntent: isReservationIntent(message) || isQuotationIntent(message) || isCategoryPriceInquiry(message),
   });
   if (specialQuoteReason) {
     return { reply: humanReviewReply(specialQuoteReason, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
@@ -692,17 +697,18 @@ async function generateAiReplyInternal({
     return { reply: humanReviewReply(exception, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
   }
 
-  const newReservation = channel !== "whatsapp" && isNewReservationIntent(message);
-  if (channel !== "whatsapp" && (newReservation || isReservationIntent(message))) {
+  const bookingFlowEnabled = channel !== "whatsapp" || isWhatsAppFullBookingEnabled();
+  const newReservation = bookingFlowEnabled && isNewReservationIntent(message);
+  if (bookingFlowEnabled && (newReservation || isReservationIntent(message))) {
     bookingContext = await ensureDurableBookingIntent(
       channel,
       externalUserId,
       { forceNew: newReservation }
     );
   }
-  // Sin PMS, el MVP WhatsApp nunca consulta inventario ni crea pre-reservas.
-  // Sus peticiones de reserva se derivan arriba para atención humana.
-  const deterministic = channel === "whatsapp"
+  // El MVP de WhatsApp conserva handoff humano; el flujo completo exige
+  // las dos verificaciones de configuración y reutiliza el motor transaccional.
+  const deterministic = !bookingFlowEnabled
     ? { handled: false, context: bookingContext }
     : await handleDeterministicBookingFlow({
     message,
@@ -806,7 +812,8 @@ async function generateAiReplyInternal({
       instructions: buildHotelAssistantPrompt({ channel }),
       previous_response_id: response.id,
       input: toolOutputs,
-      tools: channel === "whatsapp" ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
+      tools: channel === "whatsapp" && !isWhatsAppFullBookingEnabled()
+      ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
       parallel_tool_calls: false,
       max_output_tokens: env.ai.maxOutputTokens,
       store: true,

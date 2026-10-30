@@ -32,7 +32,7 @@ test("las reglas del WhatsApp MVP impiden prometer reservas o disponibilidad", (
   assert.match(prompt, /el menú es opcional/);
   assert.match(prompt, /deriva a una persona/);
   const instagram = buildHotelAssistantPrompt({ channel: "instagram" });
-  assert.match(instagram, /Instagram\/Facebook: conserva la consulta de disponibilidad/);
+  assert.match(instagram, /Conserva la consulta de disponibilidad y la pre-reserva/);
 });
 
 test("las solicitudes especiales requieren revisión humana, no reservas automáticas", () => {
