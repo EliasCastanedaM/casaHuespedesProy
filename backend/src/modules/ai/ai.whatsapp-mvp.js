@@ -507,11 +507,11 @@ function validEmail(value) {
 
 function paymentChoice(text) {
   const value = normalize(text).replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-  if (/^(?:1|opcion 1|opcion uno|la primera|primera opcion)$/.test(value) ||
-      /(?:pagar|pago).*(?:establecimiento|hospedaje|al llegar|hotel)|pay at (?:the )?hotel|pay at property|pay on arrival|no estabelecimento|pagar no hotel|payer sur place|sur place/.test(value)) {
+  if (/^(?:1|opcion 1|opcion uno|la primera|la primera opcion|primera opcion|prefiero la primera)$/.test(value) ||
+      /(?:pagar|pago).*(?:establecimiento|hospedaje|al llegar|hotel|presencial|en persona|efectivo)|pay at (?:the )?hotel|pay at property|pay on arrival|no estabelecimento|pagar no hotel|payer sur place|sur place/.test(value)) {
     return "pay_at_property";
   }
-  if (/^(?:2|opcion 2|opcion dos|la segunda|segunda opcion)$/.test(value) ||
+  if (/^(?:2|opcion 2|opcion dos|la segunda|la segunda opcion|segunda opcion|prefiero la segunda)$/.test(value) ||
       /(?:pagar|pago).*(?:ahora|online|en linea|culqi)|pay now|pay online|pay with culqi|pagar agora|payer maintenant/.test(value)) {
     return "culqi_link";
   }
