@@ -28,7 +28,8 @@ test("consulta por lavandería informa coordinación y tarifa sin etiquetas rob�
   assert.match(answer, /lavandería y el planchado/i);
   assert.match(answer, /coordinación previa/i);
   assert.match(answer, /confirmará la tarifa/i);
-  assert.doesNotMatch(answer, /tarifa a confirmar|\\(condiciones de uso/i);
+  assert.doesNotMatch(answer, /tarifa a confirmar/i);
+  assert.equal(answer.includes("(condiciones de uso"), false);
   assert.doesNotMatch(answer, /WiFi gratuito/);
 });
 
