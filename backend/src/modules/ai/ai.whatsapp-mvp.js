@@ -141,7 +141,7 @@ function extractDateTokens(message, now = new Date(), afterDate = null) {
 
 function normalizeStoredDate(value, now = new Date(), afterDate = null) {
   const raw = String(value || "").trim();
-  if (!raw || /^\\d{4}-\\d{2}-\\d{2}$/.test(raw)) return raw;
+  if (!raw || /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
   return extractDateTokens(raw, now, afterDate)[0] || raw;
 }
 
@@ -178,7 +178,7 @@ function parseAgeList(text) {
 }
 
 function isNegativeAnswer(text) {
-  const cleaned = normalize(text).replace(/[.,!?¡¿]/g, " ").replace(/\\s+/g, " ").trim();
+  const cleaned = normalize(text).replace(/[.,!?¡¿]/g, " ").replace(/\s+/g, " ").trim();
   return /^(?:no|nope|ningun[oa]?|ninguna|ninguno|sem|nao|non|none|not any)$/.test(cleaned);
 }
 
@@ -343,7 +343,7 @@ function missingQuestion(data, l) {
 }
 
 function formatSummaryDate(value) {
-  const match = String(value || "").match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return match ? match[3] + "/" + match[2] + "/" + match[1] : value;
 }
 
