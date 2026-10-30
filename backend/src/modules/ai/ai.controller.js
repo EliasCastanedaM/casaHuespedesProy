@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { env } from "../../config/env.js";
 import { generateAiReply } from "./ai.service.js";
 
@@ -10,12 +11,16 @@ const ALLOWED_CHANNELS = new Set([
 ]);
 
 export function requireAiAccess(req, res, next) {
-  if (!env.ai.internalToken) {
-    next();
-    return;
-  }
-
-  if (req.header("x-ai-token") !== env.ai.internalToken) {
+  // Fail-closed: una variable ausente nunca habilita el acceso anónimo
+  // a un servicio que realiza llamadas a OpenAI.
+  const expected = Buffer.from(env.ai.internalToken || "", "utf8");
+  const supplied = Buffer.from(String(req.header("x-ai-token") || ""), "utf8");
+  if (
+    !expected.length ||
+    !supplied.length ||
+    expected.length !== supplied.length ||
+    !timingSafeEqual(expected, supplied)
+  ) {
     return res.status(401).json({
       success: false,
       message: "No autorizado.",
