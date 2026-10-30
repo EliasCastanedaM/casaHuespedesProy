@@ -529,6 +529,24 @@ export async function setHandoffState(
                  handoff_requested_at, handoff_resolved_at, updated_at;`,
       [channel, externalUserId, active === true]
     );
+    // Al terminar una atención humana sin aprobación comercial, conservar el
+    // borrador pero desbloquear el flujo de la IA. No tocar reservas ya aprobadas.
+    if (channel === "whatsapp" && active !== true) {
+      await db.query(
+        `UPDATE public.ai_conversations
+         SET booking_context = jsonb_set(
+           booking_context,
+           '{whatsapp_mvp}',
+           ((booking_context -> 'whatsapp_mvp') - 'awaiting'::text) || '{"state":"browsing"}'::jsonb,
+           false
+         ),
+         updated_at = CURRENT_TIMESTAMP
+         WHERE channel = $1 AND external_user_id = $2
+           AND booking_context->'whatsapp_mvp'->>'state' = 'handoff'
+           AND NOT (booking_context->'whatsapp_mvp' ? 'staff_confirmation');`,
+        [channel, externalUserId]
+      );
+    }
     return result.rows[0];
   } catch (error) {
     if (env.nodeEnv === "production") throw error;

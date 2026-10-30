@@ -402,3 +402,70 @@ test("la aprobación humana exige autorizar mascotas y verificar camas para niñ
   assert.equal(approved.context.whatsapp_mvp.staff_confirmation.pet_authorized, true);
   assert.equal(approved.context.whatsapp_mvp.staff_confirmation.child_bed_availability_confirmed, true);
 });
+
+
+test("fechas en palabras sustituyen datos antiguos sin repetir la categoría", () => {
+  const now = new Date("2026-10-30T18:00:00Z");
+  const context = {
+    state: "whatsapp_mvp",
+    whatsapp_mvp: {
+      state: "handoff",
+      language: "es",
+      check_in: "2026-12-08",
+      check_out: "2026-12-10",
+      adults: 2, children: 0, child_ages: [], pets: 0, total_guests: 2,
+      category_slug: "matrimonial",
+    },
+  };
+  const changed = turn(
+    "Quiero ingresar el 20 de noviembre de 2026 y salir el 22 de noviembre de 2026.",
+    context, now
+  );
+  assert.equal(changed.mode, "whatsapp_mvp_handoff_update");
+  assert.equal(changed.context.whatsapp_mvp.check_in, "2026-11-20");
+  assert.equal(changed.context.whatsapp_mvp.check_out, "2026-11-22");
+  assert.equal(changed.context.whatsapp_mvp.category_slug, "matrimonial");
+  assert.match(changed.reply, /20\/11\/2026/);
+});
+
+test("reconoce fechas en palabras y un rango con mes compartido", () => {
+  const now = new Date("2026-10-30T18:00:00Z");
+  for (const message of [
+    "Quiero reservar del 20 al 22 de noviembre de 2026.",
+    "Quiero reservar del 20 al 22 de noviembre.",
+    "Book from 20 November 2026 to 22 November 2026.",
+    "Reserva de 20 de novembro de 2026 a 22 de novembro de 2026.",
+    "Réserver du 20 novembre 2026 au 22 novembre 2026.",
+  ]) {
+    const result = turn(message, {}, now);
+    assert.equal(result.context.whatsapp_mvp.check_in, "2026-11-20", message);
+    assert.equal(result.context.whatsapp_mvp.check_out, "2026-11-22", message);
+  }
+});
+
+test("permite corregir solamente la llegada o la salida en un borrador existente", () => {
+  const now = new Date("2026-10-30T18:00:00Z");
+  const start = turn("Quiero reservar del 20 al 22 de noviembre de 2026", {}, now);
+  const checkOut = turn("Cambia mi salida al 23 de noviembre de 2026", start.context, now);
+  assert.equal(checkOut.context.whatsapp_mvp.check_in, "2026-11-20");
+  assert.equal(checkOut.context.whatsapp_mvp.check_out, "2026-11-23");
+  const checkIn = turn("Mi llegada es el 21 de noviembre de 2026", checkOut.context, now);
+  assert.equal(checkIn.context.whatsapp_mvp.check_in, "2026-11-21");
+  assert.equal(checkIn.context.whatsapp_mvp.check_out, "2026-11-23");
+});
+
+test("una preferencia de pago antes de aprobación no crea reservas ni valida cobros", () => {
+  const context = {
+    state: "whatsapp_mvp",
+    whatsapp_mvp: {
+      state: "handoff", check_in: "2026-11-20", check_out: "2026-11-22",
+      adults: 2, children: 0, pets: 0, total_guests: 2, category_slug: "matrimonial",
+    },
+  };
+  const result = turn("Prefiero pagar en el establecimiento", context);
+  assert.equal(result.mode, "whatsapp_mvp_handoff_update");
+  assert.equal(result.action, undefined);
+  assert.equal(result.context.whatsapp_mvp.preferred_payment_method, "pay_at_property");
+  assert.equal(result.context.whatsapp_mvp.payment_method, undefined);
+  assert.match(result.reply, /pendiente|aprobaci[oó]n/i);
+});

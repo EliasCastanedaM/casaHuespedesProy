@@ -12,6 +12,7 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { responseInput, shouldReuseOpenAiResponseId } from "./ai.context-window.js";
 import { recordOpenAiUsage } from "./ai.usage.js";
 import { isHotelLocationInquiry, formatHotelLocationReply } from "./ai.location-info.js";
 import { getPublicHotelProfileService } from "../hotel/hotelProfile.service.js";
@@ -717,19 +718,6 @@ async function loadStoredHistory(channel, externalUserId, currentMessage) {
   }
 }
 
-function responseInput(history, message) {
-  const recent = Array.isArray(history) ? history : [];
-  const input = recent
-    .filter((item) => typeof item?.content === "string" && item.content.trim())
-    .map((item) => ({
-      role: item.author === "client" ? "user" : "assistant",
-      content: item.content.trim(),
-    }));
-
-  input.push({ role: "user", content: message });
-  return input;
-}
-
 async function trackedResponse(openai, request, meta) {
   const response = await openai.responses.create(request);
   await recordOpenAiUsage(response, meta);
@@ -740,31 +728,41 @@ async function createFirstResponse(
   openai,
   { message, previousResponseId, history, recoveryHistory, channel, externalUserId }
 ) {
+  const reusePrevious = shouldReuseOpenAiResponseId(channel, previousResponseId);
+  const historyOptions = channel === "whatsapp"
+    ? { maxHistoryMessages: 8, maxHistoryCharacters: 3_200 }
+    : { maxHistoryMessages: 12, maxHistoryCharacters: 5_000 };
+  const sourceHistory = recoveryHistory.length ? recoveryHistory : history;
   const request = {
     model: env.openai.model,
     instructions: buildHotelAssistantPrompt({ channel }),
-    input: responseInput(
-      previousResponseId ? history : recoveryHistory,
-      message
-    ),
+    // previous_response_id ya contiene la conversación remota. No añadir
+    // otra vez el historial de Meta a la misma solicitud.
+    input: responseInput(reusePrevious ? [] : sourceHistory, message, historyOptions),
     tools: channel === "whatsapp" ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
     parallel_tool_calls: false,
     max_output_tokens: env.ai.maxOutputTokens,
     store: true,
   };
 
-  if (!previousResponseId) return trackedResponse(openai, request, { channel, externalUserId, operation: "assistant_response" });
+  if (!reusePrevious) {
+    return trackedResponse(openai, request, { channel, externalUserId, operation: "assistant_response" });
+  }
 
   try {
     return await trackedResponse(openai, {
       ...request,
       previous_response_id: previousResponseId,
     }, { channel, externalUserId, operation: "assistant_response" });
-  } catch {
-    // Si OpenAI perdió el id previo, reconstruye el contexto desde Supabase.
+  } catch (error) {
+    // Solo reconstruir tras perder el identificador remoto, no ante 429/500.
+    if (![400, 404].includes(Number(error?.status)) ||
+        !/previous.response.id|previous_response_id|response.*not found/i.test(String(error?.message || ""))) {
+      throw error;
+    }
     return trackedResponse(openai, {
       ...request,
-      input: responseInput(recoveryHistory, message),
+      input: responseInput(sourceHistory, message, historyOptions),
     }, { channel, externalUserId, operation: "assistant_response" });
   }
 }

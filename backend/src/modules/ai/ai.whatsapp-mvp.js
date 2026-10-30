@@ -127,17 +127,64 @@ function parseDateToken(token, now = new Date()) {
   return { value, explicitYear };
 }
 
-function extractDateTokens(message, now = new Date(), afterDate = null) {
-  const pattern = /\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)\b/g;
-  const tokens = String(message || "").match(pattern) || [];
-  const parsed = tokens.map((token) => parseDateToken(token, now)).filter((item) => item?.value);
+const MONTH_NUMBERS = Object.freeze({
+  enero: 1, january: 1, janeiro: 1, janvier: 1, jan: 1, ene: 1,
+  febrero: 2, february: 2, fevereiro: 2, fevrier: 2, feb: 2, fev: 2,
+  marzo: 3, march: 3, marco: 3, mars: 3, mar: 3,
+  abril: 4, april: 4, avril: 4, abr: 4, apr: 4, avr: 4,
+  mayo: 5, may: 5, maio: 5, mai: 5,
+  junio: 6, june: 6, junho: 6, juin: 6, jun: 6,
+  julio: 7, july: 7, julho: 7, juillet: 7, jul: 7,
+  agosto: 8, august: 8, aout: 8, ago: 8, aug: 8,
+  septiembre: 9, setiembre: 9, september: 9, setembro: 9, septembre: 9, sep: 9, set: 9,
+  octubre: 10, october: 10, outubro: 10, octobre: 10, oct: 10,
+  noviembre: 11, november: 11, novembro: 11, novembre: 11, nov: 11,
+  diciembre: 12, december: 12, dezembro: 12, decembre: 12, dic: 12, dec: 12,
+});
+const MONTH_PATTERN = Object.keys(MONTH_NUMBERS).sort((a, b) => b.length - a.length).join("|");
 
+function extractDateTokens(message, now = new Date(), afterDate = null) {
+  // Recibe tanto dd/mm/aaaa como "20 de noviembre de 2026" (ES/EN/PT/FR).
+  // Los rangos "del 20 al 22 de noviembre" comparten mes y año.
+  const input = normalize(message);
+  const parsed = [];
+  const occupied = [];
+  const rangePattern = new RegExp(
+    "\\b(?:del?\\s+|desde\\s+el?\\s+)?(\\d{1,2})\\s+(?:al?|hasta(?:\\s+el)?|to|au|ate)\\s+(\\d{1,2})\\s+(?:de\\s+|of\\s+|du\\s+|d['’]\\s*)?(" +
+    MONTH_PATTERN + ")(?:\\s+(?:de\\s+)?(\\d{4}))?\\b", "g"
+  );
+  for (const match of input.matchAll(rangePattern)) {
+    const month = MONTH_NUMBERS[match[3]];
+    const year = match[4] || "";
+    const first = parseDateToken(match[1] + "/" + month + (year ? "/" + year : ""), now);
+    const second = parseDateToken(match[2] + "/" + month + (year ? "/" + year : ""), now);
+    if (!first?.value || !second?.value || second.value <= first.value) continue;
+    occupied.push([match.index, match.index + match[0].length]);
+    parsed.push({ ...first, index: match.index });
+    parsed.push({ ...second, index: match.index + 1 });
+  }
+
+  const monthPattern = new RegExp(
+    "\\b(\\d{1,2})\\s+(?:de\\s+|of\\s+|du\\s+|d['’]\\s*)?(" +
+    MONTH_PATTERN + ")(?:\\s+(?:de\\s+)?(\\d{4}))?\\b", "g"
+  );
+  const numericPattern = /\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)\b/g;
+  for (const [pattern, convert] of [
+    [monthPattern, (match) => parseDateToken(match[1] + "/" + MONTH_NUMBERS[match[2]] + (match[3] ? "/" + match[3] : ""), now)],
+    [numericPattern, (match) => parseDateToken(match[0], now)],
+  ]) {
+    for (const match of input.matchAll(pattern)) {
+      if (occupied.some(([from, to]) => match.index >= from && match.index < to)) continue;
+      const date = convert(match);
+      if (date?.value) parsed.push({ ...date, index: match.index });
+    }
+  }
+  parsed.sort((a, b) => a.index - b.index);
   if (parsed.length >= 2 && parsed[1].value <= parsed[0].value && !parsed[1].explicitYear) {
     parsed[1].value = addIsoYear(parsed[1].value) || parsed[1].value;
   } else if (parsed.length === 1 && afterDate && parsed[0].value <= afterDate && !parsed[0].explicitYear) {
     parsed[0].value = addIsoYear(parsed[0].value) || parsed[0].value;
   }
-
   return parsed.slice(0, 2).map((item) => item.value);
 }
 
@@ -233,7 +280,11 @@ function collect(message, previous = {}, now = new Date()) {
     next.check_in = dates[0];
     next.check_out = dates[1];
   } else if (dates.length === 1) {
-    if (!next.check_in) next.check_in = dates[0];
+    const mentionsArrival = /\b(?:ingresar|ingreso|ingresare|entrada|llegada|llegar|llego|check.in|arrive|arrival|arrivee|entrada)\b/.test(text);
+    const mentionsDeparture = /\b(?:salir|salida|salgo|saldre|check.out|departure|depart|partir|sortie)\b/.test(text);
+    if (mentionsArrival && !mentionsDeparture) next.check_in = dates[0];
+    else if (mentionsDeparture && !mentionsArrival) next.check_out = dates[0];
+    else if (!next.check_in) next.check_in = dates[0];
     else if (!next.check_out && dates[0] !== next.check_in) next.check_out = dates[0];
   }
 
@@ -284,6 +335,11 @@ function collect(message, previous = {}, now = new Date()) {
   if (/\b(?:vista\s+al\s+mar|sea\s+view|terr?aza|balcon|balcony|cama\s+separada)\b/.test(text)) {
     next.preferences = String(message).slice(0, 300);
   }
+  // Antes de aprobación humana, guardar solo la preferencia, no un pago confirmado.
+  if (["handoff", "browsing", "collecting"].includes(previous?.state)) {
+    const preference = paymentChoice(message);
+    if (preference) next.preferred_payment_method = preference;
+  }
   return next;
 }
 
@@ -304,7 +360,7 @@ function containsStructuredBookingAnswer(message, state = {}, now = new Date()) 
 function changedBookingFields(previous, next) {
   const keys = [
     "check_in", "check_out", "adults", "children", "child_ages",
-    "total_guests", "pets", "category_slug", "preferences",
+    "total_guests", "pets", "category_slug", "preferences", "preferred_payment_method",
   ];
   return keys.filter((key) =>
     next[key] !== undefined &&
@@ -352,6 +408,11 @@ function formatHandoffUpdateReply(data = {}, changed = []) {
   }
   if (changed.includes("preferences")) {
     parts.push("preferencias actualizadas");
+  }
+  if (changed.includes("preferred_payment_method")) {
+    parts.push(data.preferred_payment_method === "pay_at_property"
+      ? "preferencia de pago en el establecimiento (sujeta a aprobación)"
+      : "preferencia de pago por Culqi (sujeta a aprobación)");
   }
   return "Gracias por la aclaración. Actualicé tu solicitud: " + parts.join("; ") +
     ". La disponibilidad y la confirmación final siguen pendientes del equipo.";
@@ -708,7 +769,8 @@ export function handleWhatsAppMvpTurn({
       return { handled: false, context };
     }
     const updatedBooking = collect(message, state, now);
-    const changed = changedBookingFields(state, updatedBooking);
+    const changed = changedBookingFields(state, updatedBooking)
+      .filter((key) => key !== "preferred_payment_method");
     if (changed.length > 0) {
       const reset = { ...updatedBooking, state: "handoff" };
       delete reset.awaiting;
