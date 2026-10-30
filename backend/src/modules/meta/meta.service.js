@@ -88,12 +88,14 @@ function normalizedMessage({
   return normalized;
 }
 
-function parseWhatsApp(body) {
+function parseWhatsApp(body, onIgnored) {
   const messages = [];
 
   for (const entry of asArray(body.entry)) {
     for (const change of asArray(asObject(entry)?.changes)) {
       const value = asObject(asObject(change)?.value);
+      const wabaId = cleanText(asObject(entry)?.id);
+      const phoneNumberId = cleanText(asObject(value?.metadata)?.phone_number_id);
       const contactNames = new Map();
 
       for (const rawContact of asArray(value?.contacts)) {
@@ -106,16 +108,28 @@ function parseWhatsApp(body) {
       for (const item of asArray(value?.messages)) {
         const message = asObject(item);
         const externalUserId = cleanText(message?.from);
-        if (!message || !externalUserId) continue;
+        if (!message || !externalUserId) {
+          onIgnored?.({
+            messageId: cleanText(message?.id), reason: "missing_sender",
+            wabaId, phoneNumberId,
+          });
+          continue;
+        }
 
         const messageType = cleanText(message.type) || "unknown";
         const text =
           messageType === "text" ? cleanText(asObject(message.text)?.body) : "";
 
-        if (messageType === "text" && !text) continue;
+        if (messageType === "text" && !text) {
+          onIgnored?.({
+            messageId: cleanText(message.id), reason: "empty_text",
+            wabaId, phoneNumberId,
+          });
+          continue;
+        }
 
-        messages.push(
-          normalizedMessage({
+        messages.push({
+          ...normalizedMessage({
             channel: "whatsapp",
             externalUserId,
             messageId: message.id,
@@ -123,8 +137,10 @@ function parseWhatsApp(body) {
             messageType,
             timestamp: message.timestamp,
             customerName: contactNames.get(externalUserId) || "",
-          })
-        );
+          }),
+          ...(wabaId ? { wabaId } : {}),
+          ...(phoneNumberId ? { phoneNumberId } : {}),
+        });
       }
     }
   }
@@ -183,7 +199,7 @@ export function parseMetaWebhook(body = {}, options = {}) {
   if (!payload) return [];
 
   if (payload.object === "whatsapp_business_account") {
-    return parseWhatsApp(payload);
+    return parseWhatsApp(payload, options.onIgnored);
   }
   if (payload.object === "instagram") {
     return parseMessenger(
