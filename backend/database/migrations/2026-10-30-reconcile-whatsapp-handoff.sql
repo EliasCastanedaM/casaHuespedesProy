@@ -6,7 +6,7 @@ UPDATE public.ai_conversations AS a
 SET booking_context = jsonb_set(
       a.booking_context,
       '{whatsapp_mvp}',
-      (a.booking_context->'whatsapp_mvp' - 'awaiting') || '{"state":"browsing"}'::jsonb,
+      ((a.booking_context -> 'whatsapp_mvp') - 'awaiting'::text) || '{"state":"browsing"}'::jsonb,
       false
     ),
     updated_at = CURRENT_TIMESTAMP
