@@ -92,5 +92,5 @@ test("las instrucciones protegen contra preguntas generales e inyección", () =>
   assert.match(HOTEL_SCOPE_CLASSIFIER_PROMPT, /exclusivamente HOTEL o FUERA/);
   assert.match(HOTEL_SCOPE_CLASSIFIER_PROMPT, /no un asistente conversacional/);
   assert.match(buildHotelAssistantPrompt(), /No respondas preguntas de historia/);
-  assert.match(OUT_OF_HOTEL_SCOPE_REPLY, /Solo puedo ayudarte con información sobre nuestro hospedaje/);
+  assert.match(OUT_OF_HOTEL_SCOPE_REPLY, /Este canal está destinado a consultas sobre Casa Huéspedes Pimentel/);
 });
