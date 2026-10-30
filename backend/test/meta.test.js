@@ -34,6 +34,7 @@ function successfulDependencies(overrides = {}) {
     complete: async () => {},
     getHandoff: async () => false,
     setHandoff: async () => {},
+    updateHandoffContext: async () => false,
     loadHistory: async () => [],
     generateReply: async () => ({ reply: "Respuesta IA" }),
     sendReply: async () => ({}),
@@ -581,13 +582,15 @@ test("un mensaje duplicado no llama al asesor ni envía respuesta", async () => 
   assert.equal(sends, 0);
 });
 
-test("un handoff activo pausa el bot", async () => {
+test("un handoff activo pausa el bot y actualiza contexto sin responder", async () => {
   let aiCalls = 0;
   let sends = 0;
+  let contextUpdate = null;
   const result = await processMetaMessage(
-    message(),
+    message({ text: "En realidad, somos dos adultos y mi mamá." }),
     successfulDependencies({
       getHandoff: async () => true,
+      updateHandoffContext: async (payload) => { contextUpdate = payload; },
       generateReply: async () => {
         aiCalls += 1;
       },
@@ -598,6 +601,11 @@ test("un handoff activo pausa el bot", async () => {
   );
 
   assert.equal(result.status, "handoff_active");
+  assert.deepEqual(contextUpdate, {
+    channel: "whatsapp",
+    externalUserId: "51999999999",
+    message: "En realidad, somos dos adultos y mi mamá.",
+  });
   assert.equal(aiCalls, 0);
   assert.equal(sends, 0);
 });
