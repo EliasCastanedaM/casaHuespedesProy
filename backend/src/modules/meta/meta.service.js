@@ -1357,10 +1357,10 @@ export async function sendManualMetaMessage(
   const target = normalizedMessage({
     channel,
     externalUserId,
-    messageId: "",
+    messageId: "assistant-confirmation." + crypto.randomUUID(),
     text: reply,
     messageType: "text",
-    timestamp: "",
+    timestamp: String(Math.floor(Date.now() / 1000)),
   });
 
   await setHandoffState(channel, externalUserId, true, db);
