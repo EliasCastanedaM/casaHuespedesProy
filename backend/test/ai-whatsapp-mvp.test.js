@@ -128,7 +128,7 @@ test("interpreta respuestas cortas, edades con años y preguntas con número esc
   const ages = turn("5 años y 7 años", guests.context, now);
   assert.deepEqual(ages.context.whatsapp_mvp.child_ages, [5, 7]);
   assert.match(ages.reply, /mascotas/i);
-  const done = turn("No", ages.context, now);
+  const done = turn("No.", ages.context, now);
   assert.equal(done.mode, "human_review_required");
   assert.equal(done.context.whatsapp_mvp.total_guests, 4);
 });
