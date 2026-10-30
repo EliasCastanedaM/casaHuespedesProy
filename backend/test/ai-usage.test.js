@@ -34,7 +34,7 @@ test("extrae tokens de caché y razonamiento sin sumarlos dos veces", () => {
 test("costo estándar utiliza entrada sin caché, entrada en caché y salida", () => {
   const metrics = parseResponseUsage(sample);
   // (4000 * 0.20 + 1000 * 0.02 + 250 * 1.20) / 1M
-  assert.equal(estimatedStandardCostUsd(metrics), 0.00000112);
+  assert.equal(estimatedStandardCostUsd(metrics), 0.00112);
   assert.equal(estimatedStandardCostUsd({ ...metrics, serviceTier: "priority" }), null);
   assert.equal(estimatedStandardCostUsd({ ...metrics, model: "unknown-model" }), null);
 });
