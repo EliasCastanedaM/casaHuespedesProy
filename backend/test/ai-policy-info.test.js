@@ -20,8 +20,8 @@ test("responde tramos infantiles correctamente sin inventar precio", () => {
   assert.match(six, /5 a 8 años/);
   const nine = formatPolicyInformationReply("¿Desde qué edad pagan los niños? Mi hijo tiene 9 años");
   assert.match(nine, /Desde los 9 años/);
-  assert.match(nine, /pendiente de confirmar/);
-  assert.doesNotMatch(nine, /corresponde tarifa de adulto/);
+  assert.match(nine, /corresponde tarifa de adulto/);
+  assert.doesNotMatch(nine, /pendiente de confirmar/);
   assert.doesNotMatch(nine, /descuento equivalente/i);
   const overview = formatPolicyInformationReply("¿Qué reglas hay para niños?");
   assert.match(overview, /0 a 4 años/);
