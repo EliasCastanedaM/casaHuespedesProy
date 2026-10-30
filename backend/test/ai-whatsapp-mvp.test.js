@@ -230,7 +230,7 @@ test("la recomendación elige la categoría de menor capacidad que admite al gru
     { categories }
   );
   const done = turn("6 años", start.context, new Date("2026-10-30T15:00:00.000Z"), { categories });
-  const handoff = turn("No", done.context, new Date("2026-10-30T15:00:00.000Z"), { categories });
+  const handoff = done;
   assert.equal(handoff.context.whatsapp_mvp.recommended_category.slug, "triple");
   assert.match(handoff.reply, /Triple/);
   const summary = formatWhatsAppHandoffSummary(handoff.context.whatsapp_mvp);
@@ -372,7 +372,7 @@ test("una pregunta sobre pagar en el establecimiento no se interpreta como elecc
     },
   };
   const result = turn("¿Qué pasa si pago en el establecimiento?", context);
+  assert.equal(result.handled, false);
   assert.equal(result.action, undefined);
   assert.equal(result.context, context);
-  assert.match(result.reply, /Pagar en el establecimiento/);
 });
