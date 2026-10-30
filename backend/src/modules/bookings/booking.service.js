@@ -997,13 +997,20 @@ export async function updateBookingStatusService(
         UPDATE bookings
         SET
           status = 'confirmed',
-          payment_confirmed_at = COALESCE(payment_confirmed_at, CURRENT_TIMESTAMP),
+          payment_confirmed_at = CASE
+            WHEN $3::boolean THEN COALESCE(payment_confirmed_at, CURRENT_TIMESTAMP)
+            ELSE payment_confirmed_at
+          END,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $1::integer
           AND status = $2::character varying
         RETURNING *;
         `,
-        [Number(id), expectedStatus]
+        [
+          Number(id),
+          expectedStatus,
+          currentDetails.payment_provider !== "pay_at_property",
+        ]
       );
 
       transitioned = transitionResult.rows.length === 1;
