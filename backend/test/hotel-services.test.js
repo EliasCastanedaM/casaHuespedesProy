@@ -49,7 +49,7 @@ test("no promete estacionamiento propio", () => {
 test("desayuno no incluido en el precio, sin negar el servicio externo", () => {
   assert.equal(isHotelServicesInquiry("¿El desayuno está incluido?"), true);
   const answer = formatHotelServicesReply(sample, "¿El desayuno está incluido?");
-  assert.match(answer, /NO incluyen desayuno/);
+  assert.match(answer, /desayuno no está incluido/i);
   assert.doesNotMatch(answer, /No ofrecemos desayuno/);
 });
 
