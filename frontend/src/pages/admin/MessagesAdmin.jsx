@@ -663,8 +663,18 @@ export default function MessagesAdmin() {
                   <DetailRow label="Adultos" value={reservation.adults === undefined ? "" : String(reservation.adults)} />
                   <DetailRow label="Niños" value={reservation.children === undefined ? "" : String(reservation.children)} />
                   <DetailRow label="Edades de niños" value={Array.isArray(reservation.child_ages) ? reservation.child_ages.join(", ") : ""} />
+                  <DetailRow label="Regla infantil" value={Array.isArray(reservation.child_ages)
+                    ? reservation.child_ages.map((age) => Number(age) <= 4
+                      ? age + " años: sin cargo con cama disponible"
+                      : Number(age) <= 8
+                        ? age + " años: 50 % del diferencial"
+                        : age + " años: tarifa de adulto").join("; ")
+                    : ""} />
                   <DetailRow label="Huéspedes totales" value={reservation.total_guests === undefined ? "" : String(reservation.total_guests)} />
                   <DetailRow label="Mascotas" value={reservation.pets === undefined ? "" : String(reservation.pets)} />
+                  <DetailRow label="Regla de mascotas" value={Number(reservation.pets || 0) > 0
+                    ? "S/ 20 por mascota/noche · autorización previa"
+                    : "No aplica"} />
                   <DetailRow label="Categoría solicitada" value={reservation.category_slug} />
                   <DetailRow label="Categoría sugerida" value={reservation.recommended_category?.name
                     ? reservation.recommended_category.name + " (capacidad " + reservation.recommended_category.capacity + ")"
