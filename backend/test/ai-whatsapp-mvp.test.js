@@ -168,3 +168,48 @@ test("normaliza fechas sin año que ya estaban guardadas en el contexto", () => 
   assert.equal(result.context.whatsapp_mvp.adults, 2);
   assert.match(result.reply, /mascotas/i);
 });
+
+test("reconoce negaciones naturales de mascotas con tampoco y futuro", () => {
+  const now = new Date("2026-10-30T15:00:00.000Z");
+  for (const answer of [
+    "Perfecto, y tampoco llevamos mascotas.",
+    "No llevaremos mascotas.",
+    "No traemos mascotas.",
+  ]) {
+    const start = turn("Quiero reservar del 8/12 al 10/12 para dos adultos sin niños", {}, now);
+    assert.match(start.reply, /mascotas/i);
+    const done = turn(answer, start.context, now);
+    assert.equal(done.mode, "human_review_required", answer);
+    assert.equal(done.context.whatsapp_mvp.pets, 0, answer);
+  }
+});
+
+test("actualiza una corrección después de derivar y responde el total de huéspedes", () => {
+  const context = {
+    state: "whatsapp_mvp",
+    whatsapp_mvp: {
+      state: "handoff",
+      language: "es",
+      check_in: "2026-12-08",
+      check_out: "2026-12-10",
+      adults: 2,
+      children: 0,
+      child_ages: [],
+      pets: 0,
+      total_guests: 2,
+    },
+  };
+  const correction = turn("En realidad, somos dos adultos y mi mamá.", context);
+  assert.equal(correction.mode, "whatsapp_mvp_handoff_update");
+  assert.equal(correction.context.whatsapp_mvp.adults, 3);
+  assert.equal(correction.context.whatsapp_mvp.total_guests, 3);
+  assert.match(correction.reply, /3 huéspedes en total/);
+
+  const summary = turn("¿Entonces cuántas personas serían en total?", correction.context);
+  assert.equal(summary.mode, "whatsapp_mvp_summary");
+  assert.match(summary.reply, /3 huéspedes en total/);
+
+  const information = turn("¿Puedo llegar un poco antes del horario habitual?", correction.context);
+  assert.equal(information.handled, false);
+  assert.deepEqual(information.context, correction.context);
+});
