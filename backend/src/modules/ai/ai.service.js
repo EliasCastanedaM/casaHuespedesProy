@@ -515,6 +515,17 @@ export async function confirmWhatsAppMvpReservation({
     error.statusCode = 400;
     throw error;
   }
+  const handoffResult = await pool.query(
+    `SELECT handoff_active FROM meta_conversations
+     WHERE channel = $1 AND external_user_id = $2
+     LIMIT 1;`,
+    [channel, externalUserId]
+  );
+  if (!handoffResult.rows[0]?.handoff_active) {
+    const error = new Error("La conversación ya no está en atención humana activa.");
+    error.statusCode = 409;
+    throw error;
+  }
   const context = await loadBookingContext(channel, externalUserId);
   const current = context?.whatsapp_mvp || {};
   if (Number(current.total_guests || 0) >= 8) {
