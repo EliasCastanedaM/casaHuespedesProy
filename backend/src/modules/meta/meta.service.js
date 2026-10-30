@@ -953,7 +953,7 @@ function whatsappRecipientAddress(externalUserId) {
   if (!recipientId) throw new Error("Falta el identificador del destinatario de WhatsApp.");
 
   // Phone-based WhatsApp IDs continue using to. BSUIDs use recipient.
-  return /^\\+?\\d+$/.test(recipientId)
+  return /^\+?\d+$/.test(recipientId)
     ? { to: recipientId }
     : { recipient: recipientId };
 }
