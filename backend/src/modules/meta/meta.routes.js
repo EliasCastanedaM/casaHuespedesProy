@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAdminAuth } from "../../middlewares/authMiddleware.js";
+import { requireAdminAuth, requireAdminRole } from "../../middlewares/authMiddleware.js";
 import {
   listConversationsController,
   dashboardController,
@@ -25,11 +25,13 @@ router.post("/webhook", receiveWebhookController);
 router.get(
   "/embedded-signup/status",
   requireAdminAuth,
+  requireAdminRole,
   embeddedSignupStatusController
 );
 router.post(
   "/embedded-signup/complete",
   requireAdminAuth,
+  requireAdminRole,
   completeEmbeddedSignupController
 );
 
@@ -55,6 +57,7 @@ router.post(
 router.post(
   "/conversations/:channel/:externalUserId/confirm-reservation",
   requireAdminAuth,
+  requireAdminRole,
   confirmWhatsAppMvpReservationController
 );
 router.patch(
