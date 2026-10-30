@@ -248,7 +248,7 @@ test("la aprobación humana habilita datos del huésped y dos métodos de pago",
     externalUserId: "51987654321",
   });
   assert.equal(approved.context.whatsapp_mvp.state, "awaiting_customer_name");
-  assert.match(approved.reply, /S\\/ 240.00/);
+  assert.ok(approved.reply.includes("S/ 240.00"));
 
   const name = turn("Ana Torres", approved.context, new Date(), { externalUserId: "51987654321" });
   assert.equal(name.context.whatsapp_mvp.customer_name, "Ana Torres");
