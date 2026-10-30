@@ -143,7 +143,7 @@ export default function CommercialAdmin() {
   const [season,setSeason]=useState(emptySeason);
   const [rate,setRate]=useState(emptyRate);
   const [currentUser]=useState(()=>{
-    try {return JSON.parse(localStorage.getItem("adminUser")||"{}");}
+    try {return JSON.parse(sessionStorage.getItem("adminUser")||"{}");}
     catch{return {};}
   });
   const canApprove=currentUser.role==="admin";

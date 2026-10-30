@@ -1,4 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { logoutAdmin } from "../services/api.js";
+import { clearAdminSession } from "../services/adminSession.js";
 
 const menuItems = [
   {
@@ -56,10 +58,15 @@ const menuItems = [
 export default function AdminLayout() {
   const navigate = useNavigate();
 
-  function handleLogout() {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminUser");
-    navigate("/admin/login");
+  async function handleLogout() {
+    try {
+      await logoutAdmin(); // Revoca el token también del lado del servidor.
+    } catch (error) {
+      console.error("No se pudo confirmar el cierre remoto:", error?.message);
+    } finally {
+      clearAdminSession();
+      navigate("/admin/login", { replace: true });
+    }
   }
 
   return (

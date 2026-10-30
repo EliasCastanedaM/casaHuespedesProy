@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginAdmin } from "../../services/api";
+import { setAdminSession } from "../../services/adminSession.js";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -31,8 +32,7 @@ export default function Login() {
 
       const result = await loginAdmin(form);
 
-      localStorage.setItem("adminToken", result.token);
-      localStorage.setItem("adminUser", JSON.stringify(result.user));
+      setAdminSession(result);
 
       navigate("/admin/dashboard");
     } catch (err) {
