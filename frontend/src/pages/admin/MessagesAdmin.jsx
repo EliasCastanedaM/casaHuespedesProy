@@ -365,6 +365,8 @@ export default function MessagesAdmin() {
     reservation?.recommended_category?.slug,
     reservation?.category_slug,
     reservation?.staff_confirmation?.total_amount,
+    reservation?.pets,
+    Array.isArray(reservation?.child_ages) ? reservation.child_ages.join(",") : "",
   ]);
 
   async function confirmReservation() {
