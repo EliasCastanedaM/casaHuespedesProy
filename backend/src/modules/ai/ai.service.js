@@ -523,6 +523,14 @@ export async function confirmWhatsAppMvpReservation({
     throw error;
   }
   const categories = await getPublicRoomCategoriesService();
+  const maxCapacity = categories.length
+    ? Math.max(...categories.map((item) => Number(item.capacity || 0)))
+    : 0;
+  if (maxCapacity > 0 && Number(current.total_guests || 0) > maxCapacity) {
+    const error = new Error("La solicitud requiere varias habitaciones y debe gestionarse manualmente.");
+    error.statusCode = 409;
+    throw error;
+  }
   const category = categories.find((item) => String(item.slug) === String(categorySlug));
   if (!category) {
     const error = new Error("La categoría seleccionada no existe o no está activa.");
