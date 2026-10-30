@@ -667,7 +667,18 @@ export default function MessagesAdmin() {
                   </div>
                 )}
 
-                {reservation.state === "handoff" && selected.handoff_active && Number(reservation.total_guests || 0) < 8 && (
+                {reservation.state === "handoff" && selected.handoff_active &&
+                  Number(reservation.total_guests || 0) < 8 &&
+                  Number(reservation.max_single_room_capacity || 0) > 0 &&
+                  Number(reservation.total_guests || 0) > Number(reservation.max_single_room_capacity) && (
+                  <div className="mt-3 border border-[#d9b77a] bg-white p-3 text-xs leading-relaxed text-[#77521e]">
+                    Esta solicitud supera la capacidad máxima de una habitación ({reservation.max_single_room_capacity} huéspedes). El equipo debe distribuir varias habitaciones manualmente antes de registrar la reserva.
+                  </div>
+                )}
+
+                {reservation.state === "handoff" && selected.handoff_active &&
+                  Number(reservation.total_guests || 0) < 8 &&
+                  (!reservation.max_single_room_capacity || Number(reservation.total_guests || 0) <= Number(reservation.max_single_room_capacity)) && (
                   <div className="mt-3 border border-[#d9b77a] bg-white p-3">
                     <h4 className="text-xs font-bold uppercase tracking-wide text-[#77521e]">
                       Validación humana previa
