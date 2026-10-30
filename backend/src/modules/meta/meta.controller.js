@@ -352,6 +352,8 @@ export async function confirmWhatsAppMvpReservationController(req, res, next) {
       externalUserId: conversation.externalUserId,
       categorySlug,
       totalAmount,
+      petAuthorized: req.body?.pet_authorized === true,
+      childBedAvailabilityConfirmed: req.body?.child_bed_availability_confirmed === true,
     });
 
     await setHandoffState(conversation.channel, conversation.externalUserId, false);
