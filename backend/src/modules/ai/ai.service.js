@@ -279,6 +279,22 @@ async function saveBookingContext(channel, externalUserId, context) {
   }
 }
 
+export async function updateWhatsAppMvpContextForHandoff({
+  channel,
+  externalUserId,
+  message,
+}) {
+  if (channel !== "whatsapp" || !externalUserId || !String(message || "").trim()) {
+    return false;
+  }
+  const current = await loadBookingContext(channel, externalUserId);
+  if (!current?.whatsapp_mvp) return false;
+  const progress = handleWhatsAppMvpTurn({ message, context: current });
+  if (JSON.stringify(current) === JSON.stringify(progress.context)) return false;
+  await saveBookingContext(channel, externalUserId, progress.context);
+  return true;
+}
+
 async function ensureDurableBookingIntent(
   channel,
   externalUserId,

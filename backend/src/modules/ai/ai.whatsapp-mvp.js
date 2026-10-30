@@ -152,6 +152,12 @@ function namedCount(text, words) {
   return match ? parseCountToken(match[1]) : null;
 }
 
+function additionalAdultRelativeCount(text) {
+  return /\b(?:y|ademas|tambien)\s+(?:mi\s+)?(?:mama|madre|papa|padre|abuela|abuelo)\b/.test(text)
+    ? 1
+    : 0;
+}
+
 function parseStandaloneCount(text) {
   const cleaned = normalize(text)
     .replace(/[.,!?¡¿]/g, " ")
@@ -184,11 +190,9 @@ function isNegativeAnswer(text) {
 
 function mentionsNoCategory(text, words) {
   const value = normalize(text);
-  return new RegExp(
-    "\\b(?:sin|no|ningun[oa]?|without|sem|sans)\\s+(?:(?:hay|viajan|tenemos|llevamos|bring|have)\\s+)?(?:" + words + ")\\b"
-  ).test(value) || new RegExp(
-    "\\bno\\s+(?:hay|viajan|tenemos|llevamos|bring|have)\\s+(?:" + words + ")\\b"
-  ).test(value);
+  const negative = "(?:sin|no|tampoco|ningun[oa]?|without|sem|sans)";
+  const verb = "(?:(?:hay|viajan|tenemos|llevamos|llevaremos|traemos|traeremos|viajamos\\s+con|vamos\\s+con|vamos\\s+a\\s+llevar|bring|have)\\s+)?";
+  return new RegExp("\\b" + negative + "\\s+" + verb + "(?:" + words + ")\\b").test(value);
 }
 
 function collect(message, previous = {}, now = new Date()) {
@@ -235,7 +239,9 @@ function collect(message, previous = {}, now = new Date()) {
   const children = namedCount(text, CHILD_WORDS);
   const total = namedCount(text, TOTAL_WORDS);
   const pets = namedCount(text, PET_WORDS);
-  if (adults !== null) next.adults = adults;
+  if (adults !== null) {
+    next.adults = Math.min(adults + additionalAdultRelativeCount(text), 30);
+  }
   if (children !== null) next.children = children;
   if (total !== null) next.total_guests = total;
   if (pets !== null) next.pets = pets;
@@ -291,6 +297,53 @@ function containsStructuredBookingAnswer(message, state = {}, now = new Date()) 
     mentionsNoCategory(text, PET_WORDS) ||
     (["children", "pets"].includes(state?.awaiting) && isNegativeAnswer(text)) ||
     (state?.awaiting === "ages" && parseAgeList(text) !== null);
+}
+
+function changedBookingFields(previous, next) {
+  const keys = [
+    "check_in", "check_out", "adults", "children", "child_ages",
+    "total_guests", "pets", "category_slug", "preferences",
+  ];
+  return keys.filter((key) =>
+    next[key] !== undefined &&
+    JSON.stringify(previous?.[key]) !== JSON.stringify(next[key])
+  );
+}
+
+function isGuestCountQuestion(text) {
+  return /\b(?:cuantas|cuantos)\b/.test(text) &&
+    /\b(?:personas|huespedes|serian|somos|total)\b/.test(text);
+}
+
+function formatGuestCountReply(data = {}) {
+  const total = Number(data.total_guests ?? 0);
+  const adults = Number(data.adults ?? total);
+  const children = Number(data.children ?? 0);
+  return "Según los datos que me compartiste, serían " + total +
+    (total === 1 ? " huésped" : " huéspedes") + " en total: " +
+    adults + (adults === 1 ? " adulto" : " adultos") + " y " +
+    (children === 0 ? "ningún niño." : children + (children === 1 ? " niño." : " niños."));
+}
+
+function formatHandoffUpdateReply(data = {}, changed = []) {
+  const parts = [];
+  if (changed.some((key) => ["adults", "children", "total_guests"].includes(key))) {
+    const total = Number(data.total_guests ?? 0);
+    const adults = Number(data.adults ?? 0);
+    const children = Number(data.children ?? 0);
+    parts.push(total + (total === 1 ? " huésped" : " huéspedes") + " en total: " +
+      adults + (adults === 1 ? " adulto" : " adultos") + " y " +
+      (children === 0 ? "ningún niño" : children + (children === 1 ? " niño" : " niños")));
+  }
+  if (changed.includes("check_in") || changed.includes("check_out")) {
+    parts.push("fechas " + formatSummaryDate(data.check_in) + " al " + formatSummaryDate(data.check_out));
+  }
+  if (changed.includes("pets")) {
+    const pets = Number(data.pets ?? 0);
+    parts.push(pets === 0 ? "sin mascotas" : pets + (pets === 1 ? " mascota" : " mascotas"));
+  }
+  return "Gracias por la aclaración. Actualicé tu solicitud: " + parts.join("; ") +
+    ". La disponibilidad y la confirmación final siguen pendientes del equipo.";
 }
 
 const labels = {
@@ -372,6 +425,32 @@ export function handleWhatsAppMvpTurn({ message, context = {}, now = new Date() 
   const intent = reservationIntent(text);
   if (isWhatsAppMenuRequest(message)) {
     return { handled: true, reply: dictionary.menu, mode: "whatsapp_mvp_menu", context };
+  }
+  if (state?.state === "handoff") {
+    const updated = collect(message, state, now);
+    updated.language = language;
+    updated.state = "handoff";
+    delete updated.awaiting;
+    const changed = changedBookingFields(state, updated);
+    if (changed.length > 0) {
+      return {
+        handled: true,
+        context: { ...context, whatsapp_mvp: updated, state: "whatsapp_mvp" },
+        reply: formatHandoffUpdateReply(updated, changed),
+        mode: "whatsapp_mvp_handoff_update",
+      };
+    }
+    if (isGuestCountQuestion(text) && state.total_guests != null) {
+      return {
+        handled: true,
+        context,
+        reply: formatGuestCountReply(state),
+        mode: "whatsapp_mvp_summary",
+      };
+    }
+    // El equipo ya recibió la solicitud. Las preguntas informativas pueden
+    // continuar por los manejadores normales, sin volver a derivar al huésped.
+    return { handled: false, context };
   }
   if (!state && !intent) {
     const preliminary = collect(message, {}, now);

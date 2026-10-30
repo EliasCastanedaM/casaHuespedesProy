@@ -31,18 +31,19 @@ export function formatHotelLocationReply(profile, message = "") {
     return "En este momento no puedo consultar la dirección exacta del hospedaje. Nuestro equipo puede orientarte por teléfono.";
   }
   const text = normalize(message);
+  const mapsUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address);
   if (/\b(?:where|address|location|directions|located|how to get)\b/.test(text)) {
     return "Casa Huéspedes Pimentel is located at " + address +
-      ". For directions, search this full address on your maps app.";
+      ". Google Maps: " + mapsUrl;
   }
   if (/\b(?:onde|endereco|localizacao|chegar)\b/.test(text)) {
     return "Casa Huéspedes Pimentel fica em " + address +
-      ". Você pode procurar este endereço no seu aplicativo de mapas.";
+      ". Google Maps: " + mapsUrl;
   }
   if (/\b(?:adresse|comment arriver|ou etes)\b/.test(text)) {
     return "Casa Huéspedes Pimentel se trouve à " + address +
-      ". Recherchez cette adresse dans votre application de cartes.";
+      ". Google Maps : " + mapsUrl;
   }
-  return "📍 Estamos en " + address +
-    ". Para llegar, puedes buscar esta dirección en Google Maps o compartir desde dónde vienes y te orientamos.";
+  return "📍 Casa Huéspedes Pimentel está en " + address +
+    ". 🗺️ Ver ubicación en Google Maps: " + mapsUrl;
 }

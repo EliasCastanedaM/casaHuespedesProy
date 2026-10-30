@@ -1,7 +1,10 @@
 import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
-import { generateAiReply } from "../ai/ai.service.js";
+import {
+  generateAiReply,
+  updateWhatsAppMvpContextForHandoff,
+} from "../ai/ai.service.js";
 import { whatsAppMvpWelcome } from "../ai/ai.guest-rules.js";
 import { isCategoryPriceInquiry, isOpeningGreetingOnly, formatInitialGreeting } from "../ai/ai.pricing.js";
 import { getPublicRoomCategoriesService } from "../rooms/roomCategory.service.js";
@@ -1417,6 +1420,7 @@ export async function processMetaMessage(message, overrides = {}) {
     complete: overrides.complete ?? completeMessage,
     getHandoff: overrides.getHandoff ?? getHandoffState,
     setHandoff: overrides.setHandoff ?? setHandoffState,
+    updateHandoffContext: overrides.updateHandoffContext ?? updateWhatsAppMvpContextForHandoff,
     loadHistory: overrides.loadHistory ?? getRecentConversationHistory,
     generateReply: overrides.generateReply ?? generateAiReply,
     isFirstMetaIncomingMessage: overrides.isFirstMetaIncomingMessage ??
@@ -1470,6 +1474,22 @@ export async function processMetaMessage(message, overrides = {}) {
     if (
       await dependencies.getHandoff(message.channel, message.externalUserId)
     ) {
+      if (message.channel === "whatsapp" && message.messageType === "text" && message.text) {
+        try {
+          await dependencies.updateHandoffContext({
+            channel: message.channel,
+            externalUserId: message.externalUserId,
+            message: message.text,
+          });
+        } catch (error) {
+          console.warn(JSON.stringify({
+            component: "meta_webhook",
+            event: "handoff_context_update_failed",
+            channel: message.channel,
+            errorCode: cleanText(error?.code) || "unknown",
+          }));
+        }
+      }
       await dependencies.complete(message);
       return { status: "handoff_active" };
     }
