@@ -17,7 +17,7 @@ test("las reglas de huéspedes incluyen los niños, mascotas, grupos y seis cate
   assert.match(prompt, /S\/ 20/);
   assert.ok(prompt.includes("S/ 20 por mascota y por noche"));
   assert.match(prompt, /Desde los 9 años: corresponde tarifa de adulto/);
-  assert.match(prompt, /8 o más personas/);
+  assert.match(prompt, /8 o más huéspedes/);
   assert.match(prompt, /Familiar 1 y Familiar 2/);
   assert.match(prompt, /Familiar 1 y Familiar 2 son dos categorías diferentes/);
   assert.match(prompt, /No escribas símbolos de Markdown/);
