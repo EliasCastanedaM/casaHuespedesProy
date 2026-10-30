@@ -172,7 +172,8 @@ function parseAgeList(text) {
 }
 
 function isNegativeAnswer(text) {
-  return /^(?:no|nope|ningun[oa]?|ninguna|ninguno|sem|nao|non|none|not any)$/.test(normalize(text));
+  const cleaned = normalize(text).replace(/[.,!?¡¿]/g, " ").replace(/\\s+/g, " ").trim();
+  return /^(?:no|nope|ningun[oa]?|ninguna|ninguno|sem|nao|non|none|not any)$/.test(cleaned);
 }
 
 function mentionsNoCategory(text, words) {
@@ -331,13 +332,18 @@ function missingQuestion(data, l) {
   return null;
 }
 
+function formatSummaryDate(value) {
+  const match = String(value || "").match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  return match ? match[3] + "/" + match[2] + "/" + match[1] : value;
+}
+
 export function formatWhatsAppHandoffSummary(data = {}) {
   const v = (value) => value === undefined || value === null || value === "" ? "Pendiente" : String(value);
   const ages = Array.isArray(data.child_ages) ? data.child_ages.join(", ") || "No aplica" : "Pendiente";
   return [
     "SOLICITUD DE RESERVA — VALIDACIÓN HUMANA",
-    "Ingreso: " + v(data.check_in),
-    "Salida: " + v(data.check_out),
+    "Ingreso: " + v(formatSummaryDate(data.check_in)),
+    "Salida: " + v(formatSummaryDate(data.check_out)),
     "Adultos: " + v(data.adults),
     "Niños: " + v(data.children) + " · edades: " + ages,
     "Huéspedes totales: " + v(data.total_guests),
