@@ -958,6 +958,8 @@ export async function updateBookingStatusService(
   const databasePool = dependencies.pool || pool;
   const confirmedEmailSender =
     dependencies.sendBookingConfirmedEmail || sendBookingConfirmedEmail;
+  const onSiteEmailSender =
+    dependencies.sendBookingOnSiteConfirmedEmails || sendBookingOnSiteConfirmedEmails;
 
   if (status === "confirmed") {
     const client = await databasePool.connect();
@@ -1050,7 +1052,10 @@ export async function updateBookingStatusService(
     }
 
     if (transitioned && updatedDetails) {
-      void confirmedEmailSender(updatedDetails).catch((emailError) => {
+      const emailSender = updatedDetails.payment_provider === "pay_at_property"
+        ? onSiteEmailSender
+        : confirmedEmailSender;
+      void emailSender(updatedDetails).catch((emailError) => {
         console.error(
           "La reserva fue confirmada, pero no se pudo enviar su correo:",
           emailError.message
