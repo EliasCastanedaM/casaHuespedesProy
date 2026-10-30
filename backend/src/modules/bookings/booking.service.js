@@ -4,6 +4,7 @@ import { env } from "../../config/env.js";
 import {
   sendBookingConfirmedEmail,
   sendBookingPendingEmails,
+  sendBookingOnSiteConfirmedEmails,
   sendPaymentReportedEmail,
 } from "../../services/email.service.js";
 import {
@@ -199,7 +200,8 @@ function toPublicPaymentStatus(details) {
     booking_code: details.booking_code,
     status: details.status,
     payment_status: details.payment_status,
-    payment_url: details.payment_url || env.culqiPaymentUrl,
+    payment_url: details.payment_url || null,
+    payment_provider: details.payment_provider || null,
     payment_reported_at: details.payment_reported_at,
     payment_confirmed_at: details.payment_confirmed_at,
     total_amount: details.total_amount,
@@ -327,6 +329,7 @@ function bookingResult(details, { recovered = false } = {}) {
     unit_price: details.unit_price ?? details.price_per_night,
     created_at: details.created_at,
     payment_status: details.payment_status,
+    payment_method: details.payment_provider || null,
   };
 
   return {
@@ -347,7 +350,8 @@ function bookingResult(details, { recovered = false } = {}) {
       price_per_night: details.price_per_night,
     },
     public_token: details.public_token,
-    payment_url: env.culqiPaymentUrl,
+    payment_url: details.payment_url || null,
+    payment_provider: details.payment_provider || null,
     recovered,
   };
 }
@@ -511,6 +515,25 @@ async function createBookingTransaction(
   const databasePool = dependencies.pool || pool;
   const pendingEmailSender =
     dependencies.sendBookingPendingEmails || sendBookingPendingEmails;
+  const onSiteEmailSender =
+    dependencies.sendBookingOnSiteConfirmedEmails || sendBookingOnSiteConfirmedEmails;
+  const paymentMethod = options.paymentMethod || "culqi_link";
+  const staffConfirmed = options.staffConfirmed === true;
+  if (!["culqi_link", "pay_at_property"].includes(paymentMethod)) {
+    const error = new Error("El método de pago seleccionado no es válido.");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (paymentMethod === "pay_at_property" && !staffConfirmed) {
+    const error = new Error("El pago en el establecimiento requiere confirmación humana previa.");
+    error.statusCode = 403;
+    throw error;
+  }
+  if (options.finalAmount !== undefined && !staffConfirmed) {
+    const error = new Error("El importe final solo puede establecerse después de una validación humana.");
+    error.statusCode = 403;
+    throw error;
+  }
   const availabilityChecker =
     dependencies.checkAvailabilityService || checkAvailabilityService;
   const client = await databasePool.connect();
@@ -556,9 +579,13 @@ async function createBookingTransaction(
     const unitPrice = Number(
       room.category_price_per_night || room.price_per_night || 0
     );
-    const totalAmount = unitPrice * Number(normalized.nights);
+    const calculatedAmount = unitPrice * Number(normalized.nights);
+    const totalAmount = staffConfirmed && options.finalAmount !== undefined
+      ? Number(options.finalAmount)
+      : calculatedAmount;
 
-    if (totalAmount <= 0) {
+    if (!Number.isFinite(totalAmount) || totalAmount <= 0 ||
+        (!staffConfirmed && calculatedAmount <= 0)) {
       const error = new Error(
         "La categoría todavía no tiene un precio configurado. Comunícate con el hospedaje."
       );
@@ -576,7 +603,7 @@ async function createBookingTransaction(
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        'pending_payment', $11, $12, $13, $14::uuid
+        $11, $12, $13, $14, $15::uuid
       )
       RETURNING *;
       `,
@@ -591,6 +618,7 @@ async function createBookingTransaction(
         normalized.guests_count,
         normalized.nights,
         totalAmount,
+        paymentMethod === "pay_at_property" ? "confirmed" : "pending_payment",
         options.source || conversation?.channel || bookingData.source || "web",
         normalized.special_requests,
         randomUUID(),
@@ -614,9 +642,14 @@ async function createBookingTransaction(
       INSERT INTO payments (
         booking_id, payment_provider, amount, currency, status, payment_url
       )
-      VALUES ($1, 'culqi_link', $2, 'PEN', 'pending', $3);
+      VALUES ($1, $2, $3, 'PEN', 'pending', $4);
       `,
-      [insertedBooking.id, totalAmount, env.culqiPaymentUrl]
+      [
+        insertedBooking.id,
+        paymentMethod,
+        totalAmount,
+        paymentMethod === "culqi_link" ? env.culqiPaymentUrl : null,
+      ]
     );
 
     details = await getBookingDetailsById(insertedBooking.id, client);
@@ -661,7 +694,10 @@ async function createBookingTransaction(
   }
 
   if (created) {
-    void pendingEmailSender(details).catch((emailError) => {
+    const emailSender = paymentMethod === "pay_at_property"
+      ? onSiteEmailSender
+      : pendingEmailSender;
+    void emailSender(details).catch((emailError) => {
       console.error(
         "La reserva fue creada, pero no se pudo enviar su correo:",
         emailError.message
@@ -984,23 +1020,25 @@ export async function updateBookingStatusService(
         throw error;
       }
 
-      await client.query(
-        `
-        UPDATE payments
-        SET
-          status = 'paid',
-          paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = (
-          SELECT id
-          FROM payments
-          WHERE booking_id = $1::integer
-          ORDER BY created_at DESC, id DESC
-          LIMIT 1
+      if (currentDetails.payment_provider !== "pay_at_property") {
+        await client.query(
+          `
+          UPDATE payments
+          SET
+            status = 'paid',
+            paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = (
+            SELECT id
+            FROM payments
+            WHERE booking_id = $1::integer
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+          );
+          `,
+          [Number(id)]
         );
-        `,
-        [Number(id)]
-      );
+      }
 
       updatedDetails = await getBookingDetailsById(id, client);
       await client.query("COMMIT");
