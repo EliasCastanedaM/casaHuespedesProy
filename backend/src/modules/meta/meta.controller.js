@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import { persistCoexistenceEvents } from "./meta.coexistence.js";
@@ -25,6 +26,24 @@ import {
 
 const META_CHANNELS = new Set(["whatsapp", "instagram", "facebook"]);
 const conversationQueues = new Map();
+const scheduledMessageIds = new Set();
+
+function auditMeta(event, details = {}, level = "info") {
+  console[level](JSON.stringify({ component: "meta_webhook", event, ...details }));
+}
+
+function messageAudit(message) {
+  const sender = String(message.externalUserId || "");
+  return {
+    channel: message.channel,
+    messageId: message.messageId,
+    senderLast4: sender.slice(-4),
+    senderTag: crypto.createHmac("sha256", env.meta.appSecret || "development")
+      .update(sender).digest("hex").slice(0, 16),
+    ...(message.wabaId ? { wabaId: message.wabaId } : {}),
+    ...(message.phoneNumberId ? { phoneNumberId: message.phoneNumberId } : {}),
+  };
+}
 
 function conversationParams(req, res) {
   const channel = String(req.params.channel || "").toLowerCase();
@@ -52,32 +71,44 @@ function conversationParams(req, res) {
 async function processInBackground(message) {
   try {
     if (message.channel === "instagram") {
-      await processMetaMessage(message, {
+      const result = await processMetaMessage(message, {
         sendReply: sendInstagramMetaReply,
       });
+      auditMeta("processing_finished", { ...messageAudit(message), result: result.status });
       return;
     }
 
-    await processMetaMessage(message);
+    const result = await processMetaMessage(message);
+    auditMeta("processing_finished", { ...messageAudit(message), result: result.status });
   } catch (error) {
+    const errorMessage = String(error?.message || error);
+    auditMeta("processing_failed", {
+      ...messageAudit(message),
+      errorType: error?.name || "Error",
+      graphHttpStatus: Number(errorMessage.match(/Meta respondió (\d{3})/)?.[1]) || null,
+    }, "error");
     console.error(
       "No se pudo procesar el mensaje " +
         message.messageId +
         " de " +
         message.channel +
         ":",
-      error.message
+        errorMessage
     );
   }
 }
 
 function scheduleMessage(message) {
+  const messageKey = message.channel + ":" + message.messageId;
+  if (scheduledMessageIds.has(messageKey)) return;
+  scheduledMessageIds.add(messageKey);
   const key = message.channel + ":" + message.externalUserId;
   const previous = conversationQueues.get(key) ?? Promise.resolve();
   const current = previous
     .catch(() => {})
     .then(() => processInBackground(message))
     .finally(() => {
+      scheduledMessageIds.delete(messageKey);
       if (conversationQueues.get(key) === current) {
         conversationQueues.delete(key);
       }
@@ -110,6 +141,7 @@ export function verifyWebhookController(req, res) {
 }
 
 export async function receiveWebhookController(req, res, next) {
+  const requestId = crypto.randomUUID();
   try {
     const signature = req.header("x-hub-signature-256");
     const instagramWebhook = req.body?.object === "instagram";
@@ -118,27 +150,42 @@ export async function receiveWebhookController(req, res, next) {
       : verifyMetaSignature(signature, req.rawBody);
 
     if (!signatureIsValid) {
+      auditMeta("signature_rejected", { requestId, httpStatus: 401 }, "warn");
       return res.sendStatus(401);
     }
+
+    auditMeta("request_verified", { requestId, object: req.body?.object || null });
 
     // Primero persistimos los eventos de coexistencia. Un eco del teléfono
     // activa el handoff ANTES de procesar posibles mensajes del huésped.
     // Los eventos de historial/contactos jamás disparan una respuesta IA.
     await persistCoexistenceEvents(req.body, pool);
 
-    const messages = parseMetaWebhook(req.body);
+    const messages = parseMetaWebhook(req.body, {
+      onIgnored: (ignored) => auditMeta("incoming_ignored", { requestId, ...ignored }, "warn"),
+    });
     const statusUpdates = parseMetaStatusUpdates(req.body);
 
     // La persistencia/actualización durable ocurre antes del 200. Si Supabase
     // falla, Express devolverá error y Meta podrá reintentar el webhook.
     if (messages.length > 0) {
       await persistIncomingMessages(messages);
+      for (const message of messages) {
+        auditMeta("incoming_persisted", { requestId, ...messageAudit(message), messageType: message.messageType });
+      }
     }
     if (statusUpdates.length > 0) {
       await applyMetaStatusUpdates(statusUpdates);
+      for (const update of statusUpdates) {
+        auditMeta("delivery_status", { requestId, messageId: update.messageId, status: update.status });
+      }
     }
 
     res.status(200).send("EVENT_RECEIVED");
+    auditMeta("request_completed", {
+      requestId, httpStatus: 200, incomingCount: messages.length,
+      statusCount: statusUpdates.length,
+    });
 
     // OpenAI y los envíos a Meta se ejecutan fuera del tiempo de respuesta HTTP.
     if (messages.length > 0) {
@@ -147,6 +194,9 @@ export async function receiveWebhookController(req, res, next) {
       });
     }
   } catch (error) {
+    auditMeta("request_failed", {
+      requestId, httpStatus: error?.statusCode || 500, errorType: error?.name || "Error",
+    }, "error");
     next(error);
   }
 }
