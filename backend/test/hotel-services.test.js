@@ -23,11 +23,26 @@ test("responde servicios generales con información real del catálogo", () => {
   assert.doesNotMatch(answer, /S\/\s*\d+|tarifa gratis para lavandería/i);
 });
 
-test("consulta por lavandería informa que falta confirmar tarifa", () => {
+test("consulta por lavandería informa coordinación y tarifa sin etiquetas robóticas", () => {
   const answer = formatHotelServicesReply(sample, "¿Cuánto cuesta la lavandería?");
-  assert.match(answer, /Lavandería y planchado/);
-  assert.match(answer, /tarifa a confirmar/);
+  assert.match(answer, /lavandería y el planchado/i);
+  assert.match(answer, /coordinación previa/i);
+  assert.match(answer, /confirmará la tarifa/i);
+  assert.doesNotMatch(answer, /tarifa a confirmar|\\(condiciones de uso/i);
   assert.doesNotMatch(answer, /WiFi gratuito/);
+});
+
+test("no promete estacionamiento propio", () => {
+  const parking = [{
+    name: "Orientación para estacionamiento",
+    description: "Orientación sobre estacionamiento cercano.",
+    price_type: "on_request",
+    requires_coordination: true,
+  }];
+  const answer = formatHotelServicesReply(parking, "¿Tienen estacionamiento?");
+  assert.match(answer, /estacionamiento cercano/i);
+  assert.match(answer, /no está confirmado/i);
+  assert.doesNotMatch(answer, /estacionamiento propio garantizado/i);
 });
 
 test("desayuno no incluido en el precio, sin negar el servicio externo", () => {
