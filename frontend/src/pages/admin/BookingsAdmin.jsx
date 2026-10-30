@@ -16,6 +16,11 @@ const statusLabels = {
   completed: "Finalizada",
 };
 
+const paymentMethodLabels = {
+  culqi_link: "Pago en línea · Culqi",
+  pay_at_property: "Pago en el establecimiento",
+};
+
 const statusStyles = {
   pending: "bg-yellow-100 text-yellow-800",
   pending_payment: "bg-orange-100 text-orange-800",
@@ -198,6 +203,7 @@ export default function BookingsAdmin() {
       "Total",
       "Estado",
       "Estado Pago",
+      "Método de Pago",
       "Pago Reportado",
       "Comentario",
       "Fecha Registro",
@@ -218,6 +224,7 @@ export default function BookingsAdmin() {
       booking.total_amount || 0,
       statusLabels[booking.status] || booking.status,
       booking.payment_status || "",
+      paymentMethodLabels[booking.payment_provider] || booking.payment_provider || "",
       booking.payment_reported_at || "",
       booking.special_requests || "",
       booking.created_at || "",
@@ -476,6 +483,16 @@ export default function BookingsAdmin() {
                         >
                           {statusLabels[booking.status] || booking.status}
                         </span>
+                        {booking.payment_provider && (
+                          <p className="mt-2 text-xs font-semibold text-slate-600">
+                            {paymentMethodLabels[booking.payment_provider] || booking.payment_provider}
+                          </p>
+                        )}
+                        {booking.payment_provider === "pay_at_property" && booking.payment_status === "pending" && (
+                          <p className="mt-1 text-xs text-amber-700">
+                            Pago pendiente en el establecimiento
+                          </p>
+                        )}
                         {booking.payment_reported_at && (
                           <p className="mt-2 text-xs text-slate-500">
                             Avisó: {formatDate(booking.payment_reported_at)}
