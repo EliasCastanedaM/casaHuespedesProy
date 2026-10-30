@@ -46,6 +46,12 @@ export const env = {
 
   jwtSecret: cleanEnvValue(process.env.JWT_SECRET),
 
+  auth: {
+    // Keep email recovery closed until the Vercel frontend reset form is LIVE.
+    passwordRecoveryEnabled: cleanEnvValue(process.env.ADMIN_PASSWORD_RECOVERY_ENABLED)
+      .toLowerCase() === "true",
+  },
+
   frontendUrl: cleanEnvValue(
     process.env.FRONTEND_URL || "http://localhost:5173"
   ).replace(/\/+$/, ""),
