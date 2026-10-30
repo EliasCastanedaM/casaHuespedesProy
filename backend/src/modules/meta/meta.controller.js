@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { env } from "../../config/env.js";
+import { confirmWhatsAppMvpReservation } from "../ai/ai.service.js";
 import { pool } from "../../config/db.js";
 import { persistCoexistenceEvents } from "./meta.coexistence.js";
 import {
@@ -20,6 +21,7 @@ import {
   persistIncomingMessages,
   processMetaMessage,
   sendManualMetaMessage,
+  sendAssistantMetaMessage,
   setHandoffState,
   verifyMetaSignature,
 } from "./meta.service.js";
@@ -320,6 +322,57 @@ export async function sendManualMessageController(req, res, next) {
           );
 
     return res.status(201).json({ success: true, data: saved });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function confirmWhatsAppMvpReservationController(req, res, next) {
+  try {
+    const conversation = conversationParams(req, res);
+    if (!conversation) return;
+    if (conversation.channel !== "whatsapp") {
+      return res.status(400).json({
+        success: false,
+        message: "La confirmación de reservas MVP solo está disponible para WhatsApp.",
+      });
+    }
+
+    const categorySlug = String(req.body?.category_slug || "").trim();
+    const totalAmount = Number(req.body?.total_amount);
+    if (!categorySlug || !Number.isFinite(totalAmount) || totalAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Debes indicar la categoría y el importe total confirmado.",
+      });
+    }
+
+    const prepared = await confirmWhatsAppMvpReservation({
+      channel: conversation.channel,
+      externalUserId: conversation.externalUserId,
+      categorySlug,
+      totalAmount,
+    });
+
+    await setHandoffState(conversation.channel, conversation.externalUserId, false);
+    try {
+      const saved = await sendAssistantMetaMessage(
+        conversation.channel,
+        conversation.externalUserId,
+        prepared.reply
+      );
+      return res.json({
+        success: true,
+        data: {
+          message: saved,
+          category: prepared.category,
+          handoff_active: false,
+        },
+      });
+    } catch (sendError) {
+      await setHandoffState(conversation.channel, conversation.externalUserId, true);
+      throw sendError;
+    }
   } catch (error) {
     next(error);
   }
