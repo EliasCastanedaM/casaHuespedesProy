@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import { persistCoexistenceEvents } from "./meta.coexistence.js";
@@ -25,6 +26,49 @@ import {
 
 const META_CHANNELS = new Set(["whatsapp", "instagram", "facebook"]);
 const conversationQueues = new Map();
+const scheduledMessageIds = new Set();
+
+function auditMeta(event, details = {}, level = "info") {
+  console[level](JSON.stringify({ component: "meta_webhook", event, ...details }));
+}
+
+function privateTag(value) {
+  const normalized = String(value || "");
+  if (!normalized) return null;
+  return crypto.createHmac("sha256", env.meta.appSecret || "development")
+    .update(normalized).digest("hex").slice(0, 16);
+}
+
+function messageAudit(message) {
+  return {
+    channel: message.channel,
+    ...(privateTag(message.messageId) ? { messageTag: privateTag(message.messageId) } : {}),
+    ...(privateTag(message.externalUserId) ? { senderTag: privateTag(message.externalUserId) } : {}),
+    ...(message.wabaId ? { wabaId: message.wabaId } : {}),
+    ...(message.phoneNumberId ? { phoneNumberId: message.phoneNumberId } : {}),
+  };
+}
+
+function metaErrorAudit(error) {
+  const message = String(error?.message || "");
+  return {
+    errorType: error?.name || "Error",
+    errorCode: error?.code || null,
+    graphHttpStatus: Number(message.match(/Meta respondió (\d{3})/)?.[1]) || null,
+    graphErrorCode: Number(message.match(/"code"\s*:\s*(\d+)/)?.[1]) || null,
+    graphErrorType: message.match(/"type"\s*:\s*"([^"]+)"/)?.[1] || null,
+  };
+}
+function webhookEnvelopeAudit(body) {
+  const entries = Array.isArray(body?.entry) ? body.entry : [];
+  const changes = entries.flatMap((entry) => Array.isArray(entry?.changes) ? entry.changes : []);
+  return {
+    entryCount: entries.length,
+    changeFields: [...new Set(changes.map((change) => String(change?.field || "")).filter(Boolean))].slice(0, 20),
+    wabaIds: [...new Set(entries.map((entry) => String(entry?.id || "")).filter(Boolean))].slice(0, 10),
+    phoneNumberIds: [...new Set(changes.map((change) => String(change?.value?.metadata?.phone_number_id || "")).filter(Boolean))].slice(0, 10),
+  };
+}
 
 function conversationParams(req, res) {
   const channel = String(req.params.channel || "").toLowerCase();
@@ -52,32 +96,34 @@ function conversationParams(req, res) {
 async function processInBackground(message) {
   try {
     if (message.channel === "instagram") {
-      await processMetaMessage(message, {
+      const result = await processMetaMessage(message, {
         sendReply: sendInstagramMetaReply,
       });
+      auditMeta("processing_finished", { ...messageAudit(message), result: result.status });
       return;
     }
 
-    await processMetaMessage(message);
+    const result = await processMetaMessage(message);
+    auditMeta("processing_finished", { ...messageAudit(message), result: result.status });
   } catch (error) {
-    console.error(
-      "No se pudo procesar el mensaje " +
-        message.messageId +
-        " de " +
-        message.channel +
-        ":",
-      error.message
-    );
+    auditMeta("processing_failed", {
+      ...messageAudit(message),
+      ...metaErrorAudit(error),
+    }, "error");
   }
 }
 
 function scheduleMessage(message) {
+  const messageKey = message.channel + ":" + message.messageId;
+  if (scheduledMessageIds.has(messageKey)) return;
+  scheduledMessageIds.add(messageKey);
   const key = message.channel + ":" + message.externalUserId;
   const previous = conversationQueues.get(key) ?? Promise.resolve();
   const current = previous
     .catch(() => {})
     .then(() => processInBackground(message))
     .finally(() => {
+      scheduledMessageIds.delete(messageKey);
       if (conversationQueues.get(key) === current) {
         conversationQueues.delete(key);
       }
@@ -110,6 +156,7 @@ export function verifyWebhookController(req, res) {
 }
 
 export async function receiveWebhookController(req, res, next) {
+  const requestId = crypto.randomUUID();
   try {
     const signature = req.header("x-hub-signature-256");
     const instagramWebhook = req.body?.object === "instagram";
@@ -118,27 +165,62 @@ export async function receiveWebhookController(req, res, next) {
       : verifyMetaSignature(signature, req.rawBody);
 
     if (!signatureIsValid) {
+      auditMeta("signature_rejected", { requestId, httpStatus: 401 }, "warn");
       return res.sendStatus(401);
     }
+
+    auditMeta("request_verified", {
+      requestId,
+      object: req.body?.object || null,
+      ...webhookEnvelopeAudit(req.body),
+    });
 
     // Primero persistimos los eventos de coexistencia. Un eco del teléfono
     // activa el handoff ANTES de procesar posibles mensajes del huésped.
     // Los eventos de historial/contactos jamás disparan una respuesta IA.
     await persistCoexistenceEvents(req.body, pool);
 
-    const messages = parseMetaWebhook(req.body);
+    const messages = parseMetaWebhook(req.body, {
+      onIgnored: ({ externalUserId, messageId, ...ignored }) => auditMeta(
+        "incoming_ignored",
+        {
+          requestId,
+          ...ignored,
+          ...(privateTag(externalUserId) ? { senderTag: privateTag(externalUserId) } : {}),
+          ...(privateTag(messageId) ? { messageTag: privateTag(messageId) } : {}),
+        },
+        "warn"
+      ),
+    });
     const statusUpdates = parseMetaStatusUpdates(req.body);
 
     // La persistencia/actualización durable ocurre antes del 200. Si Supabase
     // falla, Express devolverá error y Meta podrá reintentar el webhook.
     if (messages.length > 0) {
       await persistIncomingMessages(messages);
+      for (const message of messages) {
+        auditMeta("incoming_persisted", { requestId, ...messageAudit(message), messageType: message.messageType });
+      }
     }
     if (statusUpdates.length > 0) {
       await applyMetaStatusUpdates(statusUpdates);
+      for (const update of statusUpdates) {
+        auditMeta("delivery_status", {
+          requestId,
+          ...(privateTag(update.messageId) ? { messageTag: privateTag(update.messageId) } : {}),
+          status: update.status,
+          ...(update.errorCode ? { graphErrorCode: update.errorCode } : {}),
+          ...(update.errorType ? { graphErrorType: update.errorType } : {}),
+          ...(update.errorTitle ? { graphErrorTitle: update.errorTitle } : {}),
+        });
+      }
     }
 
     res.status(200).send("EVENT_RECEIVED");
+    auditMeta("request_completed", {
+      requestId, httpStatus: 200, incomingCount: messages.length,
+      statusCount: statusUpdates.length,
+    });
 
     // OpenAI y los envíos a Meta se ejecutan fuera del tiempo de respuesta HTTP.
     if (messages.length > 0) {
@@ -147,6 +229,11 @@ export async function receiveWebhookController(req, res, next) {
       });
     }
   } catch (error) {
+    auditMeta("request_failed", {
+      requestId,
+      httpStatus: error?.statusCode || 500,
+      ...metaErrorAudit(error),
+    }, "error");
     next(error);
   }
 }

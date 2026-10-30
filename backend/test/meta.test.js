@@ -8,6 +8,7 @@ import {
   isFirstMetaIncomingMessage,
   listRecoverableMessages,
   parseMetaWebhook,
+  parseMetaStatusUpdates,
   processMetaMessage,
   sendManualMetaMessage,
   sendMetaReply,
@@ -264,6 +265,63 @@ test("extrae y normaliza mensajes de WhatsApp", () => {
   });
 
   assert.deepEqual(messages, [message()]);
+});
+
+test("registra descartes de WhatsApp y conserva los IDs necesarios para rastrear cada evento", () => {
+  const ignored = [];
+  const messages = parseMetaWebhook({
+    object: "whatsapp_business_account",
+    entry: [{
+      id: "waba-1",
+      changes: [{ field: "messages", value: {
+        metadata: { phone_number_id: "phone-1" },
+        messages: [
+          { id: "wamid.empty", from: "51999999999", type: "text", text: { body: " " } },
+          { id: "wamid.no-sender", type: "text", text: { body: "Hola" } },
+          { id: "wamid.valid", from: "51988888888", type: "text", text: { body: "Hola" } },
+        ],
+      } }],
+    }],
+  }, { onIgnored: (event) => ignored.push(event) });
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].externalUserId, "51988888888");
+  assert.equal(messages[0].wabaId, "waba-1");
+  assert.equal(messages[0].phoneNumberId, "phone-1");
+  assert.deepEqual(ignored.map(({ messageId, externalUserId, reason }) => [messageId, externalUserId, reason]), [
+    ["wamid.empty", "51999999999", "empty_text"],
+    ["wamid.no-sender", "", "missing_sender"],
+  ]);
+});
+
+test("conserva el código y tipo de error de los estados de entrega de WhatsApp", () => {
+  const updates = parseMetaStatusUpdates({
+    object: "whatsapp_business_account",
+    entry: [{
+      changes: [{
+        field: "messages",
+        value: {
+          statuses: [{
+            id: "wamid.failed",
+            status: "failed",
+            timestamp: "1780000000",
+            errors: [{
+              code: 131047,
+              type: "OAuthException",
+              title: "Re-engagement message",
+              message: "Re-engagement message",
+            }],
+          }],
+        },
+      }],
+    }],
+  });
+
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].errorCode, 131047);
+  assert.equal(updates[0].errorType, "OAuthException");
+  assert.equal(updates[0].errorTitle, "Re-engagement message");
+  assert.equal(updates[0].errorDetail, "Re-engagement message");
 });
 
 test("extrae Instagram y conserva el identificador externo", () => {
