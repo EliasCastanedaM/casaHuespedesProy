@@ -1,4 +1,5 @@
 import { loginService } from "./auth.service.js";
+import { changeAdminPassword, requestAdminPasswordRecovery, confirmAdminPasswordRecovery } from "./auth.passwords.js";
 import { revokeAdminSession, revokeAllAdminSessions } from "./auth.sessions.js";
 
 export async function loginController(req, res, next) {
@@ -49,5 +50,38 @@ export async function logoutAllController(req, res, next) {
     return res.json({ success: true, message: "Todas las sesiones fueron revocadas." });
   } catch (error) {
     next(error);
+  }
+}
+
+export async function changePasswordController(req, res, next) {
+  try {
+    await changeAdminPassword(req.user.id, req.body?.currentPassword, req.body?.newPassword);
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ success: true, message: "Contraseña actualizada. Todas las sesiones han sido revocadas." });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function requestPasswordRecoveryController(req, res, next) {
+  try {
+    await requestAdminPasswordRecovery(req.body?.email);
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(202).json({
+      success: true,
+      message: "Si el correo corresponde a una cuenta y la recuperación está habilitada, recibirás instrucciones.",
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function confirmPasswordRecoveryController(req, res, next) {
+  try {
+    await confirmAdminPasswordRecovery(req.body?.token, req.body?.newPassword);
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ success: true, message: "Contraseña actualizada. Inicia sesión de nuevo." });
+  } catch (error) {
+    return next(error);
   }
 }
