@@ -54,7 +54,7 @@ test("IA responde ubicación oficial sin repetir la reserva", () => {
     assert.equal(isHotelLocationInquiry(question), true, question);
     const reply = formatHotelLocationReply(verified, question);
     assert.match(reply, /José Quiñones 237/);
-    assert.match(reply, /https:\\/\\/www\\.google\\.com\\/maps\\/search\\/\\?api=1&query=/);
+    assert.ok(reply.includes("https://www.google.com/maps/search/?api=1&query="));
     assert.doesNotMatch(reply, /José Quiñones 233/);
   }
 });
