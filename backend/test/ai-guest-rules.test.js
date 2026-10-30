@@ -12,7 +12,7 @@ test("las reglas de huéspedes incluyen los niños, mascotas, grupos y seis cate
   const prompt = buildHotelAssistantPrompt();
   assert.match(prompt, /0 a 4 años/);
   assert.match(prompt, /5 a 8 años/);
-  assert.match(prompt, /50 % de la diferencia/);
+  assert.match(prompt, /50 % del diferencial/);
   assert.match(prompt, /9 años/);
   assert.match(prompt, /S\/ 20/);
   assert.ok(prompt.includes("S/ 20 por mascota y por noche"));
