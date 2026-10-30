@@ -266,6 +266,33 @@ test("extrae y normaliza mensajes de WhatsApp", () => {
   assert.deepEqual(messages, [message()]);
 });
 
+test("registra descartes de WhatsApp y conserva los IDs necesarios para rastrear cada evento", () => {
+  const ignored = [];
+  const messages = parseMetaWebhook({
+    object: "whatsapp_business_account",
+    entry: [{
+      id: "waba-1",
+      changes: [{ field: "messages", value: {
+        metadata: { phone_number_id: "phone-1" },
+        messages: [
+          { id: "wamid.empty", from: "51999999999", type: "text", text: { body: " " } },
+          { id: "wamid.no-sender", type: "text", text: { body: "Hola" } },
+          { id: "wamid.valid", from: "51988888888", type: "text", text: { body: "Hola" } },
+        ],
+      } }],
+    }],
+  }, { onIgnored: (event) => ignored.push(event) });
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].externalUserId, "51988888888");
+  assert.equal(messages[0].wabaId, "waba-1");
+  assert.equal(messages[0].phoneNumberId, "phone-1");
+  assert.deepEqual(ignored.map(({ messageId, reason }) => [messageId, reason]), [
+    ["wamid.empty", "empty_text"],
+    ["wamid.no-sender", "missing_sender"],
+  ]);
+});
+
 test("extrae Instagram y conserva el identificador externo", () => {
   const messages = parseMetaWebhook({
     object: "instagram",
