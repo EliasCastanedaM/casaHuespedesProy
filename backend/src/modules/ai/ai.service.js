@@ -509,6 +509,8 @@ export async function confirmWhatsAppMvpReservation({
   externalUserId,
   categorySlug,
   totalAmount,
+  petAuthorized = false,
+  childBedAvailabilityConfirmed = false,
 }) {
   if (channel !== "whatsapp") {
     const error = new Error("La confirmación de reservas MVP solo está disponible para WhatsApp.");
@@ -558,6 +560,8 @@ export async function confirmWhatsAppMvpReservation({
     category,
     totalAmount,
     externalUserId,
+    petAuthorized,
+    childBedAvailabilityConfirmed,
   });
   await saveBookingContext(channel, externalUserId, prepared.context);
   return { reply: prepared.reply, category };
