@@ -1,26 +1,16 @@
-// Importamos multer para recibir archivos desde formularios
 import multer from "multer";
+import { allowedImageMime, MEDIA_LIMITS } from "./mediaSecurity.js";
 
-// Guardamos la imagen en memoria temporal.
-// No se guarda en disco, solo pasa por backend y luego va a Cloudinary.
-const storage = multer.memoryStorage();
-
-// Filtro para aceptar solo imágenes
-function fileFilter(req, file, cb) {
-  // Validamos que el archivo sea imagen
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    cb(new Error("Solo se permiten archivos de imagen"), false);
-  }
-}
-
-// Configuramos multer
+// Solo imágenes comunes. El controlador verifica además su firma binaria.
 export const uploadImage = multer({
-  storage,
-  fileFilter,
-  limits: {
-    // Límite de 5MB por imagen
-    fileSize: 5 * 1024 * 1024,
+  storage: multer.memoryStorage(),
+  fileFilter(_req, file, callback) {
+    if (!allowedImageMime(file.mimetype)) {
+      const error = new Error("Formato de imagen no permitido.");
+      error.statusCode = 415;
+      return callback(error);
+    }
+    return callback(null, true);
   },
+  limits: { files: 1, fileSize: MEDIA_LIMITS.singleImageBytes, fields: 10 },
 });
