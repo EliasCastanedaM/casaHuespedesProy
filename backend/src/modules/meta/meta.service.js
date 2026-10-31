@@ -1683,6 +1683,13 @@ export async function processMetaMessage(message, overrides = {}) {
         history,
       });
       if (result.mode === "human_review_required") {
+        // La IA puede solicitar revisión mientras el personal toma el chat
+        // desde WhatsApp Business. Evitar una respuesta automática tardía y
+        // no sobrescribir el inicio de la atención humana ya registrada.
+        if (await dependencies.getHandoff(message.channel, message.externalUserId)) {
+          await dependencies.complete(message);
+          return { status: "handoff_active_after_generation" };
+        }
         await dependencies.setHandoff(message.channel, message.externalUserId, true);
         handoffActivatedByThisTurn = true;
         reply = result.reply;
