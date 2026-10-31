@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api.js";
+import { startCalendarRequest } from "./calendarRequest.js";
 
 const LEGEND = [
   ["bg-[#dceee7] text-[#235440]", "Sin registro interno"],
@@ -73,32 +74,43 @@ function friendlyDay(value) {
 export default function OperationsCalendar() {
   const [mode, setMode] = useState("week");
   const [date, setDate] = useState(todayLima);
-  const [snapshot, setSnapshot] = useState(null);
+  // Nunca mostrar una respuesta de un período anterior bajo las fechas nuevas.
+  // La clave acompaña a los datos y el AbortController cancela consultas obsoletas.
+  const [loaded, setLoaded] = useState({ key: "", data: null });
   const [selected, setSelected] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [refreshCount, setRefreshCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const period = useMemo(() => periodFor(date, mode), [date, mode]);
-  const days = useMemo(() => Array.from({ length: period.days }, (_, i) => addDays(period.start, i)), [period]);
+  const periodKey = period.start + ":" + period.days;
+  const days = useMemo(
+    () => Array.from({ length: period.days }, (_, i) => addDays(period.start, i)),
+    [period]
+  );
+  const snapshot = loaded.key === periodKey ? loaded.data : null;
+  const reload = () => setRefreshCount((previous) => previous + 1);
 
-  const reload = useCallback(async () => {
+  useEffect(() => {
     setLoading(true);
     setError("");
-    try {
-      const response = await api.get("/bookings/calendar", { params: period });
-      setSnapshot(response.data.data);
-      setSelected(null);
-    } catch (failure) {
-      setSnapshot(null);
-      setError(failure.response?.data?.message || "No se pudo consultar el calendario interno.");
-    } finally {
-      setLoading(false);
-    }
-  }, [period]);
-
-  useEffect(() => { reload(); }, [reload]);
+    setSelected(null);
+    return startCalendarRequest({
+      period,
+      periodKey,
+      request: (requestedPeriod, signal) =>
+        api.get("/bookings/calendar", { params: requestedPeriod, signal }),
+      onSuccess: setLoaded,
+      onError: (failure) => {
+        setLoaded({ key: periodKey, data: null });
+        setError(failure.response?.data?.message || "No se pudo consultar el calendario interno.");
+      },
+      onFinish: () => setLoading(false),
+    });
+  }, [period, periodKey, refreshCount]);
 
   function navigate(direction) {
+    setSelected(null);
     if (mode === "month") setDate((current) => addMonths(current, direction));
     else setDate((current) => addDays(current, direction * (mode === "week" ? 7 : 1)));
   }
@@ -139,14 +151,14 @@ export default function OperationsCalendar() {
             <button type="button" onClick={() => navigate(-1)} aria-label="Período anterior" className="border border-[#d9e3ea] bg-white px-3 py-2 hover:bg-[#eaf0f4]">‹</button>
             <span className="min-w-[165px] text-center text-sm font-semibold">{friendlyDay(period.start)} · {friendlyDay(days[days.length - 1])}</span>
             <button type="button" onClick={() => navigate(1)} aria-label="Período siguiente" className="border border-[#d9e3ea] bg-white px-3 py-2 hover:bg-[#eaf0f4]">›</button>
-            <button type="button" onClick={() => setDate(todayLima())} className="border border-[#d9e3ea] bg-white px-3 py-2 text-sm">Hoy</button>
+            <button type="button" onClick={() => { setSelected(null); setDate(todayLima()); }} className="border border-[#d9e3ea] bg-white px-3 py-2 text-sm">Hoy</button>
             <button type="button" onClick={reload} disabled={loading} className="border border-[#d9e3ea] bg-white px-3 py-2 text-sm disabled:opacity-50">Actualizar</button>
           </div>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {[["Habitaciones activas", rooms.length], ["Reservas confirmadas en el período", bookedCount], ["Solicitudes / bloqueos internos", bookings.filter((b) => b.status !== "confirmed" && b.status !== "completed").length + blocked.length]].map(([label, count]) => (
-            <div className="bg-white border border-[#dce5ed] px-5 py-4" key={label}><p className="text-xs text-[#667e92]">{label}</p><p className="mt-2 text-2xl font-semibold tabular-nums">{count}</p></div>
+            <div className="bg-white border border-[#dce5ed] px-5 py-4" key={label}><p className="text-xs text-[#667e92]">{label}</p><p className="mt-2 text-2xl font-semibold tabular-nums">{snapshot ? count : "—"}</p></div>
           ))}
         </div>
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[#53687c]">
@@ -176,7 +188,7 @@ export default function OperationsCalendar() {
                       const cell = statusFor(room, day, bookings, blocked);
                       return <td key={day} className="border-l border-[#edf1f4] p-1 align-middle text-center">
                         <button type="button" title={cell.text + " · " + day}
-                          onClick={() => setSelected({ room, day, cell })} className={"w-full min-h-[38px] px-1 py-2 text-[10px] font-semibold focus:outline focus:outline-2 focus:outline-[#6288a5] " + cell.color}>
+                          onClick={() => setSelected({ room, day, cell, periodKey })} className={"w-full min-h-[38px] px-1 py-2 text-[10px] font-semibold focus:outline focus:outline-2 focus:outline-[#6288a5] " + cell.color}>
                           {mode === "month" ? (cell.text === "Sin registro" ? "—" : cell.text.slice(0, 6)) : cell.text}
                         </button>
                       </td>;
@@ -187,7 +199,7 @@ export default function OperationsCalendar() {
             </table>
           </div>
         )}
-        {selected && <section aria-live="polite" className="mt-5 border border-[#cbd9e4] bg-white p-5">
+        {selected && snapshot && selected.periodKey === periodKey && !loading && <section aria-live="polite" className="mt-5 border border-[#cbd9e4] bg-white p-5">
           <div className="flex items-start justify-between gap-4"><h2 className="font-serif text-xl">{selected.room.name} · {friendlyDay(selected.day)}</h2><button type="button" onClick={() => setSelected(null)} aria-label="Cerrar detalle">✕</button></div>
           <p className="mt-2 text-sm"><strong>Registro interno:</strong> {selected.cell.text}</p>
           {selected.cell.detail?.status && <p className="mt-1 text-sm">Estado de reserva: {selected.cell.detail.status}.</p>}
