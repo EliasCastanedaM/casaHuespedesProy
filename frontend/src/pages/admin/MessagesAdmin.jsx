@@ -287,7 +287,7 @@ export default function MessagesAdmin() {
   }
 
   async function toggleMode() {
-    if (!selected || saving || selected.resolved_at) return;
+    if (!selected || saving || selected.resolved_at || selected.channel === "whatsapp") return;
     try {
       setSaving(true);
       const response = await api.patch(conversationPath(selected) + "/handoff", {
@@ -306,7 +306,7 @@ export default function MessagesAdmin() {
   }
 
   async function toggleResolved() {
-    if (!selected || saving) return;
+    if (!selected || saving || selected.channel === "whatsapp") return;
     try {
       setSaving(true);
       const response = await api.patch(conversationPath(selected) + "/resolved", {
@@ -328,7 +328,7 @@ export default function MessagesAdmin() {
   async function sendMessage(event) {
     event.preventDefault();
     const text = draft.trim();
-    if (!selected || !text || saving || !selected.handoff_active || selected.resolved_at) return;
+    if (!selected || selected.channel === "whatsapp" || !text || saving || !selected.handoff_active || selected.resolved_at) return;
     try {
       setSaving(true);
       const response = await api.post(conversationPath(selected) + "/messages", {
@@ -371,6 +371,12 @@ export default function MessagesAdmin() {
 
   async function confirmReservation() {
     const amount = Number(confirmAmount);
+    // La confirmación automática por WhatsApp no se habilita hasta la
+    // aprobación de Meta y una autorización operativa posterior.
+    if (selected?.channel === "whatsapp") {
+      setError("La gestión de WhatsApp está pendiente de aprobación de Meta.");
+      return;
+    }
     if (!selected || selected.channel !== "whatsapp" || saving ||
         !confirmCategory || !Number.isFinite(amount) || amount <= 0) {
       setError("Selecciona una categoría e indica el importe total confirmado.");
@@ -618,11 +624,11 @@ export default function MessagesAdmin() {
                   ) : null}
                   <div className="flex gap-2">
                     <textarea value={draft} onChange={(event) => setDraft(event.target.value)}
-                      disabled={!selected.handoff_active || Boolean(selected.resolved_at) || saving}
+                      disabled={selected.channel === "whatsapp" || !selected.handoff_active || Boolean(selected.resolved_at) || saving}
                       maxLength={4000} rows={2} placeholder="Escribe un mensaje..."
                       className="min-h-[56px] flex-1 resize-none border border-[#d2c8ba] p-3 text-sm outline-none focus:border-[#075a78] disabled:bg-[#f1f1f1]" />
                     <button type="submit" aria-label="Enviar mensaje"
-                      disabled={!selected.handoff_active || Boolean(selected.resolved_at) || !draft.trim() || saving}
+                      disabled={selected.channel === "whatsapp" || !selected.handoff_active || Boolean(selected.resolved_at) || !draft.trim() || saving}
                       className="flex items-center justify-center gap-2 bg-[#003647] px-5 font-bold text-white hover:bg-[#075a78] disabled:cursor-not-allowed disabled:opacity-40">
                       <Send size={17} /><span className="hidden sm:inline">Enviar</span>
                     </button>
@@ -792,12 +798,12 @@ export default function MessagesAdmin() {
               <div className="border-b border-[#ded4c4] p-4">
                 <h3 className="mb-3 text-sm font-bold">Acciones rápidas</h3>
                 <div className="grid grid-cols-1 gap-2">
-                  <button type="button" onClick={toggleMode} disabled={saving || Boolean(selected.resolved_at)}
+                  <button type="button" onClick={toggleMode} disabled={saving || Boolean(selected.resolved_at) || selected.channel === "whatsapp"}
                     className="flex items-center justify-center gap-2 border border-[#003647] bg-[#003647] px-3 py-2.5 text-sm font-bold text-white hover:bg-[#075a78] disabled:opacity-40">
                     {selected.handoff_active ? <Bot size={16} /> : <Headphones size={16} />}
                     {selected.handoff_active ? "Volver a IA" : "Pasar a manual"}
                   </button>
-                  <button type="button" onClick={toggleResolved} disabled={saving}
+                  <button type="button" onClick={toggleResolved} disabled={saving || selected.channel === "whatsapp"}
                     className="flex items-center justify-center gap-2 border border-[#a77735] px-3 py-2.5 text-sm font-bold text-[#855b2a] hover:bg-[#fcf2e3] disabled:opacity-40">
                     {selected.resolved_at ? <RotateCcw size={16} /> : <CheckCheck size={16} />}
                     {selected.resolved_at ? "Reabrir conversación" : "Marcar como resuelta"}
