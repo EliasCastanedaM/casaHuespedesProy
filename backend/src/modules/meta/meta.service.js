@@ -1515,6 +1515,12 @@ export async function processMetaMessage(message, overrides = {}) {
     if (incomingId) {
       const existingOutgoing = await dependencies.findOutgoing(incomingId);
       if (existingOutgoing) {
+        // Un operador pudo contestar desde WhatsApp Business o el panel
+        // durante la caída. No recuperar respuestas automáticas bajo handoff.
+        if (await dependencies.getHandoff(message.channel, message.externalUserId)) {
+          await dependencies.complete(message);
+          return { status: "handoff_active_during_recovery" };
+        }
         await deliverPersistedOutgoing(
           message,
           existingOutgoing,
