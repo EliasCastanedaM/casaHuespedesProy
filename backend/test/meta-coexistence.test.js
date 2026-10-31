@@ -6,6 +6,9 @@ import {
 } from "../src/modules/meta/meta.coexistence.js";
 import { processMetaMessage } from "../src/modules/meta/meta.service.js";
 
+// Mantener el fixture reciente y estable dentro de la ejecución de pruebas.
+const CURRENT_ECHO_TIMESTAMP = String(Math.floor(Date.now() / 1000));
+
 const envelope = (field, value) => ({
   object: "whatsapp_business_account",
   entry: [{ id: "waba-test", changes: [{ field, value }] }],
@@ -17,7 +20,7 @@ function echoPayload(id = "wamid.echo1") {
     message_echoes: [{
       id, from: "51988888888", to: "51977777777",
       type: "text", text: { body: "Lo revisamos en recepción" },
-      timestamp: "1793200000",
+      timestamp: CURRENT_ECHO_TIMESTAMP,
     }],
   });
 }
@@ -221,4 +224,51 @@ test("ciclo completo simulado: eco del personal silencia IA y reanudación habil
   assert.equal(generated, 1);
   assert.equal(sent, 1);
   assert.equal(completed, 2);
+});
+
+
+test("un eco de 2017 se archiva pero no activa atención humana en 2026", async () => {
+  const state = fakeDatabase();
+  const payload = echoPayload("wamid.historical-echo");
+  payload.entry[0].changes[0].value.message_echoes[0].timestamp = "1500000000";
+  const result = await persistCoexistenceEvents(payload, state.db);
+
+  assert.deepEqual(result, { archived: 1, echoes: 0 });
+  assert.equal(state.messages.has("wamid.historical-echo"), true);
+  assert.equal(state.conversations.get("51977777777")?.handoff_active, false);
+  assert.ok(state.operations.includes("commit"));
+});
+
+test("un eco de 25 horas, sin fecha o con fecha futura tampoco toma el control", async () => {
+  const nowSecs = Math.floor(Date.now() / 1000);
+  const cases = [
+    ["old", String(nowSecs - 25 * 60 * 60)],
+    ["missing", null],
+    ["future", String(nowSecs + 60 * 60)],
+  ];
+  for (const [label, timestamp] of cases) {
+    const state = fakeDatabase();
+    const payload = echoPayload("wamid." + label);
+    if (timestamp === null) {
+      delete payload.entry[0].changes[0].value.message_echoes[0].timestamp;
+    } else {
+      payload.entry[0].changes[0].value.message_echoes[0].timestamp = timestamp;
+    }
+    const result = await persistCoexistenceEvents(payload, state.db);
+    assert.deepEqual(result, { archived: 1, echoes: 0 }, label);
+    assert.equal(state.messages.has("wamid." + label), true, label);
+    assert.equal(state.conversations.get("51977777777")?.handoff_active, false, label);
+  }
+});
+
+test("una intervención reciente de 23 horas conserva el traspaso a humano", async () => {
+  const state = fakeDatabase();
+  const payload = echoPayload("wamid.recent-echo");
+  payload.entry[0].changes[0].value.message_echoes[0].timestamp =
+    String(Math.floor(Date.now() / 1000) - 23 * 60 * 60);
+  assert.deepEqual(await persistCoexistenceEvents(payload, state.db), {
+    archived: 1,
+    echoes: 1,
+  });
+  assert.equal(state.conversations.get("51977777777")?.handoff_active, true);
 });

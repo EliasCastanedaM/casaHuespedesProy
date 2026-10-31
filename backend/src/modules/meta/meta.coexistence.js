@@ -5,6 +5,21 @@ import crypto from "node:crypto";
 
 const FIELDS = new Set(["history", "smb_app_state_sync", "smb_message_echoes"]);
 
+// Un eco del celular indica una intervención humana actual solo si fue
+// enviado recientemente. Un historial muy antiguo puede llegar tarde o
+// importarse por primera vez y no debe quitarle el control al asesor.
+const HUMAN_ECHO_HANDOFF_WINDOW_MS = 24 * 60 * 60 * 1000;
+const HUMAN_ECHO_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
+
+function isCurrentHumanEcho(timestamp, nowMs = Date.now()) {
+  if (!timestamp) return false;
+  const sentAtMs = Date.parse(timestamp);
+  if (!Number.isFinite(sentAtMs)) return false;
+  const ageMs = nowMs - sentAtMs;
+  return ageMs >= -HUMAN_ECHO_FUTURE_TOLERANCE_MS &&
+    ageMs <= HUMAN_ECHO_HANDOFF_WINDOW_MS;
+}
+
 function object(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
@@ -125,9 +140,10 @@ export async function persistCoexistenceEvents(body, db) {
           [echo.externalUserId, echo.messageId, echo.messageType,
             echo.content, echo.timestamp]
         );
-        if (inserted.rows.length) {
-          // Una nueva intervención del móvil activa atención humana; un
-          // reintento de Meta NO debe reactivar un chat ya devuelto al bot.
+        if (inserted.rows.length && isCurrentHumanEcho(echo.timestamp)) {
+          // Solo una intervención reciente del teléfono activa el traspaso.
+          // El eco antiguo se conserva en el historial, sin pausar al bot.
+          // Un reintento de Meta tampoco reactiva un chat ya devuelto a IA.
           await client.query(
             "UPDATE meta_conversations SET handoff_active = TRUE, " +
             "handoff_requested_at = CURRENT_TIMESTAMP, handoff_resolved_at = NULL, " +
