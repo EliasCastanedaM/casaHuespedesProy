@@ -19,6 +19,11 @@ const menuItems = [
     icon: "📅",
   },
   {
+    label: "Calendario",
+    path: "/admin/calendario",
+    icon: "🗓️",
+  },
+  {
     label: "Consultas",
     path: "/admin/consultas",
     icon: "💬",
@@ -27,11 +32,6 @@ const menuItems = [
     label: "Mensajes",
     path: "/admin/mensajes",
     icon: "📨",
-  },
-  {
-    label: "Coexistencia WhatsApp",
-    path: "/admin/coexistencia-whatsapp",
-    icon: "🔗",
   },
   {
     label: "Habitaciones",
