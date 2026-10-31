@@ -965,9 +965,24 @@ async function graphPost(path, accessToken, payload) {
 
   const responseText = await response.text();
   if (!response.ok) {
-    throw new Error(
+    let graphErrorCode = null;
+    try {
+      const parsed = JSON.parse(responseText);
+      const code = Number(parsed?.error?.code);
+      if (Number.isInteger(code) && code > 0) graphErrorCode = code;
+    } catch {
+      // Meta puede devolver un cuerpo que no sea JSON.
+    }
+
+    const error = new Error(
       "Meta respondió " + response.status + ": " + responseText.slice(0, 300)
     );
+    // Repetir el mismo token inválido o un mensaje fuera de la ventana
+    // de servicio no resuelve la causa y puede generar peticiones duplicadas.
+    error.nonRetryable = [401, 403].includes(response.status) ||
+      [190, 131047].includes(graphErrorCode);
+    if (graphErrorCode !== null) error.graphErrorCode = graphErrorCode;
+    throw error;
   }
 
   try {
