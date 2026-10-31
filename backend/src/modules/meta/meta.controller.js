@@ -185,7 +185,16 @@ export async function receiveWebhookController(req, res, next) {
     // Primero persistimos los eventos de coexistencia. Un eco del teléfono
     // activa el handoff ANTES de procesar posibles mensajes del huésped.
     // Los eventos de historial/contactos jamás disparan una respuesta IA.
-    await persistCoexistenceEvents(req.body, pool);
+    const coexistence = await persistCoexistenceEvents(req.body, pool);
+    if (coexistence.archived > 0 || coexistence.echoes > 0) {
+      // Solo conteos: permiten verificar el takeover móvil en Render sin
+      // revelar identificadores, texto de huéspedes ni payload de Meta.
+      auditMeta("coexistence_persisted", {
+        requestId,
+        archivedCount: coexistence.archived,
+        humanEchoCount: coexistence.echoes,
+      });
+    }
 
     const messages = parseMetaWebhook(req.body, {
       onIgnored: ({ externalUserId, messageId, ...ignored }) => auditMeta(
