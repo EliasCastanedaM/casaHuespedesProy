@@ -15,9 +15,11 @@ function dayISO(value) {
 }
 
 function todayLima() {
-  return new Intl.DateTimeFormat("en-CA", {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(new Date());
+  }).formatToParts(new Date());
+  const value = (type) => parts.find((part) => part.type === type)?.value;
+  return value("year") + "-" + value("month") + "-" + value("day");
 }
 
 function addDays(dateText, count) {
