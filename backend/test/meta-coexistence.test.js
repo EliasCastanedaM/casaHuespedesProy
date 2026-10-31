@@ -164,3 +164,61 @@ test("reanálisis del handoff evita respuesta si alguien respondió durante Open
   assert.equal(completed, 1);
   assert.equal(handoffReads, 2);
 });
+
+
+test("ciclo completo simulado: eco del personal silencia IA y reanudación habilita respuesta", async () => {
+  const state = fakeDatabase();
+  const imported = await persistCoexistenceEvents(echoPayload("wamid.takeover"), state.db);
+  assert.deepEqual(imported, { archived: 1, echoes: 1 });
+  assert.equal(state.conversations.get("51977777777").handoff_active, true);
+
+  let generated = 0;
+  let sent = 0;
+  let completed = 0;
+  const dependencies = {
+    claim: async () => true,
+    release: async (message, error) => { throw error; },
+    complete: async () => { completed++; },
+    getHandoff: async () => state.conversations.get("51977777777").handoff_active,
+    updateHandoffContext: async () => true,
+    loadHistory: async () => [],
+    isFirstMetaIncomingMessage: async () => false,
+    hasPreviouslySentCatalog: async () => false,
+    generateReply: async () => {
+      generated++;
+      return { mode: "answer", reply: "Respuesta automática de prueba" };
+    },
+    createOutgoing: async (_message, reply) => ({
+      id: null, author: "assistant", status: "pending", content: reply,
+    }),
+    sendReply: async () => { sent++; return { messages: [{ id: "wamid.mock" }] }; },
+    recordOutgoing: async () => {},
+    sleep: async () => {},
+  };
+  const incoming = (messageId) => ({
+    channel: "whatsapp",
+    externalUserId: "51977777777",
+    messageId,
+    text: "¿Tienen habitaciones?",
+    messageType: "text",
+    timestamp: "1793200010",
+  });
+
+  const duringHandoff = await processMetaMessage(incoming("wamid.guest-during-handoff"), dependencies);
+  assert.equal(duringHandoff.status, "handoff_active");
+  assert.equal(generated, 0);
+  assert.equal(sent, 0);
+  assert.equal(completed, 1);
+
+  // Repetir un eco de Meta no debe reabrir handoff después de devolver el chat.
+  state.conversations.get("51977777777").handoff_active = false;
+  const duplicateEcho = await persistCoexistenceEvents(echoPayload("wamid.takeover"), state.db);
+  assert.deepEqual(duplicateEcho, { archived: 0, echoes: 0 });
+  assert.equal(state.conversations.get("51977777777").handoff_active, false);
+
+  const afterResume = await processMetaMessage(incoming("wamid.guest-after-resume"), dependencies);
+  assert.equal(afterResume.status, "replied");
+  assert.equal(generated, 1);
+  assert.equal(sent, 1);
+  assert.equal(completed, 2);
+});
