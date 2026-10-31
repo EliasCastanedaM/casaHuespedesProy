@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api.js";
+import { startCalendarRequest } from "./calendarRequest.js";
 
 const LEGEND = [
   ["bg-[#dceee7] text-[#235440]", "Sin registro interno"],
@@ -91,29 +92,21 @@ export default function OperationsCalendar() {
   const reload = () => setRefreshCount((previous) => previous + 1);
 
   useEffect(() => {
-    const abort = new AbortController();
-    let active = true;
     setLoading(true);
     setError("");
     setSelected(null);
-    api.get("/bookings/calendar", { params: period, signal: abort.signal })
-      .then((response) => {
-        if (!active) return;
-        setLoaded({ key: periodKey, data: response.data.data });
-      })
-      .catch((failure) => {
-        if (!active || failure.code === "ERR_CANCELED") return;
+    return startCalendarRequest({
+      period,
+      periodKey,
+      request: (requestedPeriod, signal) =>
+        api.get("/bookings/calendar", { params: requestedPeriod, signal }),
+      onSuccess: setLoaded,
+      onError: (failure) => {
         setLoaded({ key: periodKey, data: null });
         setError(failure.response?.data?.message || "No se pudo consultar el calendario interno.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-      abort.abort();
-    };
+      },
+      onFinish: () => setLoading(false),
+    });
   }, [period, periodKey, refreshCount]);
 
   function navigate(direction) {
