@@ -47,7 +47,12 @@ function messageAudit(message) {
     ...(privateTag(message.messageId) ? { messageTag: privateTag(message.messageId) } : {}),
     ...(privateTag(message.externalUserId) ? { senderTag: privateTag(message.externalUserId) } : {}),
     ...(message.wabaId ? { wabaId: message.wabaId } : {}),
-    ...(message.phoneNumberId ? { phoneNumberId: message.phoneNumberId } : {}),
+    ...(message.phoneNumberId ? {
+      phoneNumberId: message.phoneNumberId,
+      configuredSenderMatchesInbound: message.channel === "whatsapp" &&
+        Boolean(env.meta.whatsappPhoneNumberId) &&
+        message.phoneNumberId === env.meta.whatsappPhoneNumberId,
+    } : {}),
   };
 }
 
