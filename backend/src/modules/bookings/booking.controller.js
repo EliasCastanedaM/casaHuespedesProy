@@ -8,6 +8,7 @@ import {
   updateBookingStatusService,
 } from "./booking.service.js";
 import { searchAvailableRoomCategoriesService } from "../rooms/roomCategory.service.js";
+import { getInternalCalendarService } from "./booking-calendar.service.js";
 
 // Verifica disponibilidad comercial por categoría.
 // El huésped nunca selecciona ni conoce el room_id físico.
@@ -298,6 +299,18 @@ export async function deleteBookingController(req, res, next) {
       message: "Reserva eliminada correctamente.",
       data: booking,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getInternalCalendarController(req, res, next) {
+  try {
+    const result = await getInternalCalendarService({
+      start: req.query.start,
+      days: req.query.days,
+    });
+    return res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
