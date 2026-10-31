@@ -5,3 +5,8 @@ node_modules/
 npm-debug.log*
 .DS_Store
 coverage/
+
+# Backups y manifiestos locales: nunca subir datos de huéspedes
+.backup/
+*.dump
+*.backup
