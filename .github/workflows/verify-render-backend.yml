@@ -3,6 +3,11 @@ on:
   push:
     branches:
       - main
+    # Render ejecuta solo backend/; un cambio exclusivamente de frontend
+    # no debe exigir un nuevo SHA al servicio que sigue saludable.
+    paths:
+      - 'backend/**'
+      - 'render.yaml'
   workflow_dispatch:
 
 permissions:
@@ -17,6 +22,7 @@ jobs:
         env:
           HEALTH_URL: https://casa-real-huespedes-backend.onrender.com/api/health
           EXPECTED_SHA: ${{ github.sha }}
+          STRICT_SHA: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
           for attempt in $(seq 1 24); do
@@ -25,6 +31,12 @@ jobs:
             ok=$(echo "$response" | jq -r '.success // false' 2>/dev/null || true)
             if [[ "$ok" == "true" && "$deployed" == "$EXPECTED_SHA" ]]; then
               echo "Render backend is healthy and running commit $EXPECTED_SHA"
+              exit 0
+            fi
+            # Un workflow_dispatch manual también sirve como verificación
+            # de salud aunque main contenga cambios solo de interfaz.
+            if [[ "$ok" == "true" && "$STRICT_SHA" == "false" && -n "$deployed" ]]; then
+              echo "Render backend is healthy at commit $deployed (manual check)"
               exit 0
             fi
             echo "Attempt $attempt: backend has commit ${deployed:-not-reported}; expected $EXPECTED_SHA"
