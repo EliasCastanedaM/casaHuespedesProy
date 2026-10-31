@@ -614,7 +614,12 @@ export default function MessagesAdmin() {
                   )}
                 </div>
 
-                <form onSubmit={sendMessage} className="border-t border-[#ded4c4] bg-white p-3">
+                {selected.channel === "whatsapp" && (
+                   <p className="border-t border-[#ead4a7] bg-[#fff4df] px-4 py-3 text-xs font-semibold text-[#76511e]">
+                     WhatsApp en modo consulta. Las operaciones del panel están pendientes de aprobación de Meta.
+                   </p>
+                 )}
+                 <form onSubmit={sendMessage} className="border-t border-[#ded4c4] bg-white p-3">
                   {!selected.handoff_active || selected.resolved_at ? (
                     <p className="mb-2 text-xs font-semibold text-[#85612c]">
                       {selected.resolved_at
@@ -780,7 +785,7 @@ export default function MessagesAdmin() {
                     <button
                       type="button"
                       onClick={confirmReservation}
-                      disabled={saving || !confirmCategory || !confirmAmount || Number(confirmAmount) <= 0 ||
+                      disabled={selected.channel === "whatsapp" || saving || !confirmCategory || !confirmAmount || Number(confirmAmount) <= 0 ||
                         (Number(reservation.pets || 0) > 0 && !confirmPetsAuthorized) ||
                         (Array.isArray(reservation.child_ages) &&
                           reservation.child_ages.some((age) => Number(age) <= 4) &&
