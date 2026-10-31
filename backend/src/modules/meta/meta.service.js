@@ -910,11 +910,12 @@ export async function applyMetaStatusUpdates(updates, db = pool) {
          WHEN $2 = 'read' AND status IN ('pending', 'processing', 'failed', 'sent', 'delivered', 'read') THEN 'read'
          WHEN $2 = 'delivered' AND status IN ('pending', 'processing', 'failed', 'sent', 'delivered') THEN 'delivered'
          WHEN $2 = 'sent' AND status IN ('pending', 'processing', 'failed', 'sent') THEN 'sent'
-         WHEN $2 = 'failed' AND status <> 'read' THEN 'failed'
+         -- No dejar que un fallo tardío revierta una entrega confirmada.
+         WHEN $2 = 'failed' AND status NOT IN ('delivered', 'read') THEN 'failed'
          ELSE status
        END,
        error_detail = CASE
-         WHEN $2 = 'failed' THEN NULLIF($3, '')
+         WHEN $2 = 'failed' AND status NOT IN ('delivered', 'read') THEN NULLIF($3, '')
          WHEN $2 IN ('sent', 'delivered', 'read') THEN NULL
          ELSE error_detail
        END,
@@ -1319,6 +1320,12 @@ async function deliverPersistedOutgoing(
     return outgoing;
   }
 
+  // Una aceptación previa de Meta con ID NO implica entrega. Si llegó un
+  // estado fallido asíncrono, conservarlo sin reenviar al huésped.
+  if (message.channel === "whatsapp" && outgoing?.meta_message_id) {
+    return outgoing;
+  }
+
   if (message.channel === "instagram" && outgoing?.id && dependencies.db) {
     return deliverInstagramPersistedOutgoing(
       message,
@@ -1520,6 +1527,12 @@ export async function processMetaMessage(message, overrides = {}) {
         if (await dependencies.getHandoff(message.channel, message.externalUserId)) {
           await dependencies.complete(message);
           return { status: "handoff_active_during_recovery" };
+        }
+        // Un ID de Meta confirma aceptación previa. No equivale a entrega,
+        // pero tampoco permite un reenvío automático durante la recuperación.
+        if (message.channel === "whatsapp" && existingOutgoing.meta_message_id) {
+          await dependencies.complete(message);
+          return { status: "outgoing_already_accepted_by_meta" };
         }
         await deliverPersistedOutgoing(
           message,
