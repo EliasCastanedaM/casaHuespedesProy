@@ -444,12 +444,19 @@ async function releaseMessageClaim(message, error = null, db = pool) {
   try {
     await db.query(
       `UPDATE meta_messages
-       SET status = 'failed', error_detail = $3, updated_at = CURRENT_TIMESTAMP
+       SET status = 'failed',
+           error_detail = $3,
+           -- En un recovery no se conserva el phone_number_id en esta tabla.
+           -- Un fallo por emisor incorrecto debe permanecer terminal.
+           processing_attempts = CASE WHEN $4 THEN $5 ELSE processing_attempts END,
+           updated_at = CURRENT_TIMESTAMP
        WHERE channel = $1 AND meta_message_id = $2 AND direction = 'incoming';`,
       [
         message.channel,
         message.messageId,
         cleanText(error?.message || error).slice(0, 1000) || null,
+        error?.code === "WA_PHONE_NUMBER_MISMATCH",
+        MAX_PROCESSING_ATTEMPTS,
       ]
     );
   } catch {
@@ -980,9 +987,22 @@ function whatsappRecipientAddress(externalUserId) {
     : { recipient: recipientId };
 }
 
-async function sendWhatsApp(externalUserId, reply) {
+async function sendWhatsApp(externalUserId, reply, inboundPhoneNumberId = "") {
   if (!env.meta.whatsappPhoneNumberId) {
     throw new Error("Falta WHATSAPP_PHONE_NUMBER_ID.");
+  }
+
+  // La ventana de servicio pertenece al número que recibe el webhook.
+  // Con otro emisor Meta puede aceptar el envío y marcarlo luego 131047.
+  const origin = cleanText(inboundPhoneNumberId);
+  const sender = cleanText(env.meta.whatsappPhoneNumberId);
+  if (origin && origin !== sender) {
+    const error = new Error(
+      "El número WhatsApp de entrada no coincide con el emisor configurado."
+    );
+    error.code = "WA_PHONE_NUMBER_MISMATCH";
+    error.nonRetryable = true;
+    throw error;
   }
 
   return graphPost(
@@ -1029,7 +1049,7 @@ async function sendInstagram(externalUserId, reply) {
 
 export async function sendMetaReply(message, reply) {
   if (message.channel === "whatsapp") {
-    return sendWhatsApp(message.externalUserId, reply);
+    return sendWhatsApp(message.externalUserId, reply, message.phoneNumberId);
   }
   if (message.channel === "facebook") {
     return sendFacebook(message.externalUserId, reply);
@@ -1108,6 +1128,7 @@ async function sendPartWithRetry(
     try {
       return await send(message, part);
     } catch (error) {
+      if (error?.nonRetryable === true) throw error;
       lastError = error;
     }
   }
