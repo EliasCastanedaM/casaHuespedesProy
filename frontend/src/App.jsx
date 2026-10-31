@@ -7,6 +7,7 @@ import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import PublicLayout from "./layouts/PublicLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import ScheduleAdmin from "./pages/admin/ScheduleAdmin";
+import OperationsCalendar from "./pages/admin/OperationsCalendar";
 import InquiriesAdmin from "./pages/admin/InquiriesAdmin";
 import Home from "./pages/public/Home";
 import Rooms from "./pages/public/Rooms";
@@ -31,7 +32,6 @@ import RoomsAdmin from "./pages/admin/RoomsAdmin";
 import GalleryAdmin from "./pages/admin/GalleryAdmin";
 import MessagesAdmin from "./pages/admin/MessagesAdmin";
 import CommercialAdmin from "./pages/admin/CommercialAdmin";
-import WhatsAppCoexistenceAdmin from "./pages/admin/WhatsAppCoexistenceAdmin";
 
 export default function App() {
   return (
@@ -73,7 +73,9 @@ export default function App() {
             <Route path="reservas" element={<BookingsAdmin />} />
             <Route path="consultas" element={<InquiriesAdmin />} />
             <Route path="mensajes" element={<MessagesAdmin />} />
-            <Route path="coexistencia-whatsapp" element={<WhatsAppCoexistenceAdmin />} />
+            {/* Coexistencia pendiente de aprobación de Meta. Sin configuración en el panel. */}
+            <Route path="coexistencia-whatsapp" element={<Navigate to="/admin/mensajes" replace />} />
+            <Route path="calendario" element={<OperationsCalendar />} />
             <Route path="horarios" element={<ScheduleAdmin />} />
             <Route path="reglas-comerciales" element={<CommercialAdmin />} />
             <Route path="clientes" element={<CustomersAdmin />} />

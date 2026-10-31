@@ -8,6 +8,7 @@ import {
   deleteBookingController,
   getBookingPaymentStatusController,
   getAllBookingsController,
+  getInternalCalendarController,
   reportBookingPaymentController,
   updateBookingStatusController,
 } from "./booking.controller.js";
@@ -34,6 +35,9 @@ router.get(
   "/:id/payment-status",
   getBookingPaymentStatusController
 );
+
+// Calendario interno de solo lectura. Nunca consulta canales externos.
+router.get("/calendar", requireAdminAuth, getInternalCalendarController);
 
 // Ruta protegida para listar reservas
 router.get(
