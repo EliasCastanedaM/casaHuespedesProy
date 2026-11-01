@@ -6,6 +6,12 @@ import {
   RotateCcw, Search, Send, UserRound,
 } from "lucide-react";
 import api from "../../services/api";
+import {
+  canChangeConversationMode,
+  canChangeConversationResolution,
+  canComposeManualMessage,
+  canSendManualMessage,
+} from "./messageInteractionPolicy.js";
 
 const CHANNELS = [
   { id: "all", label: "Todas", icon: MessageSquare },
@@ -287,7 +293,7 @@ export default function MessagesAdmin() {
   }
 
   async function toggleMode() {
-    if (!selected || saving || selected.resolved_at || selected.channel === "whatsapp") return;
+    if (!canChangeConversationMode(selected, saving)) return;
     try {
       setSaving(true);
       const response = await api.patch(conversationPath(selected) + "/handoff", {
@@ -306,7 +312,7 @@ export default function MessagesAdmin() {
   }
 
   async function toggleResolved() {
-    if (!selected || saving || selected.channel === "whatsapp") return;
+    if (!canChangeConversationResolution(selected, saving)) return;
     try {
       setSaving(true);
       const response = await api.patch(conversationPath(selected) + "/resolved", {
@@ -328,7 +334,7 @@ export default function MessagesAdmin() {
   async function sendMessage(event) {
     event.preventDefault();
     const text = draft.trim();
-    if (!selected || selected.channel === "whatsapp" || !text || saving || !selected.handoff_active || selected.resolved_at) return;
+    if (!canSendManualMessage(selected, saving, text)) return;
     try {
       setSaving(true);
       const response = await api.post(conversationPath(selected) + "/messages", {
@@ -615,8 +621,11 @@ export default function MessagesAdmin() {
                 </div>
 
                 {selected.channel === "whatsapp" && (
-                   <p className="border-t border-[#ead4a7] bg-[#fff4df] px-4 py-3 text-xs font-semibold text-[#76511e]">
-                     WhatsApp en modo consulta. Las operaciones del panel están pendientes de aprobación de Meta.
+                   <p className="border-t border-[#d3e6df] bg-[#edf8f3] px-4 py-3 text-xs font-semibold text-[#245c48]">
+                     Atención mediante WhatsApp Cloud API: puedes tomar el chat para responder manualmente
+                     y después devolverlo a la IA. La coexistencia con WhatsApp Business del celular
+                     sigue pendiente de aprobación de Meta. Fuera de la ventana de atención,
+                     Meta puede rechazar mensajes libres.
                    </p>
                  )}
                  <form onSubmit={sendMessage} className="border-t border-[#ded4c4] bg-white p-3">
@@ -629,11 +638,11 @@ export default function MessagesAdmin() {
                   ) : null}
                   <div className="flex gap-2">
                     <textarea value={draft} onChange={(event) => setDraft(event.target.value)}
-                      disabled={selected.channel === "whatsapp" || !selected.handoff_active || Boolean(selected.resolved_at) || saving}
+                      disabled={!canComposeManualMessage(selected, saving)}
                       maxLength={4000} rows={2} placeholder="Escribe un mensaje..."
                       className="min-h-[56px] flex-1 resize-none border border-[#d2c8ba] p-3 text-sm outline-none focus:border-[#075a78] disabled:bg-[#f1f1f1]" />
                     <button type="submit" aria-label="Enviar mensaje"
-                      disabled={selected.channel === "whatsapp" || !selected.handoff_active || Boolean(selected.resolved_at) || !draft.trim() || saving}
+                      disabled={!canSendManualMessage(selected, saving, draft)}
                       className="flex items-center justify-center gap-2 bg-[#003647] px-5 font-bold text-white hover:bg-[#075a78] disabled:cursor-not-allowed disabled:opacity-40">
                       <Send size={17} /><span className="hidden sm:inline">Enviar</span>
                     </button>
@@ -803,12 +812,12 @@ export default function MessagesAdmin() {
               <div className="border-b border-[#ded4c4] p-4">
                 <h3 className="mb-3 text-sm font-bold">Acciones rápidas</h3>
                 <div className="grid grid-cols-1 gap-2">
-                  <button type="button" onClick={toggleMode} disabled={saving || Boolean(selected.resolved_at) || selected.channel === "whatsapp"}
+                  <button type="button" onClick={toggleMode} disabled={!canChangeConversationMode(selected, saving)}
                     className="flex items-center justify-center gap-2 border border-[#003647] bg-[#003647] px-3 py-2.5 text-sm font-bold text-white hover:bg-[#075a78] disabled:opacity-40">
                     {selected.handoff_active ? <Bot size={16} /> : <Headphones size={16} />}
                     {selected.handoff_active ? "Volver a IA" : "Pasar a manual"}
                   </button>
-                  <button type="button" onClick={toggleResolved} disabled={saving || selected.channel === "whatsapp"}
+                  <button type="button" onClick={toggleResolved} disabled={!canChangeConversationResolution(selected, saving)}
                     className="flex items-center justify-center gap-2 border border-[#a77735] px-3 py-2.5 text-sm font-bold text-[#855b2a] hover:bg-[#fcf2e3] disabled:opacity-40">
                     {selected.resolved_at ? <RotateCcw size={16} /> : <CheckCheck size={16} />}
                     {selected.resolved_at ? "Reabrir conversación" : "Marcar como resuelta"}
