@@ -58,5 +58,7 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Test admin calendar request cancellation
         run: npm run test:calendar
+      - name: Test manual chat control for all channels
+        run: npm run test:messages
       - name: Verify frontend build
         run: npm run build
