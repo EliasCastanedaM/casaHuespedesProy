@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "test:calendar": "node --test test/admin-calendar-request.test.js",
+    "test:messages": "node --test test/admin-whatsapp-interactions.test.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
