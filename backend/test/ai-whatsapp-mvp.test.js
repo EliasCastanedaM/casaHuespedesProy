@@ -258,6 +258,9 @@ test("la aprobación humana habilita datos del huésped y dos métodos de pago",
   assert.equal(email.context.whatsapp_mvp.customer_email, "ana@example.com");
   assert.match(email.reply, /Pagar en el establecimiento/);
   assert.match(email.reply, /Pagar ahora/);
+  assert.match(email.reply, /\n1\)/);
+  assert.match(email.reply, /\n2\)/);
+  assert.doesNotMatch(email.reply, /\\n/);
 
   const onSite = turn("1", email.context, new Date(), { externalUserId: "51987654321" });
   assert.equal(onSite.action, "create_booking");
@@ -468,4 +471,26 @@ test("una preferencia de pago antes de aprobación no crea reservas ni valida co
   assert.equal(result.context.whatsapp_mvp.preferred_payment_method, "pay_at_property");
   assert.equal(result.context.whatsapp_mvp.payment_method, undefined);
   assert.match(result.reply, /pendiente|aprobaci[oó]n/i);
+});
+
+
+test("las opciones de pago usan líneas reales en los cuatro idiomas", () => {
+  for (const language of ["es", "en", "pt", "fr"]) {
+    const context = {
+      state: "whatsapp_mvp",
+      whatsapp_mvp: {
+        state: "awaiting_customer_email", awaiting: "customer_email", language,
+        check_in: "2026-11-20", check_out: "2026-11-22", adults: 2,
+        total_guests: 2, children: 0, child_ages: [], pets: 0,
+        staff_confirmation: { confirmed: true, total_amount: 240 },
+      },
+    };
+    const email = turn("guest@example.com", context);
+    assert.equal(email.mode, "whatsapp_mvp_payment_choice", language);
+    assert.equal(email.reply.split("\n").length, 3, language);
+    assert.doesNotMatch(email.reply, /\\n/, language);
+    assert.match(email.reply, /S\/ 240\.00/, language);
+    assert.equal(turn("1", email.context).paymentMethod, "pay_at_property", language);
+    assert.equal(turn("2", email.context).paymentMethod, "culqi_link", language);
+  }
 });
