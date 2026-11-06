@@ -12,6 +12,7 @@ import {
   reportBookingPaymentByIntentService,
 } from "../bookings/booking.service.js";
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
+import { publicAiCategory } from "./ai.catalog.js";
 import { responseInput, shouldReuseOpenAiResponseId } from "./ai.context-window.js";
 import { recordOpenAiUsage } from "./ai.usage.js";
 import { isHotelLocationInquiry, formatHotelLocationReply } from "./ai.location-info.js";
@@ -637,23 +638,6 @@ async function ensureDurableBookingIntent(
   }
 }
 
-function publicCategory(category) {
-  return {
-    slug: category.slug,
-    name: category.name,
-    total_quantity: Number(category.total_quantity || 0),
-    available_quantity:
-      category.available_quantity === undefined
-        ? undefined
-        : Number(category.available_quantity || 0),
-    capacity: Number(category.capacity || 1),
-    bed_description: category.bed_description || null,
-    description: category.description || null,
-    price_per_night: Number(category.price_per_night || 0),
-    image_url: category.image_url || null,
-  };
-}
-
 async function executeTool(call, { onAvailability } = {}) {
   try {
     const args = JSON.parse(call.arguments || "{}");
@@ -677,7 +661,7 @@ async function executeTool(call, { onAvailability } = {}) {
         available_count: result.available_count,
         categories: result.categories
           .filter((category) => category.available_quantity > 0)
-          .map(publicCategory),
+          .map(publicAiCategory),
         reservation_created: false,
       });
     }
@@ -686,7 +670,7 @@ async function executeTool(call, { onAvailability } = {}) {
       const categories = await getPublicRoomCategoriesService();
       return JSON.stringify({
         success: true,
-        categories: categories.map(publicCategory),
+        categories: categories.map(publicAiCategory),
       });
     }
 
@@ -1149,3 +1133,4 @@ export async function generateAiReply(input) {
     }
   }
 }
+

@@ -1,3 +1,5 @@
+import { publicAiCategory } from "./ai.catalog.js";
+
 const clean = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export function isRoomDetailsInquiry(message) {
   const s = clean(message);
@@ -16,7 +18,8 @@ export function isHotelInformationInterruption(message) {
 }
 export function formatRoomDetailsReply(categories, message) {
   const list = (Array.isArray(categories) ? categories : [])
-    .filter((category) => category && category.is_active !== false && category.name);
+    .filter((category) => category && category.is_active !== false && category.name)
+    .map(publicAiCategory);
   const text = clean(message);
 
   // Capturar TODAS las categorías nombradas antes de filtrar. En preguntas

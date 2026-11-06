@@ -592,10 +592,10 @@ function paymentOptionsReply(data, language = "es") {
   const amount = Number(data?.staff_confirmation?.total_amount || 0);
   const amountText = amount > 0 ? " Total confirmado: S/ " + amount.toFixed(2) + "." : "";
   const messages = {
-    es: "¿Cómo prefieres realizar el pago?\\n1) Pagar en el establecimiento: registraremos tu reserva y pagarás al llegar.\\n2) Pagar ahora: te enviaremos un enlace seguro de Culqi." + amountText,
-    en: "How would you like to pay?\\n1) Pay at the property: we will register your reservation and you will pay when you arrive.\\n2) Pay now: we will send you a secure Culqi payment link." + amountText,
-    pt: "Como prefere pagar?\\n1) Pagar no estabelecimento: registraremos sua reserva e você pagará na chegada.\\n2) Pagar agora: enviaremos um link seguro da Culqi." + amountText,
-    fr: "Comment souhaitez-vous payer ?\\n1) Payer sur place : nous enregistrerons votre réservation et vous paierez à votre arrivée.\\n2) Payer maintenant : nous vous enverrons un lien de paiement sécurisé Culqi." + amountText,
+    es: "¿Cómo prefieres realizar el pago?\n1) Pagar en el establecimiento: registraremos tu reserva y pagarás al llegar.\n2) Pagar ahora: te enviaremos un enlace seguro de Culqi." + amountText,
+    en: "How would you like to pay?\n1) Pay at the property: we will register your reservation and you will pay when you arrive.\n2) Pay now: we will send you a secure Culqi payment link." + amountText,
+    pt: "Como prefere pagar?\n1) Pagar no estabelecimento: registraremos sua reserva e você pagará na chegada.\n2) Pagar agora: enviaremos um link seguro da Culqi." + amountText,
+    fr: "Comment souhaitez-vous payer ?\n1) Payer sur place : nous enregistrerons votre réservation et vous paierez à votre arrivée.\n2) Payer maintenant : nous vous enverrons un lien de paiement sécurisé Culqi." + amountText,
   };
   return messages[language] || messages.es;
 }
@@ -957,3 +957,4 @@ export function handleWhatsAppMvpTurn({
     internalSummary: formatWhatsAppHandoffSummary(data),
   };
 }
+
