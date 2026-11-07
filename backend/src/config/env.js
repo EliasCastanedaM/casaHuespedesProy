@@ -126,6 +126,7 @@ export const env = {
     language: cleanEnvValue(process.env.BOOKING_ALERT_TEMPLATE_LANGUAGE) || "es",
     mode: cleanEnvValue(process.env.BOOKING_ALERT_MODE) || "template",
     pilotSource: cleanEnvValue(process.env.BOOKING_ALERT_PILOT_SOURCE),
+    testKeyPrefix: cleanEnvValue(process.env.BOOKING_ALERT_TEST_KEY_PREFIX),
   },
 
   culqiPaymentUrl:
