@@ -124,6 +124,8 @@ export const env = {
     to: cleanEnvValue(process.env.BOOKING_ALERT_TO),
     templateName: cleanEnvValue(process.env.BOOKING_ALERT_TEMPLATE_NAME),
     language: cleanEnvValue(process.env.BOOKING_ALERT_TEMPLATE_LANGUAGE) || "es",
+    mode: cleanEnvValue(process.env.BOOKING_ALERT_MODE) || "template",
+    pilotSource: cleanEnvValue(process.env.BOOKING_ALERT_PILOT_SOURCE),
   },
 
   culqiPaymentUrl:
