@@ -19,7 +19,7 @@ el mismo flujo de cotización; el destinatario siempre es WhatsApp.
 
 ## 2. Meta Business Manager
 
-Crear y obtener aprobación de una plantilla de categoría **UTILITY** con nombre
+Para el piloto, el usuario de prueba ya debe haber escrito al hotel por WhatsApp en las últimas 23 horas. El backend verifica esto antes de enviar un mensaje de texto, con la etiqueta PRUEBA — NO ES UNA RESERVA REAL. Para el uso estable con Pepe, crear y obtener aprobación de una plantilla de categoría **UTILITY** con nombre
 `solicitud_reserva_admin`, idioma **es** y cuerpo exactamente:
 
 ```text
@@ -44,6 +44,9 @@ El administrador debe haber autorizado recibir las notificaciones.
 ```env
 BOOKING_ALERT_ENABLED=true
 BOOKING_ALERT_TO=51938345478
+BOOKING_ALERT_MODE=session_text
+BOOKING_ALERT_PILOT_SOURCE=51938345478
+# Solo al pasar a producción con plantilla aprobada:
 BOOKING_ALERT_TEMPLATE_NAME=solicitud_reserva_admin
 BOOKING_ALERT_TEMPLATE_LANGUAGE=es
 ```
@@ -52,9 +55,9 @@ Se requieren también `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN` y
 `META_GRAPH_API_VERSION` con permisos para enviar desde el número comercial.
 No colocar tokens en GitHub ni en el navegador.
 
-Si la plantilla aún no está aprobada, mantener `BOOKING_ALERT_ENABLED=false`.
-En ese estado las solicitudes aceptadas se registran en la cola, pero
-el backend no hace solicitudes de envío.
+Mientras no se apruebe la plantilla de uso estable, realizar exclusivamente la prueba `session_text` con el propio número 51938345478, y solo si su conversación sigue dentro de la ventana de 24 horas. El modo piloto restringe las alertas a solicitudes de ese mismo número y canal WhatsApp; no procesa solicitudes reales de otros clientes. Si la ventana ya cerró, el backend no envía el mensaje y registra la falla.
+
+Para migrar a Pepe: `BOOKING_ALERT_MODE=template`, `BOOKING_ALERT_PILOT_SOURCE=` (vacío), `BOOKING_ALERT_TO=51943030098` y plantilla aprobada. Hacerlo solamente después de una confirmación explícita de que el piloto funcionó.
 
 ## 4. Pruebas y verificación
 
@@ -83,3 +86,12 @@ No incluir datos del cliente en logs de aplicación.
 la instancia se reinicia antes de registrar la aceptación de Meta; en esa ventana
 muy específica puede haber una alerta duplicada. Las solicitudes no se convierten
 en reservas hasta su aprobación humana.
+
+## 5. Prueba dirigida sin crear una reserva real
+
+Después de desplegar y migrar la base de datos, insertar una fila de prueba
+única en `booking_alert_outbox` desde un administrador autorizado, con
+`channel='whatsapp'`, `external_user_id='51938345478'`, y datos
+marcados como ficticios. La recuperación procesará el evento sin llamar a
+`createBooking` ni modificar reservas. El texto debe comenzar con
+`PRUEBA DE SISTEMA — NO ES UNA RESERVA REAL`.
