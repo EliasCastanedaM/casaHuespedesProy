@@ -10,6 +10,7 @@ import { pool } from "./config/db.js";
 import { validateProductionConfig } from "./config/validateConfig.js";
 import { recoverPendingMessages } from "./modules/meta/meta.controller.js";
 import { deliverPendingBookingAlerts } from "./services/booking-alerts.service.js";
+import { processMetaTemplateReview } from "./services/booking-template-review.service.js";
 
 // Render asigna automáticamente el puerto mediante process.env.PORT.
 // En local usará env.port o 4000.
@@ -17,6 +18,7 @@ const PORT = process.env.PORT || env.port || 4000;
 const META_RECOVERY_INTERVAL_MS = 60_000;
 let recoveryRunning = false;
 let bookingAlertRecoveryRunning = false;
+let templateReviewRunning = false;
 
 async function recoverMetaMessages() {
   if (recoveryRunning) return;
@@ -48,6 +50,18 @@ async function recoverBookingAlerts() {
   }
 }
 
+async function recoverTemplateReview() {
+  if (templateReviewRunning) return;
+  templateReviewRunning = true;
+  try {
+    await processMetaTemplateReview();
+  } catch (error) {
+    console.error("Error consultando el estado de la plantilla Meta:", error.name);
+  } finally {
+    templateReviewRunning = false;
+  }
+}
+
 validateProductionConfig();
 
 // Iniciamos el servidor backend
@@ -60,6 +74,7 @@ const server = app.listen(PORT, async () => {
     console.log("Conexión a la base de datos verificada correctamente.");
     await recoverMetaMessages();
     await recoverBookingAlerts();
+    await recoverTemplateReview();
   } else {
     console.error("No se pudo verificar la conexión a la base de datos.");
   }
@@ -70,6 +85,7 @@ const server = app.listen(PORT, async () => {
 const recoveryTimer = setInterval(() => {
   void recoverMetaMessages();
   void recoverBookingAlerts();
+  void recoverTemplateReview();
 }, META_RECOVERY_INTERVAL_MS);
 recoveryTimer.unref();
 

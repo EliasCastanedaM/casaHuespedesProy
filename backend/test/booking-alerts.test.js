@@ -161,3 +161,20 @@ test("solo envía texto de sesión al mismo usuario con mensaje reciente", async
     accessToken: "token_test", phoneNumberId: "123456",
   }), /ventana WhatsApp vigente/);
 });
+
+test("piloto de plantilla filtra únicamente por el prefijo de prueba", async () => {
+  const requests = [];
+  const db = {
+    async query(sql, params = []) {
+      requests.push({ sql, params });
+      if (sql.includes("RETURNING o.id")) return { rows: [] };
+      return { rows: [] };
+    },
+  };
+  const result = await deliverPendingBookingAlerts(db, {
+    force: true, testKeyPrefix: "qa-template-20261107", pilotSource: "51938345478",
+  });
+  assert.deepEqual(result, { attempted: 0, sent: 0, failed: 0 });
+  assert.match(requests[0].sql, /alert_key LIKE/);
+  assert.deepEqual(requests[0].params, ["51938345478", "qa-template-20261107"]);
+});

@@ -70,6 +70,11 @@ export function validateProductionConfig() {
     );
   }
 
+  if (env.bookingAlert.testKeyPrefix &&
+      !/^[-a-zA-Z0-9_]{8,48}$/.test(env.bookingAlert.testKeyPrefix)) {
+    errors.push("BOOKING_ALERT_TEST_KEY_PREFIX tiene un formato inválido.");
+  }
+
   if (env.bookingAlert.enabled) {
     if (!/^51\d{9}$/.test(env.bookingAlert.to.replace(/\D/g, ""))) {
       errors.push("BOOKING_ALERT_TO debe ser un celular peruano con código 51.");
@@ -80,6 +85,9 @@ export function validateProductionConfig() {
     if (env.bookingAlert.mode === "template" &&
         !/^[a-z0-9_]{1,512}$/.test(env.bookingAlert.templateName)) {
       errors.push("Configura BOOKING_ALERT_TEMPLATE_NAME con una plantilla aprobada en Meta.");
+    }
+    if (env.bookingAlert.mode === "session_text" && env.bookingAlert.testKeyPrefix) {
+      errors.push("No combines modo session_text con un prefijo de prueba.");
     }
     if (env.bookingAlert.mode === "session_text" &&
         (!/^51\d{9}$/.test(env.bookingAlert.pilotSource) ||
