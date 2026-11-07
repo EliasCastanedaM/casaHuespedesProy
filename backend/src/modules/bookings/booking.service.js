@@ -12,6 +12,8 @@ import {
   normalizeAvailabilityInput,
 } from "../availability/availability.service.js";
 
+import { normalizeRoomPreferences, hasRoomPreferences, roomPreferenceMatch } from "../rooms/roomPreferences.js";
+
 export { checkAvailabilityService };
 
 function normalizeBookingData(bookingData) {
@@ -44,6 +46,7 @@ function normalizeBookingData(bookingData) {
     guests_count: stay.guests_count,
     nights: stay.nights,
     special_requests: bookingData.special_requests || null,
+    room_preferences: normalizeRoomPreferences(bookingData.room_preferences),
     customer: customerData,
   };
 }
@@ -54,6 +57,8 @@ async function getRoomForBooking(roomId, db = pool) {
       r.id,
       r.name,
       r.room_number,
+      r.view_type,
+      r.amenities,
       r.capacity,
       r.price_per_night,
       r.status,
@@ -374,6 +379,7 @@ async function lockAndValidateRoom({
   );
 
   const room = await getRoomForBooking(roomId, client);
+  if (room && !roomPreferenceMatch(room,normalized.room_preferences,{windowVerifiedRoomId:normalized.window_verified_room_id})) return null;
   validateBookingRequest({
     customer: normalized.customer,
     room,
@@ -485,6 +491,7 @@ async function selectRoomByCategory({
   );
 
   for (const candidate of candidateResult.rows) {
+    if(normalized.assigned_room_id && Number(candidate.id)!==Number(normalized.assigned_room_id))continue;
     const room = await lockAndValidateRoom({
       client,
       roomId: candidate.id,
@@ -500,6 +507,7 @@ async function selectRoomByCategory({
     "Ya no quedan habitaciones disponibles en esta categoría para las fechas seleccionadas."
   );
   error.statusCode = 409;
+  error.code = hasRoomPreferences(normalized.room_preferences) ? "ROOM_PREFERENCE_UNAVAILABLE" : "CATEGORY_UNAVAILABLE";
   throw error;
 }
 
@@ -534,6 +542,8 @@ async function createBookingTransaction(
     error.statusCode = 403;
     throw error;
   }
+  normalized.assigned_room_id = staffConfirmed && options.assignedRoomId ? Number(options.assignedRoomId) : null;
+  normalized.window_verified_room_id = staffConfirmed && options.windowVerifiedRoomId ? Number(options.windowVerifiedRoomId) : null;
   const availabilityChecker =
     dependencies.checkAvailabilityService || checkAvailabilityService;
   const client = await databasePool.connect();

@@ -40,8 +40,10 @@ import { buildHumanServiceRedirect, isAiServiceTime } from "./ai.schedule.js";
 import { HUMAN_ATTENTION_PHONE, isSpecificInquiryRequest, SPECIFIC_INQUIRY_REPLY } from "./ai.human-assistance.js";
 import { isReservationIntent } from "./ai.booking-flow.js";
 
-import { getReservationRoomCategoriesService } from "../rooms/roomOccupancyRates.service.js";
+import { getReservationRoomCategoriesService, withAvailableReservationRooms } from "../rooms/roomOccupancyRates.service.js";
 import { selectOccupancyQuote, formatOccupancyQuote, processingQuoteReply, isPriceVariationInquiry, priceVariationReply } from "./ai.occupancy-pricing.js";
+
+import { hasRoomPreferences, normalizeRoomPreferences, roomPreferenceMatch, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 
 const memoryResponses = new Map();
 const memoryBookingContexts = new Map();
@@ -273,6 +275,20 @@ export async function updateGlobalReservationContextForHandoff({
   }
   const progress = handleGlobalReservationTurn({ message, context: current, categories, externalUserId, channel });
   if (JSON.stringify(current) === JSON.stringify(progress.context)) return false;
+  const updated=progress.context?.whatsapp_mvp;
+  if (updated?.state === "handoff" && hasRoomPreferences(updated.room_preferences) &&
+      updated.check_in && updated.check_out && updated.children != null && updated.pets != null) {
+    try {
+      const catalog=await withAvailableReservationRooms(await getReservationRoomCategoriesService(),updated);
+      const {quote}=selectOccupancyQuote(catalog,updated);
+      if(quote) {
+        updated.pricing_quote=quote;
+        updated.recommended_category={slug:quote.category_slug,name:quote.category_name,capacity:quote.capacity};
+      }
+    } catch(error) {
+      console.warn("No se pudo actualizar la asignación interna:",error.message);
+    }
+  }
   await saveBookingContext(channel, externalUserId, progress.context);
   return true;
 }
@@ -285,7 +301,8 @@ function globalBookingSpecialRequests(state = {}, channel) {
     "Adultos: " + Number(state.adults || 0),
     "Niños: " + Number(state.children || 0) + (ages ? " (edades: " + ages + ")" : ""),
     "Mascotas: " + Number(state.pets || 0) + (Number(state.pets || 0) > 0 ? " (S/ 20 por mascota/noche; autorización del hospedaje)" : ""),
-    state.preferences ? "Preferencias: " + state.preferences : "",
+    state.preferences ? "Preferencias aceptadas: " + state.preferences : "",
+    state.requested_room_preferences ? "Preferencia original: " + roomPreferenceLabel(state.requested_room_preferences) : "",
     state.recommended_category?.name ? "Categoría sugerida: " + state.recommended_category.name : "",
     state.staff_confirmation?.category_name ? "Categoría confirmada por el equipo: " + state.staff_confirmation.category_name : "",
   ].filter(Boolean);
@@ -348,7 +365,19 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
   const state = progress.context?.whatsapp_mvp || {};
   if (["calculate_quote", "accept_quote"].includes(progress.action)) {
     if (onProcessing) await onProcessing(processingQuoteReply(state.language));
-    const selection = selectOccupancyQuote(categories, state, {
+    const accepting = progress.action === "accept_quote";
+    const effective = accepting && state.pricing_quote?.room_preferences
+      ? { ...state, room_preferences: state.pricing_quote.room_preferences,
+          preferences: roomPreferenceLabel(state.pricing_quote.room_preferences) } : state;
+    let availableCategories;
+    let inventoryVerified = true;
+    try { availableCategories = await withAvailableReservationRooms(categories,effective); }
+    catch (error) {
+      console.warn("No se pudo verificar inventario para la cotización:",error.message);
+      inventoryVerified = false;
+      availableCategories=categories.map(c=>({...c,available_rooms:[]}));
+    }
+    const selection = selectOccupancyQuote(availableCategories, effective, {
       cheaper: progress.cheaper, explicitCategory: progress.explicitCategory || progress.action === "accept_quote",
     });
     const quote = selection.quote;
@@ -356,13 +385,21 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
       const next = { ...state, state: "handoff" };
       delete next.pricing_quote;
       await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: next });
-      return { reply: humanReviewReply("esta solicitud de alojamiento"), responseId: null, deterministic: true, mode: "human_review_required" };
+      return { reply: selection.reason === "no_availability" && inventoryVerified
+        ? "Para esas fechas no figura una categoría compatible con tu solicitud en nuestro registro. Nuestro equipo puede revisar otras fechas o una distribución alternativa; conservé los datos que compartiste."
+        : humanReviewReply("esta solicitud de alojamiento"), responseId: null, deterministic: true, mode: "human_review_required" };
     }
     const previous = state.pricing_quote;
-    const unchanged = previous && JSON.stringify(previous) === JSON.stringify(quote);
+    const signature = value => value && JSON.stringify([
+      value.category_slug,value.total_amount,value.nightly_amount,value.pet_nightly_amount,
+      value.check_in,value.check_out,value.guests,value.rate_signature,
+      value.room_preferences,value.window_verification_required,
+    ]);
+    const unchanged = previous && !quote.preference_fallback && signature(previous) === signature(quote);
     const accepted = progress.action === "accept_quote" && unchanged;
     const next = {
-      ...state, state: accepted ? "handoff" : "quoted", pricing_quote: quote,
+      ...(accepted ? effective : state), state: accepted ? "handoff" : "quoted", pricing_quote: quote,
+      ...(accepted && previous?.preference_fallback ? { requested_room_preferences: state.room_preferences } : {}),
       category_slug: quote.category_slug,
       recommended_category: { slug: quote.category_slug, name: quote.category_name, capacity: quote.capacity },
     };
@@ -388,6 +425,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         check_out: state.check_out,
         guests_count: Number(state.total_guests),
         special_requests: globalBookingSpecialRequests(state, channel),
+        room_preferences: state.room_preferences,
         customer: {
           full_name: state.customer_name,
           phone: state.customer_phone,
@@ -402,6 +440,9 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         paymentMethod: progress.paymentMethod,
         staffConfirmed: true,
         finalAmount: state.staff_confirmation?.total_amount,
+        assignedRoomId: state.staff_confirmation?.room_assignment?.room_id,
+        windowVerifiedRoomId: state.staff_confirmation?.window_position_confirmed
+          ? state.staff_confirmation?.room_assignment?.room_id : null,
       });
 
       const paymentUrl = progress.paymentMethod === "culqi_link"
@@ -430,6 +471,19 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
       };
     } catch (error) {
       console.error("No se pudo registrar la reserva desde el asesor global:", error.message);
+      if (error.statusCode === 409) {
+        const retryState={ ...state, state:"quoted" };
+        delete retryState.staff_confirmation;
+        delete retryState.pricing_quote;
+        try {
+          return await executeGlobalReservationAction({
+            progress:{ action:"calculate_quote", context:{...progress.context,whatsapp_mvp:retryState} },
+            channel,externalUserId,categories:await getReservationRoomCategoriesService(),onProcessing,
+          });
+        } catch (refreshError) {
+          console.warn("No se pudo recalcular la alternativa:",refreshError.message);
+        }
+      }
       const retryState = { ...state, state: "handoff" };
       delete retryState.awaiting;
       delete retryState.staff_confirmation;
@@ -520,6 +574,8 @@ export async function confirmGlobalReservation({
   totalAmount,
   petAuthorized = false,
   childBedAvailabilityConfirmed = false,
+  roomId = null,
+  windowPositionConfirmed = false,
 }) {
   if (!["whatsapp", "instagram", "facebook"].includes(channel)) {
     const error = new Error("Canal de atención no válido.");
@@ -564,6 +620,29 @@ export async function confirmGlobalReservation({
     error.statusCode = 400;
     throw error;
   }
+  let roomAssignment=null;
+  if (hasRoomPreferences(current.room_preferences) || roomId != null) {
+    const [availableCategory] = await withAvailableReservationRooms([category],current);
+    const preferences=normalizeRoomPreferences(current.room_preferences);
+    if (windowPositionConfirmed && (!Number.isInteger(Number(roomId)) || Number(roomId)<=0)) {
+      const error=new Error("Selecciona la unidad interna cuya ubicación cerca de ventana verificaste.");
+      error.statusCode=400;throw error;
+    }
+    const room=availableCategory.available_rooms.find(candidate=>
+      (roomId==null || Number(candidate.id)===Number(roomId)) &&
+      roomPreferenceMatch(candidate,preferences,{windowVerifiedRoomId:windowPositionConfirmed?roomId:null}));
+    if(!room) {
+      const error=new Error("No hay una unidad disponible que cumpla las preferencias confirmadas. Verifica la vista y la ubicación de ventana o acuerda otra alternativa con el huésped.");
+      error.statusCode=409;throw error;
+    }
+    roomAssignment={room_id:Number(room.id),room_number:room.room_number,view_type:room.view_type};
+  }
+  if (Number(current.total_guests) === 2 &&
+      (current.bed_preference === "separate" && category.slug !== "doble" ||
+       current.bed_preference === "matrimonial" && category.slug === "doble")) {
+    const error = new Error("La categoría no respeta la preferencia de camas del huésped. Acuerda la alternativa antes de confirmar.");
+    error.statusCode=409;throw error;
+  }
   const prepared = prepareGlobalReservationContext({
     context,
     category,
@@ -572,6 +651,8 @@ export async function confirmGlobalReservation({
     channel,
     petAuthorized,
     childBedAvailabilityConfirmed,
+    roomAssignment,
+    windowPositionConfirmed,
   });
   await saveBookingContext(channel, externalUserId, prepared.context);
   return { reply: prepared.reply, category };

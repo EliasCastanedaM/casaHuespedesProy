@@ -1,12 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { pool } from "../src/config/db.js";
-import { generateAiReply } from "../src/modules/ai/ai.service.js";
+import { generateAiReply, confirmGlobalReservation, updateGlobalReservationContextForHandoff } from "../src/modules/ai/ai.service.js";
 import { handleGlobalReservationTurn } from "../src/modules/ai/ai.reservation.js";
 import { quoteForCategory, selectOccupancyQuote, formatOccupancyQuote, processingQuoteReply } from "../src/modules/ai/ai.occupancy-pricing.js";
 import { getReservationRoomCategoriesService } from "../src/modules/rooms/roomOccupancyRates.service.js";
 import OpenAI from "openai";
 import { env } from "../src/config/env.js";
+import { collectRoomPreferences, roomFeatures, roomPreferenceMatch } from "../src/modules/rooms/roomPreferences.js";
 import { guestCategoryDescription } from "../src/modules/ai/ai.category-info.js";
 import { processMetaMessage } from "../src/modules/meta/meta.service.js";
 
@@ -85,12 +86,15 @@ test("el lector de tarifas es interno y conserva la matriz aprobada", async () =
   for (const c of actual) assert.deepEqual(c.occupancy_rates,categories.find(x=>x.slug===c.slug).occupancy_rates);
 });
 
-function mockDatabase(t) {
+function mockDatabase(t, options = {}) {
   const contexts=new Map();
   t.mock.method(pool,"query",async (sql,params=[])=>{
     const key=params.slice(0,2).join(":");
     if(sql.includes("FROM room_categories rc")) return {rows:categories};
     if(sql.includes("FROM public.room_category_occupancy_rates")) return {rows:categories.flatMap(c=>Object.entries(c.occupancy_rates).map(([occupancy,amount])=>({category_slug:c.slug,occupancy,amount})))};
+    if(sql.includes("WITH requested_range") && options.failInventory)throw new Error("Inventario temporalmente inaccesible");
+    if(sql.includes("WITH requested_range")) return {rows:(options.rooms || categories.map((c,i)=>({id:i+1,category_slug:c.slug,room_number:String(200+i),view_type:c.slug==="familiar-2"||c.slug==="matrimonial-ejecutiva"?"Vista al mar":"Vista interior",amenities:[],availability_status:"available"}))).filter(r=>r.availability_status==="available")};
+    if(sql.includes("SELECT handoff_active")) return {rows:[{handoff_active:true}]};
     if(sql.includes("SELECT booking_context")) return {rows:contexts.has(key)?[{booking_context:structuredClone(contexts.get(key)),booking_context_expires_at:new Date(Date.now()+86400000)}]:[]};
     if(sql.includes("INSERT INTO ai_conversations")&&sql.includes("booking_context")){contexts.set(key,JSON.parse(params[2]));return {rows:[]};}
     if(sql.includes("SELECT author, content")) return {rows:[]};
@@ -222,4 +226,175 @@ test("la bienvenida con menú precede al aviso de cálculo en un chat nuevo",asy
   assert.match(sent[0],/Habitaciones y tarifas/);
   assert.match(sent[0],/En un momento te respondo/);
   assert.equal(sent[1],"Cotización S/ 400.00");
+});
+
+
+const viewRooms=[
+  {id:101,room_number:"101",category_slug:"matrimonial-ejecutiva",view_type:"Vista interior",availability_status:"available"},
+  {id:505,room_number:"505",category_slug:"matrimonial-ejecutiva",view_type:"Vista al mar desde segunda fila",availability_status:"available"},
+  {id:205,room_number:"205",category_slug:"matrimonial",view_type:"Vista interior",availability_status:"available"},
+  {id:405,room_number:"405",category_slug:"familiar-2",view_type:"Acceso directo a terraza y vista al mar",availability_status:"available"},
+  {id:203,room_number:"203",category_slug:"familiar",view_type:"Vista interior",availability_status:"available"},
+  {id:202,room_number:"202",category_slug:"triple",view_type:"Vista interior",availability_status:"available"},
+];
+
+test("reconoce calle/exterior, mar, interior y ventana como preferencias distintas",()=>{
+  for(const text of ["con vista a la calle","con vista hacia la calle","hacia afuera","street view","que dé a la calle","prefiero exterior","exterior"])assert.equal(collectRoomPreferences(text).view,"exterior",text);
+  for(const text of ["interior","prefiero interior","quiero una interior"])assert.equal(collectRoomPreferences(text).view,"interior",text);
+  assert.deepEqual(collectRoomPreferences("Prefiero vista interior y cerca a la ventana"),{view:"interior",near_window:true});
+  assert.equal(collectRoomPreferences("vista al mar",{near_window:true}).near_window,true);
+  assert.equal(collectRoomPreferences("ya no quiero vista al mar",{view:"sea"}).view,undefined);
+  assert.equal(collectRoomPreferences("la vista no importa",{view:"interior",near_window:true}).view,undefined);
+  assert.equal(roomFeatures(viewRooms[1]).near_window,null);
+  assert.equal(roomPreferenceMatch(viewRooms[1],{near_window:true}),false);
+  assert.equal(roomPreferenceMatch({...viewRooms[1],amenities:["cerca_ventana"]},{view:"sea",near_window:true}),true);
+});
+
+test("mar y calle reservan una unidad exterior; las alternativas mantienen categoría y capacidad",()=>{
+  const decorated=categories.map(c=>({...c,available_rooms:viewRooms.filter(r=>r.category_slug===c.slug)}));
+  for(const view of ["sea","exterior"]) {
+    const selected=selectOccupancyQuote(decorated,stay({room_preferences:{view}})).quote;
+    assert.equal(selected.category_slug,"matrimonial-ejecutiva");
+    assert.equal(selected.internal_assignment.room_id,505);
+  }
+  const family=selectOccupancyQuote(decorated,stay({adults:4,room_preferences:{view:"sea"}})).quote;
+  assert.equal(family.category_slug,"familiar-2");
+  assert.equal(family.internal_assignment.room_id,405);
+  const triple=selectOccupancyQuote(decorated,stay({adults:3,room_preferences:{view:"sea"}})).quote;
+  assert.equal(triple.category_slug,"triple");
+  assert.equal(triple.preference_fallback,true);
+  assert.equal(triple.actual_view,"interior");
+  assert.doesNotMatch(formatOccupancyQuote(family),/405|505|room_id|room_number/);
+});
+
+test("falta de vista propone una alternativa explícita, espera aceptación y conserva el pedido original",async(t)=>{
+  const rooms=viewRooms.filter(r=>r.id!==505);
+  const contexts=mockDatabase(t,{rooms});
+  for(const channel of ["whatsapp","instagram","facebook"]) {
+    const input={channel,externalUserId:"sea-unavailable-"+channel};
+    const result=await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para dos adultos sin niños ni mascotas, con vista al mar"});
+    assert.equal(result.mode,"occupancy_quote");
+    assert.match(result.reply,/no figura disponible.*alternativa.*vista interior/);
+    assert.doesNotMatch(result.reply,/101|205|505|unidad|room_id/);
+    let state=contexts.get(channel+":"+input.externalUserId).whatsapp_mvp;
+    assert.equal(state.state,"quoted");
+    assert.equal(state.room_preferences.view,"sea");
+    const accepted=await generateAiReply({...input,message:"Sí"});
+    assert.equal(accepted.mode,"human_review_required");
+    state=contexts.get(channel+":"+input.externalUserId).whatsapp_mvp;
+    assert.equal(state.room_preferences.view,"interior");
+    assert.equal(state.requested_room_preferences.view,"sea");
+  }
+});
+
+test("calle, interior y ventana se conservan al cambiar el grupo y al repetir datos con palabras",async(t)=>{
+  const contexts=mockDatabase(t,{rooms:viewRooms});
+  const input={channel:"facebook",externalUserId:"window-view"};
+  const send=message=>generateAiReply({...input,message});
+  const first=await send("Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños ni mascotas con vista a la calle y cerca a la ventana");
+  assert.match(first.reply,/vista al mar/);
+  assert.match(first.reply,/cerca de una ventana.*verificar/);
+  assert.doesNotMatch(first.reply,/505|room_id/);
+  let state=contexts.get("facebook:window-view").whatsapp_mvp;
+  assert.equal(state.pricing_quote.internal_assignment.room_id,505);
+  assert.equal(state.room_preferences.near_window,true);
+  const repeated=await send("Quiero reservar del 20/11/2026 al 22/11/2026 para dos adultos sin niños ni mascotas con vista a la calle y cerca a la ventana");
+  assert.equal(repeated.mode,"occupancy_quote");
+  assert.match(repeated.reply,/S\/ 140.00/);
+  const changed=await send("Ahora somos cuatro adultos, sin niños ni mascotas");
+  assert.match(changed.reply,/Familiar 2/);
+  state=contexts.get("facebook:window-view").whatsapp_mvp;
+  assert.equal(state.pricing_quote.internal_assignment.room_id,405);
+  assert.equal(state.room_preferences.near_window,true);
+});
+
+test("si se ocupa la vista entre cotizar y aceptar, se ofrece la alternativa sin confirmar la anterior",async(t)=>{
+  const rooms=structuredClone(viewRooms);
+  const contexts=mockDatabase(t,{rooms});
+  const input={channel:"instagram",externalUserId:"view-race"};
+  await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños ni mascotas con vista al mar"});
+  rooms.find(r=>r.id===505).availability_status="blocked";
+  const changed=await generateAiReply({...input,message:"Sí"});
+  assert.equal(changed.mode,"occupancy_quote");
+  assert.match(changed.reply,/no figura disponible.*vista interior/);
+  assert.equal(contexts.get("instagram:view-race").whatsapp_mvp.state,"quoted");
+});
+
+test("inventario bloqueado no genera una cotización ni asegura disponibilidad",async(t)=>{
+  mockDatabase(t,{rooms:[]});
+  const result=await generateAiReply({channel:"facebook",externalUserId:"no-rooms",message:"Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños ni mascotas con vista al mar"});
+  assert.equal(result.mode,"human_review_required");
+  assert.match(result.reply,/no figura una categoría compatible/);
+  assert.doesNotMatch(result.reply,/S\/|505/);
+});
+
+
+test("validación humana comprueba vista, disponibilidad y ventana en la unidad interna exacta",async(t)=>{
+  const rooms=structuredClone(viewRooms);
+  const contexts=mockDatabase(t,{rooms});
+  const input={channel:"facebook",externalUserId:"window-staff"};
+  await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para dos adultos sin niños ni mascotas con vista al mar y cerca de la ventana"});
+  await generateAiReply({...input,message:"Sí"});
+  const approval={...input,categorySlug:"matrimonial-ejecutiva",totalAmount:280};
+  await assert.rejects(confirmGlobalReservation(approval),e=>e.statusCode===409);
+  await assert.rejects(confirmGlobalReservation({...approval,windowPositionConfirmed:true}),e=>e.statusCode===400);
+  await assert.rejects(confirmGlobalReservation({...approval,roomId:101,windowPositionConfirmed:true}),e=>e.statusCode===409);
+  const confirmed=await confirmGlobalReservation({...approval,roomId:505,windowPositionConfirmed:true});
+  assert.doesNotMatch(confirmed.reply,/505|101|room_id/);
+  let state=contexts.get("facebook:window-staff").whatsapp_mvp;
+  assert.equal(state.staff_confirmation.room_assignment.room_id,505);
+  assert.equal(state.staff_confirmation.window_position_confirmed,true);
+  const changed=await generateAiReply({...input,message:"Prefiero vista interior"});
+  assert.equal(changed.mode,"human_review_required");
+  state=contexts.get("facebook:window-staff").whatsapp_mvp;
+  assert.equal(state.staff_confirmation,undefined);
+  assert.equal(state.room_preferences.view,"interior");
+  assert.equal(state.room_preferences.near_window,true);
+});
+
+test("si la unidad aprobada se ocupa antes de registrar, propone alternativa sin perder huéspedes ni vista original",async(t)=>{
+  const rooms=structuredClone(viewRooms);
+  const contexts=mockDatabase(t,{rooms});
+  const input={channel:"instagram",externalUserId:"registration-race"};
+  await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños ni mascotas con vista al mar"});
+  await generateAiReply({...input,message:"Sí"});
+  const state=contexts.get("instagram:registration-race").whatsapp_mvp;
+  Object.assign(state,{state:"awaiting_payment_choice",customer_name:"Ana Prueba",customer_email:"test@example.com",customer_phone:"51999999999",staff_confirmation:{confirmed:true,category_slug:"matrimonial-ejecutiva",total_amount:280,room_assignment:{room_id:505}}});
+  rooms.find(r=>r.id===505).availability_status="blocked";
+  t.mock.method(pool,"connect",async()=>{const e=new Error("La unidad dejó de estar disponible");e.statusCode=409;throw e;});
+  const result=await generateAiReply({...input,message:"Pagar en el establecimiento"});
+  assert.equal(result.mode,"occupancy_quote");
+  assert.match(result.reply,/alternativa.*vista interior/);
+  const saved=contexts.get("instagram:registration-race").whatsapp_mvp;
+  assert.equal(saved.state,"quoted");
+  assert.equal(saved.staff_confirmation,undefined);
+  assert.equal(saved.adults,2);
+  assert.equal(saved.room_preferences.view,"sea");
+});
+
+test("comparar vistas no cambia una preferencia ya elegida",()=>{
+  const p={view:"interior",near_window:true};
+  assert.deepEqual(collectRoomPreferences("¿Cuál es la diferencia entre vista interior y vista al mar?",p),p);
+});
+
+
+test("una caída del inventario no se confunde con falta de disponibilidad",async(t)=>{
+  mockDatabase(t,{failInventory:true});
+  const result=await generateAiReply({channel:"facebook",externalUserId:"inventory-error",message:"Quiero reservar del 20/11/2026 al 22/11/2026 para dos adultos sin niños ni mascotas con vista al mar"});
+  assert.equal(result.mode,"human_review_required");
+  assert.doesNotMatch(result.reply,/no figura|no hay|agotad|S\//);
+});
+
+test("una nueva preferencia en atención humana actualiza el resumen y la asignación interna",async(t)=>{
+  const contexts=mockDatabase(t,{rooms:viewRooms});
+  const input={channel:"facebook",externalUserId:"paused-view"};
+  await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para dos adultos sin niños ni mascotas con vista al mar y cerca de la ventana"});
+  await generateAiReply({...input,message:"Sí"});
+  assert.equal(await updateGlobalReservationContextForHandoff({...input,message:"Prefiero vista interior"}),true);
+  const state=contexts.get("facebook:paused-view").whatsapp_mvp;
+  assert.equal(state.state,"handoff");
+  assert.equal(state.room_preferences.view,"interior");
+  assert.equal(state.room_preferences.near_window,true);
+  assert.equal(state.pricing_quote.internal_assignment.room_id,101);
+  assert.equal(state.pricing_quote.window_verification_required,true);
 });

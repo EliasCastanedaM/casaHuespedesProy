@@ -1,3 +1,5 @@
+import { normalizeRoomPreferences, collectRoomPreferences, hasRoomPreferences, roomPreferenceMatch, roomFeatures, roomPreferenceLabel } from "../rooms/roomPreferences.js";
+
 // All monetary operations use integer cents. These details stay in the backend.
 const clean = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const cents = (n) => Math.round(Number(n) * 100);
@@ -84,19 +86,56 @@ export function selectOccupancyQuote(categories, state, { cheaper = false, expli
     const requested = active.find((c) => c.slug === state.category_slug);
     if (requested) fitting = [requested];
     else return { quote: null, reason: "category_capacity" };
-  } else if (state.bed_preference === "separate" && minimumCapacity === 2) {
+  }
+  if (state.bed_preference === "separate" && minimumCapacity === 2) {
     fitting = fitting.filter((c) => c.slug === "doble");
   } else if (state.bed_preference === "matrimonial" && minimumCapacity === 2) {
     fitting = fitting.filter((c) => c.slug !== "doble");
   }
-  if (state.preferences) {
-    const requested = clean(state.preferences).split(";").map((v) => v.trim()).filter(Boolean);
-    fitting = fitting.filter((c) => requested.every((preference) =>
-      clean([c.name, c.description, c.bed_description].join(" ")).includes(preference)));
+  const preferences = normalizeRoomPreferences(state.room_preferences || collectRoomPreferences(state.preferences));
+  const hasAvailability = active.some(c=>Array.isArray(c.available_rooms));
+  const selectRooms = (list,prefs) => list.map(c=>({
+    ...c,
+    matching_rooms: Array.isArray(c.available_rooms)
+      ? c.available_rooms.filter(room=>roomPreferenceMatch(room,prefs,{allowUnverifiedWindow:true})) : null,
+  })).filter(c=>c.matching_rooms === null || c.matching_rooms.length>0);
+  let candidates = selectRooms(fitting,preferences);
+  // In isolated calculator use, metadata may be absent. Runtime always supplies
+  // physical-room availability and never infers a view from a whole category.
+  if(!hasAvailability && hasRoomPreferences(preferences)) {
+    const requested = roomPreferenceLabel(preferences).split(";").map(v=>v.trim()).filter(Boolean);
+    candidates=candidates.filter(c=>requested.every(p=>clean([c.name,c.description,c.bed_description].join(" ")).includes(p)));
   }
-  let quotes = fitting.map((c) => quoteForCategory(c, state)).filter(Boolean);
+  let fallback = false;
+  if(!candidates.length && hasAvailability) {
+    fallback=true;
+    const relaxed = preferences.near_window ? {near_window:true} : {};
+    let alternatives=active.filter(c=>Number(c.capacity)===minimumCapacity);
+    if(state.bed_preference==="separate" && minimumCapacity===2) alternatives=alternatives.filter(c=>c.slug==="doble");
+    if(state.bed_preference==="matrimonial" && minimumCapacity===2) alternatives=alternatives.filter(c=>c.slug!=="doble");
+    candidates=selectRooms(alternatives,relaxed);
+  }
+  let quotes=candidates.map(c=>{
+    const quote=quoteForCategory(c,state);
+    if(!quote)return null;
+    if(c.matching_rooms) {
+      const room=c.matching_rooms.find(r=>roomFeatures(r).near_window===true)||c.matching_rooms[0];
+      const features=roomFeatures(room);
+      const effective=fallback ? normalizeRoomPreferences({view:features.view,near_window:preferences.near_window}) : preferences;
+      Object.assign(quote,{
+        room_preferences:effective,
+        preference_fallback:fallback,
+        requested_room_preferences:preferences,
+        actual_view:features.view,
+        sea_second_row:features.view==="sea" && /segunda fila/.test(clean(room.view_type)),
+        window_verification_required:preferences.near_window===true && features.near_window===null,
+        internal_assignment:{room_id:Number(room.id),room_number:room.room_number||null,view_type:room.view_type||null},
+      });
+    }
+    return quote;
+  }).filter(Boolean);
   if (Number(state.max_nightly_budget) > 0) quotes = quotes.filter((q) => q.total_nightly_amount <= Number(state.max_nightly_budget));
-  if (!quotes.length) return { quote: null, reason: state.max_nightly_budget ? "budget" : "rates_unavailable" };
+  if (!quotes.length) return { quote: null, reason: state.max_nightly_budget ? "budget" : hasAvailability ? "no_availability" : "rates_unavailable" };
   const lower = cheaper || state.price_preference === "lower";
   quotes.sort((a, b) => (lower ? 1 : -1) * (a.total_nightly_amount - b.total_nightly_amount) ||
     (a.category_slug === "matrimonial-ejecutiva" ? -1 : b.category_slug === "matrimonial-ejecutiva" ? 1 : a.category_slug.localeCompare(b.category_slug)));
@@ -108,7 +147,7 @@ export function selectOccupancyQuote(categories, state, { cheaper = false, expli
 }
 
 export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = false } = {}) {
-  if (noLowerPrice) return ({
+  if (noLowerPrice && !quote.preference_fallback) return ({
     es: "Para tu grupo, la opción de capacidad adecuada más económica mantiene el precio de " + money(quote.total_nightly_amount) + " por noche. Nuestro equipo puede evaluar otra alternativa para esas fechas. ¿Deseas que lo consulte?",
     en: "The lowest-priced category that fits your group remains " + money(quote.total_nightly_amount) + " per night. Would you like our team to review other options?",
     pt: "A opção mais econômica com capacidade para o grupo mantém o valor de " + money(quote.total_nightly_amount) + " por noite. Deseja que a equipe avalie outra alternativa?",
@@ -120,10 +159,26 @@ export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = fa
     pt: " O total inclui " + quote.pets + " animal(is); a admissão exige autorização.",
     fr: " Le total inclut " + quote.pets + " animal(aux), sous réserve d'autorisation.",
   })[language] : "";
-  return ({
-    es: "Para tu grupo, te recomiendo " + quote.category_name + ". El alojamiento cuesta " + money(quote.nightly_amount) + " por noche. Total por " + quote.nights + " noche(s): " + money(quote.total_amount) + "." + petNote + " La disponibilidad debe confirmarla nuestro equipo. ¿Deseas que solicitemos la confirmación para esas fechas?",
-    en: "For your group, I recommend " + quote.category_name + " at " + money(quote.nightly_amount) + " per night. Total for " + quote.nights + " night(s): " + money(quote.total_amount) + "." + petNote + " Our team must confirm availability. Shall I request confirmation?",
-    pt: "Para o grupo, recomendo " + quote.category_name + " por " + money(quote.nightly_amount) + " por noite. Total de " + quote.nights + " noite(s): " + money(quote.total_amount) + "." + petNote + " A equipe deve confirmar a disponibilidade. Deseja solicitar a confirmação?",
-    fr: "Pour votre groupe, je recommande " + quote.category_name + " à " + money(quote.nightly_amount) + " par nuit. Total pour " + quote.nights + " nuit(s) : " + money(quote.total_amount) + "." + petNote + " L'équipe doit confirmer la disponibilité. Souhaitez-vous demander confirmation ?",
+  const view = (quote.actual_view ? roomPreferenceLabel({view:quote.actual_view},language) : "") +
+    (quote.sea_second_row ? ({es:" desde segunda fila",en:" from the second row",pt:" da segunda fileira",fr:" depuis la deuxième rangée"})[language] || "" : "");
+  const requested=roomPreferenceLabel(quote.requested_room_preferences,language);
+  const prefix=quote.preference_fallback ? ({
+    es:"Para esas fechas, la opción solicitada" + (requested ? " con " + requested : "") + " no figura disponible en nuestro registro. Te propongo una alternativa de capacidad adecuada" + (view ? " con " + view : "") + ". ",
+    en:"The requested option" + (requested ? " with " + requested : "") + " is not available in our records for those dates. Here is a suitable alternative" + (view ? " with " + view : "") + ". ",
+    pt:"A opção solicitada não consta disponível para essas datas. Proponho uma alternativa com capacidade adequada" + (view ? " e " + view : "") + ". ",
+    fr:"L'option demandée n'est pas disponible dans notre registre à ces dates. Voici une autre catégorie adaptée" + (view ? ", " + view : "") + ". ",
+  })[language] || "" : "";
+  const detail = !quote.preference_fallback && view && hasRoomPreferences(quote.room_preferences) ? ({es:" Vista: ",en:" View: ",pt:" Vista: ",fr:" Vue : "})[language]+view+"." : "";
+  const windowNote=quote.window_verification_required ? ({
+    es:" Guardé tu preferencia de estar cerca de una ventana; nuestro equipo debe verificar esa ubicación antes de confirmar.",
+    en:" Your preference to be near a window is saved and must be checked by our team before confirmation.",
+    pt:" A preferência por ficar perto de uma janela foi registrada e será verificada pela equipe.",
+    fr:" Votre souhait d'être près d'une fenêtre est enregistré et doit être vérifié par l'équipe.",
+  })[language] || "" : "";
+  return prefix + ({
+    es: "Para tu grupo, te recomiendo " + quote.category_name + ". El alojamiento cuesta " + money(quote.nightly_amount) + " por noche. Total por " + quote.nights + " noche(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + " La disponibilidad debe confirmarla nuestro equipo. ¿Deseas que solicitemos la confirmación para esas fechas?",
+    en: "For your group, I recommend " + quote.category_name + " at " + money(quote.nightly_amount) + " per night. Total for " + quote.nights + " night(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + " Our team must confirm availability. Shall I request confirmation?",
+    pt: "Para o grupo, recomendo " + quote.category_name + " por " + money(quote.nightly_amount) + " por noite. Total de " + quote.nights + " noite(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + " A equipe deve confirmar a disponibilidade. Deseja solicitar a confirmação?",
+    fr: "Pour votre groupe, je recommande " + quote.category_name + " à " + money(quote.nightly_amount) + " par nuit. Total pour " + quote.nights + " nuit(s) : " + money(quote.total_amount) + "." + detail + petNote + windowNote + " L'équipe doit confirmer la disponibilité. Souhaitez-vous demander confirmation ?",
   })[language] || formatOccupancyQuote(quote, "es");
 }

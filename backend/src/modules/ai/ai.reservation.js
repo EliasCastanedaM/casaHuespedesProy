@@ -1,3 +1,4 @@
+import { collectRoomPreferences, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 import { randomUUID } from "node:crypto";
 import { hasOccupancyRates, acceptsQuote, isCheaperRequest } from "./ai.occupancy-pricing.js";
 
@@ -266,7 +267,7 @@ function isNegativeAnswer(text) {
 
 function mentionsNoCategory(text, words) {
   const value = normalize(text);
-  const negative = "(?:sin|no|tampoco|ningun[oa]?|without|sem|sans)";
+  const negative = "(?:sin|no|ni|tampoco|ningun[oa]?|without|sem|sans)";
   const verb = "(?:(?:hay|viajan|tenemos|llevamos|llevaremos|traemos|traeremos|viajamos\\s+con|vamos\\s+con|vamos\\s+a\\s+llevar|bring|have)\\s+)?";
   return new RegExp("\\b" + negative + "\\s+" + verb + "(?:" + words + ")\\b").test(value);
 }
@@ -362,12 +363,11 @@ function collect(message, previous = {}, now = new Date()) {
   for (const [slug, pattern] of categories) {
     if (pattern.test(text)) { next.category_slug = slug; break; }
   }
-  if (/\b(?:vista\s+al\s+mar|sea\s+view|terr?aza|balcon|balcony|cama\s+separada)\b/.test(text)) {
-    next.preferences = [
-      /vista\s+al\s+mar|sea\s+view/.test(text) ? "vista al mar" : "",
-      /terraza/.test(text) ? "terraza" : "",
-      /balcon|balcony/.test(text) ? "balcón" : "",
-    ].filter(Boolean).join("; ");
+  const roomPreferences = collectRoomPreferences(message,
+    previous.room_preferences || collectRoomPreferences(previous.preferences || ""));
+  if (Object.keys(roomPreferences).length || previous.room_preferences || previous.preferences) {
+    next.room_preferences = roomPreferences;
+    next.preferences = roomPreferenceLabel(roomPreferences);
   }
   if (/\b(?:dos camas|2 camas|camas separadas|two beds|separate beds)\b/.test(text)) next.bed_preference = "separate";
   if (/\b(?:una cama|1 cama|cama matrimonial|one bed)\b/.test(text)) next.bed_preference = "matrimonial";
@@ -383,7 +383,9 @@ function collect(message, previous = {}, now = new Date()) {
 
 function containsStructuredBookingAnswer(message, state = {}, now = new Date()) {
   const text = normalize(message);
-  return extractDateTokens(message, now, state?.check_in).length > 0 ||
+  return JSON.stringify(collectRoomPreferences(message,state.room_preferences || collectRoomPreferences(state.preferences))) !==
+      JSON.stringify(state.room_preferences || collectRoomPreferences(state.preferences)) ||
+    extractDateTokens(message, now, state?.check_in).length > 0 ||
     namedCount(text, ADULT_WORDS) !== null ||
     namedCount(text, CHILD_WORDS) !== null ||
     namedCount(text, TOTAL_WORDS) !== null ||
@@ -398,7 +400,7 @@ function containsStructuredBookingAnswer(message, state = {}, now = new Date()) 
 function changedBookingFields(previous, next) {
   const keys = [
     "check_in", "check_out", "adults", "children", "child_ages",
-    "total_guests", "pets", "category_slug", "preferences", "bed_preference", "max_nightly_budget", "preferred_payment_method",
+    "total_guests", "pets", "category_slug", "preferences", "room_preferences", "bed_preference", "max_nightly_budget", "preferred_payment_method",
   ];
   return keys.filter((key) =>
     next[key] !== undefined &&
@@ -575,6 +577,7 @@ export function formatGlobalHandoffSummary(data = {}) {
     "Categoría sugerida: " + recommendation,
     "Capacidad máxima de una habitación: " + v(data.max_single_room_capacity),
     "Preferencias: " + v(data.preferences),
+    ...(data.pricing_quote?.internal_assignment ? ["Asignación interna sugerida: " + data.pricing_quote.internal_assignment.room_number, "Ventana pendiente de verificación: " + (data.pricing_quote.window_verification_required ? "sí" : "no")] : []),
     Number(data.total_guests || 0) >= 8
       ? "ATENCIÓN: grupo de 8 o más; tarifa especial y distribución de varias habitaciones a cargo del equipo."
       : "Estado: disponibilidad e importe pendientes de validación humana; todavía no existe reserva.",
@@ -674,7 +677,7 @@ function paymentStatusReply(language, status) {
   return messages[language] || messages.es;
 }
 
-export function prepareGlobalReservation({ context = {}, category, totalAmount, externalUserId, channel, petAuthorized = false, childBedAvailabilityConfirmed = false }) {
+export function prepareGlobalReservation({ context = {}, category, totalAmount, externalUserId, channel, petAuthorized = false, childBedAvailabilityConfirmed = false, roomAssignment = null, windowPositionConfirmed = false }) {
   const current = context.whatsapp_mvp || {};
   const amount = Number(totalAmount);
   const categorySlug = String(category?.slug || "").trim().toLowerCase();
@@ -737,6 +740,8 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
       total_amount: amount,
       pet_authorized: Number(current.pets || 0) > 0 ? true : null,
       child_bed_availability_confirmed: hasChildrenUsingAvailableBeds ? true : null,
+      room_assignment: roomAssignment,
+      window_position_confirmed: windowPositionConfirmed,
       confirmed_at: new Date().toISOString(),
     },
     state: "awaiting_customer_name",
@@ -787,7 +792,7 @@ export function handleGlobalReservationTurn({
         context: { ...context, whatsapp_mvp: updated }, mode: "occupancy_quote" };
     }
     if (acceptsQuote(message)) return { handled: true, action: "accept_quote", context, mode: "human_review_required" };
-    if (pricingIntent) return { handled: true, action: "calculate_quote", context, mode: "occupancy_quote" };
+    if (pricingIntent || intent) return { handled: true, action: "calculate_quote", context, mode: "occupancy_quote" };
     return { handled: false, context };
   }
 

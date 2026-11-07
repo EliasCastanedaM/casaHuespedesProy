@@ -228,6 +228,9 @@ function createInventoryDatabase() {
 
   const database = {
     snapshot: () => clone(state),
+    setRoomFeatures(roomId, features) {
+      Object.assign(state.rooms.find(room=>room.id===roomId),features);
+    },
     setRoomStatus(roomId, status) {
       state.rooms.find((room) => room.id === roomId).status = status;
     },
@@ -550,4 +553,50 @@ test("bloqueo global impide disponibilidad incluso en resultados completos", asy
   assert.equal(result.categories[0].occupied_quantity, 5);
   assert.equal(result.categories[0].is_available, false);
   assert.equal(result.available_count, 0);
+});
+
+
+test("asignación interna reserva la unidad con vista solicitada y oculta su identidad al huésped",async()=>{
+  const db=createInventoryDatabase();
+  for(let id=1;id<=5;id++)db.setRoomFeatures(id,{view_type:"Vista interior"});
+  db.setRoomFeatures(3,{view_type:"Vista al mar desde segunda fila"});
+  const result=await createBookingByCategoryService(bookingInput(11,{room_preferences:{view:"sea"}}),{},dependencies(db));
+  assert.equal(db.snapshot().bookings[0].room_id,3);
+  assert.doesNotMatch(JSON.stringify(result),/room_id|room_number|assigned_room/);
+  await assert.rejects(createBookingByCategoryService(bookingInput(12,{room_preferences:{view:"sea"}}),{},dependencies(db)),e=>e.statusCode===409&&e.code==="ROOM_PREFERENCE_UNAVAILABLE");
+  assert.equal(db.snapshot().bookings.length,1);
+  assert.equal(db.snapshot().customers.length,1);
+});
+
+test("interior evita la unidad al mar; mantenimiento y bloqueo de la vista impiden sustitución silenciosa",async()=>{
+  const db=createInventoryDatabase();
+  db.setRoomFeatures(1,{view_type:"Vista al mar"});
+  for(let id=2;id<=5;id++)db.setRoomFeatures(id,{view_type:"Vista interior"});
+  await createBookingByCategoryService(bookingInput(21,{room_preferences:{view:"interior"}}),{},dependencies(db));
+  assert.equal(db.snapshot().bookings[0].room_id,2);
+  db.addBlockedSlot({room_id:1,blocked_date:"2026-10-11",block_type:"day"});
+  await assert.rejects(createBookingByCategoryService(bookingInput(22,{room_preferences:{view:"exterior"}}),{},dependencies(db)),e=>e.statusCode===409);
+  assert.equal(db.snapshot().bookings.length,1);
+});
+
+test("la ventana desconocida requiere verificación humana ligada a la unidad y se revalida la vista",async()=>{
+  const db=createInventoryDatabase();
+  for(let id=1;id<=5;id++)db.setRoomFeatures(id,{view_type:"Vista interior"});
+  const request=bookingInput(31,{room_preferences:{view:"interior",near_window:true}});
+  await assert.rejects(createBookingByCategoryService(request,{},dependencies(db)),e=>e.statusCode===409);
+  // An untrusted request cannot claim that staff checked a window.
+  await assert.rejects(createBookingByCategoryService({...request,windowVerifiedRoomId:3},{windowVerifiedRoomId:3},dependencies(db)),e=>e.statusCode===409);
+  await createBookingByCategoryService(request,{staffConfirmed:true,assignedRoomId:3,windowVerifiedRoomId:3},dependencies(db));
+  assert.equal(db.snapshot().bookings[0].room_id,3);
+  db.setRoomFeatures(4,{view_type:"Vista al mar"});
+  await assert.rejects(createBookingByCategoryService(bookingInput(32,{room_preferences:{view:"interior",near_window:true}}),{staffConfirmed:true,assignedRoomId:4,windowVerifiedRoomId:4},dependencies(db)),e=>e.statusCode===409);
+});
+
+test("dos reservas concurrentes de la única unidad con mar no ocupan una interior",async()=>{
+  const db=createInventoryDatabase();
+  for(let id=1;id<=5;id++)db.setRoomFeatures(id,{view_type:id===5?"Vista al mar":"Vista interior"});
+  const results=await Promise.allSettled([41,42].map(i=>createBookingByCategoryService(bookingInput(i,{room_preferences:{view:"sea"}}),{},dependencies(db))));
+  assert.equal(results.filter(r=>r.status==="fulfilled").length,1);
+  assert.equal(results.filter(r=>r.status==="rejected").length,1);
+  assert.equal(db.snapshot().bookings[0].room_id,5);
 });
