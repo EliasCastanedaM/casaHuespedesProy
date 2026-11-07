@@ -50,11 +50,11 @@ test("las solicitudes especiales requieren revisión humana, no reservas automá
   assert.match(humanReviewReply("reserva con mascota"), /una persona/);
 });
 
-test("la bienvenida WhatsApp es breve y acepta idiomas", () => {
-  assert.match(whatsAppMvpWelcome("Hola"), /idioma que prefieras/);
-  assert.match(whatsAppMvpWelcome("Hello"), /write in any language/);
-  assert.match(whatsAppMvpWelcome("Olá"), /idioma que preferir/);
-  assert.match(whatsAppMvpWelcome("Bonjour"), /langue de votre choix/);
-  assert.doesNotMatch(whatsAppMvpWelcome("Hola"), /S\/ \d+/);
+test("la bienvenida global usa el texto aprobado y las cinco opciones", () => {
+  const expected = "¡Hola! 👋 Bienvenido a Casa Huéspedes. Puedes escribirme en el idioma que prefieras.\n\n¿Buscas información del hotel o quieres hacer una reserva? Puedo ayudarte con estas opciones:\n\n1️⃣ Habitaciones y tarifas\n2️⃣ Servicios del hotel\n3️⃣ Ubicación y cómo llegar\n4️⃣ Políticas y preguntas frecuentes\n5️⃣ Reservas\n\nPuedes elegir una opción o escribirme directamente lo que necesitas. 😊";
+  for (const greeting of ["Hola", "Hello", "Olá", "Bonjour"]) {
+    assert.equal(whatsAppMvpWelcome(greeting), expected);
+  }
+  assert.ok(buildHotelAssistantPrompt().includes(expected));
   assert.match(whatsAppMvpReservationReply(), /verificar disponibilidad/);
 });

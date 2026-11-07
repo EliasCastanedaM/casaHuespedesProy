@@ -40,18 +40,20 @@ export function globalAssistantReservationReply() {
   return "¡Perfecto! 😊 Para ayudarte con la reserva, indícame las fechas de entrada y salida, cuántos adultos y niños viajarán (con sus edades), si llevarán mascotas y qué tipo de habitación prefieres. Nuestro equipo continuará en este mismo chat para verificar disponibilidad y confirmar la reserva.";
 }
 
-export function globalAssistantWelcome(message = "") {
-  const text = normalize(message).trim();
-  if (/^(ola|bom dia|boa tarde|boa noite)$/.test(text)) {
-    return "Olá! 👋 Bem-vindo(a) à Casa Huéspedes Pimentel. Você pode escrever no idioma que preferir. Deseja informações ou fazer uma reserva?";
-  }
-  if (/^(bonjour|bonsoir|salut)$/.test(text)) {
-    return "Bonjour ! 👋 Bienvenue à Casa Huéspedes Pimentel. Vous pouvez écrire dans la langue de votre choix. Souhaitez-vous des informations ou faire une réservation ?";
-  }
-  if (/^(hi|hello|hey|good morning|good afternoon|good evening)$/.test(text)) {
-    return "Hello! 👋 Welcome to Casa Huéspedes Pimentel. You can write in any language. Would you like hotel information or help with a reservation?";
-  }
-  return "¡Hola! 👋 Bienvenido(a) a Casa Huéspedes Pimentel. Puedes escribir en el idioma que prefieras. ¿Buscas información del hospedaje o quieres hacer una reserva?";
+export function globalAssistantWelcome() {
+  return [
+    "¡Hola! 👋 Bienvenido a Casa Huéspedes. Puedes escribirme en el idioma que prefieras.",
+    "",
+    "¿Buscas información del hotel o quieres hacer una reserva? Puedo ayudarte con estas opciones:",
+    "",
+    "1️⃣ Habitaciones y tarifas",
+    "2️⃣ Servicios del hotel",
+    "3️⃣ Ubicación y cómo llegar",
+    "4️⃣ Políticas y preguntas frecuentes",
+    "5️⃣ Reservas",
+    "",
+    "Puedes elegir una opción o escribirme directamente lo que necesitas. 😊",
+  ].join("\n");
 }
 
 // Compatibility names for existing consumers.
