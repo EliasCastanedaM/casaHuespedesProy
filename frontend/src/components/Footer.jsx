@@ -82,7 +82,7 @@ export default function Footer() {
             </h3>
 
             <div className="space-y-3 text-sm text-white/70">
-              <p>📍 Calle José Quiñones 237 — Pimentel</p>
+              <p>📍 Calle Quiñonez 233 — Pimentel</p>
               <p>📞 +51 901 551 287</p>
               <p>🕘 Atención 24 horas</p>
               <p>🌊 Pimentel, Lambayeque, Perú</p>

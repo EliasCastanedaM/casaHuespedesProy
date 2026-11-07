@@ -22,6 +22,9 @@ export function policyInformationType(message) {
     /\b(?:condiciones?|reglas?|politicas?|informacion|explicame|cuentame|descuentos?|tarifas?|precio|costo|cuanto|cuantos|desde|pagan|paga|cobran|cobro|aceptan|permiten|admiten)\b/.test(text);
   if (!asks) return null;
 
+  // A children's menu or breakfast is a service question, not child pricing.
+  if (/\b(?:menu|desayuno|comida|bebida|restaurante|cafeteria|dieteticos?)\b/.test(text) &&
+      !/\b(?:reserva|cotizacion|alojamiento|pagan|paga|hospedar)\b/.test(text)) return null;
   const children = /\b(?:nin[oa]s?|bebes?|menores?|hij[oa]s?|infantes?|children|kids?)\b/.test(text);
   const pets = /\b(?:mascotas?|perros?|perrit[oa]s?|gatos?|gatit[oa]s?|pets?)\b/.test(text);
   const largeGroups = /\b(?:grupos?|8\s*(?:o mas\s*)?(?:personas?|huespedes?)|ocho\s+(?:personas?|huespedes?))\b/.test(text);

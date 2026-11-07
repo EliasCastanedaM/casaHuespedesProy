@@ -60,7 +60,7 @@ export default function Services() {
               <p className="mt-3 text-gray-600">{service.description}</p>
               <p className="mt-3 text-sm text-gray-500">
                 {service.price_type === "included"
-                  ? "Servicio gratuito"
+                  ? "Incluido en la estadía"
                   : service.requires_coordination
                     ? "Previa coordinación. Tarifa y disponibilidad por confirmar."
                     : "Condiciones de uso sujetas a confirmación."}
@@ -70,7 +70,9 @@ export default function Services() {
         </div>
       )}
       <p className="mt-8 text-gray-600 text-sm">
-        El desayuno no está incluido en las tarifas de habitaciones.
+        {!loading && !error && services.some((service) =>
+          service.slug === "desayuno-continental" && service.price_type === "included") &&
+          "El desayuno continental está incluido en las tarifas de alojamiento. "}
         Para cualquier servicio adicional, confirma previamente las condiciones.
       </p>
     </div>

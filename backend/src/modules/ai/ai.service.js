@@ -19,6 +19,8 @@ import {
   formatHotelLocationReply,
 } from "./ai.location-info.js";
 import { isHotelServicesInquiry, formatHotelServicesReply } from "./ai.services-info.js";
+import { paymentInformationType, formatHotelPaymentInfoReply, manualPaymentReviewReply } from "./ai.payment-info.js";
+import { getHotelPaymentInfoService } from "../services/hotelPaymentInfo.service.js";
 import { getPublicHotelServicesService } from "../services/service.service.js";
 import { formatPolicyInformationReply, policyInformationType } from "./ai.policy-info.js";
 import { getHotelGuestPolicyRulesService } from "../services/hotelPolicy.service.js";
@@ -66,6 +68,11 @@ export function activeBookingContextFromRow(row, now = Date.now()) {
 }
 
 const tools = [
+  {
+    type: "function", name: "listar_servicios",
+    description: "Consulta el catálogo vigente de servicios del hotel, incluidos y adicionales. No informa disponibilidad de habitaciones ni autoriza pagos.",
+    strict: true, parameters: { type: "object", properties: {}, required: [], additionalProperties: false },
+  },
   {
     type: "function",
     name: "listar_habitaciones",
@@ -678,6 +685,10 @@ async function executeTool(call) {
   try {
     const args = JSON.parse(call.arguments || "{}");
 
+    if (call.name === "listar_servicios") {
+      const services=await getPublicHotelServicesService();
+      return JSON.stringify({success:true,services:services.map(({slug,name,description,price_type,price,requires_coordination})=>({slug,name,description,price_type,price,requires_coordination}))});
+    }
     if (call.name === "listar_habitaciones") {
       const categories = await getPublicRoomCategoriesService();
       return JSON.stringify({
@@ -826,6 +837,8 @@ async function generateAiReplyInternal({
   };
   const pricingIntent = isCategoryPriceInquiry(message);
   const locationInquiry = isHotelLocationInquiry(message);
+  const paymentInfoType = paymentInformationType(message);
+  const serviceInquiry = isHotelServicesInquiry(message);
   if (isLocationMenuChoice(message)) {
     const menuHistory = history.some((item) => item.author === "assistant")
       ? history
@@ -841,7 +854,7 @@ async function generateAiReplyInternal({
   // Las respuestas estructuradas del flujo global (fechas, edades, nombre,
   // correo y elección de pago) se procesan antes del clasificador de alcance.
   // Así un "no", un número o un correo no se confunden con una consulta ajena.
-  if (!locationInquiry && !policyInformationType(message)) {
+  if (!locationInquiry && !policyInformationType(message) && !paymentInfoType && !serviceInquiry) {
     const current = await loadBookingContext(channel, externalUserId);
     let categories = [];
     if (current?.whatsapp_mvp || isReservationIntent(message) || pricingIntent) {
@@ -895,6 +908,22 @@ async function generateAiReplyInternal({
       responseId: null,
       deterministic: true,
       mode: "outside_hotel_scope",
+    };
+  }
+
+  if (paymentInfoType) {
+    if (paymentInfoType === "manual_payment_report") return {
+      reply: manualPaymentReviewReply(paymentInfoType), responseId:null, deterministic:true, mode:"human_review_required",
+    };
+    let paymentInfo;
+    try { paymentInfo=await getHotelPaymentInfoService(); }
+    catch(error) { console.warn("No se pudieron consultar los medios de pago:",error.message); }
+    const reply=formatHotelPaymentInfoReply(paymentInfo,message);
+    return {
+      reply: paymentInfoType === "manual_payment_request" ? reply+"\n\n"+manualPaymentReviewReply(paymentInfoType) : reply,
+      responseId:null,deterministic:true,
+      mode:paymentInfoType === "manual_payment_request" ? "human_review_required"
+        : paymentInfo?"hotel_payment_information":"hotel_payment_information_unavailable",
     };
   }
 
