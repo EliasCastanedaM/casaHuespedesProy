@@ -6,6 +6,7 @@ import {
   formatBookingAlertParameters,
   sendBookingAlert,
   deliverPendingBookingAlerts,
+  buildPilotBookingAlertPayload,
 } from "../src/services/booking-alerts.service.js";
 
 const accepted = {
@@ -127,4 +128,35 @@ test("la recuperación consume una alerta y borra los datos personales tras el e
   });
   assert.deepEqual(result, { attempted: 1, sent: 1, failed: 0 });
   assert.ok(queries.some(item => item.sql.includes("payload = '{}'::jsonb")));
+});
+
+test("el texto de piloto se etiqueta como prueba y no como reserva real", () => {
+  const payload = buildPilotBookingAlertPayload(accepted, { to: "51938345478" });
+  assert.equal(payload.type, "text");
+  assert.match(payload.text.body, /NO ES UNA RESERVA REAL/);
+});
+
+test("solo envía texto de sesión al mismo usuario con mensaje reciente", async () => {
+  const posted = [];
+  const sent = await sendBookingAlert(accepted, {
+    mode: "session_text", to: "51938345478", pilotSource: "51938345478",
+    db: { query: async () => ({ rows: [{ allowed: true }] }) },
+    accessToken: "token_test", phoneNumberId: "123456", graphVersion: "v26.0",
+    fetchImpl: async (url, options) => {
+      posted.push(JSON.parse(options.body));
+      return { ok: true, status: 200, json: async () => ({ messages: [{ id: "wamid.demo" }] }) };
+    },
+  });
+  assert.equal(sent.messageId, "wamid.demo");
+  assert.equal(posted[0].to, "51938345478");
+  assert.equal(posted[0].type, "text");
+  await assert.rejects(() => sendBookingAlert(accepted, {
+    mode: "session_text", to: "51943030098", pilotSource: "51938345478",
+    accessToken: "token_test", phoneNumberId: "123456",
+  }), /restringido/);
+  await assert.rejects(() => sendBookingAlert(accepted, {
+    mode: "session_text", to: "51938345478", pilotSource: "51938345478",
+    db: { query: async () => ({ rows: [{ allowed: false }] }) },
+    accessToken: "token_test", phoneNumberId: "123456",
+  }), /ventana WhatsApp vigente/);
 });
