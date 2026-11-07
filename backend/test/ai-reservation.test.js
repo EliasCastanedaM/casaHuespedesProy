@@ -507,7 +507,7 @@ test("otra reserva usa los datos aportados en ese mensaje y pregunta solo los qu
 
 test("saludo, corrección y negación de nueva reserva conservan la solicitud vigente",()=>{
   const context={whatsapp_mvp:{state:"quoted",intent_id:"ongoing",check_in:"2026-11-20",check_out:"2026-11-22",adults:2,children:0,pets:0,total_guests:2,child_ages:[]}};
-  for(const message of ["Hola","No quiero una nueva reserva","No es una nueva reserva","Quiero cambiar las fechas de mi nueva reserva","Quiero reservar"]){
+  for(const message of ["Hola","No quiero una nueva reserva","No es una nueva reserva","Quiero cambiar las fechas de mi nueva reserva","Quiero cancelar otra reserva","I want to cancel another booking","Quiero reservar"]){
     const result=turn(message,context);
     assert.equal(result.context.whatsapp_mvp.intent_id,"ongoing",message);
     assert.equal(result.context.whatsapp_mvp.check_in,"2026-11-20",message);

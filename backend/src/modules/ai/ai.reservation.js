@@ -53,7 +53,7 @@ function reservationIntent(text) {
 function isExplicitNewReservation(message) {
   const text = normalize(message).replace(/[¿?¡!.,]/g, " ").replace(/\s+/g, " ").trim();
   const phrase = /\b(?:(?:nueva|otra) reserva(?:cion)?|(?:new|another) (?:booking|reservation)|(?:nova|outra) reserva|(?:nouvelle|autre) reservation)\b/;
-  if (!phrase.test(text)) return false;
+  if (!phrase.test(text) || !reservationIntent(text)) return false;
   if (/\b(?:modificar|cambiar|corregir|editar|actualizar|modify|change|edit|alterar|modifier|changer)\b/.test(text)) return false;
   if (/\b(?:no (?:quiero|deseo|necesito|es)|do not want|don'?t want|not a|nao quero|pas de)\b.{0,25}\b(?:(?:nueva|otra|new|another|nova|outra|nouvelle|autre))\b/.test(text)) return false;
   // An explicit new stay clears only the conversation draft. Existing bookings
