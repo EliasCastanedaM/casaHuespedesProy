@@ -138,7 +138,8 @@ test("el texto de piloto se etiqueta como prueba y no como reserva real", () => 
 
 test("solo envía texto de sesión al mismo usuario con mensaje reciente", async () => {
   const posted = [];
-  const sent = await sendBookingAlert(accepted, {
+  const userAlert = { ...accepted, external_user_id: "51938345478" };
+  const sent = await sendBookingAlert(userAlert, {
     mode: "session_text", to: "51938345478", pilotSource: "51938345478",
     db: { query: async () => ({ rows: [{ allowed: true }] }) },
     accessToken: "token_test", phoneNumberId: "123456", graphVersion: "v26.0",
@@ -150,11 +151,11 @@ test("solo envía texto de sesión al mismo usuario con mensaje reciente", async
   assert.equal(sent.messageId, "wamid.demo");
   assert.equal(posted[0].to, "51938345478");
   assert.equal(posted[0].type, "text");
-  await assert.rejects(() => sendBookingAlert(accepted, {
+  await assert.rejects(() => sendBookingAlert(userAlert, {
     mode: "session_text", to: "51943030098", pilotSource: "51938345478",
     accessToken: "token_test", phoneNumberId: "123456",
   }), /restringido/);
-  await assert.rejects(() => sendBookingAlert(accepted, {
+  await assert.rejects(() => sendBookingAlert(userAlert, {
     mode: "session_text", to: "51938345478", pilotSource: "51938345478",
     db: { query: async () => ({ rows: [{ allowed: false }] }) },
     accessToken: "token_test", phoneNumberId: "123456",
