@@ -9,7 +9,7 @@ function normalizeMessage(value) {
 export function isCategoryPriceInquiry(message) {
   const normalized = normalizeMessage(message);
   const asksPrice =
-    /\b(precios?|tarifas?|costos?)\b/.test(normalized) ||
+    /\b(precios?|tarifas?|costos?|prices?|rates?|precos?|tarifs?)\b/.test(normalized) ||
     /\bcuanto(?:s)?\s+(?:cuesta|cuestan|vale|valen|sale|salen|cobran|esta|estan)\b/.test(normalized);
   const specificStay =
     /\b\d{4}-\d{2}-\d{2}\b/.test(normalized) ||

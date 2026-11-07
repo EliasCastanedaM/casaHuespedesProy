@@ -576,9 +576,9 @@ async function createBookingTransaction(
       ? await updateCustomer(existingCustomer.id, normalized.customer, client)
       : await createCustomer(normalized.customer, client);
 
-    const unitPrice = Number(
-      room.category_price_per_night || room.price_per_night || 0
-    );
+    const unitPrice = staffConfirmed && options.finalAmount !== undefined
+      ? Math.round(Number(options.finalAmount) / Number(normalized.nights) * 100) / 100
+      : Number(room.category_price_per_night || room.price_per_night || 0);
     const calculatedAmount = unitPrice * Number(normalized.nights);
     const totalAmount = staffConfirmed && options.finalAmount !== undefined
       ? Number(options.finalAmount)

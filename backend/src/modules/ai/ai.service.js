@@ -22,7 +22,7 @@ import { isHotelServicesInquiry, formatHotelServicesReply } from "./ai.services-
 import { getPublicHotelServicesService } from "../services/service.service.js";
 import { formatPolicyInformationReply, policyInformationType } from "./ai.policy-info.js";
 import { getHotelGuestPolicyRulesService } from "../services/hotelPolicy.service.js";
-import { isRoomDetailsInquiry, formatRoomDetailsReply } from "./ai.category-info.js";
+import { isRoomDetailsInquiry, formatRoomDetailsReply, guestCategoryDescription } from "./ai.category-info.js";
 import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
 import {
   globalReservationContext,
@@ -35,10 +35,13 @@ import {
   OUT_OF_HOTEL_SCOPE_REPLY,
   isHotelRelatedMessage,
 } from "./ai.scope.js";
-import { isCategoryPriceInquiry, formatCategoryPricesReply } from "./ai.pricing.js";
+import { isCategoryPriceInquiry } from "./ai.pricing.js";
 import { buildHumanServiceRedirect, isAiServiceTime } from "./ai.schedule.js";
 import { HUMAN_ATTENTION_PHONE, isSpecificInquiryRequest, SPECIFIC_INQUIRY_REPLY } from "./ai.human-assistance.js";
 import { isReservationIntent } from "./ai.booking-flow.js";
+
+import { getReservationRoomCategoriesService } from "../rooms/roomOccupancyRates.service.js";
+import { selectOccupancyQuote, formatOccupancyQuote, processingQuoteReply, isPriceVariationInquiry, priceVariationReply } from "./ai.occupancy-pricing.js";
 
 const memoryResponses = new Map();
 const memoryBookingContexts = new Map();
@@ -65,7 +68,7 @@ const tools = [
     type: "function",
     name: "listar_habitaciones",
     description:
-      "Lista las categorías de habitaciones, cantidades, capacidades y el monto vigente por noche.",
+      "Lista categorías, capacidades y camas. No informa precios ni disponibilidad; la cotización se calcula en el flujo de reserva.",
     strict: true,
     parameters: {
       type: "object",
@@ -341,8 +344,41 @@ function globalBookingFailureReply(language) {
   return messages[language] || messages.es;
 }
 
-async function executeGlobalReservationAction({ progress, channel, externalUserId }) {
+async function executeGlobalReservationAction({ progress, channel, externalUserId, categories = [], onProcessing }) {
   const state = progress.context?.whatsapp_mvp || {};
+  if (["calculate_quote", "accept_quote"].includes(progress.action)) {
+    if (onProcessing) await onProcessing(processingQuoteReply(state.language));
+    const selection = selectOccupancyQuote(categories, state, {
+      cheaper: progress.cheaper, explicitCategory: progress.explicitCategory || progress.action === "accept_quote",
+    });
+    const quote = selection.quote;
+    if (!quote) {
+      const next = { ...state, state: "handoff" };
+      delete next.pricing_quote;
+      await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: next });
+      return { reply: humanReviewReply("esta solicitud de alojamiento"), responseId: null, deterministic: true, mode: "human_review_required" };
+    }
+    const previous = state.pricing_quote;
+    const unchanged = previous && JSON.stringify(previous) === JSON.stringify(quote);
+    const accepted = progress.action === "accept_quote" && unchanged;
+    const next = {
+      ...state, state: accepted ? "handoff" : "quoted", pricing_quote: quote,
+      category_slug: quote.category_slug,
+      recommended_category: { slug: quote.category_slug, name: quote.category_name, capacity: quote.capacity },
+    };
+    delete next.awaiting;
+    await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: next });
+    return {
+      reply: accepted ? ({
+        es: "¡Perfecto! 😊 Nuestro equipo revisará la disponibilidad y confirmará el importe para esas fechas. Ya tiene los datos que compartiste; no necesitas repetirlos.",
+        en: "Perfect! 😊 Our team will check availability and confirm the amount for those dates. You won't need to repeat your details.",
+        pt: "Perfeito! 😊 Nossa equipe verificará a disponibilidade e confirmará o valor. Não é necessário repetir os dados.",
+        fr: "Parfait ! 😊 Notre équipe vérifiera la disponibilité et confirmera le montant. Vous n'aurez pas à répéter vos informations.",
+      })[state.language || "es"] || "Nuestro equipo confirmará disponibilidad e importe."
+        : formatOccupancyQuote(quote, state.language, { noLowerPrice: selection.reason === "no_lower_price" }),
+      responseId: null, deterministic: true, mode: accepted ? "human_review_required" : "occupancy_quote",
+    };
+  }
   if (progress.action === "create_booking") {
     await saveBookingContext(channel, externalUserId, progress.context);
     try {
@@ -552,8 +588,7 @@ function publicCategory(category) {
         : Number(category.available_quantity || 0),
     capacity: Number(category.capacity || 1),
     bed_description: category.bed_description || null,
-    description: category.description || null,
-    price_per_night: Number(category.price_per_night || 0),
+    description: guestCategoryDescription(category.description) || null,
     image_url: category.image_url || null,
   };
 }
@@ -582,7 +617,7 @@ async function executeTool(call) {
 async function loadStoredHistory(channel, externalUserId, currentMessage) {
   try {
     const result = await pool.query(
-      "SELECT author, content FROM meta_messages WHERE channel = $1 AND external_user_id = $2 AND content <> '' ORDER BY created_at DESC, id DESC LIMIT 20;",
+      "SELECT author, content FROM meta_messages WHERE channel = $1 AND external_user_id = $2 AND content <> '' AND author <> 'system' ORDER BY created_at DESC, id DESC LIMIT 20;",
       [channel, externalUserId]
     );
     const history = result.rows.reverse();
@@ -651,7 +686,7 @@ async function generateAiReplyInternal({
   message,
   history = [],
   now = new Date(),
-}) {
+}, { onProcessing } = {}) {
   // El asesor virtual opera 24/7. isAiServiceTime se conserva como punto
   // único de decisión para mantener compatibilidad con la arquitectura actual.
   if (!isAiServiceTime(now)) {
@@ -680,6 +715,35 @@ async function generateAiReplyInternal({
     };
   }
 
+  let scopeCheck;
+  const checkHotelScope = async () => {
+    if (scopeCheck !== undefined) return scopeCheck;
+    scopeCheck = await isHotelRelatedMessage(message, {
+      history: history.length ? history : await loadStoredHistory(channel, externalUserId, message),
+      classify: async ({ message: currentMessage, history: recentHistory }) => {
+        const classification = await trackedResponse(getClient(), {
+          model: env.openai.model,
+          instructions: HOTEL_SCOPE_CLASSIFIER_PROMPT,
+          input: JSON.stringify({ mensaje_actual: currentMessage, historial_reciente: recentHistory }),
+          max_output_tokens: 128,
+          store: false,
+        }, { channel, externalUserId, operation: "scope_classifier" });
+        return classification.output_text;
+      },
+    });
+    return scopeCheck;
+  };
+  // Precio también puede referirse a asuntos ajenos al hotel. Conserva el filtro
+  // antes de iniciar una cotización nueva o explicar cambios comerciales.
+  if (isCategoryPriceInquiry(message) || isPriceVariationInquiry(message)) {
+    if (!await checkHotelScope()) return {
+      reply: OUT_OF_HOTEL_SCOPE_REPLY, responseId: null, deterministic: true, mode: "outside_hotel_scope",
+    };
+  }
+  if (isPriceVariationInquiry(message)) return {
+    reply: priceVariationReply(), responseId: null, deterministic: true, mode: "price_variation_information",
+  };
+  const pricingIntent = isCategoryPriceInquiry(message);
   const locationInquiry = isHotelLocationInquiry(message);
   if (isLocationMenuChoice(message)) {
     const menuHistory = history.some((item) => item.author === "assistant")
@@ -699,9 +763,9 @@ async function generateAiReplyInternal({
   if (!locationInquiry && !policyInformationType(message)) {
     const current = await loadBookingContext(channel, externalUserId);
     let categories = [];
-    if (current?.whatsapp_mvp || isReservationIntent(message)) {
+    if (current?.whatsapp_mvp || isReservationIntent(message) || pricingIntent) {
       try {
-        categories = await getPublicRoomCategoriesService();
+        categories = await getReservationRoomCategoriesService();
       } catch (error) {
         console.warn("No se pudieron cargar categorías para recomendar habitación:", error.message);
       }
@@ -712,6 +776,7 @@ async function generateAiReplyInternal({
       externalUserId,
       channel,
       categories,
+      pricingIntent,
       now,
     });
     if (progress.action) {
@@ -719,6 +784,8 @@ async function generateAiReplyInternal({
         progress,
         channel,
         externalUserId,
+        categories,
+        onProcessing,
       });
       if (actionResult) return actionResult;
     }
@@ -739,22 +806,7 @@ async function generateAiReplyInternal({
   // herramientas de tarifas/reservas para responder solicitudes ajenas.
   // Para mensajes ambiguos, un clasificador independiente valida el alcance
   // antes de generar cualquier respuesta abierta o consultar inventario.
-  const hotelScope = await isHotelRelatedMessage(message, {
-    history: history.length ? history : await loadStoredHistory(channel, externalUserId, message),
-    classify: async ({ message: currentMessage, history: recentHistory }) => {
-      const classification = await trackedResponse(getClient(), {
-        model: env.openai.model,
-        instructions: HOTEL_SCOPE_CLASSIFIER_PROMPT,
-        input: JSON.stringify({
-          mensaje_actual: currentMessage,
-          historial_reciente: recentHistory,
-        }),
-        max_output_tokens: 128,
-        store: false,
-      }, { channel, externalUserId, operation: "scope_classifier" });
-      return classification.output_text;
-    },
-  });
+  const hotelScope = await checkHotelScope();
 
   if (!hotelScope) {
     return {
@@ -823,28 +875,6 @@ async function generateAiReplyInternal({
         responseId: null,
         deterministic: true,
         mode: "hotel_services_unavailable",
-      };
-    }
-  }
-
-  // Las preguntas generales de precios se responden con los valores vigentes
-  // de Supabase, sin depender de la memoria del modelo ni de sus herramientas.
-  if (isCategoryPriceInquiry(message)) {
-    try {
-      const categories = await getPublicRoomCategoriesService();
-      return {
-        reply: formatCategoryPricesReply(categories, message),
-        responseId: null,
-        deterministic: true,
-        mode: "category_prices",
-      };
-    } catch (error) {
-      console.warn("No se pudieron consultar las tarifas vigentes:", error.message);
-      return {
-        reply: "No puedo confirmar los precios en este momento. Para evitar darte información incorrecta, por favor comunícate con el señor Pepe, dueño del hotel, al " + HUMAN_ATTENTION_PHONE + ".",
-        responseId: null,
-        deterministic: true,
-        mode: "category_prices_unavailable",
       };
     }
   }
@@ -937,12 +967,12 @@ async function generateAiReplyInternal({
   return { reply, responseId: response.id };
 }
 
-export async function generateAiReply(input) {
+export async function generateAiReply(input, options = {}) {
   const key = conversationKey(input.channel, input.externalUserId);
   const previous = conversationQueues.get(key) || Promise.resolve();
   const current = previous
     .catch(() => undefined)
-    .then(() => generateAiReplyInternal(input));
+    .then(() => generateAiReplyInternal(input, options));
 
   conversationQueues.set(key, current);
 

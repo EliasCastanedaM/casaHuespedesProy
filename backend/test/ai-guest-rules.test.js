@@ -10,13 +10,15 @@ import {
 
 test("las reglas de huéspedes incluyen los niños, mascotas, grupos y seis categorías", () => {
   const prompt = buildHotelAssistantPrompt();
-  assert.match(prompt, /0 a 4 años/);
-  assert.match(prompt, /5 a 8 años/);
-  assert.match(prompt, /50 % del diferencial/);
-  assert.match(prompt, /9 años/);
+
+
+
+
+  assert.match(prompt, /solicita cantidad y edades/);
+  assert.doesNotMatch(prompt, /50 % del diferencial|Desde los 9 años/);
   assert.match(prompt, /S\/ 20/);
   assert.ok(prompt.includes("S/ 20 por mascota y por noche"));
-  assert.match(prompt, /Desde los 9 años: corresponde tarifa de adulto/);
+
   assert.match(prompt, /8 o más huéspedes/);
   assert.match(prompt, /Familiar 1 y Familiar 2/);
   assert.match(prompt, /Familiar 1 y Familiar 2 son dos categorías diferentes/);

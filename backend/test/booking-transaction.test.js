@@ -246,6 +246,7 @@ test("pago en el establecimiento crea una reserva confirmada sin enlace Culqi y 
   assert.equal(snapshot.bookings.length, 1);
   assert.equal(snapshot.bookings[0].status, "confirmed");
   assert.equal(snapshot.bookings[0].total_amount, 500);
+  assert.equal(snapshot.bookings[0].unit_price, 250);
   assert.equal(snapshot.payments[0].payment_provider, "pay_at_property");
   assert.equal(snapshot.payments[0].status, "pending");
   assert.equal(snapshot.payments[0].payment_url, null);

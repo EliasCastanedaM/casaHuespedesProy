@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { hasOccupancyRates, acceptsQuote, isCheaperRequest } from "./ai.occupancy-pricing.js";
 
 // Flujo global progresivo de atención y reservas. La disponibilidad y el importe requieren aprobación humana;
 // después de esa aprobación, el backend registra la reserva y procesa el método de pago elegido.
@@ -316,13 +317,16 @@ function collect(message, previous = {}, now = new Date()) {
 
   const adults = namedCount(text, ADULT_WORDS);
   const children = namedCount(text, CHILD_WORDS);
-  const total = namedCount(text, TOTAL_WORDS);
+  const total = namedCount(text, TOTAL_WORDS) ??
+    (previous.awaiting !== "ages" && /^(?:somos|seremos|we are|nous sommes)\s/.test(text) ? parseStandaloneCount(text) : null);
   const pets = namedCount(text, PET_WORDS);
   if (adults !== null) {
     next.adults = Math.min(adults + additionalAdultRelativeCount(text), 30);
   }
   if (children !== null) next.children = children;
-  if (total !== null) next.total_guests = total;
+  if (total !== null) {
+    next.total_guests = total;
+  }
   if (pets !== null) next.pets = pets;
 
   if (mentionsNoCategory(text, PET_WORDS)) next.pets = 0;
@@ -339,7 +343,7 @@ function collect(message, previous = {}, now = new Date()) {
   }
 
   if (next.children === 0) next.child_ages = [];
-  if (next.adults == null && next.total_guests != null && next.children != null) {
+  if ((next.adults == null || (total !== null && adults === null)) && next.total_guests != null && next.children != null) {
     const inferredAdults = next.total_guests - next.children;
     if (inferredAdults >= 0) next.adults = inferredAdults;
   }
@@ -359,8 +363,16 @@ function collect(message, previous = {}, now = new Date()) {
     if (pattern.test(text)) { next.category_slug = slug; break; }
   }
   if (/\b(?:vista\s+al\s+mar|sea\s+view|terr?aza|balcon|balcony|cama\s+separada)\b/.test(text)) {
-    next.preferences = String(message).slice(0, 300);
+    next.preferences = [
+      /vista\s+al\s+mar|sea\s+view/.test(text) ? "vista al mar" : "",
+      /terraza/.test(text) ? "terraza" : "",
+      /balcon|balcony/.test(text) ? "balcón" : "",
+    ].filter(Boolean).join("; ");
   }
+  if (/\b(?:dos camas|2 camas|camas separadas|two beds|separate beds)\b/.test(text)) next.bed_preference = "separate";
+  if (/\b(?:una cama|1 cama|cama matrimonial|one bed)\b/.test(text)) next.bed_preference = "matrimonial";
+  const budget = text.match(/\b(?:presupuesto|maximo|hasta)\s*(?:s\/?\.?\s*)?(\d+(?:[.,]\d{1,2})?)\s*(?:soles?\s*)?por noche\b/);
+  if (budget) next.max_nightly_budget = Number(budget[1].replace(",", "."));
   // Antes de aprobación humana, guardar solo la preferencia, no un pago confirmado.
   if (["handoff", "browsing", "collecting"].includes(previous?.state)) {
     const preference = paymentChoice(message);
@@ -386,7 +398,7 @@ function containsStructuredBookingAnswer(message, state = {}, now = new Date()) 
 function changedBookingFields(previous, next) {
   const keys = [
     "check_in", "check_out", "adults", "children", "child_ages",
-    "total_guests", "pets", "category_slug", "preferences", "preferred_payment_method",
+    "total_guests", "pets", "category_slug", "preferences", "bed_preference", "max_nightly_budget", "preferred_payment_method",
   ];
   return keys.filter((key) =>
     next[key] !== undefined &&
@@ -516,7 +528,7 @@ function missingQuestion(data, l) {
   if (!data.check_in || !data.check_out) return dictionary.dates;
   if (data.adults == null) return dictionary.guests;
   if (data.children == null) return dictionary.children;
-  if (data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length < data.children)) return dictionary.ages;
+  if (data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length !== data.children)) return dictionary.ages;
   if (data.pets == null) return dictionary.pets;
   return null;
 }
@@ -534,7 +546,7 @@ export function formatGlobalHandoffSummary(data = {}) {
     : null;
   const childPolicy = Array.isArray(data.child_ages)
     ? data.child_ages.map((age) => age <= 4 ? age + " años: sin cargo si usa cama disponible"
-      : age <= 8 ? age + " años: 50 % del diferencial de tarifa; validar importe"
+      : age <= 8 ? age + " años: 50 % del diferencial entre tarifa de adultos computables y tarifa individual; tope por ocupación total"
       : age + " años: tarifa de adulto").join("; ") || "No aplica"
     : "Pendiente";
   const petCharge = Number(data.pets || 0) > 0 && nights
@@ -545,6 +557,12 @@ export function formatGlobalHandoffSummary(data = {}) {
     : "Pendiente de recomendación";
   return [
     "SOLICITUD DE RESERVA — VALIDACIÓN HUMANA",
+    ...(data.pricing_quote ? [
+      "Cotización calculada: S/ " + Number(data.pricing_quote.total_amount).toFixed(2),
+      "Alojamiento por noche: S/ " + Number(data.pricing_quote.nightly_amount).toFixed(2),
+      "Niños: 50 % de (tarifa para adultos computables - tarifa de 1 persona), con tope de ocupación equivalente.",
+      "Tope infantil aplicado: " + (data.pricing_quote.child_cap_applied ? "sí" : "no"),
+    ] : []),
     "Ingreso: " + v(formatSummaryDate(data.check_in)),
     "Salida: " + v(formatSummaryDate(data.check_out)),
     "Noches: " + v(nights),
@@ -571,7 +589,7 @@ function recommendCategory(categories, guests) {
     .filter((item) => item?.slug && Number(item.capacity) >= count)
     .sort((a, b) =>
       Number(a.capacity) - Number(b.capacity) ||
-      Number(a.price_per_night || 0) - Number(b.price_per_night || 0)
+      Number(b.price_per_night || 0) - Number(a.price_per_night || 0)
     );
   const item = active[0];
   return item ? {
@@ -737,14 +755,40 @@ export function handleGlobalReservationTurn({
   externalUserId = "",
   channel,
   categories = [],
+  pricingIntent = false,
 }) {
   const text = normalize(message);
   const state = context.whatsapp_mvp || null;
   const language = detectLanguage(message, state?.language || "es");
   const dictionary = labels[language] || labels.es;
-  const intent = reservationIntent(text);
+  const intent = reservationIntent(text) || pricingIntent;
   if (isAssistantMenuRequest(message)) {
     return { handled: true, reply: dictionary.menu, mode: "global_reservation_menu", context };
+  }
+
+  if (state?.state === "quoted") {
+    const updated = collect(message, state, now);
+    updated.language = language;
+    const changed = changedBookingFields(state, updated);
+    const cheaper = isCheaperRequest(message);
+    if (changed.length || cheaper) {
+      delete updated.staff_confirmation;
+      if (cheaper) updated.price_preference = "lower";
+      const question = missingQuestion(updated, language);
+      if (question) {
+        updated.state = "collecting";
+        updated.awaiting = !updated.check_in || !updated.check_out ? "dates"
+          : updated.adults == null ? "guests" : updated.children == null ? "children"
+          : updated.children > 0 && (!updated.child_ages || updated.child_ages.length !== updated.children) ? "ages" : "pets";
+        return { handled: true, context: { ...context, whatsapp_mvp: updated }, reply: question, mode: "global_reservation_collecting" };
+      }
+      return { handled: true, action: "calculate_quote", cheaper,
+        explicitCategory: changed.includes("category_slug"),
+        context: { ...context, whatsapp_mvp: updated }, mode: "occupancy_quote" };
+    }
+    if (acceptsQuote(message)) return { handled: true, action: "accept_quote", context, mode: "human_review_required" };
+    if (pricingIntent) return { handled: true, action: "calculate_quote", context, mode: "occupancy_quote" };
+    return { handled: false, context };
   }
 
   if (state?.state === "handoff") {
@@ -772,6 +816,8 @@ export function handleGlobalReservationTurn({
     }
     const changed = changedBookingFields(state, updated);
     if (changed.length > 0) {
+      delete updated.pricing_quote;
+      delete updated.staff_confirmation;
       return {
         handled: true,
         context: { ...context, whatsapp_mvp: updated, state: "whatsapp_mvp" },
@@ -802,6 +848,7 @@ export function handleGlobalReservationTurn({
       const reset = { ...updatedBooking, state: "handoff" };
       delete reset.awaiting;
       delete reset.staff_confirmation;
+      delete reset.pricing_quote;
       return {
         handled: true,
         context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: reset },
@@ -928,6 +975,7 @@ export function handleGlobalReservationTurn({
 
   const data = collect(message, state || {}, now);
   data.language = language;
+  data.reservation_requested = state?.reservation_requested || reservationIntent(text);
   data.state = "collecting";
   data.intent_id = state?.intent_id || randomUUID();
   delete data.awaiting;
@@ -957,9 +1005,17 @@ export function handleGlobalReservationTurn({
     data.awaiting = !data.check_in || !data.check_out ? "dates"
       : data.adults == null ? "guests"
       : data.children == null ? "children"
-      : data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length < data.children) ? "ages"
+      : data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length !== data.children) ? "ages"
       : "pets";
     return { handled: true, context: nextContext, reply: question, mode: "global_reservation_collecting" };
+  }
+
+  if (hasOccupancyRates(categories) && Number(data.total_guests) < 8 &&
+      Number(data.total_guests) <= Number(data.max_single_room_capacity)) {
+    return {
+      handled: true, action: "calculate_quote", explicitCategory: Boolean(data.category_slug),
+      context: nextContext, mode: "occupancy_quote",
+    };
   }
 
   data.state = "handoff";
