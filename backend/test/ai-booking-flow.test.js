@@ -108,17 +108,17 @@ function flow(input) {
   });
 }
 
-test("el asesor ofrece llamada y reserva directa después de disponibilidad", () => {
+test("el asesor global exige aprobación humana antes de reservar", () => {
   const prompt = buildHotelAssistantPrompt();
   assert.match(prompt, /901551287/);
-  assert.match(prompt, /reservar directamente en esta conversación/);
-  assert.match(prompt, /no envíes un enlace de pago/);
+  assert.match(prompt, /equipo confirme disponibilidad, categoría e importe/);
+  assert.match(prompt, /Solo la acción autorizada del backend/);
   assert.match(prompt, /mascotas.*autorización previa/i);
   assert.match(prompt, /S\/ 20/);
   assert.doesNotMatch(prompt, /S\/ 35/);
   assert.match(prompt, /No se permite ruido excesivo/i);
   assert.match(prompt, /Nunca menciones, muestres ni solicites números físicos/i);
-  assert.match(prompt, /cantidad disponible por categoría/i);
+  assert.match(prompt, /no inventes cantidades disponibles/i);
 });
 
 test("consultar disponibilidad no crea una reserva", async () => {

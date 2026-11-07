@@ -1,18 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  handleWhatsAppMvpTurn,
-  formatWhatsAppHandoffSummary,
-  prepareWhatsAppMvpReservation,
-} from "../src/modules/ai/ai.whatsapp-mvp.js";
+  handleGlobalReservationTurn,
+  formatGlobalHandoffSummary,
+  prepareGlobalReservation,
+} from "../src/modules/ai/ai.reservation.js";
 
 function turn(message, context = {}, now = new Date(), extra = {}) {
-  return handleWhatsAppMvpTurn({ message, context, now, ...extra });
+  return handleGlobalReservationTurn({ message, context, now, channel: "whatsapp", ...extra });
 }
 
 test("MVP pregunta solamente los datos pendientes antes de pasar al equipo", () => {
   const start = turn("Hola, quiero reservar");
-  assert.equal(start.mode, "whatsapp_mvp_collecting");
+  assert.equal(start.mode, "global_reservation_collecting");
   assert.match(start.reply, /fechas de entrada y salida/);
   const dates = turn("Del 20/11/2026 al 22/11/2026", start.context);
   assert.match(dates.reply, /Cuántas personas|Cuántas|Cu[aá]ntas personas/);
@@ -27,7 +27,7 @@ test("MVP pregunta solamente los datos pendientes antes de pasar al equipo", () 
   assert.equal(done.context.whatsapp_mvp.total_guests, 3);
   assert.equal(done.context.whatsapp_mvp.pets, 0);
   assert.equal(done.context.whatsapp_mvp.state, "handoff");
-  const summary = formatWhatsAppHandoffSummary(done.context.whatsapp_mvp);
+  const summary = formatGlobalHandoffSummary(done.context.whatsapp_mvp);
   assert.match(summary, /20\/11\/2026/);
   assert.match(summary, /22\/11\/2026/);
   assert.match(summary, /todavía no existe reserva/);
@@ -46,7 +46,7 @@ test("intención tras consulta de habitaciones retiene datos sin iniciar reserva
 test("menú opcional no obliga a elegir ni elimina contexto", () => {
   const info = turn("Quiero reservar");
   const menu = turn("¿Qué opciones hay en el menú?", info.context);
-  assert.equal(menu.mode, "whatsapp_mvp_menu");
+  assert.equal(menu.mode, "global_reservation_menu");
   assert.match(menu.reply, /Habitaciones y tarifas/);
   assert.deepEqual(menu.context, info.context);
 });
@@ -69,14 +69,14 @@ test("el MVP no ofrece pago ni registra reserva antes de la aprobación humana",
 
 test("reserva con niños sin edad pregunta antes de escalar", () => {
   const result = turn("Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos y 1 niño sin mascotas");
-  assert.equal(result.mode, "whatsapp_mvp_collecting");
+  assert.equal(result.mode, "global_reservation_collecting");
   assert.match(result.reply, /edades/i);
 });
 
 
 test("nunca supone que dos adultos implica ausencia de niños", () => {
   const start = turn("Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin mascotas");
-  assert.equal(start.mode, "whatsapp_mvp_collecting");
+  assert.equal(start.mode, "global_reservation_collecting");
   assert.match(start.reply, /Viajan niños/i);
   const done = turn("No", start.context);
   assert.equal(done.mode, "human_review_required");
@@ -85,7 +85,7 @@ test("nunca supone que dos adultos implica ausencia de niños", () => {
 
 test("un mensaje autónomo sobre el menú no inicia reserva", () => {
   const menu = turn("¿Qué opciones hay en el menú?");
-  assert.equal(menu.mode, "whatsapp_mvp_menu");
+  assert.equal(menu.mode, "global_reservation_menu");
   assert.equal(menu.context.whatsapp_mvp, undefined);
 });
 
@@ -96,7 +96,7 @@ test("una consulta de información no reinicia una reserva en curso", () => {
   assert.equal(info.handled, false);
   assert.deepEqual(info.context, progress.context);
   const resumed = turn("20/11/2026 al 22/11/2026", info.context);
-  assert.equal(resumed.mode, "whatsapp_mvp_collecting");
+  assert.equal(resumed.mode, "global_reservation_collecting");
   assert.match(resumed.reply, /personas/i);
 });
 
@@ -115,7 +115,7 @@ test("reconoce números escritos con palabras y conserva el contexto de la reser
   const done = turn("No llevamos mascotas", guests.context, now);
   assert.equal(done.mode, "human_review_required");
   assert.equal(done.context.whatsapp_mvp.pets, 0);
-  const summary = formatWhatsAppHandoffSummary(done.context.whatsapp_mvp);
+  const summary = formatGlobalHandoffSummary(done.context.whatsapp_mvp);
   assert.match(summary, /Adultos: 2/);
   assert.match(summary, /Niños: 0/);
   assert.match(summary, /Huéspedes totales: 2/);
@@ -202,13 +202,13 @@ test("actualiza una corrección después de derivar y responde el total de hués
     },
   };
   const correction = turn("En realidad, somos dos adultos y mi mamá.", context);
-  assert.equal(correction.mode, "whatsapp_mvp_handoff_update");
+  assert.equal(correction.mode, "global_reservation_handoff_update");
   assert.equal(correction.context.whatsapp_mvp.adults, 3);
   assert.equal(correction.context.whatsapp_mvp.total_guests, 3);
   assert.match(correction.reply, /3 huéspedes en total/);
 
   const summary = turn("¿Entonces cuántas personas serían en total?", correction.context);
-  assert.equal(summary.mode, "whatsapp_mvp_summary");
+  assert.equal(summary.mode, "global_reservation_summary");
   assert.match(summary.reply, /3 huéspedes en total/);
 
   const information = turn("¿Puedo llegar un poco antes del horario habitual?", correction.context);
@@ -233,7 +233,7 @@ test("la recomendación elige la categoría de menor capacidad que admite al gru
   const handoff = done;
   assert.equal(handoff.context.whatsapp_mvp.recommended_category.slug, "triple");
   assert.match(handoff.reply, /Triple/);
-  const summary = formatWhatsAppHandoffSummary(handoff.context.whatsapp_mvp);
+  const summary = formatGlobalHandoffSummary(handoff.context.whatsapp_mvp);
   assert.match(summary, /50 % del diferencial/);
 });
 
@@ -241,7 +241,7 @@ test("la aprobación humana habilita datos del huésped y dos métodos de pago",
   const request = turn(
     "Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas"
   );
-  const approved = prepareWhatsAppMvpReservation({
+  const approved = prepareGlobalReservation({ channel: "whatsapp",
     context: request.context,
     category: { slug: "matrimonial", name: "Matrimonial Estándar", capacity: 2, price_per_night: 120 },
     totalAmount: 240,
@@ -273,7 +273,7 @@ test("si WhatsApp no entrega un teléfono numérico, el asesor lo solicita", () 
   const request = turn(
     "Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas"
   );
-  const approved = prepareWhatsAppMvpReservation({
+  const approved = prepareGlobalReservation({ channel: "whatsapp",
     context: request.context,
     category: { slug: "matrimonial", name: "Matrimonial Estándar", capacity: 2, price_per_night: 120 },
     totalAmount: 240,
@@ -290,7 +290,7 @@ test("una modificación posterior a la aprobación invalida la validación y dev
   const request = turn(
     "Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas"
   );
-  const approved = prepareWhatsAppMvpReservation({
+  const approved = prepareGlobalReservation({ channel: "whatsapp",
     context: request.context,
     category: { slug: "matrimonial", name: "Matrimonial Estándar", capacity: 2, price_per_night: 120 },
     totalAmount: 240,
@@ -308,7 +308,7 @@ test("los grupos de 8 o más no pueden usar el registro automático de una sola 
   );
   assert.equal(request.mode, "human_review_required");
   assert.match(request.reply, /8 o más/);
-  assert.throws(() => prepareWhatsAppMvpReservation({
+  assert.throws(() => prepareGlobalReservation({ channel: "whatsapp",
     context: request.context,
     category: { slug: "familiar", name: "Familiar 1", capacity: 5, price_per_night: 250 },
     totalAmount: 1000,
@@ -351,7 +351,7 @@ test("grupos que superan la capacidad máxima actual también requieren varias h
   );
   assert.equal(result.context.whatsapp_mvp.max_single_room_capacity, 5);
   assert.match(result.reply, /más de un cuarto|varias habitaciones/i);
-  assert.throws(() => prepareWhatsAppMvpReservation({
+  assert.throws(() => prepareGlobalReservation({ channel: "whatsapp",
     context: result.context,
     category: { slug: "familiar", name: "Familiar 1", capacity: 5, price_per_night: 250 },
     totalAmount: 500,
@@ -389,12 +389,12 @@ test("la aprobación humana exige autorizar mascotas y verificar camas para niñ
     totalAmount: 500,
     externalUserId: "51987654321",
   };
-  assert.throws(() => prepareWhatsAppMvpReservation(base), /autorización previa/);
-  assert.throws(() => prepareWhatsAppMvpReservation({
+  assert.throws(() => prepareGlobalReservation(base), /autorización previa/);
+  assert.throws(() => prepareGlobalReservation({ channel: "whatsapp",
     ...base,
     petAuthorized: true,
   }), /camas disponibles/);
-  const approved = prepareWhatsAppMvpReservation({
+  const approved = prepareGlobalReservation({ channel: "whatsapp",
     ...base,
     petAuthorized: true,
     childBedAvailabilityConfirmed: true,
@@ -421,7 +421,7 @@ test("fechas en palabras sustituyen datos antiguos sin repetir la categoría", (
     "Quiero ingresar el 20 de noviembre de 2026 y salir el 22 de noviembre de 2026.",
     context, now
   );
-  assert.equal(changed.mode, "whatsapp_mvp_handoff_update");
+  assert.equal(changed.mode, "global_reservation_handoff_update");
   assert.equal(changed.context.whatsapp_mvp.check_in, "2026-11-20");
   assert.equal(changed.context.whatsapp_mvp.check_out, "2026-11-22");
   assert.equal(changed.context.whatsapp_mvp.category_slug, "matrimonial");
@@ -463,7 +463,7 @@ test("una preferencia de pago antes de aprobación no crea reservas ni valida co
     },
   };
   const result = turn("Prefiero pagar en el establecimiento", context);
-  assert.equal(result.mode, "whatsapp_mvp_handoff_update");
+  assert.equal(result.mode, "global_reservation_handoff_update");
   assert.equal(result.action, undefined);
   assert.equal(result.context.whatsapp_mvp.preferred_payment_method, "pay_at_property");
   assert.equal(result.context.whatsapp_mvp.payment_method, undefined);

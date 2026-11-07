@@ -1,10 +1,8 @@
 import OpenAI from "openai";
-import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import {
   getPublicRoomCategoriesService,
-  searchAvailableRoomCategoriesService,
 } from "../rooms/roomCategory.service.js";
 import {
   createBookingByCategoryService,
@@ -22,7 +20,12 @@ import { formatPolicyInformationReply, policyInformationType } from "./ai.policy
 import { getHotelGuestPolicyRulesService } from "../services/hotelPolicy.service.js";
 import { isRoomDetailsInquiry, formatRoomDetailsReply } from "./ai.category-info.js";
 import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
-import { handleWhatsAppMvpTurn, isWhatsAppMenuRequest, prepareWhatsAppMvpReservation as prepareWhatsAppMvpReservationContext } from "./ai.whatsapp-mvp.js";
+import {
+  globalReservationContext,
+  handleGlobalReservationTurn,
+  isAssistantMenuRequest,
+  prepareGlobalReservation as prepareGlobalReservationContext,
+} from "./ai.reservation.js";
 import {
   HOTEL_SCOPE_CLASSIFIER_PROMPT,
   OUT_OF_HOTEL_SCOPE_REPLY,
@@ -30,13 +33,7 @@ import {
 } from "./ai.scope.js";
 import { isCategoryPriceInquiry, formatCategoryPricesReply } from "./ai.pricing.js";
 import { buildHumanServiceRedirect, isAiServiceTime } from "./ai.schedule.js";
-import {
-  handleDeterministicBookingFlow,
-  isNewReservationIntent,
-  isReservationIntent,
-  isWhatsAppBookingStep,
-  mergeAvailabilityIntoBookingContext,
-} from "./ai.booking-flow.js";
+import { isReservationIntent } from "./ai.booking-flow.js";
 
 const memoryResponses = new Map();
 const memoryBookingContexts = new Map();
@@ -44,7 +41,6 @@ const conversationQueues = new Map();
 let client;
 let warnedMissingConversationTable = false;
 let warnedMissingBookingContext = false;
-const DRAFT_CONTEXT_TTL_MS = 30 * 60 * 1000;
 const BOOKED_CONTEXT_TTL_MS = 24 * 60 * 60 * 1000;
 
 export function activeBookingContextFromRow(row, now = Date.now()) {
@@ -56,38 +52,10 @@ export function activeBookingContextFromRow(row, now = Date.now()) {
     : {};
   if (!expiresAt && Object.keys(stored).length > 0) return {};
   if (expiresAt && expiresAt <= now) return {};
-  return stored;
+  return globalReservationContext(stored);
 }
 
 const tools = [
-  {
-    type: "function",
-    name: "consultar_disponibilidad",
-    description:
-      "Busca la cantidad de habitaciones disponibles por categoría para fechas y huéspedes concretos.",
-    strict: true,
-    parameters: {
-      type: "object",
-      properties: {
-        check_in: {
-          type: "string",
-          description: "Fecha de entrada en formato AAAA-MM-DD.",
-        },
-        check_out: {
-          type: "string",
-          description: "Fecha de salida en formato AAAA-MM-DD.",
-        },
-        guests_count: {
-          type: "integer",
-          minimum: 1,
-          maximum: 30,
-          description: "Cantidad total de huéspedes.",
-        },
-      },
-      required: ["check_in", "check_out", "guests_count"],
-      additionalProperties: false,
-    },
-  },
   {
     type: "function",
     name: "listar_habitaciones",
@@ -238,9 +206,7 @@ async function loadBookingContext(channel, externalUserId) {
 
 async function saveBookingContext(channel, externalUserId, context) {
   const key = conversationKey(channel, externalUserId);
-  const ttlMs = channel === "whatsapp" || ["booked", "payment_reported"].includes(context?.state)
-    ? BOOKED_CONTEXT_TTL_MS
-    : DRAFT_CONTEXT_TTL_MS;
+  const ttlMs = BOOKED_CONTEXT_TTL_MS;
   const expiresAt = Object.keys(context || {}).length > 0
     ? Date.now() + ttlMs
     : null;
@@ -281,12 +247,12 @@ async function saveBookingContext(channel, externalUserId, context) {
   }
 }
 
-export async function updateWhatsAppMvpContextForHandoff({
+export async function updateGlobalReservationContextForHandoff({
   channel,
   externalUserId,
   message,
 }) {
-  if (channel !== "whatsapp" || !externalUserId || !String(message || "").trim()) {
+  if (!externalUserId || !String(message || "").trim()) {
     return false;
   }
   const current = await loadBookingContext(channel, externalUserId);
@@ -297,17 +263,17 @@ export async function updateWhatsAppMvpContextForHandoff({
   } catch (error) {
     console.warn("No se pudieron cargar categorías al actualizar el handoff:", error.message);
   }
-  const progress = handleWhatsAppMvpTurn({ message, context: current, categories, externalUserId });
+  const progress = handleGlobalReservationTurn({ message, context: current, categories, externalUserId, channel });
   if (JSON.stringify(current) === JSON.stringify(progress.context)) return false;
   await saveBookingContext(channel, externalUserId, progress.context);
   return true;
 }
 
 
-function whatsappBookingSpecialRequests(state = {}) {
+function globalBookingSpecialRequests(state = {}, channel) {
   const ages = Array.isArray(state.child_ages) ? state.child_ages.join(", ") : "";
   const details = [
-    "Solicitud originada por WhatsApp",
+    "Solicitud originada por " + channel,
     "Adultos: " + Number(state.adults || 0),
     "Niños: " + Number(state.children || 0) + (ages ? " (edades: " + ages + ")" : ""),
     "Mascotas: " + Number(state.pets || 0) + (Number(state.pets || 0) > 0 ? " (S/ 20 por mascota/noche; autorización del hospedaje)" : ""),
@@ -318,7 +284,7 @@ function whatsappBookingSpecialRequests(state = {}) {
   return details.join(" | ").slice(0, 1800);
 }
 
-function whatsappBookingCreatedReply(state, bookingResult, paymentMethod) {
+function globalBookingCreatedReply(state, bookingResult, paymentMethod) {
   const language = state.language || "es";
   const booking = bookingResult.booking || {};
   const amount = "S/ " + Number(booking.total_amount || 0).toFixed(2);
@@ -341,7 +307,7 @@ function whatsappBookingCreatedReply(state, bookingResult, paymentMethod) {
   return messages[language] || messages.es;
 }
 
-function whatsappPaymentStatusReply(language, status) {
+function globalPaymentStatusReply(language, status) {
   const confirmed = status === "confirmed";
   const messages = {
     es: confirmed
@@ -360,7 +326,7 @@ function whatsappPaymentStatusReply(language, status) {
   return messages[language] || messages.es;
 }
 
-function whatsappBookingFailureReply(language) {
+function globalBookingFailureReply(language) {
   const messages = {
     es: "No pude completar el registro automático porque la validación interna necesita una revisión adicional. Mantengo tu solicitud para que nuestro equipo continúe contigo; no necesitas repetir los datos.",
     en: "I couldn't complete the automatic registration because the internal validation needs another review. I've kept your request for our team to continue; you don't need to repeat your details.",
@@ -370,7 +336,7 @@ function whatsappBookingFailureReply(language) {
   return messages[language] || messages.es;
 }
 
-async function executeWhatsAppMvpAction({ progress, channel, externalUserId }) {
+async function executeGlobalReservationAction({ progress, channel, externalUserId }) {
   const state = progress.context?.whatsapp_mvp || {};
   if (progress.action === "create_booking") {
     await saveBookingContext(channel, externalUserId, progress.context);
@@ -380,7 +346,7 @@ async function executeWhatsAppMvpAction({ progress, channel, externalUserId }) {
         check_in: state.check_in,
         check_out: state.check_out,
         guests_count: Number(state.total_guests),
-        special_requests: whatsappBookingSpecialRequests(state),
+        special_requests: globalBookingSpecialRequests(state, channel),
         customer: {
           full_name: state.customer_name,
           phone: state.customer_phone,
@@ -388,10 +354,10 @@ async function executeWhatsAppMvpAction({ progress, channel, externalUserId }) {
           document_type: null,
           document_number: null,
         },
-        source: "whatsapp",
+        source: channel,
       }, {
         bookingIntentId: state.intent_id,
-        source: "whatsapp",
+        source: channel,
         paymentMethod: progress.paymentMethod,
         staffConfirmed: true,
         finalAmount: state.staff_confirmation?.total_amount,
@@ -416,20 +382,20 @@ async function executeWhatsAppMvpAction({ progress, channel, externalUserId }) {
       const nextContext = { state: "whatsapp_mvp", whatsapp_mvp: nextState };
       await saveBookingContext(channel, externalUserId, nextContext);
       return {
-        reply: whatsappBookingCreatedReply(nextState, result, progress.paymentMethod),
+        reply: globalBookingCreatedReply(nextState, result, progress.paymentMethod),
         responseId: null,
         deterministic: true,
-        mode: "whatsapp_mvp_booking_created",
+        mode: "global_reservation_booking_created",
       };
     } catch (error) {
-      console.error("No se pudo registrar la reserva desde WhatsApp MVP:", error.message);
+      console.error("No se pudo registrar la reserva desde el asesor global:", error.message);
       const retryState = { ...state, state: "handoff" };
       delete retryState.awaiting;
       delete retryState.staff_confirmation;
       const retryContext = { state: "whatsapp_mvp", whatsapp_mvp: retryState };
       await saveBookingContext(channel, externalUserId, retryContext);
       return {
-        reply: whatsappBookingFailureReply(state.language || "es"),
+        reply: globalBookingFailureReply(state.language || "es"),
         responseId: null,
         deterministic: true,
         mode: "human_review_required",
@@ -450,13 +416,13 @@ async function executeWhatsAppMvpAction({ progress, channel, externalUserId }) {
         whatsapp_mvp: nextState,
       });
       return {
-        reply: whatsappPaymentStatusReply(state.language || "es", result.status),
+        reply: globalPaymentStatusReply(state.language || "es", result.status),
         responseId: null,
         deterministic: true,
-        mode: "whatsapp_mvp_payment_reported",
+        mode: "global_reservation_payment_reported",
       };
     } catch (error) {
-      console.error("No se pudo registrar el aviso de pago de WhatsApp:", error.message);
+      console.error("No se pudo registrar el aviso de pago del asesor:", error.message);
       return {
         reply: "No pude registrar el aviso en este momento. Nuestro equipo puede revisar el pago contigo; conserva el comprobante de Culqi.",
         responseId: null,
@@ -488,13 +454,13 @@ async function executeWhatsAppMvpAction({ progress, channel, externalUserId }) {
         whatsapp_mvp: nextState,
       });
       return {
-        reply: whatsappPaymentStatusReply(state.language || "es", status),
+        reply: globalPaymentStatusReply(state.language || "es", status),
         responseId: null,
         deterministic: true,
-        mode: "whatsapp_mvp_booking_status",
+        mode: "global_reservation_booking_status",
       };
     } catch (error) {
-      console.error("No se pudo consultar el estado de la reserva WhatsApp:", error.message);
+      console.error("No se pudo consultar el estado de la reserva:", error.message);
       return {
         reply: "No puedo consultar el estado de la reserva ahora mismo. Nuestro equipo puede revisarlo contigo.",
         responseId: null,
@@ -506,7 +472,7 @@ async function executeWhatsAppMvpAction({ progress, channel, externalUserId }) {
   return null;
 }
 
-export async function confirmWhatsAppMvpReservation({
+export async function confirmGlobalReservation({
   channel,
   externalUserId,
   categorySlug,
@@ -514,8 +480,8 @@ export async function confirmWhatsAppMvpReservation({
   petAuthorized = false,
   childBedAvailabilityConfirmed = false,
 }) {
-  if (channel !== "whatsapp") {
-    const error = new Error("La confirmación de reservas MVP solo está disponible para WhatsApp.");
+  if (!["whatsapp", "instagram", "facebook"].includes(channel)) {
+    const error = new Error("Canal de atención no válido.");
     error.statusCode = 400;
     throw error;
   }
@@ -557,84 +523,17 @@ export async function confirmWhatsAppMvpReservation({
     error.statusCode = 400;
     throw error;
   }
-  const prepared = prepareWhatsAppMvpReservationContext({
+  const prepared = prepareGlobalReservationContext({
     context,
     category,
     totalAmount,
     externalUserId,
+    channel,
     petAuthorized,
     childBedAvailabilityConfirmed,
   });
   await saveBookingContext(channel, externalUserId, prepared.context);
   return { reply: prepared.reply, category };
-}
-
-async function ensureDurableBookingIntent(
-  channel,
-  externalUserId,
-  { forceNew = false } = {}
-) {
-  const dbClient = await pool.connect();
-
-  try {
-    await dbClient.query("BEGIN");
-    await dbClient.query(
-      `
-      INSERT INTO ai_conversations (
-        channel, external_user_id, last_response_id, booking_context,
-        booking_context_expires_at, updated_at
-      )
-      VALUES ($1, $2, NULL, '{}'::jsonb, NULL, CURRENT_TIMESTAMP)
-      ON CONFLICT (channel, external_user_id) DO NOTHING;
-      `,
-      [channel, externalUserId]
-    );
-
-    const currentResult = await dbClient.query(
-      `
-      SELECT booking_context, booking_context_expires_at
-      FROM ai_conversations
-      WHERE channel = $1 AND external_user_id = $2
-      FOR UPDATE;
-      `,
-      [channel, externalUserId]
-    );
-    const row = currentResult.rows[0];
-    const expired = row?.booking_context_expires_at &&
-      new Date(row.booking_context_expires_at).getTime() <= Date.now();
-    const current = !expired && row?.booking_context &&
-      typeof row.booking_context === "object"
-      ? row.booking_context
-      : {};
-    const canReuse = !forceNew && Boolean(current.intent_id) &&
-      ["draft", "booked", "payment_reported"].includes(current.state);
-    const next = canReuse
-      ? current
-      : {
-          ...(forceNew ? {} : current),
-          state: "draft",
-          active: true,
-          intent_id: randomUUID(),
-        };
-
-    await dbClient.query(
-      `
-      UPDATE ai_conversations
-      SET booking_context = $3::jsonb,
-          booking_context_expires_at = CURRENT_TIMESTAMP + INTERVAL '30 minutes',
-          updated_at = CURRENT_TIMESTAMP
-      WHERE channel = $1 AND external_user_id = $2;
-      `,
-      [channel, externalUserId, JSON.stringify(next)]
-    );
-    await dbClient.query("COMMIT");
-    return next;
-  } catch (error) {
-    await dbClient.query("ROLLBACK");
-    throw error;
-  } finally {
-    dbClient.release();
-  }
 }
 
 function publicCategory(category) {
@@ -654,33 +553,9 @@ function publicCategory(category) {
   };
 }
 
-async function executeTool(call, { onAvailability } = {}) {
+async function executeTool(call) {
   try {
     const args = JSON.parse(call.arguments || "{}");
-
-    if (call.name === "consultar_disponibilidad") {
-      const result = await searchAvailableRoomCategoriesService({
-        check_in: args.check_in,
-        check_out: args.check_out,
-        guests_count: args.guests_count,
-      });
-
-      // Guarda únicamente el stock por categoría. La unidad física no se
-      // asigna hasta el momento de crear la reserva.
-      await onAvailability?.(result);
-
-      return JSON.stringify({
-        success: true,
-        check_in: result.check_in,
-        check_out: result.check_out,
-        nights: result.nights,
-        available_count: result.available_count,
-        categories: result.categories
-          .filter((category) => category.available_quantity > 0)
-          .map(publicCategory),
-        reservation_created: false,
-      });
-    }
 
     if (call.name === "listar_habitaciones") {
       const categories = await getPublicRoomCategoriesService();
@@ -729,17 +604,15 @@ async function createFirstResponse(
   { message, previousResponseId, history, recoveryHistory, channel, externalUserId }
 ) {
   const reusePrevious = shouldReuseOpenAiResponseId(channel, previousResponseId);
-  const historyOptions = channel === "whatsapp"
-    ? { maxHistoryMessages: 8, maxHistoryCharacters: 3_200 }
-    : { maxHistoryMessages: 12, maxHistoryCharacters: 5_000 };
+  const historyOptions = { maxHistoryMessages: 8, maxHistoryCharacters: 3_200 };
   const sourceHistory = recoveryHistory.length ? recoveryHistory : history;
   const request = {
     model: env.openai.model,
-    instructions: buildHotelAssistantPrompt({ channel }),
+    instructions: buildHotelAssistantPrompt(),
     // previous_response_id ya contiene la conversación remota. No añadir
     // otra vez el historial de Meta a la misma solicitud.
     input: responseInput(reusePrevious ? [] : sourceHistory, message, historyOptions),
-    tools: channel === "whatsapp" ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
+    tools,
     parallel_tool_calls: false,
     max_output_tokens: env.ai.maxOutputTokens,
     store: true,
@@ -787,18 +660,18 @@ async function generateAiReplyInternal({
 
   // Pedido explícito del menú del hotel: respuesta fija, breve y sin
   // consultar datos externos. Otras consultas sí pasan por el filtro de alcance.
-  if (channel === "whatsapp" && isWhatsAppMenuRequest(message)) {
+  if (isAssistantMenuRequest(message)) {
     const context = await loadBookingContext(channel, externalUserId);
-    const menu = handleWhatsAppMvpTurn({ message, context });
+    const menu = handleGlobalReservationTurn({ message, context });
     return {
       reply: menu.reply, responseId: null, deterministic: true, mode: menu.mode,
     };
   }
 
-  // Las respuestas estructuradas del flujo WhatsApp (fechas, edades, nombre,
+  // Las respuestas estructuradas del flujo global (fechas, edades, nombre,
   // correo y elección de pago) se procesan antes del clasificador de alcance.
   // Así un "no", un número o un correo no se confunden con una consulta ajena.
-  if (channel === "whatsapp" && !policyInformationType(message)) {
+  if (!policyInformationType(message)) {
     const current = await loadBookingContext(channel, externalUserId);
     let categories = [];
     if (current?.whatsapp_mvp || isReservationIntent(message)) {
@@ -808,15 +681,16 @@ async function generateAiReplyInternal({
         console.warn("No se pudieron cargar categorías para recomendar habitación:", error.message);
       }
     }
-    const progress = handleWhatsAppMvpTurn({
+    const progress = handleGlobalReservationTurn({
       message,
       context: current,
       externalUserId,
+      channel,
       categories,
       now,
     });
     if (progress.action) {
-      const actionResult = await executeWhatsAppMvpAction({
+      const actionResult = await executeGlobalReservationAction({
         progress,
         channel,
         externalUserId,
@@ -911,7 +785,7 @@ async function generateAiReplyInternal({
 
 
 
-  // Las excepciones de Instagram y Facebook siguen con sus reglas de revisión.
+  // Las excepciones conservan la misma revisión humana en todos los canales.
   const specialQuoteReason = requiresManualReview(message, {
     hasReservationIntent: isReservationIntent(message) || isCategoryPriceInquiry(message),
   });
@@ -947,7 +821,7 @@ async function generateAiReplyInternal({
     try {
       const categories = await getPublicRoomCategoriesService();
       return {
-        reply: formatCategoryPricesReply(categories, message, { channel }),
+        reply: formatCategoryPricesReply(categories, message),
         responseId: null,
         deterministic: true,
         mode: "category_prices",
@@ -985,76 +859,7 @@ async function generateAiReplyInternal({
     }
   }
 
-  let bookingContext = await loadBookingContext(channel, externalUserId);
-  const exception = requiresManualReview(message, {
-    bookingInProgress: Boolean(bookingContext?.active),
-    hasReservationIntent: isReservationIntent(message),
-  });
-  if (exception) {
-    return { reply: humanReviewReply(exception, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
-  }
-
-  const newReservation = channel !== "whatsapp" && isNewReservationIntent(message);
-  if (channel !== "whatsapp" && (newReservation || isReservationIntent(message))) {
-    bookingContext = await ensureDurableBookingIntent(
-      channel,
-      externalUserId,
-      { forceNew: newReservation }
-    );
-  }
-  // Sin PMS, el MVP WhatsApp nunca consulta inventario ni crea pre-reservas.
-  // Sus peticiones de reserva se derivan arriba para atención humana.
-  const deterministic = channel === "whatsapp"
-    ? { handled: false, context: bookingContext }
-    : await handleDeterministicBookingFlow({
-    message,
-    context: bookingContext,
-    hotelPhone: env.hotel.phone || "901551287",
-    paymentUrl: env.culqiPaymentUrl,
-    newIntentPrepared: newReservation,
-    // Las reservas por Instagram y Facebook también deben ser conversacionales:
-    // una pregunta por vez, con verificación de stock antes de solicitar PII.
-    progressiveCollection: true,
-    services: {
-      listCategories: getPublicRoomCategoriesService,
-      searchAvailableRooms: searchAvailableRoomCategoriesService,
-      createBooking: (bookingData, options = {}) =>
-        createBookingByCategoryService(bookingData, {
-          ...options,
-          conversation: { channel, externalUserId },
-        }),
-      getBooking: getBookingByIntentService,
-      reportPayment: reportBookingPaymentByIntentService,
-    },
-  });
-
-  if (deterministic.handled) {
-    if (!deterministic.contextPersisted) {
-      await saveBookingContext(
-        channel,
-        externalUserId,
-        deterministic.context
-      );
-    } else {
-      memoryBookingContexts.set(conversationKey(channel, externalUserId), {
-        context: deterministic.context,
-        expiresAt: Date.now() + BOOKED_CONTEXT_TTL_MS,
-      });
-    }
-    return {
-      reply: deterministic.reply,
-      responseId: null,
-      deterministic: true,
-      mode: deterministic.mode || "booking_flow",
-    };
-  }
-
-  if (
-    JSON.stringify(deterministic.context) !== JSON.stringify(bookingContext)
-  ) {
-    bookingContext = deterministic.context;
-    await saveBookingContext(channel, externalUserId, bookingContext);
-  }
+  // Las reservas se procesan únicamente mediante el flujo global anterior.
 
   const previousResponseId = await getPreviousResponseId(
     channel,
@@ -1088,28 +893,16 @@ async function generateAiReplyInternal({
       calls.map(async (call) => ({
         type: "function_call_output",
         call_id: call.call_id,
-        output: await executeTool(call, {
-          onAvailability: async (availability) => {
-            bookingContext = mergeAvailabilityIntoBookingContext(
-              bookingContext,
-              availability
-            );
-            await saveBookingContext(
-              channel,
-              externalUserId,
-              bookingContext
-            );
-          },
-        }),
+        output: await executeTool(call),
       }))
     );
 
     response = await trackedResponse(openai, {
       model: env.openai.model,
-      instructions: buildHotelAssistantPrompt({ channel }),
+      instructions: buildHotelAssistantPrompt(),
       previous_response_id: response.id,
       input: toolOutputs,
-      tools: channel === "whatsapp" ? tools.filter((tool) => tool.name !== "consultar_disponibilidad") : tools,
+      tools,
       parallel_tool_calls: false,
       max_output_tokens: env.ai.maxOutputTokens,
       store: true,

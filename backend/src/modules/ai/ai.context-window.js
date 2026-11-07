@@ -30,8 +30,7 @@ export function responseInput(history, message, {
   return kept;
 }
 
-export function shouldReuseOpenAiResponseId(channel, previousResponseId) {
-  // En WhatsApp, conversaciones de varios días podían reintroducir miles de
-  // tokens aunque el historial visible ya se hubiera limitado.
-  return channel !== "whatsapp" && Boolean(previousResponseId);
+export function shouldReuseOpenAiResponseId() {
+  // Ventana acotada común: no reintroducir cadenas remotas antiguas de otro flujo.
+  return false;
 }

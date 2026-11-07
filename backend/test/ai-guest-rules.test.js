@@ -25,14 +25,16 @@ test("las reglas de huéspedes incluyen los niños, mascotas, grupos y seis cate
   assert.match(prompt, /no confirmes su admisión sin autorización humana/);
 });
 
-test("las reglas del WhatsApp MVP impiden prometer reservas o disponibilidad", () => {
-  const prompt = buildHotelAssistantPrompt({ channel: "whatsapp" });
-  assert.match(prompt, /MVP WhatsApp/);
-  assert.match(prompt, /nunca confirmes disponibilidad por tu cuenta/);
+test("la instrucción global aplica la política humana a todos los canales", () => {
+  const prompt = buildHotelAssistantPrompt();
+  assert.match(prompt, /Instrucción global/);
+  assert.match(prompt, /Nunca confirmes disponibilidad por tu cuenta/);
   assert.match(prompt, /el menú es opcional/);
   assert.match(prompt, /entrega la conversación al equipo/);
-  const instagram = buildHotelAssistantPrompt({ channel: "instagram" });
-  assert.match(instagram, /Instagram\/Facebook: conserva la consulta de disponibilidad/);
+  for (const channel of ["whatsapp", "instagram", "facebook"]) {
+    assert.equal(buildHotelAssistantPrompt({ channel }), prompt);
+  }
+  assert.doesNotMatch(prompt, /WhatsApp|Instagram|Facebook|Reglas específicas del canal|consultar_disponibilidad/);
 });
 
 test("las solicitudes especiales requieren revisión humana, no reservas automáticas", () => {

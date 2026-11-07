@@ -383,7 +383,7 @@ export default function MessagesAdmin() {
       setError("La gestión de WhatsApp está pendiente de aprobación de Meta.");
       return;
     }
-    if (!selected || selected.channel !== "whatsapp" || saving ||
+    if (!selected || saving ||
         !confirmCategory || !Number.isFinite(amount) || amount <= 0) {
       setError("Selecciona una categoría e indica el importe total confirmado.");
       return;
@@ -667,7 +667,7 @@ export default function MessagesAdmin() {
               ) : <p className="mt-3 text-sm text-[#73818a]">Selecciona un chat para ver su información.</p>}
             </div>
 
-            {selected?.channel === "whatsapp" && reservation && (
+            {selected && reservation && (
               <div className="border-b border-[#ded4c4] bg-[#fdf3dc] p-4">
                 <h3 className="text-sm font-bold">Resumen interno de recepción</h3>
                 <p className="mt-1 text-xs text-[#876b3b]">

@@ -36,11 +36,11 @@ export function humanReviewReply(reason, phone = "901551287") {
   ].join("\n");
 }
 
-export function whatsAppMvpReservationReply() {
+export function globalAssistantReservationReply() {
   return "¡Perfecto! 😊 Para ayudarte con la reserva, indícame las fechas de entrada y salida, cuántos adultos y niños viajarán (con sus edades), si llevarán mascotas y qué tipo de habitación prefieres. Nuestro equipo continuará en este mismo chat para verificar disponibilidad y confirmar la reserva.";
 }
 
-export function whatsAppMvpWelcome(message = "") {
+export function globalAssistantWelcome(message = "") {
   const text = normalize(message).trim();
   if (/^(ola|bom dia|boa tarde|boa noite)$/.test(text)) {
     return "Olá! 👋 Bem-vindo(a) à Casa Huéspedes Pimentel. Você pode escrever no idioma que preferir. Deseja informações ou fazer uma reserva?";
@@ -53,3 +53,6 @@ export function whatsAppMvpWelcome(message = "") {
   }
   return "¡Hola! 👋 Bienvenido(a) a Casa Huéspedes Pimentel. Puedes escribir en el idioma que prefieras. ¿Buscas información del hospedaje o quieres hacer una reserva?";
 }
+
+// Compatibility names for existing consumers.
+export { globalAssistantWelcome as whatsAppMvpWelcome, globalAssistantReservationReply as whatsAppMvpReservationReply };

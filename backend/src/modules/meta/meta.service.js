@@ -3,10 +3,10 @@ import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
 import {
   generateAiReply,
-  updateWhatsAppMvpContextForHandoff,
+  updateGlobalReservationContextForHandoff,
 } from "../ai/ai.service.js";
-import { whatsAppMvpWelcome } from "../ai/ai.guest-rules.js";
-import { isCategoryPriceInquiry, isOpeningGreetingOnly, formatInitialGreeting } from "../ai/ai.pricing.js";
+import { globalAssistantWelcome } from "../ai/ai.guest-rules.js";
+import { isOpeningGreetingOnly } from "../ai/ai.pricing.js";
 import { getPublicRoomCategoriesService } from "../rooms/roomCategory.service.js";
 import {
   sendInstagramMessageParts,
@@ -27,7 +27,7 @@ const UNSUPPORTED_MESSAGE_REPLY =
 const HUMAN_HANDOFF_REPLY =
   "Claro, dejaré esta conversación para que la atienda una persona. El asistente automático quedará pausado en este chat.";
 
-const WHATSAPP_FOLLOWUP_GREETING_REPLY =
+const ASSISTANT_FOLLOWUP_GREETING_REPLY =
   "Con gusto 😊. Puedes consultar información del hotel o solicitar una reserva. Para reservar, comparte tus fechas, cantidad de adultos, niños (con sus edades) y mascotas; una persona confirmará disponibilidad.";
 
 function asObject(value) {
@@ -538,7 +538,7 @@ export async function setHandoffState(
     );
     // Al terminar una atención humana sin aprobación comercial, conservar el
     // borrador pero desbloquear el flujo de la IA. No tocar reservas ya aprobadas.
-    if (channel === "whatsapp" && active !== true) {
+    if (active !== true) {
       await db.query(
         `UPDATE public.ai_conversations
          SET booking_context = jsonb_set(
@@ -714,40 +714,44 @@ export async function isFirstMetaIncomingMessage(channel, externalUserId, incomi
   if (firstEverMessage) return true;
 
   // Los huéspedes antiguos conservan el historial. Si vuelven a escribir
-  // un saludo breve y nunca recibieron el nuevo catálogo, se lo presentamos
+  // un saludo breve y nunca recibieron la bienvenida global, la presentamos
   // una sola vez sin obligarlos a iniciar un chat distinto.
-  // WhatsApp incluye también la primera consulta de reserva en una cuenta
-  // de prueba que ya tenía mensajes previos, pero todavía no tenía catálogo.
   // Una conversación existente solo se saluda cuando empieza de forma clara:
   // no se interrumpe una reserva en curso con otra presentación.
   const startsConversation = isOpeningGreetingOnly(messageText) ||
-    (channel === "whatsapp" &&
-      /\b(?:hola|buenas|buenos dias)\b/i.test(
+    /\b(?:hola|buenas|buenos dias)\b/i.test(
         String(messageText || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-      ));
+      );
   if (!startsConversation) return false;
   const previousWelcome = await db.query(
     `SELECT EXISTS (
        SELECT 1 FROM meta_messages
        WHERE channel = $1 AND external_user_id = $2
          AND direction = 'outgoing' AND author = 'assistant'
-         AND content LIKE '%Estas son nuestras categorías y tarifas vigentes:%'
+         AND (content LIKE '%Estas son nuestras categorías y tarifas vigentes:%'
+           OR content LIKE '%Bienvenido(a) a Casa Huéspedes Pimentel.%'
+           OR content LIKE '%Welcome to Casa Huéspedes Pimentel.%'
+           OR content LIKE '%Bem-vindo(a) à Casa Huéspedes Pimentel.%'
+           OR content LIKE '%Bienvenue à Casa Huéspedes Pimentel.%')
      ) AS has_welcome;`,
     [channel, externalUserId]
   );
   return previousWelcome.rows[0]?.has_welcome === false;
 }
 
-// Confirma que el huésped ya recibió el catálogo antes de convertir otro
+// Confirma que el huésped ya recibió una bienvenida antes de convertir otro
 // saludo en una invitación a continuar. No depende de memoria volátil.
 async function hasPreviouslySentCatalog(channel, externalUserId, db = pool) {
-  if (channel !== "whatsapp") return false;
   const result = await db.query(
     `SELECT EXISTS (
        SELECT 1 FROM meta_messages
        WHERE channel = $1 AND external_user_id = $2
          AND direction = 'outgoing' AND author = 'assistant'
-         AND content LIKE '%Estas son nuestras categorías y tarifas vigentes:%'
+         AND (content LIKE '%Estas son nuestras categorías y tarifas vigentes:%'
+           OR content LIKE '%Bienvenido(a) a Casa Huéspedes Pimentel.%'
+           OR content LIKE '%Welcome to Casa Huéspedes Pimentel.%'
+           OR content LIKE '%Bem-vindo(a) à Casa Huéspedes Pimentel.%'
+           OR content LIKE '%Bienvenue à Casa Huéspedes Pimentel.%')
      ) AS has_welcome;`,
     [channel, externalUserId]
   );
@@ -1518,7 +1522,7 @@ export async function processMetaMessage(message, overrides = {}) {
     complete: overrides.complete ?? completeMessage,
     getHandoff: overrides.getHandoff ?? getHandoffState,
     setHandoff: overrides.setHandoff ?? setHandoffState,
-    updateHandoffContext: overrides.updateHandoffContext ?? updateWhatsAppMvpContextForHandoff,
+    updateHandoffContext: overrides.updateHandoffContext ?? updateGlobalReservationContextForHandoff,
     loadHistory: overrides.loadHistory ?? getRecentConversationHistory,
     generateReply: overrides.generateReply ?? generateAiReply,
     isFirstMetaIncomingMessage: overrides.isFirstMetaIncomingMessage ??
@@ -1584,7 +1588,7 @@ export async function processMetaMessage(message, overrides = {}) {
     if (
       await dependencies.getHandoff(message.channel, message.externalUserId)
     ) {
-      if (message.channel === "whatsapp" && message.messageType === "text" && message.text) {
+      if (message.messageType === "text" && message.text) {
         try {
           await dependencies.updateHandoffContext({
             channel: message.channel,
@@ -1646,33 +1650,20 @@ export async function processMetaMessage(message, overrides = {}) {
       message.text
     );
 
-    let welcome = "";
-    if (firstMessage) {
-      if (message.channel === "whatsapp") {
-        welcome = whatsAppMvpWelcome(message.text);
-      } else {
-        try {
-          welcome = formatInitialGreeting(await dependencies.listCategories());
-        } catch (error) {
-          console.warn("No se pudieron consultar las tarifas para el saludo:", error.message);
-          welcome = formatInitialGreeting([]);
-        }
-      }
-    }
+    const welcome = firstMessage ? globalAssistantWelcome(message.text) : "";
 
     let reply;
     let handoffActivatedByThisTurn = false;
     if (firstMessage && isOpeningGreetingOnly(message.text)) {
       reply = welcome;
-    } else if (message.channel === "whatsapp" &&
-               isOpeningGreetingOnly(message.text) &&
+    } else if (isOpeningGreetingOnly(message.text) &&
                await dependencies.hasPreviouslySentCatalog(
                  message.channel, message.externalUserId, dependencies.db ?? pool
                )) {
-      // La bienvenida y el catálogo se presentan solo una vez. Un "hola"
+      // La bienvenida se presenta solo una vez. Un "hola"
       // posterior continúa orientando la reserva, sin reabrir el saludo
       // ni consumir otra llamada a OpenAI.
-      reply = WHATSAPP_FOLLOWUP_GREETING_REPLY;
+      reply = ASSISTANT_FOLLOWUP_GREETING_REPLY;
     } else {
       // Incluso en el primer mensaje, el filtro de alcance debe ejecutarse
       // antes de mostrar el catálogo: un pedido ajeno no recibe precios.
@@ -1695,16 +1686,6 @@ export async function processMetaMessage(message, overrides = {}) {
         reply = result.reply;
       } else if (result.mode === "outside_hotel_scope") {
         reply = result.reply;
-      } else if (firstMessage && message.channel !== "whatsapp" &&
-                 result.mode === "category_prices" &&
-                 isCategoryPriceInquiry(message.text)) {
-        reply = welcome;
-      } else if (firstMessage && message.channel === "whatsapp" &&
-                 result.mode === "booking_details_required") {
-        // El flujo de reserva ya dejó guardada la intención y los datos
-        // del primer mensaje. Mostramos primero el catálogo, sin pedir
-        // todos los datos juntos ni repetir la pregunta de fechas.
-        reply = welcome;
       } else {
         reply = firstMessage ? welcome + "\n\n" + result.reply : result.reply;
       }
