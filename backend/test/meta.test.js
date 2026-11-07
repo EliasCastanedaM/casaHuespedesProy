@@ -35,6 +35,7 @@ function successfulDependencies(overrides = {}) {
     getHandoff: async () => false,
     setHandoff: async () => {},
     updateHandoffContext: async () => false,
+    hasPreviouslySentCatalog: async () => false,
     loadHistory: async () => [],
     generateReply: async () => ({ reply: "Respuesta IA" }),
     sendReply: async () => ({}),
@@ -1237,12 +1238,12 @@ test("POST del webhook acepta firma válida y rechaza firma inválida", async ()
   }
 });
 
-test("primer saludo en Instagram y Facebook presenta categorías y precios sin llamar a la IA", async () => {
+test("primer saludo usa la misma bienvenida global en las tres plataformas", async () => {
   const categories = [
     { slug: "matrimonial", name: "Matrimonial Estándar", price_per_night: 154.70 },
     { slug: "doble", name: "Doble", price_per_night: 176.80 },
   ];
-  for (const channel of ["instagram", "facebook"]) {
+  for (const channel of ["whatsapp", "instagram", "facebook"]) {
     let sent = "";
     const result = await processMetaMessage(
       message({ channel, externalUserId: "nuevo-huesped-" + channel, text: "¡Hola!" }),
@@ -1261,13 +1262,12 @@ test("primer saludo en Instagram y Facebook presenta categorías y precios sin l
     );
     assert.equal(result.status, "replied");
     assert.match(sent, /¡Hola!/);
-    assert.match(sent, /Matrimonial Estándar: S\/ 154\.70 por noche/);
-    assert.match(sent, /Doble: S\/ 176\.80 por noche/);
-    assert.match(sent, /fecha|fechas/i);
+    assert.match(sent, /idioma que prefieras/);
+    assert.doesNotMatch(sent, /S\/\s*\d+|tarifas vigentes/);
   }
 });
 
-test("primera consulta específica conserva la respuesta original después del catálogo", async () => {
+test("primera consulta específica conserva la respuesta original después del saludo global", async () => {
   let sent = "";
   let generated = 0;
   await processMetaMessage(
@@ -1287,7 +1287,8 @@ test("primera consulta específica conserva la respuesta original después del c
     })
   );
   assert.equal(generated, 1);
-  assert.match(sent, /Familiar: S\/ 221\.00/);
+  assert.match(sent, /Bienvenido/);
+  assert.doesNotMatch(sent, /Familiar: S\/ 221\.00/);
   assert.match(sent, /S\/ 20/);
 });
 
@@ -1462,8 +1463,8 @@ test("una consulta de tarifas en primer mensaje pasa por el filtro antes del cat
     })
   );
   assert.equal(calls, 1);
-  assert.match(sent, /Triple: S\/ 197\.20 por noche/);
-  assert.equal((sent.match(/Triple: S\/ 197\.20/g) || []).length, 1);
+  assert.match(sent, /Triple S\/ 197\.20/);
+  assert.equal((sent.match(/197\.20/g) || []).length, 1);
 });
 
 

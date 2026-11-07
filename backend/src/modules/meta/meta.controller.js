@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { env } from "../../config/env.js";
-import { confirmWhatsAppMvpReservation } from "../ai/ai.service.js";
+import { confirmGlobalReservation } from "../ai/ai.service.js";
 import { pool } from "../../config/db.js";
 import { persistCoexistenceEvents } from "./meta.coexistence.js";
 import {
@@ -341,17 +341,10 @@ export async function sendManualMessageController(req, res, next) {
   }
 }
 
-export async function confirmWhatsAppMvpReservationController(req, res, next) {
+export async function confirmGlobalReservationController(req, res, next) {
   try {
     const conversation = conversationParams(req, res);
     if (!conversation) return;
-    if (conversation.channel !== "whatsapp") {
-      return res.status(400).json({
-        success: false,
-        message: "La confirmación de reservas MVP solo está disponible para WhatsApp.",
-      });
-    }
-
     const categorySlug = String(req.body?.category_slug || "").trim();
     const totalAmount = Number(req.body?.total_amount);
     if (!categorySlug || !Number.isFinite(totalAmount) || totalAmount <= 0) {
@@ -361,7 +354,7 @@ export async function confirmWhatsAppMvpReservationController(req, res, next) {
       });
     }
 
-    const prepared = await confirmWhatsAppMvpReservation({
+    const prepared = await confirmGlobalReservation({
       channel: conversation.channel,
       externalUserId: conversation.externalUserId,
       categorySlug,

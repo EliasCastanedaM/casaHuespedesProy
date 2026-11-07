@@ -59,7 +59,7 @@ function requestedSlugs(message) {
   return slugs;
 }
 
-export function formatCategoryPricesReply(categories, message, { channel = "instagram" } = {}) {
+export function formatCategoryPricesReply(categories, message) {
   const validCategories = Array.isArray(categories)
     ? categories.filter((category) => category?.is_active !== false)
     : [];
@@ -83,9 +83,7 @@ export function formatCategoryPricesReply(categories, message, { channel = "inst
     "Estas son nuestras tarifas vigentes por categoría:",
     ...rows,
     "",
-    channel === "whatsapp"
-      ? "Si deseas solicitar una reserva, indícame fechas y número de huéspedes; una persona de nuestro equipo confirmará disponibilidad y precio final."
-      : "Para confirmar disponibilidad y el total de tu estadía, indícame fecha de entrada, fecha de salida y número de huéspedes.",
+    "Si deseas solicitar una reserva, indícame fechas y número de huéspedes; una persona de nuestro equipo confirmará disponibilidad y precio final.",
   ].join("\n");
 }
 

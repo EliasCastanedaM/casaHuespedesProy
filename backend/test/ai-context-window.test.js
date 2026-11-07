@@ -5,9 +5,9 @@ import {
 } from "../src/modules/ai/ai.context-window.js";
 import { setHandoffState } from "../src/modules/meta/meta.service.js";
 
-test("WhatsApp corta cadena remota para evitar crecer sin límite", () => {
+test("todos los canales cortan cadena remota para evitar crecer sin límite", () => {
   assert.equal(shouldReuseOpenAiResponseId("whatsapp", "resp_old"), false);
-  assert.equal(shouldReuseOpenAiResponseId("instagram", "resp_old"), true);
+  assert.equal(shouldReuseOpenAiResponseId("instagram", "resp_old"), false);
   assert.equal(shouldReuseOpenAiResponseId("facebook", null), false);
 });
 
