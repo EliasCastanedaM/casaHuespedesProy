@@ -7,7 +7,6 @@ import {
 } from "../ai/ai.service.js";
 import { globalAssistantWelcome } from "../ai/ai.guest-rules.js";
 import { isOpeningGreetingOnly } from "../ai/ai.pricing.js";
-import { getPublicRoomCategoriesService } from "../rooms/roomCategory.service.js";
 import {
   sendInstagramMessageParts,
   sendInstagramMetaReply,
@@ -26,9 +25,6 @@ const UNSUPPORTED_MESSAGE_REPLY =
 
 const HUMAN_HANDOFF_REPLY =
   "Claro, dejaré esta conversación para que la atienda una persona. El asistente automático quedará pausado en este chat.";
-
-const ASSISTANT_FOLLOWUP_GREETING_REPLY =
-  "Con gusto 😊. Puedes consultar información del hotel o solicitar una reserva. Para reservar, comparte tus fechas, cantidad de adultos, niños (con sus edades) y mascotas; una persona confirmará disponibilidad.";
 
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -729,6 +725,7 @@ export async function isFirstMetaIncomingMessage(channel, externalUserId, incomi
        WHERE channel = $1 AND external_user_id = $2
          AND direction = 'outgoing' AND author = 'assistant'
          AND (content LIKE '%Estas son nuestras categorías y tarifas vigentes:%'
+           OR content LIKE '%Bienvenido a Casa Huéspedes.%'
            OR content LIKE '%Bienvenido(a) a Casa Huéspedes Pimentel.%'
            OR content LIKE '%Welcome to Casa Huéspedes Pimentel.%'
            OR content LIKE '%Bem-vindo(a) à Casa Huéspedes Pimentel.%'
@@ -737,25 +734,6 @@ export async function isFirstMetaIncomingMessage(channel, externalUserId, incomi
     [channel, externalUserId]
   );
   return previousWelcome.rows[0]?.has_welcome === false;
-}
-
-// Confirma que el huésped ya recibió una bienvenida antes de convertir otro
-// saludo en una invitación a continuar. No depende de memoria volátil.
-async function hasPreviouslySentCatalog(channel, externalUserId, db = pool) {
-  const result = await db.query(
-    `SELECT EXISTS (
-       SELECT 1 FROM meta_messages
-       WHERE channel = $1 AND external_user_id = $2
-         AND direction = 'outgoing' AND author = 'assistant'
-         AND (content LIKE '%Estas son nuestras categorías y tarifas vigentes:%'
-           OR content LIKE '%Bienvenido(a) a Casa Huéspedes Pimentel.%'
-           OR content LIKE '%Welcome to Casa Huéspedes Pimentel.%'
-           OR content LIKE '%Bem-vindo(a) à Casa Huéspedes Pimentel.%'
-           OR content LIKE '%Bienvenue à Casa Huéspedes Pimentel.%')
-     ) AS has_welcome;`,
-    [channel, externalUserId]
-  );
-  return result.rows[0]?.has_welcome === true;
 }
 
 async function getRecentConversationHistory(
@@ -1527,9 +1505,6 @@ export async function processMetaMessage(message, overrides = {}) {
     generateReply: overrides.generateReply ?? generateAiReply,
     isFirstMetaIncomingMessage: overrides.isFirstMetaIncomingMessage ??
       (mockedPersistence ? async () => false : isFirstMetaIncomingMessage),
-    listCategories: overrides.listCategories ?? getPublicRoomCategoriesService,
-    hasPreviouslySentCatalog: overrides.hasPreviouslySentCatalog ??
-      (mockedPersistence ? async () => false : hasPreviouslySentCatalog),
     sendReply: overrides.sendReply ?? sendMetaReply,
     findOutgoing:
       overrides.findOutgoing ??
@@ -1642,7 +1617,9 @@ export async function processMetaMessage(message, overrides = {}) {
       message.externalUserId,
       message.messageId
     );
-    const firstMessage = await dependencies.isFirstMetaIncomingMessage(
+    const greetingOnly = isOpeningGreetingOnly(message.text);
+    // Un saludo siempre recibe el texto aprobado, aunque el chat ya tenga historial.
+    const firstMessage = greetingOnly || await dependencies.isFirstMetaIncomingMessage(
       message.channel,
       message.externalUserId,
       incomingId,
@@ -1654,16 +1631,8 @@ export async function processMetaMessage(message, overrides = {}) {
 
     let reply;
     let handoffActivatedByThisTurn = false;
-    if (firstMessage && isOpeningGreetingOnly(message.text)) {
+    if (greetingOnly) {
       reply = welcome;
-    } else if (isOpeningGreetingOnly(message.text) &&
-               await dependencies.hasPreviouslySentCatalog(
-                 message.channel, message.externalUserId, dependencies.db ?? pool
-               )) {
-      // La bienvenida se presenta solo una vez. Un "hola"
-      // posterior continúa orientando la reserva, sin reabrir el saludo
-      // ni consumir otra llamada a OpenAI.
-      reply = ASSISTANT_FOLLOWUP_GREETING_REPLY;
     } else {
       // Incluso en el primer mensaje, el filtro de alcance debe ejecutarse
       // antes de mostrar el catálogo: un pedido ajeno no recibe precios.

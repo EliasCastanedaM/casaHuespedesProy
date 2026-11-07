@@ -20,7 +20,7 @@ function message(overrides = {}) {
     channel: "whatsapp",
     externalUserId: "51999999999",
     messageId: "wamid.1",
-    text: "Hola",
+    text: "Necesito información del hotel",
     messageType: "text",
     timestamp: "1780000000",
     ...overrides,
@@ -266,7 +266,7 @@ test("extrae y normaliza mensajes de WhatsApp", () => {
     ],
   });
 
-  assert.deepEqual(messages, [message()]);
+  assert.deepEqual(messages, [message({ text: "Hola" })]);
 });
 
 test("extrae BSUID cuando Meta omite from y mantiene compatibilidad con números", () => {
@@ -514,13 +514,13 @@ test("llama al mismo asesor con canal y usuario separados", async () => {
     {
       channel: "facebook",
       externalUserId: "usuario-a",
-      message: "Hola",
+      message: "Necesito información del hotel",
       history: [],
     },
     {
       channel: "instagram",
       externalUserId: "usuario-b",
-      message: "Hola",
+      message: "Necesito información del hotel",
       history: [],
     },
   ]);
@@ -1576,39 +1576,26 @@ test("WhatsApp no antepone catálogo a consultas ajenas al hotel", async () => {
 });
 
 
-test("WhatsApp orienta la reserva cuando se repite Hola despues de mostrar el catalogo", async () => {
-  const sent = [];
-  let aiCalls = 0;
-  const base = successfulDependencies({
-    hasPreviouslySentCatalog: async () => true,
-    listCategories: async () => [
-      { slug: "doble", name: "Doble", price_per_night: 176.80 },
-    ],
-    generateReply: async () => {
-      aiCalls += 1;
-      return { reply: "Saludo genérico no deseado" };
-    },
-    sendReply: async (_message, content) => {
-      sent.push(content);
-      return { messages: [{ id: "wamid.saludo-" + sent.length }] };
-    },
+for (const channel of ["whatsapp", "instagram", "facebook"]) {
+  test(`${channel}: repite el mensaje aprobado al saludar con o sin historial`, async () => {
+    const expected = "¡Hola! 👋 Bienvenido a Casa Huéspedes. Puedes escribirme en el idioma que prefieras.\n\n¿Buscas información del hotel o quieres hacer una reserva? Puedo ayudarte con estas opciones:\n\n1️⃣ Habitaciones y tarifas\n2️⃣ Servicios del hotel\n3️⃣ Ubicación y cómo llegar\n4️⃣ Políticas y preguntas frecuentes\n5️⃣ Reservas\n\nPuedes elegir una opción o escribirme directamente lo que necesitas. 😊";
+    const sent = [];
+    for (const [index, greeting] of ["Hola", "Hola", "Buenas noches", "Hello"].entries()) {
+      const result = await processMetaMessage(
+        message({ channel, externalUserId: "saludo-repetido-" + channel, messageId: "greeting-" + index, text: greeting }),
+        successfulDependencies({
+          claim: async () => ({ id: 1201 + index }),
+          isFirstMetaIncomingMessage: async () => index === 0,
+          loadHistory: async () => index ? [{ author: "assistant", content: "Datos anteriores de la reserva" }] : [],
+          generateReply: async () => { throw new Error("La bienvenida debe enviarse sin generación ni reinterpretación"); },
+          sendReply: async (_message, content) => {
+            sent.push(content);
+            return { messages: [{ id: "welcome-" + index }] };
+          },
+        })
+      );
+      assert.equal(result.status, "replied");
+    }
+    assert.deepEqual(sent, [expected, expected, expected, expected]);
   });
-
-  const first = await processMetaMessage(
-    message({ channel: "whatsapp", externalUserId: "prueba-dos-holas", messageId: "wamid.hola1", text: "hola" }),
-    { ...base, claim: async () => ({ id: 1201 }), isFirstMetaIncomingMessage: async () => true }
-  );
-  const second = await processMetaMessage(
-    message({ channel: "whatsapp", externalUserId: "prueba-dos-holas", messageId: "wamid.hola2", text: "hola" }),
-    { ...base, claim: async () => ({ id: 1202 }), isFirstMetaIncomingMessage: async () => false }
-  );
-
-  assert.equal(first.status, "replied");
-  assert.equal(second.status, "replied");
-  assert.equal(sent.length, 2);
-  assert.match(sent[0], /bienvenido/i);
-  assert.match(sent[1], /categoría|reserva/i);
-  assert.match(sent[1], /fechas/);
-  assert.doesNotMatch(sent[1], /Bienvenido|Estas son nuestras categorías|Saludo genérico/i);
-  assert.equal(aiCalls, 0);
-});
+}
