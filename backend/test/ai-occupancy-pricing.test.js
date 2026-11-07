@@ -398,3 +398,29 @@ test("una nueva preferencia en atención humana actualiza el resumen y la asigna
   assert.equal(state.pricing_quote.internal_assignment.room_id,101);
   assert.equal(state.pricing_quote.window_verification_required,true);
 });
+
+
+test("una nueva reserva no reutiliza la cotización anterior ni envía aviso de cálculo antes de reunir datos",async(t)=>{
+  const contexts=mockDatabase(t,{rooms:viewRooms});
+  for(const channel of ["whatsapp","instagram","facebook"]){
+    const input={channel,externalUserId:"fresh-reservation-"+channel};
+    const notices=[];
+    const send=message=>generateAiReply({...input,message},{onProcessing:async text=>notices.push(text)});
+    await send("Quiero reservar del 20/11/2026 al 22/11/2026 para dos adultos, sin niños ni mascotas, con vista al mar");
+    const oldId=contexts.get(channel+":"+input.externalUserId).whatsapp_mvp.intent_id;
+    notices.length=0;
+    const fresh=await send("Quiero hacer una nueva reserva");
+    assert.equal(fresh.mode,"global_reservation_collecting");
+    assert.match(fresh.reply,/fechas de entrada y salida/);
+    assert.deepEqual(notices,[]);
+    const state=contexts.get(channel+":"+input.externalUserId).whatsapp_mvp;
+    assert.notEqual(state.intent_id,oldId);
+    assert.equal(state.check_in,undefined);
+    assert.equal(state.adults,undefined);
+    assert.equal(state.room_preferences,undefined);
+    const complete=await send("Del 25/11/2026 al 27/11/2026 para cuatro adultos, sin niños ni mascotas, con vista interior");
+    assert.equal(complete.mode,"occupancy_quote");
+    assert.match(complete.reply,/Familiar 1.*S\/ 230.00.*S\/ 460.00/);
+    assert.equal(contexts.get(channel+":"+input.externalUserId).whatsapp_mvp.check_in,"2026-11-25");
+  }
+});

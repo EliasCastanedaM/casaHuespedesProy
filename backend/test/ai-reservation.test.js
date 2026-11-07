@@ -469,3 +469,59 @@ test("una preferencia de pago antes de aprobación no crea reservas ni valida co
   assert.equal(result.context.whatsapp_mvp.payment_method, undefined);
   assert.match(result.reply, /pendiente|aprobaci[oó]n/i);
 });
+
+
+test("una nueva reserva explícita pide datos nuevos desde cualquier estado sin heredar la anterior",()=>{
+  for(const state of ["collecting","quoted","handoff","awaiting_customer_name","awaiting_customer_email","awaiting_payment_choice","booked","confirmed","payment_reported"]){
+    const previous={state:"whatsapp_mvp",whatsapp_mvp:{
+      state,intent_id:"previous-intent",language:"es",check_in:"2026-11-20",check_out:"2026-11-22",
+      adults:2,children:0,child_ages:[],pets:0,total_guests:2,category_slug:"matrimonial-ejecutiva",
+      room_preferences:{view:"sea",near_window:true},preferences:"vista al mar; cerca de una ventana",
+      price_preference:"lower",max_nightly_budget:150,customer_name:"Cliente Anterior",customer_email:"old@example.com",customer_phone:"51999999999",
+      pricing_quote:{total_amount:280},staff_confirmation:{confirmed:true},booking:{id:7},payment_method:"culqi_link",
+    }};
+    const snapshot=structuredClone(previous);
+    const result=turn("Quiero hacer una nueva reserva",previous);
+    assert.equal(result.mode,"global_reservation_collecting",state);
+    assert.match(result.reply,/fechas de entrada y salida/);
+    assert.doesNotMatch(result.reply,/140|280|Ejecutiva|confirmación para esas fechas/);
+    const next=result.context.whatsapp_mvp;
+    assert.notEqual(next.intent_id,"previous-intent");
+    for(const key of ["check_in","check_out","adults","children","child_ages","pets","total_guests","category_slug","room_preferences","preferences","price_preference","max_nightly_budget","customer_name","customer_email","customer_phone","pricing_quote","staff_confirmation","booking","payment_method"])assert.equal(next[key],undefined,state+":"+key);
+    assert.deepEqual(previous,snapshot,"no debe mutar el contexto anterior");
+  }
+});
+
+test("otra reserva usa los datos aportados en ese mensaje y pregunta solo los que faltan",()=>{
+  const old={whatsapp_mvp:{state:"quoted",intent_id:"old",check_in:"2026-11-20",check_out:"2026-11-22",adults:2,children:0,pets:0,room_preferences:{view:"sea"}}};
+  const result=turn("Quiero otra reserva del 25/11/2026 al 27/11/2026 para cuatro adultos",old);
+  const next=result.context.whatsapp_mvp;
+  assert.equal(next.check_in,"2026-11-25");
+  assert.equal(next.check_out,"2026-11-27");
+  assert.equal(next.adults,4);
+  assert.equal(next.children,undefined);
+  assert.equal(next.pets,undefined);
+  assert.equal(next.room_preferences,undefined);
+  assert.match(result.reply,/Viajan niños/);
+});
+
+test("saludo, corrección y negación de nueva reserva conservan la solicitud vigente",()=>{
+  const context={whatsapp_mvp:{state:"quoted",intent_id:"ongoing",check_in:"2026-11-20",check_out:"2026-11-22",adults:2,children:0,pets:0,total_guests:2,child_ages:[]}};
+  for(const message of ["Hola","No quiero una nueva reserva","No es una nueva reserva","Quiero cambiar las fechas de mi nueva reserva","Quiero reservar"]){
+    const result=turn(message,context);
+    assert.equal(result.context.whatsapp_mvp.intent_id,"ongoing",message);
+    assert.equal(result.context.whatsapp_mvp.check_in,"2026-11-20",message);
+  }
+  const corrected=turn("Ahora somos tres adultos",context);
+  assert.equal(corrected.context.whatsapp_mvp.intent_id,"ongoing");
+  assert.equal(corrected.context.whatsapp_mvp.adults,3);
+});
+
+test("nuevo pedido de reserva inicia un contexto limpio en inglés, portugués y francés",()=>{
+  for(const message of ["I want to make a new booking","Quero fazer uma nova reserva","Je voudrais faire une nouvelle réservation"]){
+    const result=turn(message,{whatsapp_mvp:{state:"quoted",intent_id:"old",check_in:"2026-11-20",adults:2}});
+    assert.equal(result.mode,"global_reservation_collecting",message);
+    assert.equal(result.context.whatsapp_mvp.check_in,undefined);
+    assert.notEqual(result.context.whatsapp_mvp.intent_id,"old");
+  }
+});

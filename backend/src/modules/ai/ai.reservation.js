@@ -50,6 +50,18 @@ function reservationIntent(text) {
     !/\b(?:cancelar|cancel|anular|modificar|change|cambiar)\b/.test(text);
 }
 
+function isExplicitNewReservation(message) {
+  const text = normalize(message).replace(/[¿?¡!.,]/g, " ").replace(/\s+/g, " ").trim();
+  const phrase = /\b(?:(?:nueva|otra) reserva(?:cion)?|(?:new|another) (?:booking|reservation)|(?:nova|outra) reserva|(?:nouvelle|autre) reservation)\b/;
+  if (!phrase.test(text)) return false;
+  if (/\b(?:modificar|cambiar|corregir|editar|actualizar|modify|change|edit|alterar|modifier|changer)\b/.test(text)) return false;
+  if (/\b(?:no (?:quiero|deseo|necesito|es)|do not want|don'?t want|not a|nao quero|pas de)\b.{0,25}\b(?:(?:nueva|otra|new|another|nova|outra|nouvelle|autre))\b/.test(text)) return false;
+  // An explicit new stay clears only the conversation draft. Existing bookings
+  // in the database are never cancelled or modified by this transition.
+  return /^(?:(?:una|otra|a|une) )?(?:(?:nueva|otra) reserva(?:cion)?|(?:new|another) (?:booking|reservation)|(?:nova|outra) reserva|(?:nouvelle|autre) reservation)(?: please| por favor)?$/.test(text) ||
+    /\b(?:quiero|quisiera|deseo|necesito|hacer|iniciar|crear|empezar|i want|i would like|start|make|create|quero|gostaria|je veux|je voudrais|faire)\b/.test(text);
+}
+
 export function isAssistantMenuRequest(message) {
   const cleaned = normalize(message).replace(/[¿?¡!.,]/g, " ").replace(/\s+/g, " ").trim();
   return /^(?:menu|opciones|opcoes|options|choix|mostrar menu|ver menu|show menu|show me the menu|que opciones hay|que opciones hay en el menu|cuales son las opciones|que opciones tienes|what are the options|me muestras el menu|me das el menu)$/.test(cleaned);
@@ -763,8 +775,10 @@ export function handleGlobalReservationTurn({
   pricingIntent = false,
 }) {
   const text = normalize(message);
+  const previousLanguage = context.whatsapp_mvp?.language || "es";
+  if (isExplicitNewReservation(message)) context = {};
   const state = context.whatsapp_mvp || null;
-  const language = detectLanguage(message, state?.language || "es");
+  const language = detectLanguage(message, state?.language || previousLanguage);
   const dictionary = labels[language] || labels.es;
   const intent = reservationIntent(text) || pricingIntent;
   if (isAssistantMenuRequest(message)) {
