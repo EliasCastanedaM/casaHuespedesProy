@@ -12,6 +12,9 @@ import {
 import { globalReservationContext, handleGlobalReservationTurn } from "../src/modules/ai/ai.reservation.js";
 import { formatCategoryPricesReply } from "../src/modules/ai/ai.pricing.js";
 import { setHandoffState } from "../src/modules/meta/meta.service.js";
+import { globalAssistantWelcome } from "../src/modules/ai/ai.guest-rules.js";
+import { formatHotelLocationReply } from "../src/modules/ai/ai.location-info.js";
+import { HOTEL_SCOPE_CLASSIFIER_PROMPT } from "../src/modules/ai/ai.scope.js";
 
 const channels = ["whatsapp", "instagram", "facebook"];
 const categories = [{
@@ -187,4 +190,70 @@ test("devolver un chat a la IA aplica la misma liberación de borrador en cada c
     assert.deepEqual(queries[1].params, [channel, "global-release"]);
     assert.match(queries[1].sql, /NOT .*staff_confirmation/);
   }
+});
+
+test("los tres canales responden la ubicación por menú sin generación de IA ni cambios en la reserva", async (t) => {
+  const db = fakeDatabase(t);
+  const history = [{ author: "assistant", content: globalAssistantWelcome() }];
+  t.mock.method(OpenAI.Responses.prototype, "create", async () => { throw new Error("El menú de ubicación es determinista"); });
+  for (const channel of channels) {
+    const externalUserId = "location-menu";
+    const context = { state: "whatsapp_mvp", whatsapp_mvp: { state: "awaiting_customer_name", intent_id: "approved-existing" } };
+    db.contexts.set(channel + ":" + externalUserId, context);
+    for (const message of ["3", "3️⃣", "opción 3"]) {
+      const result = await generateAiReply({ channel, externalUserId, message, history });
+      assert.equal(result.mode, "hotel_location_information");
+      assert.equal(result.reply, formatHotelLocationReply());
+      assert.deepEqual(db.contexts.get(channel + ":" + externalUserId), context);
+    }
+  }
+  assert.equal(db.queries.some(({ sql }) => /INSERT|UPDATE/.test(sql)), false);
+});
+
+test("la opción numérica recupera el menú guardado cuando no hay historial en la entrada", async (t) => {
+  const requests = [];
+  t.mock.method(pool, "query", async (sql, params) => {
+    requests.push({ sql, params });
+    assert.match(sql, /SELECT author, content FROM meta_messages/);
+    return { rows: [{ author: "assistant", content: globalAssistantWelcome() }] };
+  });
+  const result = await generateAiReply({ channel: "whatsapp", externalUserId: "stored-location-menu", message: "3" });
+  assert.equal(result.reply, formatHotelLocationReply());
+  assert.deepEqual(requests[0].params, ["whatsapp", "stored-location-menu"]);
+});
+
+test("las consultas directas de ubicación responden durante una reserva sin tomar la pregunta como nombre", async (t) => {
+  const db = fakeDatabase(t);
+  const previousKey = env.openai.apiKey;
+  env.openai.apiKey = "test-key-no-network";
+  t.after(() => { env.openai.apiKey = previousKey; });
+  t.mock.method(OpenAI.Responses.prototype, "create", async (request) => {
+    assert.equal(request.instructions, HOTEL_SCOPE_CLASSIFIER_PROMPT);
+    return { id: "test-location-scope", output: [], output_text: "HOTEL" };
+  });
+  for (const channel of channels) {
+    const externalUserId = "direct-location";
+    const context = { state: "whatsapp_mvp", whatsapp_mvp: { state: "awaiting_customer_name", intent_id: "approved-existing" } };
+    db.contexts.set(channel + ":" + externalUserId, context);
+    for (const message of ["Ubicación", "Dónde quedan", "Cómo llegar", "Me pasas un taxi", "Tienen cochera"]) {
+      const result = await generateAiReply({ channel, externalUserId, message });
+      assert.equal(result.reply, formatHotelLocationReply());
+      assert.deepEqual(db.contexts.get(channel + ":" + externalUserId), context);
+    }
+  }
+});
+
+test("un tres como edad conserva su significado si no se acaba de presentar el menú", async (t) => {
+  const db = fakeDatabase(t);
+  const externalUserId = "child-age-three";
+  db.contexts.set("whatsapp:" + externalUserId, {
+    state: "whatsapp_mvp", whatsapp_mvp: {
+      state: "collecting", awaiting: "ages", intent_id: "child-age",
+      check_in: "2026-11-20", check_out: "2026-11-22",
+      adults: 2, children: 1, total_guests: 3,
+    },
+  });
+  const result = await generateAiReply({ channel: "whatsapp", externalUserId, message: "3" });
+  assert.notEqual(result.mode, "hotel_location_information");
+  assert.deepEqual(db.contexts.get("whatsapp:" + externalUserId).whatsapp_mvp.child_ages, [3]);
 });
