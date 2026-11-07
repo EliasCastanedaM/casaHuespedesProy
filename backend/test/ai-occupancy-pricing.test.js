@@ -239,7 +239,8 @@ const viewRooms=[
 ];
 
 test("reconoce calle/exterior, mar, interior y ventana como preferencias distintas",()=>{
-  for(const text of ["con vista a la calle","con vista hacia la calle","hacia afuera","street view"])assert.equal(collectRoomPreferences(text).view,"exterior",text);
+  for(const text of ["con vista a la calle","con vista hacia la calle","hacia afuera","street view","que dé a la calle","prefiero exterior","exterior"])assert.equal(collectRoomPreferences(text).view,"exterior",text);
+  for(const text of ["interior","prefiero interior","quiero una interior"])assert.equal(collectRoomPreferences(text).view,"interior",text);
   assert.deepEqual(collectRoomPreferences("Prefiero vista interior y cerca a la ventana"),{view:"interior",near_window:true});
   assert.equal(collectRoomPreferences("vista al mar",{near_window:true}).near_window,true);
   assert.equal(collectRoomPreferences("ya no quiero vista al mar",{view:"sea"}).view,undefined);

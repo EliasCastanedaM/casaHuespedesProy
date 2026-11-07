@@ -18,8 +18,8 @@ export function collectRoomPreferences(message, previous = {}) {
       !/\b(?:prefiero|quiero|quisiera|necesito|busco)\b/.test(text)) return next;
   const patterns = [
     ["sea", /\b(?:vista (?:al|hacia el) mar|mirando al mar|frente al mar|sea view|ocean view|vue (?:sur la|mer)|vista para o mar)\b/g],
-    ["exterior", /\b(?:vista (?:a|hacia) (?:la )?(?:calle|avenida|afuera|exterior)|vista exterior|hacia (?:la calle|afuera)|street view|outside view)\b/g],
-    ["interior", /\b(?:vista (?:al )?interior|vista hacia (?:el )?interior|hacia adentro|interior view|courtyard view|vista interna)\b/g],
+    ["exterior", /\b(?:vista (?:a|hacia) (?:la )?(?:calle|avenida|afuera|exterior)|vista exterior|hacia (?:la calle|afuera)|(?:que (?:de|mire)|mirando|frente) (?:a|hacia) (?:la )?(?:calle|avenida)|(?:prefiero|quiero|quisiera|que sea) (?:una )?exterior|^exterior|street view|outside view)\b/g],
+    ["interior", /\b(?:vista (?:al )?interior|vista hacia (?:el )?interior|hacia adentro|(?:prefiero|quiero|quisiera|que sea) (?:una )?interior|^interior|interior view|courtyard view|vista interna)\b/g],
   ];
   const found = patterns.flatMap(([view, regex]) => [...text.matchAll(regex)].map(m=>({view,index:m.index})));
   found.sort((a,b)=>a.index-b.index);
