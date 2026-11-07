@@ -200,6 +200,7 @@ export async function deliverPendingBookingAlerts(db = pool, options = {}) {
       const result = await send(alert);
       await db.query(
         "UPDATE public.booking_alert_outbox SET status = 'sent', sent_at = NOW(), " +
+        "delivery_status = 'accepted', delivery_updated_at = NOW(), " +
         "meta_message_id = $2, last_error = NULL, locked_at = NULL, payload = '{}'::jsonb WHERE id = $1",
         [alert.id, result.messageId]
       );
@@ -220,4 +221,45 @@ export async function deliverPendingBookingAlerts(db = pool, options = {}) {
     }
   }
   return { attempted, sent, failed };
+}
+
+
+// Los webhooks de entrega firmados por Meta, no la respuesta de POST /messages,
+// son la fuente de verdad para delivered/read/failed.
+export async function applyBookingAlertStatusUpdates(updates, db = pool) {
+  const affected = [];
+  for (const update of Array.isArray(updates) ? updates : []) {
+    const messageId = String(update?.messageId || "").trim();
+    const next = String(update?.status || "").toLowerCase();
+    if (update?.channel !== "whatsapp" || !messageId ||
+        !["sent", "delivered", "read", "failed"].includes(next)) continue;
+
+    const errorCode = Number(update?.errorCode);
+    const code = Number.isInteger(errorCode) && errorCode > 0 ? errorCode : null;
+    // Solo título de Meta: nunca se guardan tokens ni datos de huéspedes aquí.
+    const title = String(update?.errorTitle || "").replace(/\s+/g, " ").trim().slice(0, 120);
+    const sql = [
+      "UPDATE public.booking_alert_outbox",
+      "SET delivery_status = CASE",
+      "WHEN $2 = 'read' THEN 'read'",
+      "WHEN $2 = 'delivered' AND delivery_status IS DISTINCT FROM 'read' THEN 'delivered'",
+      "WHEN $2 = 'failed' AND delivery_status NOT IN ('delivered', 'read') THEN 'failed'",
+      "WHEN $2 = 'sent' AND delivery_status IN ('accepted', 'sent') THEN 'sent'",
+      "ELSE delivery_status END,",
+      "delivery_error_code = CASE",
+      "WHEN $2 = 'failed' AND delivery_status NOT IN ('delivered', 'read') THEN $3",
+      "WHEN $2 IN ('delivered', 'read') THEN NULL",
+      "ELSE delivery_error_code END,",
+      "delivery_error_title = CASE",
+      "WHEN $2 = 'failed' AND delivery_status NOT IN ('delivered', 'read') THEN NULLIF($4, '')",
+      "WHEN $2 IN ('delivered', 'read') THEN NULL",
+      "ELSE delivery_error_title END,",
+      "delivery_updated_at = NOW()",
+      "WHERE meta_message_id = $1 AND status = 'sent'",
+      "RETURNING id, delivery_status, delivery_error_code",
+    ].join("\n");
+    const result = await db.query(sql, [messageId, next, code, title]);
+    if (result.rows[0]) affected.push(result.rows[0]);
+  }
+  return affected;
 }

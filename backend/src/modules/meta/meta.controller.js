@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { confirmGlobalReservation } from "../ai/ai.service.js";
 import { pool } from "../../config/db.js";
+import { applyBookingAlertStatusUpdates } from "../../services/booking-alerts.service.js";
 import { persistCoexistenceEvents } from "./meta.coexistence.js";
 import {
   sendInstagramMetaReply,
@@ -220,6 +221,17 @@ export async function receiveWebhookController(req, res, next) {
     }
     if (statusUpdates.length > 0) {
       await applyMetaStatusUpdates(statusUpdates);
+      // Los avisos al administrador no están en meta_messages, sino en la
+      // cola de alertas: actualizar también su entrega real usando el ID Meta.
+      const bookingAlertStatuses = await applyBookingAlertStatusUpdates(statusUpdates);
+      for (const alertStatus of bookingAlertStatuses) {
+        auditMeta("booking_alert_delivery_status", {
+          alertId: alertStatus.id,
+          status: alertStatus.delivery_status,
+          ...(alertStatus.delivery_error_code
+            ? { graphErrorCode: alertStatus.delivery_error_code } : {}),
+        });
+      }
       for (const update of statusUpdates) {
         auditMeta("delivery_status", {
           requestId,
