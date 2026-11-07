@@ -70,6 +70,27 @@ export function validateProductionConfig() {
     );
   }
 
+  if (env.bookingAlert.enabled) {
+    if (!/^51\d{9}$/.test(env.bookingAlert.to.replace(/\D/g, ""))) {
+      errors.push("BOOKING_ALERT_TO debe ser un celular peruano con código 51.");
+    }
+    if (!["template", "session_text"].includes(env.bookingAlert.mode)) {
+      errors.push("BOOKING_ALERT_MODE debe ser template o session_text.");
+    }
+    if (env.bookingAlert.mode === "template" &&
+        !/^[a-z0-9_]{1,512}$/.test(env.bookingAlert.templateName)) {
+      errors.push("Configura BOOKING_ALERT_TEMPLATE_NAME con una plantilla aprobada en Meta.");
+    }
+    if (env.bookingAlert.mode === "session_text" &&
+        (!/^51\d{9}$/.test(env.bookingAlert.pilotSource) ||
+         env.bookingAlert.pilotSource !== env.bookingAlert.to.replace(/\D/g, ""))) {
+      errors.push("El modo session_text requiere que BOOKING_ALERT_PILOT_SOURCE coincida con BOOKING_ALERT_TO.");
+    }
+    if (!env.meta.whatsappAccessToken || !env.meta.whatsappPhoneNumberId) {
+      errors.push("Las alertas requieren WHATSAPP_ACCESS_TOKEN y WHATSAPP_PHONE_NUMBER_ID.");
+    }
+  }
+
   if (errors.length > 0) {
     const error = new Error(`Configuración inválida:\n- ${errors.join("\n- ")}`);
     error.code = "INVALID_CONFIGURATION";
