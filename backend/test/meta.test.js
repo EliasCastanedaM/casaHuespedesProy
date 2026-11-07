@@ -611,7 +611,7 @@ test("un handoff activo pausa el bot y actualiza contexto sin responder", async 
   assert.equal(sends, 0);
 });
 
-test("una solicitud humana activa handoff y no consume IA", async () => {
+test("la primera solicitud humana ofrece continuar una sola vez sin pausar la IA", async () => {
   let handoff;
   let sentReply = "";
   let aiCalls = 0;
@@ -631,12 +631,8 @@ test("una solicitud humana activa handoff y no consume IA", async () => {
     })
   );
 
-  assert.equal(result.status, "handoff_requested");
-  assert.deepEqual(handoff, {
-    channel: "whatsapp",
-    externalUserId: "51999999999",
-    active: true,
-  });
+  assert.equal(result.status, "human_assistance_offered");
+  assert.equal(handoff, undefined);
   assert.match(sentReply, /persona/i);
   assert.equal(aiCalls, 0);
 });

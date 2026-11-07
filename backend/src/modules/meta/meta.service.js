@@ -8,6 +8,10 @@ import {
 import { globalAssistantWelcome } from "../ai/ai.guest-rules.js";
 import { isOpeningGreetingOnly } from "../ai/ai.pricing.js";
 import {
+  HUMAN_ASSISTANCE_OFFER, HUMAN_ASSISTANCE_REPLY, SPECIFIC_INQUIRY_REPLY,
+  isHumanAssistanceRequest, isHumanContactConfirmation, isContinueWithAiConfirmation,
+} from "../ai/ai.human-assistance.js";
+import {
   sendInstagramMessageParts,
   sendInstagramMetaReply,
   splitInstagramMessage,
@@ -22,9 +26,6 @@ let warnedMissingHandoffTable = false;
 
 const UNSUPPORTED_MESSAGE_REPLY =
   "Por ahora puedo ayudarte mediante mensajes de texto. Escríbeme tu consulta, por favor.";
-
-const HUMAN_HANDOFF_REPLY =
-  "Claro, dejaré esta conversación para que la atienda una persona. El asistente automático quedará pausado en este chat.";
 
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -287,16 +288,31 @@ export function verifyMetaSignature(signatureHeader, rawBody) {
 }
 
 export function isHumanHandoffRequest(text) {
-  const normalized = cleanText(text)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+  return isHumanAssistanceRequest(text);
+}
 
-  return [
-    /\b(hablar|comunicar(?:me)?|contactar(?:me)?)\b.{0,35}\b(persona|alguien|humano|asesor|recepcionista)\b/,
-    /\b(asesor|agente|atencion|soporte)\s+(humano|personal)\b/,
-    /\bnecesito\s+ayuda\s+de\s+(una\s+)?persona\b/,
-  ].some((pattern) => pattern.test(normalized));
+export async function getHumanAssistanceContext(channel, externalUserId, db = pool) {
+  validateConversation(channel, externalUserId);
+  // El outbox ya es durable. No se necesita un contador en memoria ni modificar
+  // la reserva para recordar que la única invitación ya se presentó en este chat.
+  const result = await db.query(
+    `SELECT EXISTS (
+       SELECT 1 FROM meta_messages
+       WHERE channel = $1 AND external_user_id = $2
+         AND direction = 'outgoing' AND author = 'assistant' AND content = $3
+     ) AS offered,
+     COALESCE((
+       SELECT content = $3 FROM meta_messages
+       WHERE channel = $1 AND external_user_id = $2
+         AND direction = 'outgoing' AND author = 'assistant'
+       ORDER BY created_at DESC, id DESC LIMIT 1
+     ), FALSE) AS awaiting_confirmation;`,
+    [channel, externalUserId, HUMAN_ASSISTANCE_OFFER]
+  );
+  return {
+    offered: result.rows[0]?.offered === true,
+    awaitingConfirmation: result.rows[0]?.awaiting_confirmation === true,
+  };
 }
 
 function conversationKey(channel, externalUserId) {
@@ -1500,6 +1516,8 @@ export async function processMetaMessage(message, overrides = {}) {
     complete: overrides.complete ?? completeMessage,
     getHandoff: overrides.getHandoff ?? getHandoffState,
     setHandoff: overrides.setHandoff ?? setHandoffState,
+    humanAssistanceContext: overrides.humanAssistanceContext ??
+      (mockedPersistence ? async () => ({ offered: false, awaitingConfirmation: false }) : getHumanAssistanceContext),
     updateHandoffContext: overrides.updateHandoffContext ?? updateGlobalReservationContextForHandoff,
     loadHistory: overrides.loadHistory ?? getRecentConversationHistory,
     generateReply: overrides.generateReply ?? generateAiReply,
@@ -1539,7 +1557,8 @@ export async function processMetaMessage(message, overrides = {}) {
       if (existingOutgoing) {
         // Un operador pudo contestar desde WhatsApp Business o el panel
         // durante la caída. No recuperar respuestas automáticas bajo handoff.
-        if (await dependencies.getHandoff(message.channel, message.externalUserId)) {
+        if (await dependencies.getHandoff(message.channel, message.externalUserId) &&
+            existingOutgoing.content !== HUMAN_ASSISTANCE_REPLY) {
           await dependencies.complete(message);
           return { status: "handoff_active_during_recovery" };
         }
@@ -1583,21 +1602,25 @@ export async function processMetaMessage(message, overrides = {}) {
       return { status: "handoff_active" };
     }
 
-    if (isHumanHandoffRequest(message.text)) {
-      await dependencies.setHandoff(
-        message.channel,
-        message.externalUserId,
-        true
-      );
-      const outgoing = await dependencies.createOutgoing(
-        message,
-        HUMAN_HANDOFF_REPLY,
-        "assistant",
-        incomingId
-      );
-      await deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
-      await dependencies.complete(message);
-      return { status: "handoff_requested" };
+    const humanRequested = isHumanHandoffRequest(message.text);
+    const contactConfirmed = isHumanContactConfirmation(message.text);
+    const continueWithAi = isContinueWithAiConfirmation(message.text);
+    if (message.messageType === "text" && (humanRequested || contactConfirmed || continueWithAi)) {
+      const contact = await dependencies.humanAssistanceContext(message.channel, message.externalUserId);
+      const acceptedContact = contact.awaitingConfirmation && contactConfirmed;
+      if (humanRequested || acceptedContact || (contact.awaitingConfirmation && continueWithAi)) {
+        const handoff = acceptedContact || (humanRequested && contact.offered);
+        if (handoff) {
+          await dependencies.setHandoff(message.channel, message.externalUserId, true);
+        }
+        const reply = handoff ? HUMAN_ASSISTANCE_REPLY
+          : continueWithAi && !humanRequested ? SPECIFIC_INQUIRY_REPLY
+          : HUMAN_ASSISTANCE_OFFER;
+        const outgoing = await dependencies.createOutgoing(message, reply, "assistant", incomingId);
+        await deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
+        await dependencies.complete(message);
+        return { status: handoff ? "handoff_requested" : reply === HUMAN_ASSISTANCE_OFFER ? "human_assistance_offered" : "replied" };
+      }
     }
 
     if (message.messageType !== "text") {
@@ -1653,7 +1676,7 @@ export async function processMetaMessage(message, overrides = {}) {
         await dependencies.setHandoff(message.channel, message.externalUserId, true);
         handoffActivatedByThisTurn = true;
         reply = result.reply;
-      } else if (result.mode === "outside_hotel_scope") {
+      } else if (["outside_hotel_scope", "specific_inquiry"].includes(result.mode)) {
         reply = result.reply;
       } else {
         reply = firstMessage ? welcome + "\n\n" + result.reply : result.reply;

@@ -1,3 +1,5 @@
+import { HUMAN_ATTENTION_PHONE } from "./ai.human-assistance.js";
+
 // Reglas comerciales confirmadas: 0–4 años sin cargo con cama disponible,
 // 5–8 años al 50 % del diferencial de tarifa y desde 9 años tarifa de adulto.
 // Niños, mascotas y grupos especiales conservan validación humana antes del cierre.
@@ -27,7 +29,7 @@ export function requiresManualReview(message, { bookingInProgress = false, hasRe
   return null;
 }
 
-export function humanReviewReply(reason, phone = "901551287") {
+export function humanReviewReply(reason, phone = HUMAN_ATTENTION_PHONE) {
   return [
     "Con gusto te ayudo. 😊",
     `Para ${reason}, nuestro equipo debe revisar los detalles antes de confirmar el precio y la reserva.`,

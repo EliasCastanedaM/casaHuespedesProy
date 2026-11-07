@@ -37,6 +37,7 @@ import {
 } from "./ai.scope.js";
 import { isCategoryPriceInquiry, formatCategoryPricesReply } from "./ai.pricing.js";
 import { buildHumanServiceRedirect, isAiServiceTime } from "./ai.schedule.js";
+import { HUMAN_ATTENTION_PHONE, isSpecificInquiryRequest, SPECIFIC_INQUIRY_REPLY } from "./ai.human-assistance.js";
 import { isReservationIntent } from "./ai.booking-flow.js";
 
 const memoryResponses = new Map();
@@ -662,6 +663,13 @@ async function generateAiReplyInternal({
     };
   }
 
+  if (isSpecificInquiryRequest(message)) {
+    return {
+      reply: SPECIFIC_INQUIRY_REPLY, responseId: null,
+      deterministic: true, mode: "specific_inquiry",
+    };
+  }
+
   // Pedido explícito del menú del hotel: respuesta fija, breve y sin
   // consultar datos externos. Otras consultas sí pasan por el filtro de alcance.
   if (isAssistantMenuRequest(message)) {
@@ -794,7 +802,7 @@ async function generateAiReplyInternal({
     hasReservationIntent: isReservationIntent(message) || isCategoryPriceInquiry(message),
   });
   if (specialQuoteReason) {
-    return { reply: humanReviewReply(specialQuoteReason, env.hotel.phone), responseId: null, deterministic: true, mode: "human_review_required" };
+    return { reply: humanReviewReply(specialQuoteReason), responseId: null, deterministic: true, mode: "human_review_required" };
   }
 
   // Responder servicios reales desde Supabase incluso mientras haya una reserva
@@ -833,7 +841,7 @@ async function generateAiReplyInternal({
     } catch (error) {
       console.warn("No se pudieron consultar las tarifas vigentes:", error.message);
       return {
-        reply: "No puedo confirmar los precios en este momento. Para evitar darte información incorrecta, por favor comunícate con nuestro equipo al " + (env.hotel.phone || "901551287") + ".",
+        reply: "No puedo confirmar los precios en este momento. Para evitar darte información incorrecta, por favor comunícate con el señor Pepe, dueño del hotel, al " + HUMAN_ATTENTION_PHONE + ".",
         responseId: null,
         deterministic: true,
         mode: "category_prices_unavailable",

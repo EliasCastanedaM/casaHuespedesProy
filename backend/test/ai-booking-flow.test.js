@@ -110,7 +110,7 @@ function flow(input) {
 
 test("el asesor global exige aprobación humana antes de reservar", () => {
   const prompt = buildHotelAssistantPrompt();
-  assert.match(prompt, /901551287/);
+  assert.match(prompt, /943 030 098/);
   assert.match(prompt, /equipo confirme disponibilidad, categoría e importe/);
   assert.match(prompt, /Solo la acción autorizada del backend/);
   assert.match(prompt, /mascotas.*autorización previa/i);
