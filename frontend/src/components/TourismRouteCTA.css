@@ -1,0 +1,74 @@
+.tourism-invite {
+  position: relative;
+  padding: clamp(48px, 7vw, 90px) 20px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(221,179,120,.19), transparent 65%), #fffaf2;
+  border-top: 1px solid #e8dacc;
+}
+.tourism-invite__inner { max-width: 850px; margin: 0 auto; }
+.tourism-invite__eyebrow { margin: 0 0 15px; color: #a4754a; font-size: 11px; font-weight: 800; letter-spacing: .21em; line-height: 1.7; text-transform: uppercase; }
+.tourism-invite__title { margin: 0; color: #2b1d12; font: 500 clamp(33px,5vw,56px)/1.13 Georgia,serif; letter-spacing: -.034em; }
+.tourism-invite__intro { max-width: 680px; margin: 18px auto 30px; color: #6f6257; font-size: clamp(15px,1.5vw,17px); line-height: 1.85; }
+.tourism-invite__button {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  overflow: hidden;
+  max-width: 100%;
+  min-height: 72px;
+  padding: 11px 23px 11px 12px;
+  border: 1px solid #a9794e;
+  border-radius: 999px;
+  color: white;
+  background: linear-gradient(110deg,#302014,#53331d);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .045em;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: transform .3s ease, box-shadow .3s ease;
+  animation: tourismButtonPulse 3.2s ease-in-out infinite;
+}
+.tourism-invite__button::before { content: ""; position: absolute; top: -80%; left: -90%; width: 35%; height: 250%; transform: rotate(20deg); background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent); transition: transform .8s ease; pointer-events: none; }
+.tourism-invite__button:hover::before, .tourism-invite__button:focus-visible::before { transform: translateX(750%) rotate(20deg); }
+.tourism-invite__button:hover { transform: translateY(-4px); box-shadow: 0 19px 35px rgba(71,42,19,.3); }
+.tourism-invite__button:focus-visible { outline: 3px solid #b8895b; outline-offset: 5px; }
+.tourism-invite__icon { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; background: #b78650; animation: tourismIconFloat 3.2s ease-in-out infinite; }
+.tourism-invite__arrow { font-size: 23px; font-weight: 400; transition: transform .3s ease; }
+.tourism-invite__button:hover .tourism-invite__arrow { transform: translate(3px,-3px); }
+.tourism-invite__hint { color: #897967; margin: 16px 0 0; font-size: 12px; }
+.tourism-photo-overlay { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 18px; background: rgba(23,16,12,.83); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: tourismOverlayIn .25s ease both; }
+.tourism-photo-dialog { display: flex; flex-direction: column; overflow: hidden; width: min(100%,1370px); max-height: calc(100dvh - 36px); border: 1px solid #d8bfa2; border-radius: 22px; background: #fff8ed; box-shadow: 0 30px 95px rgba(0,0,0,.42); animation: tourismDialogIn .4s cubic-bezier(.2,.7,.25,1) both; }
+.tourism-photo-header { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 20px; padding: 16px 23px; background: #fffaf3; border-bottom: 1px solid #e2cdb0; }
+.tourism-photo-kicker { margin: 0 0 4px; color: #a87545; font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; }
+.tourism-photo-header h2 { margin: 0; color: #2b1d12; font: 500 clamp(19px,3vw,31px)/1.2 Georgia,serif; }
+.tourism-photo-actions { display: flex; align-items: center; gap: 13px; flex: 0 0 auto; }
+.tourism-photo-expand { color: #6a4227; font-size: 12px; font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
+.tourism-photo-close { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #dfc9ac; border-radius: 50%; background: #fff; color: #382519; cursor: pointer; font-size: 30px; line-height: 1; transition: background .2s ease, transform .2s ease; }
+.tourism-photo-close:hover { background: #f1e4d3; transform: rotate(90deg); }
+.tourism-photo-close:focus-visible, .tourism-photo-expand:focus-visible { outline: 3px solid #a87545; outline-offset: 3px; }
+.tourism-photo-viewport { min-height: 0; overflow: auto; background: #f4e6d4; overscroll-behavior: contain; }
+.tourism-photo-image { display: block; width: 100%; height: auto; }
+.tourism-photo-note { flex: 0 0 auto; margin: 0; padding: 11px 20px; background: #fffaf3; color: #796853; font-size: 11px; text-align: center; line-height: 1.55; }
+@keyframes tourismButtonPulse { 0%,100% { box-shadow: 0 12px 28px rgba(71,42,19,.22), 0 0 0 0 rgba(168,117,69,.15); } 50% { box-shadow: 0 16px 33px rgba(71,42,19,.27), 0 0 0 9px rgba(168,117,69,0); } }
+@keyframes tourismIconFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes tourismOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tourismDialogIn { from { opacity: 0; transform: translateY(22px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width:620px) {
+  .tourism-invite__button { gap: 10px; padding: 10px 15px 10px 10px; font-size: 11px; letter-spacing: .01em; }
+  .tourism-invite__icon { flex-basis: 42px; height: 42px; width: 42px; }
+  .tourism-photo-overlay { padding: 0; }
+  .tourism-photo-dialog { max-height: 100dvh; border: 0; border-radius: 0; }
+  .tourism-photo-header { padding: 13px 14px; gap: 10px; }
+  .tourism-photo-actions { gap: 8px; }
+  .tourism-photo-expand { font-size: 10px; }
+  .tourism-photo-close { height: 38px; width: 38px; }
+  .tourism-photo-note { font-size: 10px; padding: 8px 12px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .tourism-invite__button, .tourism-invite__icon, .tourism-photo-overlay, .tourism-photo-dialog { animation: none !important; }
+  .tourism-invite__button, .tourism-invite__button::before, .tourism-invite__arrow, .tourism-photo-close { transition: none !important; }
+}

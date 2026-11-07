@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./Home.css";
+import TourismGuideSection from "../../components/TourismRouteCTA";
 
 const includedServices = [
   {
@@ -402,66 +403,6 @@ function HowToGetThereSection({ videoSrc }) {
   );
 }
 
-function TourismGuideSection() {
-  return (
-    <section
-      id="ruta-turistica-recomendada"
-      aria-labelledby="ruta-turistica-titulo"
-      className="scroll-mt-28 bg-[#fffaf3] px-4 pb-16 pt-12 sm:px-6 sm:pb-20 sm:pt-16 md:px-8"
-    >
-      <div className="mx-auto max-w-7xl">
-        <div className="mx-auto mb-9 max-w-3xl text-center sm:mb-11">
-          <p className="text-xs font-bold uppercase tracking-[0.23em] text-[#9f683d]">
-            Una ruta recomendada para nuestros huéspedes
-          </p>
-          <h2
-            id="ruta-turistica-titulo"
-            className="mt-4 font-serif text-4xl leading-tight text-[#2b1d12] sm:text-5xl"
-          >
-            Descubre Pimentel y Lambayeque
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#6f6257]">
-            Desde la playa de Pimentel puedes descubrir el muelle, la gastronomía
-            norteña, los museos de Lambayeque y sus paisajes naturales. Te
-            recomendamos estos destinos para inspirar tu próxima visita.
-          </p>
-        </div>
-
-        <a
-          href="/img/home/ruta-turistica-pimentel.svg"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Abrir la ruta turística ilustrada de Pimentel y Lambayeque en tamaño completo"
-          className="group block overflow-hidden rounded-[22px] border border-[#e5d3ba] bg-[#f8efdf] shadow-[0_22px_60px_rgba(43,29,18,0.13)] transition duration-300 hover:shadow-[0_28px_65px_rgba(43,29,18,0.19)] focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-[#a87545]"
-        >
-          <img
-            src="/img/home/ruta-turistica-pimentel.svg"
-            alt="Mapa ilustrado con lugares recomendados desde Casa Huéspedes Pimentel: muelle, Chiclayo, museos de Lambayeque, Túcume, Ferreñafe, Huaca Rajada, Chaparrí y Bosque de Pómac."
-            width="1536"
-            height="1024"
-            loading="lazy"
-            decoding="async"
-            className="block h-auto w-full transition-transform duration-500 group-hover:scale-[1.005]"
-          />
-        </a>
-
-        <div className="mt-6 flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
-          <p className="max-w-2xl text-sm leading-6 text-[#756759]">
-            Mapa ilustrativo, no a escala. Los recorridos y tiempos son
-            referenciales; verifica horarios y condiciones de visita.
-          </p>
-          <Link
-            to="/turismo"
-            className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#2b1d12] px-7 py-3.5 text-xs font-bold uppercase tracking-[0.11em] text-white transition hover:bg-[#a87545] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a87545]"
-          >
-            Conoce todos los atractivos
-            <span aria-hidden="true" className="ml-2">↗</span>
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function HouseConcept() {
   return (

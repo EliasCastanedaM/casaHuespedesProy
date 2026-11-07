@@ -5,6 +5,8 @@
   "type": "module",
   "homepage": "https://www.casahuespedespimentel.com",
   "scripts": {
+    "predev": "node scripts/rebuild-tourism-image.mjs",
+    "prebuild": "node scripts/rebuild-tourism-image.mjs",
     "dev": "vite",
     "build": "vite build",
     "test:calendar": "node --test test/admin-calendar-request.test.js",
