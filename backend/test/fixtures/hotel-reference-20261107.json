@@ -1,0 +1,254 @@
+{
+  "payments": {
+    "methods": [
+      "Efectivo",
+      "Transferencia BCP",
+      "Yape",
+      "Plin",
+      "Tarjetas Visa y Mastercard"
+    ],
+    "bank": {
+      "name": "BCP",
+      "account_type": "Ahorros",
+      "account_number": "30506479111043",
+      "cci": "00230510647911104315"
+    },
+    "yape": "997369352",
+    "plin": "943030098",
+    "cards": [
+      "Visa",
+      "Mastercard"
+    ],
+    "manual_payment_requires_coordination": true,
+    "automatic_payment_verification": false
+  },
+  "location": {
+    "street_address": "Calle Quiñonez 233",
+    "district": "Pimentel",
+    "province": "Chiclayo",
+    "region": "Lambayeque",
+    "country": "Perú",
+    "landmark": "A una cuadra del Muelle de Pimentel, en la paralela al primer malecón.",
+    "maps_url": "https://maps.app.goo.gl/PfXxizCYj1YqeY9x7",
+    "own_parking": false,
+    "beachfront_confirmed": false
+  },
+  "services": [
+    {
+      "slug": "wifi",
+      "name": "WiFi gratuito",
+      "description": "Conexión WiFi gratuita disponible en todo el establecimiento.",
+      "price_type": "included",
+      "price": 0,
+      "requires_coordination": false,
+      "display_order": 1
+    },
+    {
+      "slug": "bano-privado",
+      "name": "Baño privado con agua caliente",
+      "description": "Cada habitación cuenta con baño privado con agua caliente, toallas y papel higiénico.",
+      "price_type": "included",
+      "price": 0,
+      "requires_coordination": false,
+      "display_order": 2
+    },
+    {
+      "slug": "tv-netflix",
+      "name": "TV y Netflix",
+      "description": "Cada habitación cuenta con TV y Netflix.",
+      "price_type": "included",
+      "price": 0,
+      "requires_coordination": false,
+      "display_order": 3
+    },
+    {
+      "slug": "ventilador",
+      "name": "Ventilador",
+      "description": "Cada habitación cuenta con ventilador.",
+      "price_type": "included",
+      "price": 0,
+      "requires_coordination": false,
+      "display_order": 4
+    },
+    {
+      "slug": "desayuno-continental",
+      "name": "Desayuno continental",
+      "description": "Desayuno continental incluido en la tarifa de alojamiento.",
+      "price_type": "included",
+      "price": 0,
+      "requires_coordination": false,
+      "display_order": 5
+    },
+    {
+      "slug": "cocina-compartida",
+      "name": "Cocina compartida",
+      "description": "Cocina abierta y compartida para uso de los huéspedes.",
+      "price_type": "included",
+      "price": 0,
+      "requires_coordination": false,
+      "display_order": 6
+    },
+    {
+      "slug": "terraza",
+      "name": "Terraza con vista al mar",
+      "description": "Área común: terraza en el cuarto piso con vista al mar. El acceso a esta área no implica que todas las habitaciones tengan esa vista.",
+      "price_type": "included",
+      "price": 0,
+      "requires_coordination": false,
+      "display_order": 7
+    },
+    {
+      "slug": "salon-compartido",
+      "name": "Zona de TV y salón compartido",
+      "description": "Zona de TV y salón de uso compartido.",
+      "price_type": "included",
+      "price": 0,
+      "requires_coordination": false,
+      "display_order": 8
+    },
+    {
+      "slug": "exteriores",
+      "name": "Mobiliario exterior y solárium",
+      "description": "Mobiliario exterior, terraza y zona de solárium.",
+      "price_type": "not_specified",
+      "price": null,
+      "requires_coordination": false,
+      "display_order": 9
+    },
+    {
+      "slug": "lavanderia",
+      "name": "Lavandería y planchado",
+      "description": "Lavandería de pago. Planchado y limpieza en seco sujetos a coordinación; el equipo confirma condiciones y tarifas antes de contratar.",
+      "price_type": "on_request",
+      "price": null,
+      "requires_coordination": true,
+      "display_order": 10
+    },
+    {
+      "slug": "limpieza-diaria",
+      "name": "Limpieza diaria",
+      "description": "Servicio de limpieza diaria del alojamiento.",
+      "price_type": "not_specified",
+      "price": null,
+      "requires_coordination": false,
+      "display_order": 11
+    },
+    {
+      "slug": "barbacoa",
+      "name": "Barbacoa de pago",
+      "description": "Uso de barbacoa de pago, previa coordinación. El equipo confirma disponibilidad y tarifa.",
+      "price_type": "on_request",
+      "price": null,
+      "requires_coordination": true,
+      "display_order": 12
+    },
+    {
+      "slug": "traslado-aeropuerto",
+      "name": "Traslado al aeropuerto de pago",
+      "description": "Traslado al aeropuerto de pago, previa coordinación. El equipo confirma proveedor, disponibilidad y tarifa.",
+      "price_type": "on_request",
+      "price": null,
+      "requires_coordination": true,
+      "display_order": 13
+    },
+    {
+      "slug": "comida-bebida",
+      "name": "Comida y bebida",
+      "description": "Cafetería, restaurante y snack-bar; opciones de fruta, botella de agua, bombones o galletas y menú para niños. El equipo confirma horarios, disponibilidad y el precio de cada consumo.",
+      "price_type": "on_request",
+      "price": null,
+      "requires_coordination": true,
+      "display_order": 14
+    },
+    {
+      "slug": "menus-dieteticos",
+      "name": "Menús dietéticos bajo petición",
+      "description": "Menús dietéticos bajo petición y sujetos a coordinación. El equipo confirma disponibilidad y costo.",
+      "price_type": "on_request",
+      "price": null,
+      "requires_coordination": true,
+      "display_order": 15
+    },
+    {
+      "slug": "seguridad",
+      "name": "Seguridad en zonas comunes",
+      "description": "Extintores y cámaras de seguridad fuera del alojamiento y en zonas comunitarias.",
+      "price_type": "not_specified",
+      "price": null,
+      "requires_coordination": false,
+      "display_order": 16
+    },
+    {
+      "slug": "recepcion",
+      "name": "Recepción y factura",
+      "description": "Se proporciona factura y registro de entrada y salida privado. El equipo confirma las condiciones del servicio.",
+      "price_type": "not_specified",
+      "price": null,
+      "requires_coordination": false,
+      "display_order": 17
+    },
+    {
+      "slug": "orientacion-turistica",
+      "name": "Información turística",
+      "description": "Orientación sobre lugares y actividades cercanas a Pimentel y Lambayeque.",
+      "price_type": "included",
+      "price": 0,
+      "requires_coordination": false,
+      "display_order": 18
+    },
+    {
+      "slug": "playa-pediluvio",
+      "name": "Playa cercana y pediluvio",
+      "description": "Playa cercana y pediluvio. Consulta las condiciones de uso con el equipo.",
+      "price_type": "not_specified",
+      "price": null,
+      "requires_coordination": false,
+      "display_order": 19
+    },
+    {
+      "slug": "idiomas",
+      "name": "Atención presencial en español",
+      "description": "El personal atiende en español. Puedes escribir al asesor digital en el idioma que prefieras.",
+      "price_type": "not_specified",
+      "price": null,
+      "requires_coordination": false,
+      "display_order": 20
+    },
+    {
+      "slug": "habitaciones-familiares",
+      "name": "Habitaciones familiares y para no fumadores",
+      "description": "Hay categorías familiares y habitaciones para no fumadores. Está prohibido fumar en todo el alojamiento.",
+      "price_type": "not_specified",
+      "price": null,
+      "requires_coordination": false,
+      "display_order": 21
+    },
+    {
+      "slug": "estacionamiento",
+      "name": "Estacionamiento externo recomendado",
+      "description": "El alojamiento no cuenta con estacionamiento propio. Se puede compartir una sugerencia de cochera de terceros, de pago y sujeta a disponibilidad.",
+      "price_type": "on_request",
+      "price": null,
+      "requires_coordination": true,
+      "display_order": 22
+    },
+    {
+      "slug": "taxi",
+      "name": "Taxi de terceros recomendado",
+      "description": "Se puede compartir una sugerencia de taxi de terceros. El proveedor confirma tarifas y disponibilidad.",
+      "price_type": "on_request",
+      "price": null,
+      "requires_coordination": true,
+      "display_order": 23
+    },
+    {
+      "slug": "mascotas",
+      "name": "Mascotas con autorización previa",
+      "description": "Se admiten mascotas bajo petición y autorización del hospedaje. Cargo de S/ 20 por mascota y por noche.",
+      "price_type": "on_request",
+      "price": 20,
+      "requires_coordination": true,
+      "display_order": 24
+    }
+  ]
+}

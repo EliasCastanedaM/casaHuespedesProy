@@ -14,7 +14,7 @@ import { globalAssistantWelcome } from "../src/modules/ai/ai.guest-rules.js";
 
 const verified = {
   name: "Casa Huéspedes Pimentel",
-  street_address: "Calle José Quiñones 237",
+  street_address: "Calle Quiñonez 233",
   district: "Pimentel",
   region: "Lambayeque",
   country: "Perú",
@@ -32,7 +32,7 @@ test("el perfil público lee solo la dirección verificada sin datos internos", 
   const profile = await getPublicHotelProfileService(db);
   assert.deepEqual(profile, verified);
   assert.equal(formatOfficialHotelAddress(profile),
-    "Calle José Quiñones 237, Pimentel, Lambayeque, Perú");
+    "Calle Quiñonez 233, Pimentel, Lambayeque, Perú");
 });
 
 test("el mensaje aprobado no depende de una dirección escrita en la base", async () => {
@@ -41,7 +41,8 @@ test("el mensaje aprobado no depende de una dirección escrita en la base", asyn
   });
   assert.equal(result, null);
   const answer = formatHotelLocationReply(result, "¿Dónde están ubicados?");
-  assert.doesNotMatch(answer, /237|233/);
+  assert.match(answer, /Calle Quiñonez 233/);
+  assert.doesNotMatch(answer, /237/);
   assert.ok(answer.includes("https://maps.app.goo.gl/PfXxizCYj1YqeY9x7"));
 });
 

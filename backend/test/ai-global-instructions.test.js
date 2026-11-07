@@ -103,7 +103,7 @@ test("los tres canales envían la misma instrucción y herramientas en generaci�
   assert.equal(requests.length, 6);
   for (let i = 0; i < requests.length; i++) {
     assert.equal(requests[i].instructions, buildHotelAssistantPrompt());
-    assert.deepEqual(requests[i].tools.map((tool) => tool.name), ["listar_habitaciones"]);
+    assert.deepEqual(requests[i].tools.map((tool) => tool.name), ["listar_servicios", "listar_habitaciones"]);
     if (i % 2 === 0) assert.equal(requests[i].previous_response_id, undefined);
   }
 });

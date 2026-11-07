@@ -1,6 +1,6 @@
 import { pool } from "../../config/db.js";
 
-// Fuente verificada: el responsable confirmó Calle José Quiñones 237.
+// Perfil público vigente, aprobado por el responsable del proyecto.
 // No incluir campos internos (source/verification) en la API pública.
 export async function getPublicHotelProfileService(db = pool) {
   const result = await db.query(`

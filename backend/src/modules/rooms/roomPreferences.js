@@ -33,7 +33,8 @@ export function collectRoomPreferences(message, previous = {}) {
   const nearWindow=/\b(?:cerca (?:a|de) (?:la |una )?ventana|junto a (?:la |una )?ventana|al lado de (?:la |una )?ventana|con ventana|near (?:a |the )?window|by (?:the )?window)\b/.test(text);
   if (nearWindow) next.near_window=true;
   if (/\b(?:no importa (?:la |una )?ventana|sin preferencia de ventana|(?:no necesito|no quiero|ya no quiero) (?:estar )?cerca (?:a|de) (?:la )?ventana)\b/.test(text)) delete next.near_window;
-  if (/\b(?:terraza|terrace|terrasse|terraco)\b/.test(text)) next.terrace=true;
+  if (/\b(?:terraza|terrace|terrasse|terraco)\b/.test(text) &&
+      !/\b(?:terraza comun|usar la terraza|subir a la terraza)\b/.test(text)) next.terrace=true;
   if (/\b(?:sin terraza|no necesito terraza|la terraza no importa)\b/.test(text)) delete next.terrace;
   if (/\b(?:balcon|balcony)\b/.test(text)) next.balcony=true;
   if (/\b(?:sin balcon|no necesito balcon|el balcon no importa)\b/.test(text)) delete next.balcony;

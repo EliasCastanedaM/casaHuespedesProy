@@ -7,6 +7,9 @@ export function isHotelLocationInquiry(message) {
   const text = normalize(message);
   if (!text) return false;
 
+  if (/\b(?:referencia|estan|hotel|hospedaje|casa huespedes)\b/.test(text) &&
+      /\b(?:playa|muelle|malecon)\b/.test(text)) return true;
+
   // No confundir preguntas de atractivos turísticos con la dirección del hotel.
   if (/\b(?:museo|muelle|playa|restaurante|aeropuerto|chiclayo|caballitos)\b/.test(text) &&
       !/\b(?:hospedaje|hotel|casa huespedes)\b/.test(text) &&
@@ -40,10 +43,12 @@ export function isLocationMenuSelection(message, history = []) {
 
 export function formatHotelLocationReply() {
   return [
-    "📍 Encuentra la ubicación de Casa Huéspedes y las indicaciones para llegar aquí:",
+    "📍 Casa Huéspedes: Calle Quiñonez 233, Pimentel, Chiclayo, Perú.",
+    "A una cuadra del Muelle de Pimentel, en la paralela al primer malecón.",
+    "Encuentra nuestra ubicación y las indicaciones para llegar aquí:",
     "https://maps.app.goo.gl/PfXxizCYj1YqeY9x7",
     "",
-    "También te compartimos estas opciones de taxi y estacionamiento para facilitar tu llegada. Son servicios de terceros; puedes consultar directamente sus tarifas y disponibilidad:",
+    "No contamos con estacionamiento propio. También te compartimos estas opciones de taxi y estacionamiento para facilitar tu llegada. Son servicios de terceros; puedes consultar directamente sus tarifas y disponibilidad:",
     "",
     "🚕 Servicio de taxi: +51 949 489 526",
     "🅿️ Estacionamiento las 24 horas: +51 979 123 264",
