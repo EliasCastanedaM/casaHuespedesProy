@@ -2,8 +2,9 @@ import { env } from "../config/env.js";
 import { pool } from "../config/db.js";
 import { roomPreferenceLabel } from "../modules/rooms/roomPreferences.js";
 
-// La alerta usa una plantilla de utilidad aprobada por Meta, no un mensaje
-// de sesión: el administrador puede no haber escrito al hotel en 24 horas.
+// En producción se utiliza una plantilla de utilidad aprobada por Meta.
+// El piloto puede usar un mensaje libre SOLO si el destinatario está dentro
+// de su propia ventana de conversación de 24 horas con el hotel.
 export const BOOKING_ALERT_TEMPLATE_BODY =
   "Nueva solicitud de reserva\n" +
   "Canal: {{1}}\nCliente: {{2}}\nContacto: {{3}}\n" +
@@ -79,6 +80,24 @@ export function buildBookingAlertPayload(alert, { to, templateName, language = "
   };
 }
 
+export function buildPilotBookingAlertPayload(alert, { to } = {}) {
+  const recipient = String(to || "").replace(/[^\d]/g, "");
+  if (!/^51\d{9}$/.test(recipient)) throw new Error("Teléfono de prueba inválido.");
+  const p = formatBookingAlertParameters(alert);
+  return {
+    messaging_product: "whatsapp", recipient_type: "individual", to: recipient,
+    type: "text", text: { preview_url: false, body:
+      "PRUEBA DE SISTEMA — NO ES UNA RESERVA REAL\n" +
+      "Casa Huéspedes Pimentel\n" +
+      "Canal: " + p[0] + "\nCliente: " + p[1] + "\nContacto: " + p[2] +
+      "\nFechas: " + p[3] + "\nHuéspedes: " + p[4] +
+      "\nCategoría: " + p[5] + "\nPreferencias: " + p[6] +
+      "\nTotal cotizado: " + p[7] +
+      "\nEstado: pendiente de aprobación.\nConsulta el panel administrativo."
+    }
+  };
+}
+
 export async function sendBookingAlert(alert, {
   fetchImpl = fetch,
   accessToken = env.meta.whatsappAccessToken,
@@ -87,6 +106,9 @@ export async function sendBookingAlert(alert, {
   templateName = env.bookingAlert.templateName,
   language = env.bookingAlert.language,
   graphVersion = env.meta.graphApiVersion,
+  mode = env.bookingAlert.mode,
+  pilotSource = env.bookingAlert.pilotSource,
+  db = pool,
 } = {}) {
   if (!accessToken || !/^\d+$/.test(String(phoneNumberId || ""))) {
     throw new Error("WhatsApp Cloud API no está configurada para enviar alertas.");
@@ -94,7 +116,30 @@ export async function sendBookingAlert(alert, {
   if (!/^v\d+\.\d+$/.test(String(graphVersion))) {
     throw new Error("Versión de Graph API inválida.");
   }
-  const payload = buildBookingAlertPayload(alert, { to, templateName, language });
+  let payload;
+  if (mode === "session_text") {
+    const only = String(pilotSource || "").replace(/\D/g, "");
+    const number = String(to || "").replace(/\D/g, "");
+    if (!only || only !== number || alert.channel !== "whatsapp" ||
+      String(alert.external_user_id) !== only) {
+      throw new Error("Modo de prueba restringido al chat WhatsApp del destinatario.");
+    }
+    const recent = await db.query(
+      "SELECT EXISTS(SELECT 1 FROM public.meta_messages WHERE channel='whatsapp' " +
+      "AND external_user_id=$1 AND direction='incoming' AND meta_timestamp > NOW() - INTERVAL '23 hours') AS allowed",
+      [only]
+    );
+    if (recent.rows[0]?.allowed !== true) {
+      const error = new Error("Prueba detenida: el destinatario no tiene ventana WhatsApp vigente.");
+      error.nonRetryable = true;
+      throw error;
+    }
+    payload = buildPilotBookingAlertPayload(alert, { to });
+  } else if (mode === "template") {
+    payload = buildBookingAlertPayload(alert, { to, templateName, language });
+  } else {
+    throw new Error("Modo de alerta no reconocido.");
+  }
   const response = await fetchImpl(
     "https://graph.facebook.com/" + graphVersion + "/" + phoneNumberId + "/messages",
     {
@@ -124,14 +169,13 @@ const CLAIM_SQL = [
   "  SELECT id FROM public.booking_alert_outbox",
   "  WHERE ((status IN ('pending', 'failed') AND next_attempt_at <= NOW() AND attempts < 5)",
   "      OR (status = 'sending' AND locked_at < NOW() - INTERVAL '5 minutes' AND attempts < 5))",
+  "    AND ($1::text = '' OR (channel = 'whatsapp' AND external_user_id = $1))",
   "  ORDER BY created_at, id FOR UPDATE SKIP LOCKED LIMIT 1",
   ")",
   "RETURNING o.id, o.channel, o.external_user_id, o.payload, o.attempts",
 ].join("\n");
 
 export async function deliverPendingBookingAlerts(db = pool, options = {}) {
-  if (!env.bookingAlert.enabled && !options.force) return { attempted: 0, sent: 0, failed: 0 };
-  // No retirar elementos de la cola cuando faltan credenciales o plantilla.
   if (!env.bookingAlert.enabled && options.force !== true) return { attempted: 0, sent: 0, failed: 0 };
   const send = options.send || sendBookingAlert;
   const batchSize = Math.min(Math.max(Number(options.limit) || 10, 1), 30);
@@ -139,7 +183,7 @@ export async function deliverPendingBookingAlerts(db = pool, options = {}) {
   let sent = 0;
   let failed = 0;
   for (let index = 0; index < batchSize; index += 1) {
-    const claimed = await db.query(CLAIM_SQL);
+    const claimed = await db.query(CLAIM_SQL, [options.pilotSource ?? env.bookingAlert.pilotSource ?? ""]);
     const alert = claimed.rows[0];
     if (!alert) break;
     attempted += 1;
