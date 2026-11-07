@@ -24,7 +24,7 @@ test("registro comercial se consulta de Supabase sin escribir ni aprobar datos",
   assert.match(pets, /pendiente confirmar/);
   assert.doesNotMatch(pets, /S\/ 20 por mascota y por noche/);
   const nine = formatPolicyInformationReply("¿Qué pasa si mi hijo tiene 9 años?", { rules });
-  assert.match(nine, /pendiente de confirmar/);
+  assert.match(nine, /tratamiento distinto/);
 });
 
 test("no aplica reglas pendientes incluso si contienen una posible frecuencia o tarifa", () => {
@@ -33,10 +33,10 @@ test("no aplica reglas pendientes incluso si contienen una posible frecuencia o 
     ninos_9_mas: { review_status: "pending_review", config: {adult_rate_confirmed: true} },
   };
   assert.match(formatPolicyInformationReply("¿Cuánto cuesta llevar perros?", { rules }), /pendiente confirmar/);
-  assert.match(formatPolicyInformationReply("¿Mi hija de 9 años paga como adulto?", { rules }), /pendiente de confirmar/);
+  assert.match(formatPolicyInformationReply("¿Mi hija de 9 años paga como adulto?", { rules }), /tratamiento distinto/);
 });
 
-test("una futura aprobación explícita actualiza respuestas sin volver a desplegar el bot", () => {
+test("las reglas de mascotas se actualizan y los detalles infantiles se mantienen internos", () => {
   const rules = {
     mascotas: { review_status: "verified", config: {amount_pen: 25, vat_included: true, charge_frequency: "pet_per_night"} },
     ninos_9_mas: { review_status: "verified", config: {adult_rate_confirmed: true} },
@@ -45,13 +45,13 @@ test("una futura aprobación explícita actualiza respuestas sin volver a desple
   const pets = formatPolicyInformationReply("¿Cuánto cobras por mascotas?", { rules });
   assert.match(pets, /S\/ 25/);
   assert.match(pets, /por mascota y por noche/);
-  assert.match(formatPolicyInformationReply("¿Mi hijo de 9 años paga adulto?", { rules }), /corresponde tarifa de adulto/);
-  assert.match(formatPolicyInformationReply("¿Qué condiciones aplican a los niños de 6 años?", { rules }), /50 % del diferencial/);
+  assert.match(formatPolicyInformationReply("¿Mi hijo de 9 años paga adulto?", { rules }), /tratamiento distinto/);
+  assert.match(formatPolicyInformationReply("¿Qué condiciones aplican a los niños de 6 años?", { rules }), /tratamiento distinto/);
 });
 
 test("no inventa tarifas de una regla ausente o retirada", () => {
   const out = formatPolicyInformationReply("¿Mi hijo de 6 años paga?", { rules: {} });
-  assert.match(out, /debe ser revisada por el equipo/);
+  assert.match(out, /tratamiento distinto/);
   assert.doesNotMatch(out, /50 %/);
   const pets = formatPolicyInformationReply("¿Aceptan mascotas?", { rules: {} });
   assert.match(pets, /Nuestro equipo confirmará/);

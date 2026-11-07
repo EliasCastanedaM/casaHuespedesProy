@@ -56,14 +56,12 @@ export function formatRoomDetailsReply(categories, message) {
     const parts = [category.name];
     if (Number(category.capacity) > 0) parts.push("hasta " + Number(category.capacity) + " huéspedes");
     if (category.bed_description) parts.push(category.bed_description);
-    if (Number(category.price_per_night) > 0) {
-      parts.push("S/ " + Number(category.price_per_night).toFixed(2) + " por noche");
-    }
+
     const base = "- " + parts.join(" · ");
     // Las descripciones oficiales incluyen piso, vista y acceso a terraza:
     // datos útiles para comparar más allá de camas/capacidad/tarifa.
     return comparing && category.description?.trim()
-      ? base + "\n  " + category.description.trim()
+      ? base + "\n  " + guestCategoryDescription(category.description)
       : base;
   });
 
@@ -76,4 +74,12 @@ export function formatRoomDetailsReply(categories, message) {
     "",
     "La disponibilidad se confirma para las fechas solicitadas. ¿Quieres consultar alguna en particular?",
   ].join("\n");
+}
+
+// Commercial tariff labels and individual room numbers are internal hotel data.
+export function guestCategoryDescription(value) {
+  return String(value || "")
+    .replace(/[^.!?]*(?:tarifa\s*Full)[^.!?]*[.!?]?/gi, "")
+    .replace(/La unidad\s+\d+\s+tiene/gi, "Una de las habitaciones tiene")
+    .replace(/\s+/g, " ").trim();
 }

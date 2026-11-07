@@ -772,6 +772,7 @@ async function getRecentConversationHistory(
      WHERE channel = $1
        AND external_user_id = $2
        AND content <> ''
+       AND author <> 'system'
        AND ($3::text IS NULL OR meta_message_id IS DISTINCT FROM $3)
        AND (direction = 'incoming' OR status IN ('sent', 'delivered', 'read'))
        AND (last_ai.created_at IS NULL OR meta_messages.created_at > last_ai.created_at)
@@ -784,7 +785,7 @@ async function getRecentConversationHistory(
   return history.some((item) => item.author === "admin") ? history : [];
 }
 
-async function findAssistantOutgoingForIncoming(incomingId, db = pool) {
+async function findAssistantOutgoingForIncoming(incomingId, db = pool, author = "assistant") {
   if (!incomingId) return null;
   const result = await db.query(
     `SELECT id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
@@ -794,10 +795,10 @@ async function findAssistantOutgoingForIncoming(incomingId, db = pool) {
      FROM meta_messages
      WHERE in_reply_to_message_id = $1
        AND direction = 'outgoing'
-       AND author = 'assistant'
+       AND author = $2
      ORDER BY id ASC
      LIMIT 1;`,
-    [incomingId]
+    [incomingId, author]
   );
   return result.rows[0] || null;
 }
@@ -833,8 +834,8 @@ async function createOutgoingMessage(
     );
     return saved.rows[0];
   } catch (error) {
-    if (error?.code === "23505" && inReplyToMessageId && author === "assistant") {
-      return findAssistantOutgoingForIncoming(inReplyToMessageId, db);
+    if (error?.code === "23505" && inReplyToMessageId && ["assistant", "system"].includes(author)) {
+      return findAssistantOutgoingForIncoming(inReplyToMessageId, db, author);
     }
     throw error;
   }
@@ -1527,6 +1528,8 @@ export async function processMetaMessage(message, overrides = {}) {
     findOutgoing:
       overrides.findOutgoing ??
       (mockedPersistence ? async () => null : findAssistantOutgoingForIncoming),
+    findProcessing: overrides.findProcessing ??
+      (mockedPersistence ? async () => null : (id) => findAssistantOutgoingForIncoming(id, overrides.db ?? pool, "system")),
     createOutgoing:
       overrides.createOutgoing ??
       (mockedPersistence
@@ -1654,6 +1657,7 @@ export async function processMetaMessage(message, overrides = {}) {
 
     let reply;
     let handoffActivatedByThisTurn = false;
+    let welcomeSentWithProcessing = false;
     if (greetingOnly) {
       reply = welcome;
     } else {
@@ -1664,6 +1668,14 @@ export async function processMetaMessage(message, overrides = {}) {
         externalUserId: message.externalUserId,
         message: message.text,
         history,
+      }, {
+        onProcessing: async (text) => {
+          if (await dependencies.getHandoff(message.channel, message.externalUserId)) return;
+          const outgoing = await dependencies.findProcessing(incomingId) ||
+            await dependencies.createOutgoing(message, firstMessage ? welcome + "\n\n" + text : text, "system", incomingId);
+          await deliverPersistedOutgoing(message, outgoing, dependencies, "system");
+          welcomeSentWithProcessing = firstMessage;
+        },
       });
       if (result.mode === "human_review_required") {
         // La IA puede solicitar revisión mientras el personal toma el chat
@@ -1679,7 +1691,7 @@ export async function processMetaMessage(message, overrides = {}) {
       } else if (["outside_hotel_scope", "specific_inquiry"].includes(result.mode)) {
         reply = result.reply;
       } else {
-        reply = firstMessage ? welcome + "\n\n" + result.reply : result.reply;
+        reply = firstMessage && !welcomeSentWithProcessing ? welcome + "\n\n" + result.reply : result.reply;
       }
     }
 

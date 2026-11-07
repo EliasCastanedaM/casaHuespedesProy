@@ -31,17 +31,11 @@ export function policyInformationType(message) {
   return null;
 }
 
-function requestedAge(text) {
-  const n = normalize(text);
-  const match = n.match(/\b(?:edad\s*(?:de|:)?\s*)?(\d{1,2})\s*an[oa]s?\b/);
-  return match ? Number(match[1]) : null;
-}
-
 // Mantiene un respaldo conservador si hay una incidencia de conexión.
 // Cuando se suministran reglas de Supabase, SOLO sus estados activos se usan.
 const FALLBACK = {
   ninos_0_4: { review_status: "verified", config: { no_charge_when_using_existing_beds: true } },
-  ninos_5_8: { review_status: "verified", config: { percent_of_min_max_differential: 50 } },
+  ninos_5_8: { review_status: "verified", config: { percent_of_adult_single_differential: 50 } },
   ninos_9_mas: { review_status: "verified", config: { adult_rate_confirmed: true, quote_requires_manual_review: false } },
   mascotas: { review_status: "verified", config: { amount_pen: 20, vat_included: true, charge_frequency: "pet_per_night", approval_required: true, automatic_final_quote: false } },
   grupos_8: { review_status: "verified", config: { min_total_guests: 8 } },
@@ -55,34 +49,7 @@ export function formatPolicyInformationReply(message, { rules } = {}) {
   const human = "Nuestro equipo confirmará los detalles antes de cotizar o autorizar una excepción.";
 
   if (type === "children") {
-    const age = requestedAge(message);
-    const young = get("ninos_0_4");
-    const middle = get("ninos_5_8");
-    const adult = get("ninos_9_mas");
-    const lines = [];
-
-    if (age === null || age <= 4) {
-      lines.push(young?.review_status === "verified" &&
-        young.config?.no_charge_when_using_existing_beds === true
-        ? "De 0 a 4 años: no pagan cargo adicional si utilizan las camas disponibles y se respeta la capacidad de la habitación."
-        : "De 0 a 4 años: las condiciones necesitan revisión de nuestro equipo.");
-    }
-    if (age === null || (age >= 5 && age <= 8)) {
-      const percent = Number(middle?.config?.percent_of_min_max_differential);
-      lines.push(middle?.review_status === "verified" &&
-        Number.isFinite(percent) && percent > 0 && percent <= 100
-        ? "De 5 a 8 años: se contempla el " + percent +
-          " % del diferencial entre la tarifa mínima y máxima. El importe y su aplicación deben ser validados por nuestro equipo; no puedo confirmar un monto automático."
-        : "De 5 a 8 años: la tarifa final debe ser revisada por el equipo.");
-    }
-    if (age === null || age >= 9) {
-      lines.push(adult?.review_status === "verified" &&
-        adult.config?.adult_rate_confirmed === true
-        ? "Desde los 9 años: corresponde tarifa de adulto."
-        : "Desde los 9 años: la condición tarifaria está pendiente de confirmar con nuestro equipo. No puedo asegurar automáticamente una tarifa de adulto ni un monto final.");
-    }
-    return ["¡Claro! 😊 Estas son las condiciones para niños:", ...lines,
-      "Si deseas cotizar una estadía con niños, nuestro equipo confirmará el importe final."].join("\n");
+    return "Los niños tienen un tratamiento distinto en la cotización. Para calcular el importe de tu estadía, dime cuántos adultos y niños viajarán y qué edades tienen los niños. 😊";
   }
 
   if (type === "pets") {

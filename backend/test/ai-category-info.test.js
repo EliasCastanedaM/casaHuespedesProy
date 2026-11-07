@@ -24,16 +24,16 @@ test("responde detalles de las seis habitaciones incluso con reserva activa", ()
     assert.equal(isRoomDetailsInquiry(message), true, message);
     const reply = formatRoomDetailsReply(categories, message);
     for (const category of categories) assert.ok(reply.includes(category.name), category.name);
-    assert.match(reply, /S\/ 210\.00 por noche/);
+    assert.doesNotMatch(reply, /S\/\s*\d/);
     assert.doesNotMatch(reply, /confirmada la disponibilidad|reservé|se creó/i);
   }
 });
 
-test("filtra una categoría individual y preserva nombre y precio oficiales", () => {
+test("filtra una categoría individual y preserva el nombre sin cotizar el precio Full", () => {
   const reply = formatRoomDetailsReply(categories, "Cuéntame sobre Familiar 2");
   assert.match(reply, /Familiar 2/);
   assert.doesNotMatch(reply, /Familiar 1/);
-  assert.match(reply, /S\/ 250\.00/);
+  assert.doesNotMatch(reply, /S\/\s*\d/);
 });
 
 test("no confunde recomendaciones, selección y disponibilidad con detalles", () => {
@@ -68,7 +68,7 @@ test("compara Familiar 1 y Familiar 2 sin omitir ninguna y conserva sus diferenc
   assert.match(answer, /Familiar 2/);
   assert.match(answer, /Segundo piso y vista interior/);
   assert.match(answer, /acceso directo a terraza y vista al mar/);
-  assert.equal((answer.match(/S\/ 250\.00 por noche/g) || []).length, 2);
+  assert.doesNotMatch(answer, /S\/\s*\d/);
   assert.doesNotMatch(answer, /Matrimonial Ejecutiva|Triple - 3 Camas/);
 });
 
