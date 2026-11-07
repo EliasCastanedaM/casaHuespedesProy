@@ -1,5 +1,3 @@
-import { formatOfficialHotelAddress } from "../hotel/hotelProfile.service.js";
-
 function normalize(value) {
   return String(value || "").normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -11,39 +9,43 @@ export function isHotelLocationInquiry(message) {
 
   // No confundir preguntas de atractivos turísticos con la dirección del hotel.
   if (/\b(?:museo|muelle|playa|restaurante|aeropuerto|chiclayo|caballitos)\b/.test(text) &&
-      !/\b(?:hospedaje|hotel|casa huespedes)\b/.test(text)) return false;
-  if (/\b(?:reservar|reserva|cancelar|cambio de direccion)\b/.test(text)) return false;
+      !/\b(?:hospedaje|hotel|casa huespedes)\b/.test(text) &&
+      !/\b(?:llegar|llego|llegamos)\b.*\bdesde\b/.test(text)) return false;
+  if (/\b(?:cancelar|cambio de direccion|direccion de correo|direccion ip)\b/.test(text)) return false;
 
   return (
-    /\b(?:direccion|ubicacion|ubicados?|ubicadas?|ubicado|ubicada|queda|quedan|llegar|llego|encuentran|situados?|donde estan|donde se ubica|como llegar)\b/.test(text) ||
+    /\b(?:direccion|ubicacion|ubicados?|ubicadas?|ubicado|ubicada|queda|quedan|llegar|llego|encuentran|situados?|donde estan|donde se ubica|como llegar|mapa|maps|taxi|taxis|cochera|estacionamiento)\b/.test(text) ||
     /\b(?:donde esta(?: el| la)? (?:hotel|hospedaje|casa huespedes))\b/.test(text) ||
     /\b(?:address|location|located|where are you|how to get there|directions)\b/.test(text) ||
     /\b(?:endereco|localizacao|onde fica|como chegar|adresse|ou etes vous|comment arriver)\b/.test(text)
-  ) && (
-    !/\b(?:cual es la direccion de|donde queda|donde se ubica|ubicacion de)\b/.test(text) ||
-    /\b(?:hospedaje|hotel|casa huespedes|ustedes|estan|están|su|del|se)\b/.test(text)
   );
 }
 
-export function formatHotelLocationReply(profile, message = "") {
-  const address = formatOfficialHotelAddress(profile);
-  if (!address) {
-    return "En este momento no puedo consultar la dirección exacta del hospedaje. Nuestro equipo puede orientarte por teléfono.";
-  }
-  const text = normalize(message);
-  const mapsUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address);
-  if (/\b(?:where|address|location|directions|located|how to get)\b/.test(text)) {
-    return "Casa Huéspedes Pimentel is located at " + address +
-      ". Google Maps: " + mapsUrl;
-  }
-  if (/\b(?:onde|endereco|localizacao|chegar)\b/.test(text)) {
-    return "Casa Huéspedes Pimentel fica em " + address +
-      ". Google Maps: " + mapsUrl;
-  }
-  if (/\b(?:adresse|comment arriver|ou etes)\b/.test(text)) {
-    return "Casa Huéspedes Pimentel se trouve à " + address +
-      ". Google Maps : " + mapsUrl;
-  }
-  return "📍 Casa Huéspedes Pimentel está en " + address +
-    ". 🗺️ Ver ubicación en Google Maps: " + mapsUrl;
+export function isLocationMenuChoice(message) {
+  const text = normalize(message).replace(/[\uFE0F\u20E3]/g, "").replace(/[.!¿?]/g, "").trim();
+  return /^(?:(?:la\s+)?opcion\s*)?3$/.test(text);
+}
+
+export function isLocationMenuSelection(message, history = []) {
+  if (!isLocationMenuChoice(message)) return false;
+  if (/\bopcion\b/.test(normalize(message))) return true;
+  const lastAssistant = [...history].reverse().find((item) => item.author === "assistant");
+  const text = normalize(lastAssistant?.content);
+  // Un número aislado solo representa el menú si el último mensaje del asesor
+  // presentó esas opciones; no confundirlo con edades, huéspedes o pagos.
+  return text.includes("habitaciones y tarifas") &&
+    text.includes("ubicacion y como llegar") &&
+    text.includes("politicas y preguntas frecuentes");
+}
+
+export function formatHotelLocationReply() {
+  return [
+    "📍 Encuentra la ubicación de Casa Huéspedes y las indicaciones para llegar aquí:",
+    "https://maps.app.goo.gl/PfXxizCYj1YqeY9x7",
+    "",
+    "También te compartimos estas opciones de taxi y estacionamiento para facilitar tu llegada. Son servicios de terceros; puedes consultar directamente sus tarifas y disponibilidad:",
+    "",
+    "🚕 Servicio de taxi: +51 949 489 526",
+    "🅿️ Estacionamiento las 24 horas: +51 979 123 264",
+  ].join("\n");
 }

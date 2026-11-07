@@ -12,8 +12,12 @@ import {
 import { buildHotelAssistantPrompt } from "./ai.prompt.js";
 import { responseInput, shouldReuseOpenAiResponseId } from "./ai.context-window.js";
 import { recordOpenAiUsage } from "./ai.usage.js";
-import { isHotelLocationInquiry, formatHotelLocationReply } from "./ai.location-info.js";
-import { getPublicHotelProfileService } from "../hotel/hotelProfile.service.js";
+import {
+  isHotelLocationInquiry,
+  isLocationMenuChoice,
+  isLocationMenuSelection,
+  formatHotelLocationReply,
+} from "./ai.location-info.js";
 import { isHotelServicesInquiry, formatHotelServicesReply } from "./ai.services-info.js";
 import { getPublicHotelServicesService } from "../services/service.service.js";
 import { formatPolicyInformationReply, policyInformationType } from "./ai.policy-info.js";
@@ -668,10 +672,23 @@ async function generateAiReplyInternal({
     };
   }
 
+  const locationInquiry = isHotelLocationInquiry(message);
+  if (isLocationMenuChoice(message)) {
+    const menuHistory = history.some((item) => item.author === "assistant")
+      ? history
+      : await loadStoredHistory(channel, externalUserId, message);
+    if (isLocationMenuSelection(message, menuHistory)) {
+      return {
+        reply: formatHotelLocationReply(), responseId: null,
+        deterministic: true, mode: "hotel_location_information",
+      };
+    }
+  }
+
   // Las respuestas estructuradas del flujo global (fechas, edades, nombre,
   // correo y elección de pago) se procesan antes del clasificador de alcance.
   // Así un "no", un número o un correo no se confunden con una consulta ajena.
-  if (!policyInformationType(message)) {
+  if (!locationInquiry && !policyInformationType(message)) {
     const current = await loadBookingContext(channel, externalUserId);
     let categories = [];
     if (current?.whatsapp_mvp || isReservationIntent(message)) {
@@ -740,26 +757,13 @@ async function generateAiReplyInternal({
     };
   }
 
-  // La dirección oficial se obtiene del perfil verificado en Supabase.
-  // La pregunta no consume ni modifica el contexto de reserva.
-  if (isHotelLocationInquiry(message)) {
-    try {
-      const profile = await getPublicHotelProfileService();
-      return {
-        reply: formatHotelLocationReply(profile, message),
-        responseId: null,
-        deterministic: true,
-        mode: "hotel_location_information",
-      };
-    } catch (error) {
-      console.warn("No se pudo consultar dirección oficial:", error.message);
-      return {
-        reply: "No puedo confirmar la dirección en este momento. Nuestro equipo puede ayudarte a llegar.",
-        responseId: null,
-        deterministic: true,
-        mode: "hotel_location_unavailable",
-      };
-    }
+  // El enlace y los contactos fueron aprobados por el hospedaje. La consulta
+  // no modifica la reserva ni depende del perfil de dirección de la base.
+  if (locationInquiry) {
+    return {
+      reply: formatHotelLocationReply(), responseId: null,
+      deterministic: true, mode: "hotel_location_information",
+    };
   }
 
   // Una consulta sobre reglas comerciales no equivale a modificar la reserva.
