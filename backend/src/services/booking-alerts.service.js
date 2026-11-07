@@ -169,7 +169,8 @@ const CLAIM_SQL = [
   "  SELECT id FROM public.booking_alert_outbox",
   "  WHERE ((status IN ('pending', 'failed') AND next_attempt_at <= NOW() AND attempts < 5)",
   "      OR (status = 'sending' AND locked_at < NOW() - INTERVAL '5 minutes' AND attempts < 5))",
-  "    AND ($1::text = '' OR (channel = 'whatsapp' AND external_user_id = $1))",
+  "    AND (($2::text <> '' AND alert_key LIKE $2 || '%')",
+  "         OR ($2::text = '' AND ($1::text = '' OR (channel = 'whatsapp' AND external_user_id = $1))))",
   "  ORDER BY created_at, id FOR UPDATE SKIP LOCKED LIMIT 1",
   ")",
   "RETURNING o.id, o.channel, o.external_user_id, o.payload, o.attempts",
@@ -183,7 +184,10 @@ export async function deliverPendingBookingAlerts(db = pool, options = {}) {
   let sent = 0;
   let failed = 0;
   for (let index = 0; index < batchSize; index += 1) {
-    const claimed = await db.query(CLAIM_SQL, [options.pilotSource ?? env.bookingAlert.pilotSource ?? ""]);
+    const claimed = await db.query(CLAIM_SQL, [
+      options.pilotSource ?? env.bookingAlert.pilotSource ?? "",
+      options.testKeyPrefix ?? env.bookingAlert.testKeyPrefix ?? "",
+    ]);
     const alert = claimed.rows[0];
     if (!alert) break;
     attempted += 1;
