@@ -6,6 +6,7 @@ import {
   formatBookingAlertParameters,
   sendBookingAlert,
   deliverPendingBookingAlerts,
+  applyBookingAlertStatusUpdates,
   buildPilotBookingAlertPayload,
 } from "../src/services/booking-alerts.service.js";
 
@@ -177,4 +178,62 @@ test("piloto de plantilla filtra únicamente por el prefijo de prueba", async ()
   assert.deepEqual(result, { attempted: 0, sent: 0, failed: 0 });
   assert.match(requests[0].sql, /alert_key LIKE/);
   assert.deepEqual(requests[0].params, ["51938345478", "qa-template-20261107"]);
+});
+
+test("el webhook de Meta registra fallo real de plantilla y código 131042", async () => {
+  const statements = [];
+  const db = {
+    async query(sql, params) {
+      statements.push({ sql, params });
+      return { rows: [{ id: 8, delivery_status: "failed", delivery_error_code: 131042 }] };
+    },
+  };
+  const result = await applyBookingAlertStatusUpdates([{
+    channel: "whatsapp",
+    messageId: "wamid.template-example",
+    status: "failed",
+    errorCode: 131042,
+    errorTitle: "Business eligibility payment issue",
+  }], db);
+  assert.deepEqual(result, [{ id: 8, delivery_status: "failed", delivery_error_code: 131042 }]);
+  assert.deepEqual(statements[0].params, [
+    "wamid.template-example", "failed", 131042, "Business eligibility payment issue",
+  ]);
+  assert.match(statements[0].sql, /WHERE meta_message_id = \$1 AND status = 'sent'/);
+});
+
+test("se ignoran otros canales, estados desconocidos y mensajes sin ID", async () => {
+  let called = false;
+  const db = {
+    async query() {
+      called = true;
+      throw Error("No debería consultar base de datos");
+    },
+  };
+  const result = await applyBookingAlertStatusUpdates([
+    { channel: "instagram", messageId: "other", status: "failed" },
+    { channel: "whatsapp", messageId: "", status: "failed" },
+    { channel: "whatsapp", messageId: "mock", status: "queued" },
+  ], db);
+  assert.deepEqual(result, []);
+  assert.equal(called, false);
+});
+
+test("los webhooks no degradan entregado/leído con fallos tardíos", async () => {
+  const queries = [];
+  const db = {
+    async query(sql, params) {
+      queries.push({ sql, params });
+      return { rows: [] };
+    },
+  };
+  await applyBookingAlertStatusUpdates([
+    { channel: "whatsapp", messageId: "wamid.delivery", status: "delivered" },
+    { channel: "whatsapp", messageId: "wamid.delivery", status: "read" },
+    { channel: "whatsapp", messageId: "wamid.delivery", status: "failed", errorCode: 131042 },
+  ], db);
+  assert.equal(queries.length, 3);
+  assert.match(queries[0].sql, /WHEN \$2 = 'failed' AND delivery_status NOT IN \('delivered', 'read'\)/);
+  assert.deepEqual(queries.map((x) => x.params[1]), ["delivered", "read", "failed"]);
+  assert.equal(queries[2].params[2], 131042);
 });
