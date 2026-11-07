@@ -117,6 +117,15 @@ export const env = {
     ),
   },
 
+  bookingAlert: {
+    // Deshabilitado por defecto: las pruebas se envían solamente al teléfono
+    // establecido por el administrador en Render, jamás a un número fijo.
+    enabled: cleanEnvValue(process.env.BOOKING_ALERT_ENABLED).toLowerCase() === "true",
+    to: cleanEnvValue(process.env.BOOKING_ALERT_TO),
+    templateName: cleanEnvValue(process.env.BOOKING_ALERT_TEMPLATE_NAME),
+    language: cleanEnvValue(process.env.BOOKING_ALERT_TEMPLATE_LANGUAGE) || "es",
+  },
+
   culqiPaymentUrl:
     process.env.CULQI_PAYMENT_URL ||
     "https://express.culqi.com/pago/A863017EB2",
