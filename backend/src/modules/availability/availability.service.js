@@ -145,6 +145,7 @@ export async function searchAvailableRoomsService(input = {}, db = pool) {
       r.status,
       r.main_image_url,
       r.room_number,
+      r.view_type,
       r.floor_label,
       r.room_type,
       r.category_slug,

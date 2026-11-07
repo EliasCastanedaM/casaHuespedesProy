@@ -115,6 +115,7 @@ export default function MessagesAdmin() {
   const [confirmCategory, setConfirmCategory] = useState("");
   const [confirmPetsAuthorized, setConfirmPetsAuthorized] = useState(false);
   const [confirmChildBedAvailability, setConfirmChildBedAvailability] = useState(false);
+  const [confirmWindowPosition, setConfirmWindowPosition] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
@@ -362,16 +363,19 @@ export default function MessagesAdmin() {
     setConfirmAmount(
       reservation?.staff_confirmation?.total_amount
         ? String(reservation.staff_confirmation.total_amount)
-        : ""
+        : reservation?.pricing_quote?.total_amount ? String(reservation.pricing_quote.total_amount) : ""
     );
     setConfirmPetsAuthorized(false);
     setConfirmChildBedAvailability(false);
+    setConfirmWindowPosition(false);
   }, [
     selectedId,
     reservation?.recommended_category?.slug,
     reservation?.category_slug,
     reservation?.staff_confirmation?.total_amount,
     reservation?.pets,
+    reservation?.pricing_quote?.total_amount,
+    reservation?.pricing_quote?.internal_assignment?.room_id,
     Array.isArray(reservation?.child_ages) ? reservation.child_ages.join(",") : "",
   ]);
 
@@ -398,6 +402,11 @@ export default function MessagesAdmin() {
       setError("Confirma que los niños de 0 a 4 años utilizarán camas disponibles.");
       return;
     }
+    if (reservation?.pricing_quote?.window_verification_required &&
+        (!confirmWindowPosition || confirmCategory !== reservation?.pricing_quote?.category_slug)) {
+      setError("Verifica la ubicación cerca de ventana de la unidad sugerida en la categoría cotizada.");
+      return;
+    }
     try {
       setSaving(true);
       const response = await api.post(
@@ -407,6 +416,9 @@ export default function MessagesAdmin() {
           total_amount: amount,
           pet_authorized: confirmPetsAuthorized,
           child_bed_availability_confirmed: confirmChildBedAvailability,
+          room_id: confirmCategory === reservation?.pricing_quote?.category_slug
+            ? reservation?.pricing_quote?.internal_assignment?.room_id : null,
+          window_position_confirmed: confirmWindowPosition,
         }
       );
       if (!response.data?.success) {
@@ -778,6 +790,22 @@ export default function MessagesAdmin() {
                         <span>Confirmo que los niños de 0 a 4 años utilizarán camas disponibles, sin cargo adicional.</span>
                       </label>
                     )}
+                    {reservation.pricing_quote?.internal_assignment && (
+                      <p className="mt-3 text-xs text-[#52636a]">
+                        Asignación interna sugerida: {reservation.pricing_quote.internal_assignment.room_number || "pendiente"}.
+                        {" "}{reservation.pricing_quote.internal_assignment.view_type || "Vista pendiente de verificar"}.
+                        Esta identificación no se envía al huésped.
+                      </p>
+                    )}
+                    {reservation.pricing_quote?.window_verification_required && (
+                      <label className="mt-3 flex items-start gap-2 text-xs text-[#52636a]">
+                        <input type="checkbox" checked={confirmWindowPosition}
+                          onChange={(event) => setConfirmWindowPosition(event.target.checked)}
+                          disabled={saving || confirmCategory !== reservation.pricing_quote.category_slug}
+                          className="mt-0.5" />
+                        <span>Verifiqué que la unidad interna sugerida está cerca de una ventana.</span>
+                      </label>
+                    )}
                     <label className="mt-3 block text-xs font-semibold text-[#52636a]">
                       Importe total confirmado (S/)
                       <input
@@ -796,6 +824,8 @@ export default function MessagesAdmin() {
                       onClick={confirmReservation}
                       disabled={selected.channel === "whatsapp" || saving || !confirmCategory || !confirmAmount || Number(confirmAmount) <= 0 ||
                         (Number(reservation.pets || 0) > 0 && !confirmPetsAuthorized) ||
+                        (reservation.pricing_quote?.window_verification_required &&
+                          (!confirmWindowPosition || confirmCategory !== reservation.pricing_quote.category_slug)) ||
                         (Array.isArray(reservation.child_ages) &&
                           reservation.child_ages.some((age) => Number(age) <= 4) &&
                           !confirmChildBedAvailability)}

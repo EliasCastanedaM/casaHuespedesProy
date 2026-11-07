@@ -361,6 +361,8 @@ export async function confirmGlobalReservationController(req, res, next) {
       totalAmount,
       petAuthorized: req.body?.pet_authorized === true,
       childBedAvailabilityConfirmed: req.body?.child_bed_availability_confirmed === true,
+      roomId: req.body?.room_id ?? null,
+      windowPositionConfirmed: req.body?.window_position_confirmed === true,
     });
 
     await setHandoffState(conversation.channel, conversation.externalUserId, false);

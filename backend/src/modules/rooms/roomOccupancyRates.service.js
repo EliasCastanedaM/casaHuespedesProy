@@ -16,3 +16,14 @@ export async function getReservationRoomCategoriesService(db = pool) {
   }
   return categories.map((category) => ({ ...category, occupancy_rates: rates.get(category.slug) || {} }));
 }
+
+// Availability is a local inventory snapshot; final confirmation remains human.
+export async function withAvailableReservationRooms(categories, state, db = pool) {
+  const { searchAvailableRoomsService } = await import("../availability/availability.service.js");
+  const result = await searchAvailableRoomsService({
+    check_in: state.check_in, check_out: state.check_out,
+    guests_count: Number(state.adults)+Number(state.children),
+    check_in_time: state.check_in_time,
+  }, db);
+  return categories.map(c=>({ ...c, available_rooms: result.rooms.filter(room=>room.category_slug===c.slug) }));
+}
