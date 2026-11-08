@@ -19,6 +19,7 @@ import {
   formatHotelLocationReply,
 } from "./ai.location-info.js";
 import { isHotelServicesInquiry, formatHotelServicesReply } from "./ai.services-info.js";
+import { formatTourismReply } from "./ai.tourism.js";
 import { paymentInformationType, formatHotelPaymentInfoReply, manualPaymentReviewReply } from "./ai.payment-info.js";
 import { getHotelPaymentInfoService } from "../services/hotelPaymentInfo.service.js";
 import { getPublicHotelServicesService } from "../services/service.service.js";
@@ -804,6 +805,16 @@ async function generateAiReplyInternal({
     const menu = handleGlobalReservationTurn({ message, context });
     return {
       reply: menu.reply, responseId: null, deterministic: true, mode: menu.mode,
+    };
+  }
+
+  // Consultas turísticas desde datos verificados, sin OpenAI ni cambios
+  // de contexto de reserva. No se gestionan pagos ni reservas de terceros.
+  const touristReply = formatTourismReply(message);
+  if (touristReply) {
+    return {
+      reply: touristReply, responseId: null, deterministic: true,
+      mode: "nearby_tourist_information",
     };
   }
 
