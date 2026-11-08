@@ -26,7 +26,7 @@ import { getPublicHotelServicesService } from "../services/service.service.js";
 import { formatPolicyInformationReply, policyInformationType } from "./ai.policy-info.js";
 import { getHotelGuestPolicyRulesService } from "../services/hotelPolicy.service.js";
 import { isRoomDetailsInquiry, formatRoomDetailsReply, guestCategoryDescription } from "./ai.category-info.js";
-import { requiresManualReview, humanReviewReply } from "./ai.guest-rules.js";
+import { requiresManualReview, humanReviewReply, globalAssistantSocialLinks, isHotelSocialMediaInquiry } from "./ai.guest-rules.js";
 import {
   globalReservationContext,
   handleGlobalReservationTurn,
@@ -795,6 +795,17 @@ async function generateAiReplyInternal({
     return {
       reply: SPECIFIC_INQUIRY_REPLY, responseId: null,
       deterministic: true, mode: "specific_inquiry",
+    };
+  }
+
+  // Solicitud expresa de fotos, videos o enlaces: datos oficiales,
+  // sin OpenAI, sin modificar reservas ni reutilizar el mensaje de menú.
+  if (isHotelSocialMediaInquiry(message)) {
+    return {
+      reply: globalAssistantSocialLinks(),
+      responseId: null,
+      deterministic: true,
+      mode: "hotel_social_media_information",
     };
   }
 
