@@ -58,5 +58,23 @@ export function globalAssistantWelcome() {
   ].join("\n");
 }
 
+// Segundo mensaje fijo de presentación, enviado por el backend después
+// del menú de bienvenida, también cuando un huésped vuelve a saludar.
+// Son enlaces oficiales publicados en el sitio web del hospedaje.
+export function globalAssistantSocialLinks() {
+  return [
+    "📸 ¿Te gustaría conocer mejor nuestras habitaciones e instalaciones?",
+    "",
+    "Puedes ver fotografías, videos y más información sobre Casa Huéspedes Pimentel en nuestra página web y redes sociales:",
+    "",
+    "🌐 Página web: https://www.casahuespedespimentel.com/",
+    "📷 Instagram: https://www.instagram.com/casahuespedes.pimentel/",
+    "📘 Facebook: https://www.facebook.com/casadehuespedespimentel/",
+    "🎥 TikTok: https://www.tiktok.com/@casahuespedespimentel",
+    "",
+    "Si deseas hacer una consulta o reservar, puedes seguir escribiéndonos aquí. 😊",
+  ].join("\n");
+}
+
 // Compatibility names for existing consumers.
 export { globalAssistantWelcome as whatsAppMvpWelcome, globalAssistantReservationReply as whatsAppMvpReservationReply };
