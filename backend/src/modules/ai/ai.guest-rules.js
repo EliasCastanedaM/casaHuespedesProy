@@ -83,7 +83,7 @@ export function isHotelSocialMediaInquiry(message) {
   const text = String(message || "").normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   if (!text || text.length > 500) return false;
-  if (/\b(?:tesis|ensayo|tarea|receta|codigo|programacion|tutorial|crear cuenta|iniciar sesion|contrasena|hackear|museo|restaurante|arqueologia|tumbas reales|huaca)\b/.test(text)) return false;
+  if (/\b(?:tesis|ensayo|tarea|receta|codigo|programacion|tutorial|crear cuenta|iniciar sesion|contrasena|hackear|museos?|restaurantes?|arqueologia|tumbas reales|huacas?)\b/.test(text)) return false;
   const media = /\b(?:fotos?|fotografias?|imagenes?|videos?|instagram|facebook|tiktok|redes sociales|pagina web|sitio web|website|social media)\b/.test(text);
   const context = /\b(?:hotel|hospedaje|habitacion|habitaciones|instalaciones|alojamiento|casa huespedes|pimentel|ustedes|nuestras|nuestro|sus|su|tienen|puedo ver|donde veo|compartir|comparteme|pasame|mandame)\b/.test(text);
   const ownerSocial = /\b(?:su|sus|del hotel|del hospedaje|de ustedes)\s+(?:instagram|facebook|tiktok|redes sociales|pagina web|sitio web)\b/.test(text);
