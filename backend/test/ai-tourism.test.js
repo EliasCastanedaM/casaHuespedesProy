@@ -33,6 +33,7 @@ test("responde restaurantes próximos a Pimentel por nombre y ubicación sin pro
 
 test("responde direcciones puntuales y marca la ubicación no confirmada", () => {
   assert.match(formatTourismReply("¿Dónde está Bertika's?"), /Calle Lima 200/);
+  assert.match(formatTourismReply("¿Dónde está La Tintorera?"), /Manuel Seoane 733/);
   assert.match(formatTourismReply("¿Dónde está La Tienda del Pato?"), /numeraci[oó]n por confirmar/i);
   assert.match(formatTourismReply("¿Dónde queda el Museo Tumbas Reales de Sipán?"), /Vizcardo y Guzmán 895/);
 });
