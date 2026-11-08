@@ -140,7 +140,7 @@ export function isTourismInquiry(message) {
   if (/^(?:[¿? ]*)?(?:el hotel |el hospedaje )?(?:tiene|tienen|ofrece|ofrecen|incluye|hay)\s+(?:un\s+)?(?:restaurante|cafeteria)\??$/.test(text)) return false;
   if (/\b(?:quiero reservar|deseo reservar|cancelar reserva|confirmar reserva|pagar reserva)\b/.test(text)) return false;
   return TOURIST_TOPIC.test(text) ||
-    TOURISM_PLACES.some((place) => text.includes(normalize(place.name)));
+    TOURISM_PLACES.some((place) => isSpecificPlaceMention(text, place));
 }
 
 function categoryFor(message) {
