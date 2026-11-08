@@ -5,7 +5,7 @@ import {
   generateAiReply,
   updateGlobalReservationContextForHandoff,
 } from "../ai/ai.service.js";
-import { globalAssistantWelcome } from "../ai/ai.guest-rules.js";
+import { globalAssistantWelcome, globalAssistantSocialLinks } from "../ai/ai.guest-rules.js";
 import { isOpeningGreetingOnly } from "../ai/ai.pricing.js";
 import {
   HUMAN_ASSISTANCE_OFFER, HUMAN_ASSISTANCE_REPLY, SPECIFIC_INQUIRY_REPLY,
@@ -1400,6 +1400,41 @@ async function deliverPersistedOutgoing(
   }
 }
 
+// El segundo mensaje de bienvenida se vincula al primer outgoing, no al
+// mensaje entrante. Así ambas burbujas quedan registradas por separado sin
+// vulnerar el índice único de respuestas y pueden recuperarse tras una caída.
+async function deliverWelcomeSocialFollowUp(message, primaryOutgoing, dependencies) {
+  const linkedId = primaryOutgoing?.id ?? null;
+  const saved = linkedId
+    ? await dependencies.findOutgoing(linkedId)
+    : null;
+
+  // Meta ya lo aceptó: jamás repetir por un reintento del webhook.
+  if (saved?.meta_message_id || ["sent", "delivered", "read"].includes(saved?.status)) {
+    return saved;
+  }
+
+  const outgoing = saved || await dependencies.createOutgoing(
+    message,
+    globalAssistantSocialLinks(),
+    "assistant",
+    linkedId
+  );
+  return deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
+}
+
+// En recuperación no volvemos a consultar OpenAI. Se comprueba si la
+// bienvenida estaba en el primer outgoing o en el aviso de procesamiento
+// inicial. Un saludo simple siempre cuenta como nueva presentación.
+async function hasWelcomeForRecoveredTurn(message, incomingId, outgoing, dependencies) {
+  if (isOpeningGreetingOnly(message.text)) return true;
+  const welcome = globalAssistantWelcome();
+  if (outgoing?.content?.includes(welcome)) return true;
+  if (!incomingId) return false;
+  const processing = await dependencies.findProcessing(incomingId);
+  return Boolean(processing?.content?.includes(welcome));
+}
+
 export async function sendManualMetaMessage(
   channel,
   externalUserId,
@@ -1567,18 +1602,27 @@ export async function processMetaMessage(message, overrides = {}) {
         }
         // Un ID de Meta confirma aceptación previa. No equivale a entrega,
         // pero tampoco permite un reenvío automático durante la recuperación.
-        if (message.channel === "whatsapp" && existingOutgoing.meta_message_id) {
-          await dependencies.complete(message);
-          return { status: "outgoing_already_accepted_by_meta" };
+        const acceptedByMeta = message.channel === "whatsapp" &&
+          Boolean(existingOutgoing.meta_message_id);
+        if (!acceptedByMeta) {
+          await deliverPersistedOutgoing(
+            message,
+            existingOutgoing,
+            dependencies,
+            "assistant"
+          );
         }
-        await deliverPersistedOutgoing(
-          message,
-          existingOutgoing,
-          dependencies,
-          "assistant"
-        );
+
+        // Si se interrumpió el proceso entre los dos mensajes, enviar solo
+        // el segundo que falte, sin repetir el primero en WhatsApp.
+        if (await hasWelcomeForRecoveredTurn(
+          message, incomingId, existingOutgoing, dependencies
+        )) {
+          await deliverWelcomeSocialFollowUp(message, existingOutgoing, dependencies);
+        }
         await dependencies.complete(message);
-        return { status: "replied_recovered" };
+        return { status: acceptedByMeta
+          ? "outgoing_already_accepted_by_meta" : "replied_recovered" };
       }
     }
 
@@ -1658,6 +1702,7 @@ export async function processMetaMessage(message, overrides = {}) {
     let reply;
     let handoffActivatedByThisTurn = false;
     let welcomeSentWithProcessing = false;
+    let sendSocialFollowUp = greetingOnly;
     if (greetingOnly) {
       reply = welcome;
     } else {
@@ -1692,6 +1737,10 @@ export async function processMetaMessage(message, overrides = {}) {
         reply = result.reply;
       } else {
         reply = firstMessage && !welcomeSentWithProcessing ? welcome + "\n\n" + result.reply : result.reply;
+        // Si el saludo global fue enviado con el aviso de procesamiento,
+        // el mensaje social va después de la respuesta final.
+        sendSocialFollowUp = firstMessage &&
+          Boolean(welcome || welcomeSentWithProcessing);
       }
     }
 
@@ -1710,6 +1759,9 @@ export async function processMetaMessage(message, overrides = {}) {
       incomingId
     );
     await deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
+    if (sendSocialFollowUp) {
+      await deliverWelcomeSocialFollowUp(message, outgoing, dependencies);
+    }
     await dependencies.complete(message);
 
     return { status: "replied" };
