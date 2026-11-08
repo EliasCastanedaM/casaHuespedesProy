@@ -221,11 +221,13 @@ test("la bienvenida con menú precede al aviso de cálculo en un chat nuevo",asy
     generateReply:async(_i,{onProcessing})=>{await onProcessing(processingQuoteReply());return {reply:"Cotización S/ 400.00",mode:"occupancy_quote"};},
     sendReply:async(_m,text)=>{sent.push(text);return {};},recordOutgoing:async()=>{},sleep:async()=>{},
   });
-  assert.equal(sent.length,2);
+  assert.equal(sent.length,3);
   assert.ok(sent[0].startsWith("¡Hola!"));
   assert.match(sent[0],/Habitaciones y tarifas/);
   assert.match(sent[0],/En un momento te respondo/);
   assert.equal(sent[1],"Cotización S/ 400.00");
+  assert.match(sent[2], /casahuespedespimentel\.com/);
+  assert.match(sent[2], /instagram\.com\/casahuespedes\.pimentel/);
 });
 
 

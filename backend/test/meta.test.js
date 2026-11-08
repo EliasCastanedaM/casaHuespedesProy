@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import test from "node:test";
 import assert from "node:assert/strict";
 import app from "../src/app.js";
+import { globalAssistantSocialLinks } from "../src/modules/ai/ai.guest-rules.js";
 import { env } from "../src/config/env.js";
 import {
   isHumanHandoffRequest,
@@ -1264,7 +1265,7 @@ test("primer saludo usa la misma bienvenida global en las tres plataformas", asy
 });
 
 test("primera consulta específica conserva la respuesta original después del saludo global", async () => {
-  let sent = "";
+  const sent = [];
   let generated = 0;
   await processMetaMessage(
     message({ channel: "facebook", externalUserId: "nuevo-huesped-consulta", text: "¿Puedo llevar mi mascota?" }),
@@ -1277,15 +1278,17 @@ test("primera consulta específica conserva la respuesta original después del s
         return { reply: "Las mascotas requieren aprobación previa y tienen un cargo adicional de S/ 20." };
       },
       sendReply: async (_message, reply) => {
-        sent = reply;
+        sent.push(reply);
         return { messages: [{ id: "salida-2" }] };
       },
     })
   );
   assert.equal(generated, 1);
-  assert.match(sent, /Bienvenido/);
-  assert.doesNotMatch(sent, /Familiar: S\/ 221\.00/);
-  assert.match(sent, /S\/ 20/);
+  assert.equal(sent.length, 2);
+  assert.match(sent[0], /Bienvenido/);
+  assert.doesNotMatch(sent[0], /Familiar: S\/ 221\.00/);
+  assert.match(sent[0], /S\/ 20/);
+  assert.equal(sent[1], globalAssistantSocialLinks());
 });
 
 test("mensajes posteriores no repiten el saludo ni el catálogo", async () => {
@@ -1440,7 +1443,7 @@ test("un tema académico en chat existente se rechaza sin repetir catálogo", as
 });
 
 test("una consulta de tarifas en primer mensaje pasa por el filtro antes del catálogo", async () => {
-  let sent = "";
+  const sent = [];
   let calls = 0;
   await processMetaMessage(
     message({ channel: "instagram", externalUserId: "tarifas-nuevo", text: "¿Cuánto cuestan las habitaciones?" }),
@@ -1453,19 +1456,21 @@ test("una consulta de tarifas en primer mensaje pasa por el filtro antes del cat
         return { reply: "Triple S/ 197.20", mode: "category_prices" };
       },
       sendReply: async (_message, reply) => {
-        sent = reply;
+        sent.push(reply);
         return { messages: [{ id: "msg-tarifas" }] };
       },
     })
   );
   assert.equal(calls, 1);
-  assert.match(sent, /Triple S\/ 197\.20/);
-  assert.equal((sent.match(/197\.20/g) || []).length, 1);
+  assert.equal(sent.length, 2);
+  assert.match(sent[0], /Triple S\/ 197\.20/);
+  assert.equal((sent[0].match(/197\.20/g) || []).length, 1);
+  assert.equal(sent[1], globalAssistantSocialLinks());
 });
 
 
-test("WhatsApp MVP saluda brevemente sin imponer menú ni publicar todas las tarifas", async () => {
-  let reply = "";
+test("WhatsApp MVP saluda con menú y enlaces en mensajes separados", async () => {
+  const replies = [];
   await processMetaMessage(
     message({ channel: "whatsapp", externalUserId: "nuevo-whatsapp", text: "Hola" }),
     successfulDependencies({
@@ -1474,15 +1479,17 @@ test("WhatsApp MVP saluda brevemente sin imponer menú ni publicar todas las tar
       listCategories: async () => { throw new Error("WhatsApp no debe cargar tarifas al saludar"); },
       generateReply: async () => { throw new Error("No debe llamar a la IA en saludo"); },
       sendReply: async (_message, content) => {
-        reply = content;
+        replies.push(content);
         return { messages: [{ id: "wamid.welcome1" }] };
       },
     })
   );
-  assert.match(reply, /bienvenido|bienvenida/i);
-  assert.match(reply, /idioma que prefieras/i);
-  assert.match(reply, /información del hospedaje|hacer una reserva/i);
-  assert.doesNotMatch(reply, /S\/\s*\d+|tarifas vigentes/i);
+  assert.equal(replies.length, 2);
+  assert.match(replies[0], /bienvenido|bienvenida/i);
+  assert.match(replies[0], /idioma que prefieras/i);
+  assert.match(replies[0], /información del hospedaje|hacer una reserva/i);
+  assert.doesNotMatch(replies[0], /S\/\s*\d+|tarifas vigentes/i);
+  assert.equal(replies[1], globalAssistantSocialLinks());
 });
 
 test("WhatsApp MVP deriva a humano la solicitud de reserva sin crearla", async () => {
@@ -1592,6 +1599,11 @@ for (const channel of ["whatsapp", "instagram", "facebook"]) {
       );
       assert.equal(result.status, "replied");
     }
-    assert.deepEqual(sent, [expected, expected, expected, expected]);
+    assert.deepEqual(sent, [
+      expected, globalAssistantSocialLinks(),
+      expected, globalAssistantSocialLinks(),
+      expected, globalAssistantSocialLinks(),
+      expected, globalAssistantSocialLinks(),
+    ]);
   });
 }
