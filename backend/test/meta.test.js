@@ -1443,7 +1443,7 @@ test("un tema académico en chat existente se rechaza sin repetir catálogo", as
 });
 
 test("una consulta de tarifas en primer mensaje pasa por el filtro antes del catálogo", async () => {
-  let sent = "";
+  const sent = [];
   let calls = 0;
   await processMetaMessage(
     message({ channel: "instagram", externalUserId: "tarifas-nuevo", text: "¿Cuánto cuestan las habitaciones?" }),
@@ -1456,14 +1456,16 @@ test("una consulta de tarifas en primer mensaje pasa por el filtro antes del cat
         return { reply: "Triple S/ 197.20", mode: "category_prices" };
       },
       sendReply: async (_message, reply) => {
-        sent = reply;
+        sent.push(reply);
         return { messages: [{ id: "msg-tarifas" }] };
       },
     })
   );
   assert.equal(calls, 1);
-  assert.match(sent, /Triple S\/ 197\.20/);
-  assert.equal((sent.match(/197\.20/g) || []).length, 1);
+  assert.equal(sent.length, 2);
+  assert.match(sent[0], /Triple S\/ 197\.20/);
+  assert.equal((sent[0].match(/197\.20/g) || []).length, 1);
+  assert.equal(sent[1], globalAssistantSocialLinks());
 });
 
 
