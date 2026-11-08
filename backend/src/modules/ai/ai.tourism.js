@@ -135,6 +135,9 @@ const GENERAL = /\b(?:que visitar|que hacer|atractivos|turistic|lugares para|don
 export function isTourismInquiry(message) {
   const text = normalize(message);
   if (!text || text.length > 600 || OUTSIDE_DOMAIN.test(text) || BOOKING_TURN.test(text) || OWN_SERVICE.test(text)) return false;
+  // Las preguntas sobre servicios DENTRO del hospedaje pertenecen al
+  // catálogo del hotel, no a negocios de terceros.
+  if (/^(?:[¿? ]*)?(?:el hotel |el hospedaje )?(?:tiene|tienen|ofrece|ofrecen|incluye|hay)\s+(?:un\s+)?(?:restaurante|cafeteria)\??$/.test(text)) return false;
   if (/\b(?:quiero reservar|deseo reservar|cancelar reserva|confirmar reserva|pagar reserva)\b/.test(text)) return false;
   return TOURIST_TOPIC.test(text) ||
     TOURISM_PLACES.some((place) => text.includes(normalize(place.name)));
@@ -167,7 +170,14 @@ export function formatTourismReply(message) {
   if (specific && !genericQuestion && !more) {
     selected = [specific];
   } else if (kind === "general") {
-    selected = ["muelle", "playa", "tintorera", "tumbas"].map((id) => TOURISM_PLACES.find((item) => item.id === id));
+    // "¿Qué hacer en Pimentel?" prioriza paseos locales. Para consultas de
+    // Lambayeque en general, sí se incluyen museos de otras localidades.
+    const local = /\bpimentel\b|\bcerca (?:del|al) (?:hotel|hospedaje)\b/.test(text) &&
+      !/\blambayeque\b/.test(text);
+    const ids = local
+      ? ["muelle", "playa", "malecon", "tintorera"]
+      : ["muelle", "tumbas", "tucume", "pomac"];
+    selected = ids.map((id) => TOURISM_PLACES.find((item) => item.id === id));
   } else {
     const candidates = TOURISM_PLACES.filter((place) => place.kind === kind);
     const start = more && candidates.length > 4 ? 4 : 0;
