@@ -48,7 +48,7 @@ export default function Login() {
       {/* Fondo */}
       <div className="absolute inset-0">
         <img
-          src="https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1800&auto=format&fit=crop"
+          src="/img/galeria/galeria-3.jpg"
           alt="Casa Huéspedes Pimentel"
           className="w-full h-full object-cover"
         />
