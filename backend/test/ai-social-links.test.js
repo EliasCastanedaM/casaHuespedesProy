@@ -6,6 +6,7 @@ import {
   isHotelSocialMediaInquiry,
   globalAssistantSocialLinks,
 } from "../src/modules/ai/ai.guest-rules.js";
+import { formatRoomDetailsReply } from "../src/modules/ai/ai.category-info.js";
 import { generateAiReply } from "../src/modules/ai/ai.service.js";
 
 test("reconoce preguntas explícitas sobre fotos, videos y redes del hotel", () => {
@@ -41,8 +42,9 @@ test("las consultas de fotos son deterministas, no consultan base y no reinician
       channel, externalUserId: "media-test-" + channel,
       message: "¿Dónde veo fotos de las habitaciones?",
     });
-    assert.equal(result.mode, "hotel_social_media_information");
+    assert.equal(result.mode, "category_details");
     assert.equal(result.deterministic, true);
-    assert.equal(result.reply, globalAssistantSocialLinks());
+    assert.equal(result.reply, formatRoomDetailsReply());
   }
 });
+

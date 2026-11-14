@@ -155,19 +155,13 @@ export function selectOccupancyQuote(categories, state, { cheaper = false, expli
 }
 
 export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = false, alternatives = [] } = {}) {
-  if (alternatives.length && !quote.preference_fallback && !quote.window_verification_required) return formatQuoteOptions([quote,...alternatives],language);
-  if (noLowerPrice && !quote.preference_fallback) return ({
-    es: "Para tu grupo, la opción de capacidad adecuada más económica mantiene el precio de " + money(quote.total_nightly_amount) + " por noche. Nuestro equipo puede evaluar otra alternativa para esas fechas. ¿Deseas que lo consulte?",
-    en: "The lowest-priced category that fits your group remains " + money(quote.total_nightly_amount) + " per night. Would you like our team to review other options?",
-    pt: "A opção mais econômica com capacidade para o grupo mantém o valor de " + money(quote.total_nightly_amount) + " por noite. Deseja que a equipe avalie outra alternativa?",
-    fr: "La catégorie la moins chère adaptée au groupe reste à " + money(quote.total_nightly_amount) + " par nuit. Souhaitez-vous que l'équipe étudie une autre solution ?",
-  })[language] || formatOccupancyQuote(quote, "es", { noLowerPrice });
-  const petNote = quote.pets > 0 ? ({
-    es: " El total incluye " + quote.pets + " mascota(s); su admisión requiere autorización del hospedaje.",
-    en: " The total includes " + quote.pets + " pet(s); admission requires hotel approval.",
-    pt: " O total inclui " + quote.pets + " animal(is); a admissão exige autorização.",
-    fr: " Le total inclut " + quote.pets + " animal(aux), sous réserve d'autorisation.",
-  })[language] : "";
+  const labels = {
+    es: { night: 'por noche', total: 'Total', nights: 'noche(s)', noLower: 'No hay una opción compatible más económica.' },
+    en: { night: 'per night', total: 'Total', nights: 'night(s)', noLower: 'There is no lower-priced suitable option.' },
+    pt: { night: 'por noite', total: 'Total', nights: 'noite(s)', noLower: 'Não há opção compatível mais econômica.' },
+    fr: { night: 'par nuit', total: 'Total', nights: 'nuit(s)', noLower: "Il n’y a pas d’option adaptée moins chère." },
+  }[language];
+  if (!labels) return formatOccupancyQuote(quote, 'es', { noLowerPrice, alternatives });
   const view = (quote.actual_view ? roomPreferenceLabel({view:quote.actual_view},language) : "") +
     (quote.sea_second_row ? ({es:" desde segunda fila",en:" from the second row",pt:" da segunda fileira",fr:" depuis la deuxième rangée"})[language] || "" : "");
   const requested=roomPreferenceLabel(quote.requested_room_preferences,language);
@@ -177,61 +171,12 @@ export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = fa
     pt:"A opção solicitada não consta disponível para essas datas. Proponho uma alternativa com capacidade adequada" + (view ? " e " + view : "") + ". ",
     fr:"L'option demandée n'est pas disponible dans notre registre à ces dates. Voici une autre catégorie adaptée" + (view ? ", " + view : "") + ". ",
   })[language] || "" : "";
-  const detail = !quote.preference_fallback && view && hasRoomPreferences(quote.room_preferences) ? ({es:" Vista: ",en:" View: ",pt:" Vista: ",fr:" Vue : "})[language]+view+"." : "";
-  const windowNote=quote.window_verification_required ? ({
-    es:" Guardé tu preferencia de estar cerca de una ventana; nuestro equipo debe verificar esa ubicación antes de confirmar.",
-    en:" Your preference to be near a window is saved and must be checked by our team before confirmation.",
-    pt:" A preferência por ficar perto de uma janela foi registrada e será verificada pela equipe.",
-    fr:" Votre souhait d'être près d'une fenêtre est enregistré et doit être vérifié par l'équipe.",
-  })[language] || "" : "";
-  const sharingNote=sharingCondition(quote,language)+parentBedCondition(quote,language);
-  return prefix + ({
-    es: "Para tu grupo, te recomiendo " + quote.category_name + ". El alojamiento cuesta " + money(quote.nightly_amount) + " por noche. Total por " + quote.nights + " noche(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " La disponibilidad debe confirmarla nuestro equipo. ¿Deseas que solicitemos la confirmación para esas fechas?",
-    en: "For your group, I recommend " + quote.category_name + " at " + money(quote.nightly_amount) + " per night. Total for " + quote.nights + " night(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " Our team must confirm availability. Shall I request confirmation?",
-    pt: "Para o grupo, recomendo " + quote.category_name + " por " + money(quote.nightly_amount) + " por noite. Total de " + quote.nights + " noite(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " A equipe deve confirmar a disponibilidade. Deseja solicitar a confirmação?",
-    fr: "Pour votre groupe, je recommande " + quote.category_name + " à " + money(quote.nightly_amount) + " par nuit. Total pour " + quote.nights + " nuit(s) : " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " L'équipe doit confirmer la disponibilité. Souhaitez-vous demander confirmation ?",
-  })[language] || formatOccupancyQuote(quote, "es");
-}
-
-
-function sharingCondition(quote,language) {
-  if(!quote.shared_children)return '';
-  return ({
-    es:' El importe supone que '+quote.shared_children+' niño(s) de hasta 4 años comparte(n) la cama de '+quote.parent_bed_size+' plazas con sus padres, sin cama adicional; el equipo debe confirmar esta distribución.',
-    en:' This amount assumes '+quote.shared_children+' child(ren) aged 4 or under share the parent bed with their parents, without an extra bed; our team must confirm this arrangement.',
-    pt:' O valor considera '+quote.shared_children+' criança(s) de até 4 anos compartilhando a cama dos pais, sem cama extra; a equipe deve confirmar a distribuição.',
-    fr:' Ce montant suppose que '+quote.shared_children+' enfant(s) de 4 ans ou moins partagent le lit de leurs parents, sans lit supplémentaire ; notre équipe doit confirmer cette disposition.',
-  })[language] || sharingCondition(quote,'es');
-}
-function formatQuoteOptions(quotes,language='es') {
-  const labels={
-    es:{intro:'Estas son las opciones que se ajustan a tu grupo, de la más básica a las siguientes categorías:',night:'por noche',total:'Total',nights:'noche(s)',note:'Nuestro equipo debe confirmar disponibilidad y distribución de camas. ¿Cuál prefieres?'},
-    en:{intro:'These options fit your group, starting with the most basic category:',night:'per night',total:'Total',nights:'night(s)',note:'Our team must confirm availability and sleeping arrangements. Which would you prefer?'},
-    pt:{intro:'Estas opções atendem ao grupo, começando pela categoria mais básica:',night:'por noite',total:'Total',nights:'noite(s)',note:'A equipe deve confirmar a disponibilidade e as camas. Qual prefere?'},
-    fr:{intro:'Voici les options adaptées au groupe, de la catégorie la plus simple aux suivantes :',night:'par nuit',total:'Total',nights:'nuit(s)',note:'Notre équipe doit confirmer la disponibilité et les couchages. Laquelle préférez-vous ?'},
-  }[language];
-  if(!labels)return formatQuoteOptions(quotes,'es');
-  const rows=quotes.map((q,i)=>{
-    const shared=q.shared_children ? ({
-      es:' Niño(s) compartiendo la cama de '+q.parent_bed_size+' plazas con sus padres, sin cama adicional.',
-      en:' Young child(ren) share the parent bed with their parents, without an extra bed.',
-      pt:' Criança(s) compartilham a cama dos pais, sem cama extra.',
-      fr:' Les jeunes enfants partagent le lit de leurs parents, sans lit supplémentaire.',
-    })[language] : '';
-    const view=hasRoomPreferences(q.room_preferences)&&q.actual_view ? ' · '+roomPreferenceLabel({view:q.actual_view},language) : '';
-    return (i+1)+') '+q.category_name+(q.bed_description?' · '+q.bed_description:'')+
-      view+' · '+money(q.total_nightly_amount)+' '+labels.night+'. '+labels.total+' '+q.nights+' '+labels.nights+': '+money(q.total_amount)+'.'+shared+parentBedCondition(q,language);
-  });
-  const pet=quotes[0].pets>0 ? ({es:' El total incluye mascotas; su admisión requiere autorización.',en:' The total includes pets, subject to hotel approval.',pt:' O total inclui animais, sujeitos a autorização.',fr:' Le total inclut les animaux, sous réserve d’autorisation.'})[language] : '';
-  return [labels.intro,...rows,pet.trim(),labels.note].filter(Boolean).join('\n');
-}
-
-function parentBedCondition(quote,language='es') {
-  if(!quote.parents_share_one_half_bed)return '';
-  return ({
-    es:' Esta opción supone que los dos padres comparten una cama de 1½ plazas; las camas restantes son para quienes necesiten cama propia. El equipo confirmará la distribución.',
-    en:' This option assumes both parents share one 1½-plaza bed; the remaining beds are for guests needing their own bed. Our team must confirm the arrangement.',
-    pt:' Esta opção considera os dois pais compartilhando uma cama de 1½ praça; as outras camas são para quem precisar de cama própria. A equipe confirmará a distribuição.',
-    fr:' Cette option suppose que les deux parents partagent un lit de 1½ place ; les autres lits sont destinés aux occupants souhaitant leur propre lit. Notre équipe confirmera la disposition.',
-  })[language] || parentBedCondition(quote,'es');
+  const quotes = !noLowerPrice && !quote.preference_fallback && !quote.window_verification_required
+    ? [quote, ...alternatives] : [quote];
+  const rows = quotes.map((item, index) =>
+    (quotes.length > 1 ? (index + 1) + ') ' : '') + item.category_name +
+    ' · ' + money(item.total_nightly_amount) + ' ' + labels.night +
+    '. ' + labels.total + ' ' + item.nights + ' ' + labels.nights + ': ' + money(item.total_amount) + '.');
+  if (noLowerPrice) rows.push(labels.noLower);
+  return prefix + rows.join('\n');
 }

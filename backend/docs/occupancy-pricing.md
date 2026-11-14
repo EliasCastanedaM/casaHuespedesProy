@@ -25,8 +25,8 @@ no tiene una unidad compatible libre para esas fechas.
 ## Nueva regla infantil
 
 - Hasta 4 años inclusive: sin cargo cuando no se añaden camas adicionales. Hasta
-  dos pueden compartir la cama de sus padres, de 2 o 1½ plazas. La propuesta lo indica
-  como condición; el equipo debe confirmar la distribución antes del registro.
+  dos pueden compartir la cama de sus padres, de 2 o 1½ plazas. El motor conserva
+  la distribución internamente; el equipo debe confirmarla antes del registro.
 - De 5 a 8 años inclusive: S/ 20 por niño y por noche.
 - Desde 9 años: tarifa de adulto.
 
@@ -110,3 +110,10 @@ antes de crear una reserva. Las reservas ya registradas y sus pagos no se recalc
 `npm test` en `backend` verifica importes, límites de edades, plazas de cama,
 negaciones de compartir, tres canales, selección de alternativas, disponibilidad,
 aprobación, registros transaccionales y ausencia de cambios en reservas existentes.
+
+## Mensaje al huésped
+
+La cotización presenta únicamente habitación, importe por noche y total. Las
+validaciones de distribución e inventario permanecen internas; no se repiten
+explicaciones por opción. Los detalles y fotos se consultan en la página oficial
+de habitaciones, cuyo enlace se envía cuando el huésped lo pide.
