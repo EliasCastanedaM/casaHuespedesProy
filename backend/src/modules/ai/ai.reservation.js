@@ -1,3 +1,4 @@
+import { guestComposition, categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
 import { collectRoomPreferences, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 import { randomUUID } from "node:crypto";
 import { hasOccupancyRates, acceptsQuote, isCheaperRequest } from "./ai.occupancy-pricing.js";
@@ -356,6 +357,8 @@ function collect(message, previous = {}, now = new Date()) {
   }
 
   if (next.children === 0) next.child_ages = [];
+  if(/\b(?:no (?:va a |van a )?(?:compart(?:e|en|ira|iran|ir)|dorm(?:ira|iran))|cama (?:propia|separada|adicional) para (?:el |mi |los )?(?:bebe|nino)|separate bed for (?:the )?child|not share)\b/.test(text))next.young_children_share_bed=false;
+  else if(/\b(?:comparte|comparten|compartira|compartiran|dormira|dormiran)\b.{0,55}\b(?:con nosotros|con sus padres|con los padres|nuestra cama)|\bshare (?:the |our )?bed\b/.test(text))next.young_children_share_bed=true;
   if ((next.adults == null || (total !== null && adults === null)) && next.total_guests != null && next.children != null) {
     const inferredAdults = next.total_guests - next.children;
     if (inferredAdults >= 0) next.adults = inferredAdults;
@@ -412,7 +415,7 @@ function containsStructuredBookingAnswer(message, state = {}, now = new Date()) 
 function changedBookingFields(previous, next) {
   const keys = [
     "check_in", "check_out", "adults", "children", "child_ages",
-    "total_guests", "pets", "category_slug", "preferences", "room_preferences", "bed_preference", "max_nightly_budget", "preferred_payment_method",
+    "total_guests", "young_children_share_bed", "pets", "category_slug", "preferences", "room_preferences", "bed_preference", "max_nightly_budget", "preferred_payment_method",
   ];
   return keys.filter((key) =>
     next[key] !== undefined &&
@@ -560,7 +563,7 @@ export function formatGlobalHandoffSummary(data = {}) {
     : null;
   const childPolicy = Array.isArray(data.child_ages)
     ? data.child_ages.map((age) => age <= 4 ? age + " años: sin cargo si usa cama disponible"
-      : age <= 8 ? age + " años: 50 % del diferencial entre tarifa de adultos computables y tarifa individual; tope por ocupación total"
+      : age <= 8 ? age + " años: S/ 20 por niño y por noche"
       : age + " años: tarifa de adulto").join("; ") || "No aplica"
     : "Pendiente";
   const petCharge = Number(data.pets || 0) > 0 && nights
@@ -574,8 +577,8 @@ export function formatGlobalHandoffSummary(data = {}) {
     ...(data.pricing_quote ? [
       "Cotización calculada: S/ " + Number(data.pricing_quote.total_amount).toFixed(2),
       "Alojamiento por noche: S/ " + Number(data.pricing_quote.nightly_amount).toFixed(2),
-      "Niños: 50 % de (tarifa para adultos computables - tarifa de 1 persona), con tope de ocupación equivalente.",
-      "Tope infantil aplicado: " + (data.pricing_quote.child_cap_applied ? "sí" : "no"),
+      "Niños de 5 a 8 años: S/ 20 por niño y por noche; desde 9 años, tarifa de adulto.",
+      "Niños pequeños compartiendo cama de 2 plazas: " + Number(data.pricing_quote.shared_children || 0),
     ] : []),
     "Ingreso: " + v(formatSummaryDate(data.check_in)),
     "Salida: " + v(formatSummaryDate(data.check_out)),
@@ -597,22 +600,12 @@ export function formatGlobalHandoffSummary(data = {}) {
 }
 
 
-function recommendCategory(categories, guests) {
-  const count = Number(guests || 0);
-  if (!count || count >= 8 || !Array.isArray(categories)) return null;
-  const active = categories
-    .filter((item) => item?.slug && Number(item.capacity) >= count)
-    .sort((a, b) =>
-      Number(a.capacity) - Number(b.capacity) ||
-      Number(b.price_per_night || 0) - Number(a.price_per_night || 0)
-    );
-  const item = active[0];
-  return item ? {
-    slug: String(item.slug),
-    name: String(item.name || item.slug),
-    capacity: Number(item.capacity),
-    price_per_night: Number(item.price_per_night || 0),
-  } : null;
+function recommendCategory(categories, state) {
+  const party=guestComposition(state);
+  if(!party || party.total>=8 || !Array.isArray(categories))return null;
+  const item=categories.filter(c=>c?.slug && c.is_active!==false && categoryBedPlan(c,state).fits)
+    .sort((a,b)=>Number(a.capacity)-Number(b.capacity)||Number(a.price_per_night)-Number(b.price_per_night))[0];
+  return item ? {slug:item.slug,name:item.name,capacity:Number(item.capacity),price_per_night:Number(item.price_per_night)} : null;
 }
 
 function validPhone(value) {
@@ -705,7 +698,7 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
     throw error;
   }
   if (Number(current.max_single_room_capacity || 0) > 0 &&
-      Number(current.total_guests || 0) > Number(current.max_single_room_capacity)) {
+      minimumRequiredBedPlaces(current) > Number(current.max_single_room_capacity)) {
     const error = new Error("La solicitud requiere varias habitaciones y debe gestionarse manualmente.");
     error.statusCode = 409;
     throw error;
@@ -734,6 +727,10 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
     error.statusCode = 409;
     throw error;
   }
+  if (!categoryBedPlan(category,current,{allowAssumedSharing:childBedAvailabilityConfirmed}).fits) {
+    const error=new Error('La distribución de camas no admite al grupo con las condiciones indicadas.');
+    error.statusCode=409;throw error;
+  }
   const language = current.language || "es";
   const next = {
     ...current,
@@ -747,6 +744,7 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
     customer_phone: current.customer_phone || (channel === "whatsapp" ? validPhone(externalUserId) : ""),
     staff_confirmation: {
       confirmed: true,
+      child_policy_version: CHILD_POLICY_VERSION,
       category_slug: categorySlug,
       category_name: categoryName,
       total_amount: amount,
@@ -787,6 +785,8 @@ export function handleGlobalReservationTurn({
 
   if (state?.state === "quoted") {
     const updated = collect(message, state, now);
+    const optionNumber=String(message).trim().match(/^(?:opci[oó]n\s*)?([1-3])[.! ]*$/i)?.[1];
+    if(optionNumber && state.quote_options?.[Number(optionNumber)-1])updated.category_slug=state.quote_options[Number(optionNumber)-1].category_slug;
     updated.language = language;
     const changed = changedBookingFields(state, updated);
     const cheaper = isCheaperRequest(message);
@@ -819,10 +819,10 @@ export function handleGlobalReservationTurn({
       ? Math.max(...categories.map((item) => Number(item.capacity || 0)))
       : Number(updated.max_single_room_capacity || 0);
     if (maxCapacity > 0) updated.max_single_room_capacity = maxCapacity;
-    const suggested = recommendCategory(categories, updated.total_guests);
+    const suggested = recommendCategory(categories, updated);
     if (Number(updated.total_guests || 0) < 8 && suggested) {
       const selected = categories.find((item) => item.slug === updated.category_slug);
-      updated.recommended_category = selected && Number(selected.capacity) >= Number(updated.total_guests)
+      updated.recommended_category = selected && categoryBedPlan(selected,updated).fits
         ? {
             slug: String(selected.slug),
             name: String(selected.name || selected.slug),
@@ -1003,10 +1003,10 @@ export function handleGlobalReservationTurn({
     ? Math.max(...categories.map((item) => Number(item.capacity || 0)))
     : Number(data.max_single_room_capacity || 0);
   if (maxCapacity > 0) data.max_single_room_capacity = maxCapacity;
-  const suggested = recommendCategory(categories, data.total_guests);
+  const suggested = recommendCategory(categories, data);
   if (data.total_guests != null && Number(data.total_guests) < 8 && suggested) {
     const selected = categories.find((item) => item.slug === data.category_slug);
-    data.recommended_category = selected && Number(selected.capacity) >= Number(data.total_guests)
+    data.recommended_category = selected && categoryBedPlan(selected,data).fits
       ? {
           slug: String(selected.slug),
           name: String(selected.name || selected.slug),
@@ -1030,7 +1030,7 @@ export function handleGlobalReservationTurn({
   }
 
   if (hasOccupancyRates(categories) && Number(data.total_guests) < 8 &&
-      Number(data.total_guests) <= Number(data.max_single_room_capacity)) {
+      minimumRequiredBedPlaces(data) <= Number(data.max_single_room_capacity)) {
     return {
       handled: true, action: "calculate_quote", explicitCategory: Boolean(data.category_slug),
       context: nextContext, mode: "occupancy_quote",
@@ -1040,7 +1040,7 @@ export function handleGlobalReservationTurn({
   data.state = "handoff";
   const largeGroup = Number(data.total_guests || 0) >= 8;
   const needsMultipleRooms = Number(data.max_single_room_capacity || 0) > 0 &&
-    Number(data.total_guests || 0) > Number(data.max_single_room_capacity);
+    minimumRequiredBedPlaces(data) > Number(data.max_single_room_capacity);
   let handoffReply = largeGroup
     ? (labels[language]?.largeGroupHandoff || labels.es.largeGroupHandoff)
     : needsMultipleRooms
@@ -1059,3 +1059,4 @@ export function handleGlobalReservationTurn({
     internalSummary: formatGlobalHandoffSummary(data),
   };
 }
+

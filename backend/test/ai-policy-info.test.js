@@ -2,14 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { formatPolicyInformationReply, policyInformationType } from "../src/modules/ai/ai.policy-info.js";
 
-test("explica el tratamiento infantil sin revelar tramos ni fórmulas", () => {
+test("explica la nueva tarifa infantil sin la fórmula anterior", () => {
   for (const message of ["¿Qué condiciones aplican a los niños de 6 años?", "¿Cuánto pagan los niños de 4 años?", "¿Desde qué edad pagan los niños? Mi hijo tiene 9 años", "¿Qué reglas hay para niños?"]) {
     assert.equal(policyInformationType(message), "children");
     const reply = formatPolicyInformationReply(message);
-    assert.match(reply, /tratamiento distinto/);
+    assert.match(reply, /S\/ 20 por niño y por noche/);
     assert.match(reply, /adultos y niños/);
     assert.match(reply, /edades/);
-    assert.doesNotMatch(reply, /0 a 4|5 a 8|9 años|50|diferencial|tarifa de adulto|S\/\s*\d/);
+    assert.doesNotMatch(reply, /50|diferencial/);
   }
 });
 
@@ -49,6 +49,7 @@ test("la consulta de políticas es informativa y no requiere mutar el contexto",
   });
   const before = JSON.stringify(context);
   const reply = formatPolicyInformationReply("¿Qué condiciones aplican a los niños de 6 años?");
-  assert.match(reply, /tratamiento distinto/);
+  assert.match(reply, /S\/ 20 por niño y por noche/);
   assert.equal(JSON.stringify(context), before);
 });
+

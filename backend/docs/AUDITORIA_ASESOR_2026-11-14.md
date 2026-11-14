@@ -1,5 +1,14 @@
 # Auditoría y reestructuración del asesor — Casa Huéspedes Pimentel
 
+> Ampliación posterior solicitada por el propietario: la política infantil y el
+> orden de categorías de esta primera entrega fueron reemplazados según
+> [CAMBIO_INFANTIL_CAMAS_2026-11-14.md](CAMBIO_INFANTIL_CAMAS_2026-11-14.md).
+> La suite ampliada tiene 439 pruebas aprobadas. Las cifras de 414 y la afirmación
+> de no cambiar reglas comerciales que siguen a continuación corresponden a la
+> primera entrega, antes de esa nueva autorización. El SQL comercial sigue preparado
+> para revisión y no se ha aplicado en producción.
+
+
 Fecha: 14 de noviembre de 2026, America/Lima.
 Base inspeccionada: `main`, commit `5c6a47ce5baf89d8a23e2117b962e834d02574a9`.
 Rama de revisión: `codex/advisor-relevance-20261114`.

@@ -1,3 +1,4 @@
+import { categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
 import OpenAI from "openai";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
@@ -313,6 +314,7 @@ function globalBookingSpecialRequests(state = {}, channel) {
     "Solicitud originada por " + channel,
     "Adultos: " + Number(state.adults || 0),
     "Niños: " + Number(state.children || 0) + (ages ? " (edades: " + ages + ")" : ""),
+    "Niños pequeños compartiendo cama de 2 plazas: " + Number(state.pricing_quote?.shared_children || 0),
     "Mascotas: " + Number(state.pets || 0) + (Number(state.pets || 0) > 0 ? " (S/ 20 por mascota/noche; autorización del hospedaje)" : ""),
     state.preferences ? "Preferencias aceptadas: " + state.preferences : "",
     state.requested_room_preferences ? "Preferencia original: " + roomPreferenceLabel(state.requested_room_preferences) : "",
@@ -406,7 +408,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     const signature = value => value && JSON.stringify([
       value.category_slug,value.total_amount,value.nightly_amount,value.pet_nightly_amount,
       value.check_in,value.check_out,value.guests,value.rate_signature,
-      value.room_preferences,value.window_verification_required,
+      value.room_preferences,value.window_verification_required,value.shared_children,
     ]);
     const unchanged = previous && !quote.preference_fallback && signature(previous) === signature(quote);
     const accepted = progress.action === "accept_quote" && unchanged;
@@ -414,6 +416,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
       ...(accepted ? effective : state), state: accepted ? "handoff" : "quoted", pricing_quote: quote,
       ...(accepted && previous?.preference_fallback ? { requested_room_preferences: state.room_preferences } : {}),
       category_slug: quote.category_slug,
+      quote_options: [quote,...(selection.alternatives || [])],
       recommended_category: { slug: quote.category_slug, name: quote.category_name, capacity: quote.capacity },
     };
     delete next.awaiting;
@@ -425,11 +428,18 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         pt: "Perfeito! 😊 Nossa equipe verificará a disponibilidade e confirmará o valor. Não é necessário repetir os dados.",
         fr: "Parfait ! 😊 Notre équipe vérifiera la disponibilité et confirmera le montant. Vous n'aurez pas à répéter vos informations.",
       })[state.language || "es"] || "Nuestro equipo confirmará disponibilidad e importe."
-        : formatOccupancyQuote(quote, state.language, { noLowerPrice: selection.reason === "no_lower_price" }),
+        : formatOccupancyQuote(quote, state.language, { noLowerPrice: selection.reason === "no_lower_price", alternatives: selection.alternatives }),
       responseId: null, deterministic: true, mode: accepted ? "human_review_required" : "occupancy_quote",
     };
   }
   if (progress.action === "create_booking") {
+    if (Number(state.children)>0 && state.staff_confirmation?.child_policy_version!==CHILD_POLICY_VERSION) {
+      const revised={...state,state:'handoff'};
+      delete revised.staff_confirmation;
+      delete revised.pricing_quote;
+      await saveBookingContext(channel,externalUserId,{...progress.context,whatsapp_mvp:revised});
+      return {reply:humanReviewReply('la actualización de las condiciones infantiles'),responseId:null,deterministic:true,mode:'human_review_required'};
+    }
     await saveBookingContext(channel, externalUserId, progress.context);
     try {
       const result = await createBookingByCategoryService({
@@ -452,6 +462,8 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         source: channel,
         paymentMethod: progress.paymentMethod,
         staffConfirmed: true,
+        guestComposition: {adults:state.adults,children:state.children,child_ages:state.child_ages,
+          young_children_share_bed:state.young_children_share_bed !== false && state.staff_confirmation?.child_bed_availability_confirmed === true},
         finalAmount: state.staff_confirmation?.total_amount,
         assignedRoomId: state.staff_confirmation?.room_assignment?.room_id,
         windowVerifiedRoomId: state.staff_confirmation?.window_position_confirmed
@@ -617,7 +629,7 @@ export async function confirmGlobalReservation({
   const maxCapacity = categories.length
     ? Math.max(...categories.map((item) => Number(item.capacity || 0)))
     : 0;
-  if (maxCapacity > 0 && Number(current.total_guests || 0) > maxCapacity) {
+  if (maxCapacity > 0 && minimumRequiredBedPlaces(current) > maxCapacity) {
     const error = new Error("La solicitud requiere varias habitaciones y debe gestionarse manualmente.");
     error.statusCode = 409;
     throw error;
@@ -628,7 +640,7 @@ export async function confirmGlobalReservation({
     error.statusCode = 400;
     throw error;
   }
-  if (Number(category.capacity) < Number(current.total_guests || 0)) {
+  if (!categoryBedPlan(category,current).fits) {
     const error = new Error("La categoría seleccionada no tiene capacidad para todos los huéspedes.");
     error.statusCode = 400;
     throw error;
@@ -650,7 +662,7 @@ export async function confirmGlobalReservation({
     }
     roomAssignment={room_id:Number(room.id),room_number:room.room_number,view_type:room.view_type};
   }
-  if (Number(current.total_guests) === 2 &&
+  if (minimumRequiredBedPlaces(current) <= 2 &&
       (current.bed_preference === "separate" && category.slug !== "doble" ||
        current.bed_preference === "matrimonial" && category.slug === "doble")) {
     const error = new Error("La categoría no respeta la preferencia de camas del huésped. Acuerda la alternativa antes de confirmar.");

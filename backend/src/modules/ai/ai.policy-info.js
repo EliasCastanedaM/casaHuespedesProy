@@ -38,7 +38,7 @@ export function policyInformationType(message) {
 // Cuando se suministran reglas de Supabase, SOLO sus estados activos se usan.
 const FALLBACK = {
   ninos_0_4: { review_status: "verified", config: { no_charge_when_using_existing_beds: true } },
-  ninos_5_8: { review_status: "verified", config: { percent_of_adult_single_differential: 50 } },
+  ninos_5_8: { review_status: "verified", config: { amount_pen: 20, charge_frequency: "child_per_night" } },
   ninos_9_mas: { review_status: "verified", config: { adult_rate_confirmed: true, quote_requires_manual_review: false } },
   mascotas: { review_status: "verified", config: { amount_pen: 20, vat_included: true, charge_frequency: "pet_per_night", approval_required: true, automatic_final_quote: false } },
   grupos_8: { review_status: "verified", config: { min_total_guests: 8 } },
@@ -52,6 +52,10 @@ export function formatPolicyInformationReply(message, { rules } = {}) {
   const human = "Nuestro equipo confirmará los detalles antes de cotizar o autorizar una excepción.";
 
   if (type === "children") {
+    const rule=get('ninos_5_8');
+    if(rule?.review_status==='verified' && rule.config?.amount_pen===20 && rule.config?.charge_frequency==='child_per_night') {
+      return "Los niños de hasta 4 años no pagan si no usan camas adicionales; hasta dos pueden compartir la cama de 2 plazas con sus padres. De 5 a 8 años se cobran S/ 20 por niño y por noche; desde los 9 años se aplica tarifa de adulto. Para cotizar, dime cuántos adultos y niños viajan y sus edades.";
+    }
     return "Los niños tienen un tratamiento distinto en la cotización. Para calcular el importe de tu estadía, dime cuántos adultos y niños viajarán y qué edades tienen los niños. 😊";
   }
 
@@ -83,3 +87,4 @@ export function formatPolicyInformationReply(message, { rules } = {}) {
   }
   return null;
 }
+

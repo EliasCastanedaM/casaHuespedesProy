@@ -65,3 +65,12 @@ respuestas incompletas y privacidad de diagnósticos.
 El informe [AUDITORIA_ASESOR_2026-11-14.md](AUDITORIA_ASESOR_2026-11-14.md) registra
 causas, archivos, resultados, ejemplos y limitaciones. Estas pruebas no sustituyen
 la validación en chats reales después de autorizar un despliegue.
+
+## Actualización infantil del 14/11/2026
+
+Las opciones se ordenan desde la categoría básica compatible, con un máximo de
+dos alternativas superiores. Se diferencia el total real de huéspedes de las
+plazas de cama: hasta dos niños de 0 a 4 años pueden compartir una cama de 2 plazas
+con sus padres, sin cama adicional; de 5 a 8 años se cobran S/ 20 por niño/noche y
+desde los 9 se aplica tarifa de adulto. La aprobación y la transacción revalidan
+la distribución. Véase [CAMBIO_INFANTIL_CAMAS_2026-11-14.md](CAMBIO_INFANTIL_CAMAS_2026-11-14.md).
