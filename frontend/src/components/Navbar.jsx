@@ -105,6 +105,9 @@ export default function Navbar() {
           <Link to="/galeria" className={navLink("/galeria")}>
             Galería
           </Link>
+          <Link to="/que-hacer-en-pimentel" className={navLink("/que-hacer-en-pimentel")}>
+            Qué hacer en Pimentel
+          </Link>
         </div>
 
         {/* NAVEGACIÓN PARA CELULAR Y TABLET */}
@@ -184,6 +187,13 @@ export default function Navbar() {
               className="py-3 text-sm font-black uppercase tracking-[0.14em] text-[#5f5147] transition hover:text-[#a87545]"
             >
               Galería
+            </Link>
+            <Link
+              to="/que-hacer-en-pimentel"
+              onClick={closeMobileMenu}
+              className="border-t border-[#eadfce] py-3 text-sm font-black uppercase tracking-[0.14em] text-[#5f5147] transition hover:text-[#a87545]"
+            >
+              Qué hacer en Pimentel
             </Link>
           </div>
         </div>

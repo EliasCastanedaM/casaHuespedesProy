@@ -70,6 +70,11 @@ export default function Footer() {
                   Conoce Pimentel
                 </Link>
               </li>
+              <li>
+                <Link to="/que-hacer-en-pimentel" className="hover:text-[#d9b48f] transition">
+                  Qué hacer en Pimentel
+                </Link>
+              </li>
 
              
             </ul>

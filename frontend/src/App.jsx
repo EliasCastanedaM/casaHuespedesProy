@@ -16,6 +16,7 @@ import RoomDetail from "./pages/public/RoomDetail";
 import Services from "./pages/public/Services";
 import Gallery from "./pages/public/Gallery";
 import Tourism from "./pages/public/Tourism";
+import WhatToDo from "./pages/public/WhatToDo";
 import Contact from "./pages/public/Contact";
 import PaymentResult from "./pages/public/PaymentResult";
 import PrivacyPolicy from "./pages/public/PrivacyPolicy";
@@ -44,6 +45,7 @@ export default function App() {
 
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/que-hacer-en-pimentel" element={<WhatToDo />} />
           <Route path="/habitaciones" element={<Rooms />} />
           <Route path="/habitaciones/:id" element={<RoomDetail />} />
           <Route
