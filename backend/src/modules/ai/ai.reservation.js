@@ -63,6 +63,20 @@ function isExplicitNewReservation(message) {
     /\b(?:quiero|quisiera|deseo|necesito|hacer|iniciar|crear|empezar|i want|i would like|start|make|create|quero|gostaria|je veux|je voudrais|faire)\b/.test(text);
 }
 
+// A reservation message that supplies a new stay (especially dates) starts a
+// fresh request. Previous chat messages must not fill in missing occupants,
+// children or pets unless the guest explicitly asks to continue or modify the
+// existing request.
+function startsIndependentReservation(message, context = {}) {
+  if (!context?.whatsapp_mvp || !reservationIntent(normalize(message))) return false;
+  if (isExplicitNewReservation(message)) return true;
+  const text = normalize(message);
+  if (/\b(?:continuar|seguir|retomar|modificar|cambiar|corregir|editar|actualizar|agregar|añadir|ahora somos|continue|resume|modify|change|edit|update|add)\b/.test(text)) return false;
+  const suppliesStay = /\b(?:del|desde|para el|from|for)\b.*\b(?:\d{1,2}|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(text)
+    || /\b(?:check[ -]?in|check[ -]?out|ingreso|salida|entrada|llegada)\b/.test(text);
+  return suppliesStay;
+}
+
 export function isAssistantMenuRequest(message) {
   const cleaned = normalize(message).replace(/[¿?¡!.,]/g, " ").replace(/\s+/g, " ").trim();
   return /^(?:menu|opciones|opcoes|options|choix|mostrar menu|ver menu|show menu|show me the menu|que opciones hay|que opciones hay en el menu|cuales son las opciones|que opciones tienes|what are the options|me muestras el menu|me das el menu)$/.test(cleaned);
@@ -776,7 +790,7 @@ export function handleGlobalReservationTurn({
 }) {
   const text = normalize(message);
   const previousLanguage = context.whatsapp_mvp?.language || "es";
-  if (isExplicitNewReservation(message)) context = {};
+  if (isExplicitNewReservation(message) || startsIndependentReservation(message, context)) context = {};
   const state = context.whatsapp_mvp || null;
   const language = detectLanguage(message, state?.language || previousLanguage);
   const dictionary = labels[language] || labels.es;

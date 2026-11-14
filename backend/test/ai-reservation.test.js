@@ -33,14 +33,15 @@ test("MVP pregunta solamente los datos pendientes antes de pasar al equipo", () 
   assert.match(summary, /todavía no existe reserva/);
 });
 
-test("intención tras consulta de habitaciones retiene datos sin iniciar reserva prematuramente", () => {
+test("una reserva con nuevas fechas no hereda datos de una consulta anterior", () => {
   const info = turn("Somos 2 adultos y queremos una doble");
   assert.equal(info.handled, false);
   assert.equal(info.context.whatsapp_mvp.state, "browsing");
   const booking = turn("Quiero reservar del 20/11/2026 al 22/11/2026 sin mascotas y sin niños", info.context);
-  assert.equal(booking.mode, "human_review_required");
-  assert.equal(booking.context.whatsapp_mvp.category_slug, "doble");
-  assert.equal(booking.context.whatsapp_mvp.adults, 2);
+  assert.equal(booking.mode, "global_reservation_collecting");
+  assert.equal(booking.context.whatsapp_mvp.category_slug, undefined);
+  assert.equal(booking.context.whatsapp_mvp.adults, undefined);
+  assert.match(booking.reply, /Cuántas personas|Cu[aá]ntas personas/);
 });
 
 test("menú opcional no obliga a elegir ni elimina contexto", () => {
@@ -503,6 +504,25 @@ test("otra reserva usa los datos aportados en ese mensaje y pregunta solo los qu
   assert.equal(next.pets,undefined);
   assert.equal(next.room_preferences,undefined);
   assert.match(result.reply,/Viajan niños/);
+});
+
+test("una reserva con nuevas fechas no reutiliza ocupantes de una conversación anterior",()=>{
+  const previous={whatsapp_mvp:{
+    state:"quoted", intent_id:"old", check_in:"2026-11-20", check_out:"2026-11-22",
+    adults:2, children:2, child_ages:[2,8], pets:0, total_guests:4,
+    category_slug:"doble", pricing_quote:{total_amount:480},
+  }};
+  const result=turn("Quiero reservar del 25 al 28 de noviembre",previous);
+  const next=result.context.whatsapp_mvp;
+  assert.equal(next.check_in,"2026-11-25");
+  assert.equal(next.check_out,"2026-11-28");
+  assert.equal(next.adults,undefined);
+  assert.equal(next.children,undefined);
+  assert.equal(next.child_ages,undefined);
+  assert.equal(next.pets,undefined);
+  assert.equal(next.total_guests,undefined);
+  assert.equal(next.pricing_quote,undefined);
+  assert.match(result.reply,/adultos|personas|viajan/i);
 });
 
 test("saludo, corrección y negación de nueva reserva conservan la solicitud vigente",()=>{
