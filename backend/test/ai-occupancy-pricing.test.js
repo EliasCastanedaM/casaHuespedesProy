@@ -120,7 +120,7 @@ test("los tres canales cotizan, procesan, permiten precio menor y pasan al equip
     assert.equal(state.customer_email,undefined);
     const cheaper=await send("¿Hay algo más barato?");
     assert.equal(cheaper.mode,"occupancy_quote");
-    assert.match(cheaper.reply,/más económica.*S\/ 120\.00/);
+    assert.match(cheaper.reply,/S\/ 120\.00[\s\S]*más económica/);
     const accepted=await send("Sí");
     assert.equal(accepted.mode,"human_review_required");
     state=contexts.get(channel+":"+externalUserId).whatsapp_mvp;
@@ -292,8 +292,8 @@ test("calle, interior y ventana se conservan al cambiar el grupo y al repetir da
   const input={channel:"facebook",externalUserId:"window-view"};
   const send=message=>generateAiReply({...input,message});
   const first=await send("Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños ni mascotas con vista a la calle y cerca a la ventana");
-  assert.match(first.reply,/vista al mar/);
-  assert.match(first.reply,/cerca de una ventana.*verificar/);
+  assert.match(first.reply,/Matrimonial Ejecutiva.*S\/ 140.00/);
+  assert.doesNotMatch(first.reply,/vista al mar|cerca de una ventana|equipo/);
   assert.doesNotMatch(first.reply,/505|room_id/);
   let state=contexts.get("facebook:window-view").whatsapp_mvp;
   assert.equal(state.pricing_quote.internal_assignment.room_id,505);

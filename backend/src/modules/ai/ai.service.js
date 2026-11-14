@@ -26,7 +26,7 @@ import { getHotelPaymentInfoService } from "../services/hotelPaymentInfo.service
 import { getPublicHotelServicesService } from "../services/service.service.js";
 import { formatPolicyInformationReply, policyInformationType } from "./ai.policy-info.js";
 import { getHotelGuestPolicyRulesService } from "../services/hotelPolicy.service.js";
-import { isRoomDetailsInquiry, formatRoomDetailsReply, guestCategoryDescription } from "./ai.category-info.js";
+import { isRoomDetailsInquiry, formatRoomDetailsReply, isRoomDetailsFollowup, followsRoomQuote, guestCategoryDescription } from "./ai.category-info.js";
 import { requiresManualReview, humanReviewReply, globalAssistantSocialLinks, isHotelSocialMediaInquiry } from "./ai.guest-rules.js";
 import {
   globalReservationContext,
@@ -830,6 +830,17 @@ async function generateAiReplyInternal({
     };
   }
 
+  // Room details use the official page, without changing the booking or loading
+  // a room catalogue. A short follow-up is resolved from the latest reply only.
+  const roomHistory = isRoomDetailsFollowup(message)
+    ? (history.length ? history : await loadStoredHistory(channel, externalUserId, message)) : history;
+  if (isRoomDetailsInquiry(message) || (isRoomDetailsFollowup(message) && followsRoomQuote(roomHistory))) {
+    return {
+      reply: formatRoomDetailsReply([], message, serviceReplyLanguage(message, roomHistory)),
+      responseId: null, deterministic: true, mode: 'category_details',
+    };
+  }
+
   // Solicitud expresa de fotos, videos o enlaces: datos oficiales,
   // sin OpenAI, sin modificar reservas ni reutilizar el mensaje de menú.
   if (isHotelSocialMediaInquiry(message)) {
@@ -1050,28 +1061,6 @@ async function generateAiReplyInternal({
         responseId: null,
         deterministic: true,
         mode: "hotel_services_unavailable",
-      };
-    }
-  }
-
-  // Las preguntas informativas no deben quedar atrapadas en un borrador de
-  // reserva anterior. La fuente oficial es el catálogo de Supabase.
-  if (isRoomDetailsInquiry(message)) {
-    try {
-      const categories = await getPublicRoomCategoriesService();
-      return {
-        reply: formatRoomDetailsReply(categories, message),
-        responseId: null,
-        deterministic: true,
-        mode: "category_details",
-      };
-    } catch (error) {
-      console.warn("No fue posible consultar las categorías:", diagnosticCode(error));
-      return {
-        reply: "No puedo confirmar los detalles de las habitaciones en este momento. Nuestro equipo puede ayudarte.",
-        responseId: null,
-        deterministic: true,
-        mode: "category_details_unavailable",
       };
     }
   }

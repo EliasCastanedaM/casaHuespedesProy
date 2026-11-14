@@ -1,9 +1,9 @@
 const clean = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export function isRoomDetailsInquiry(message) {
   const s = clean(message);
-  if (/\b(?:reservar|reserva|cancelar|pagar|disponibilidad|disponibles?|recomendar|recomiendas|recomienda)\b/.test(s)) return false;
-  const topic = /\b(?:habitaciones?|categorias?|camas?|matrimonial|doble|triple|familiar)\b/.test(s);
-  const asks = /\b(?:cuentame|explicame|explica|describe|detalles?|informacion|cuales|que|tipos|opciones|dime|tienen|compara|comparame|comparar|diferencias?)\b/.test(s);
+  if (/\b(?:reservar|reserva|cancelar|pagar|disponibilidad|disponibles?|recomendar|recomiendas|recomienda|book|booking|reserve|cancel|pay|availability|available|recommend|precios?|tarifas?|prices?|rates?)\b/.test(s)) return false;
+  const topic = /\b(?:habitaciones?|categorias?|camas?|matrimonial|doble|triple|familiar|rooms?|bedrooms?|quartos?|chambres?)\b/.test(s);
+  const asks = /\b(?:cuentame|explicame|explica|describe|detalles?|informacion|cuales|que|tipos|opciones|dime|tienen|compara|comparame|comparar|diferencias?|fotos?|fotografias?|imagenes?|videos?|enlace|link|photos?|pictures?|details|information|tell|show|detalhes)\b/.test(s);
   const followup = /\b(?:explicame|cuentame|describe)\b.*\b(?:cada una|una por una|todas|esas|las opciones)\b/.test(s);
   return (topic && asks) || followup;
 }
@@ -14,66 +14,26 @@ export function isHotelInformationInterruption(message) {
   return /\b(?:que|como|donde|cuales|cuentame|explicame|informacion|horario|incluye|tienen|aceptan|permiten|admiten)\b/.test(s) &&
     /\b(?:servicios?|ubicacion|ubicad[oa]s?|direccion|desayuno|wifi|mascotas?|perros?|gatos?|politicas?|fotos?|terraza|estacionamiento)\b/.test(s);
 }
-export function formatRoomDetailsReply(categories, message) {
-  const list = (Array.isArray(categories) ? categories : [])
-    .filter((category) => category && category.is_active !== false && category.name);
-  const text = clean(message);
+export const ROOMS_PAGE_URL = 'https://www.casahuespedespimentel.com/habitaciones';
 
-  // Capturar TODAS las categorías nombradas antes de filtrar. En preguntas
-  // como "diferencias entre Familiar 1 y Familiar 2", first-match omitía Familiar 1.
-  const requested = new Set();
-  const add = (slug) => requested.add(slug);
-  const standard = /\bmatrimonial\s+(?:estandar|standard)\b/.test(text);
-  const executive = /\bmatrimonial\s+ejecutiva\b/.test(text);
-  if (standard) add("matrimonial");
-  if (executive) add("matrimonial-ejecutiva");
-  if (!standard && !executive && /\bmatrimonial(?:es)?\b/.test(text)) {
-    add("matrimonial");
-    add("matrimonial-ejecutiva");
-  }
-  if (/\bdoble\b/.test(text)) add("doble");
-  if (/\btriple\b/.test(text)) add("triple");
+export function formatRoomDetailsReply(_categories, _message, language = 'es') {
+  const intro = {
+    es: 'Puedes ver fotos y detalles de las habitaciones aquí:',
+    en: 'You can see room photos and details here:',
+    pt: 'Veja fotos e detalhes dos quartos aqui:',
+    fr: 'Vous pouvez voir les photos et les détails des chambres ici :',
+  }[language] || 'Puedes ver fotos y detalles de las habitaciones aquí:';
+  return intro + '\n' + ROOMS_PAGE_URL;
+}
 
-  const familiarOne = /\bfamiliar\s*(?:1|uno)\b/.test(text);
-  const familiarTwo = /\bfamiliar\s*(?:2|dos)\b/.test(text);
-  if (familiarOne) add("familiar");
-  if (familiarTwo) add("familiar-2");
-  if (!familiarOne && !familiarTwo && /\bfamiliar(?:es)?\b/.test(text)) {
-    add("familiar");
-    add("familiar-2");
-  }
+export function isRoomDetailsFollowup(message) {
+  return /^(?:quiero |dame |ver |muestrame |puedo ver |me puedes dar |puedes darme |pasame |can i see |show me |i want )?(?:mas (?:detalles|informacion|fotos)|detalles|fotos|el enlace|el link|more (?:details|information|photos)|photos|details)[.!?¿¡\s]*$/.test(clean(message).trim());
+}
 
-  const selected = requested.size
-    ? list.filter((category) => requested.has(category.slug))
-    : list;
-  if (!selected.length) {
-    return "No puedo confirmar esos detalles ahora mismo. Una persona del equipo puede ayudarte.";
-  }
-
-  const comparing = selected.length > 1 &&
-    /\b(?:diferencias?|compara|comparame|comparar|comparacion|versus|vs)\b/.test(text);
-  const rows = selected.map((category) => {
-    const parts = [category.name];
-    if (Number(category.capacity) > 0) parts.push("hasta " + Number(category.capacity) + " huéspedes");
-    if (category.bed_description) parts.push(category.bed_description);
-
-    const base = "- " + parts.join(" · ");
-    // Las descripciones oficiales incluyen piso, vista y acceso a terraza:
-    // datos útiles para comparar más allá de camas/capacidad/tarifa.
-    return comparing && category.description?.trim()
-      ? base + "\n  " + guestCategoryDescription(category.description)
-      : base;
-  });
-
-  const intro = comparing
-    ? "¡Claro! 😊 Estas son las diferencias entre las categorías que mencionas:"
-    : "¡Claro! 😊 Estas son nuestras categorías:";
-  return [
-    intro,
-    ...rows,
-    "",
-    "La disponibilidad se confirma para las fechas solicitadas. ¿Quieres consultar alguna en particular?",
-  ].join("\n");
+export function followsRoomQuote(history = []) {
+  const last = [...history].reverse().find(item => item.author === 'assistant' || item.role === 'assistant');
+  return /S\/\s*\d/.test(last?.content || '') &&
+    /matrimonial|doble|triple|familiar/i.test(last?.content || '');
 }
 
 // Commercial tariff labels and individual room numbers are internal hotel data.
@@ -83,3 +43,4 @@ export function guestCategoryDescription(value) {
     .replace(/La unidad\s+\d+\s+tiene/gi, "Una de las habitaciones tiene")
     .replace(/\s+/g, " ").trim();
 }
+

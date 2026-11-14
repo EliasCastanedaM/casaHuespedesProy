@@ -77,3 +77,14 @@ la distribución. El propietario permite que dos padres compartan una cama de
 1½ plazas: con niños de 2 y 8, se empieza por Doble; si ambos niños requieren
 cama propia, por Triple. No se añade un suplemento inventado al menor de hasta 4.
 Véase [CAMBIO_INFANTIL_CAMAS_2026-11-14.md](CAMBIO_INFANTIL_CAMAS_2026-11-14.md).
+
+## Presentación de cotizaciones y detalles (14/11/2026)
+
+Por indicación del propietario, cada opción muestra solo nombre de la habitación,
+precio por noche y total de la estancia. Se omiten introducciones, camas,
+distribución, condiciones infantiles y párrafos de revisión humana. El cálculo,
+el inventario y la aprobación siguen validados internamente. Si una preferencia
+solicitada no está disponible, se informa la alternativa para no sustituirla
+silenciosamente. Las solicitudes de fotos o detalles de habitaciones reciben
+una frase breve y https://www.casahuespedespimentel.com/habitaciones, sin catálogo
+ni redes sociales. Las consultas informativas no modifican la reserva.

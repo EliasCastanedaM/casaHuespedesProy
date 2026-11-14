@@ -30,8 +30,8 @@ for(const age of [0,1,4])test('dos adultos y niño de '+age+' años: matrimonial
   const text=formatOccupancyQuote(result.quote,'es',{alternatives:result.alternatives});
   assert.match(text,/Estándar.*S\/ 120\.00.*S\/ 360\.00/);
   assert.match(text,/Ejecutiva.*S\/ 140\.00.*S\/ 420\.00/);
-  assert.match(text,/sin cama adicional/);
-  assert.match(text,/confirmar disponibilidad/);
+  assert.equal(text.split('\n').length,3);
+  assert.doesNotMatch(text,/compartiendo|distribuci[oó]n|equipo|1½|https?:/);
 });
 
 test('hasta dos niños de 4 años comparten; un tercero requiere plazas reales',()=>{
@@ -168,12 +168,15 @@ test('negaciones de compartir cama se conservan como correcciones, sin invertir 
   }
 });
 
-test('cada alternativa describe el tamaño real de la cama compartida',()=>{
-  const {quote,alternatives}=selectOccupancyQuote(categories,stay());
+test('las opciones muestran habitación y precio; el cálculo de camas queda interno',()=>{
+  const {quote,alternatives}=selectOccupancyQuote(categories,stay({children:2,child_ages:[2,8]}));
+  assert.equal(quote.parents_share_one_half_bed,true);
   const text=formatOccupancyQuote(quote,'es',{alternatives});
-  assert.match(text.split('\n').find(line=>line.startsWith('1)')),/compartiendo/);
-  assert.match(text.split('\n').find(line=>line.startsWith('2)')),/compartiendo/);
-  assert.match(text.split('\n').find(line=>line.startsWith('3)')),/compartiendo la cama de 1½ plazas/);
+  assert.equal(text, [
+    '1) Doble - 2 Camas · S/ 160.00 por noche. Total 3 noche(s): S/ 480.00.',
+    '2) Triple - 3 Camas · S/ 210.00 por noche. Total 3 noche(s): S/ 630.00.',
+    '3) Familiar 1 · S/ 210.00 por noche. Total 3 noche(s): S/ 630.00.',
+  ].join('\n'));
 });
 
 test('edades inválidas en texto no provocan una cotización ni un error de tipo',()=>{
@@ -219,7 +222,12 @@ for(const channel of ['whatsapp','instagram','facebook'])test(channel+': flujo 2
   const input={channel,externalUserId:'two-beds'};
   const result=await generateAiReply({...input,message:'Quiero reservar del 25/11/2026 al 28/11/2026 para 2 adultos y 2 niños de 2 y 8 años sin mascotas'});
   assert.match(result.reply,/1\) Doble - 2 Camas.*160\.00.*480\.00/);
-  assert.match(result.reply,/compartiendo la cama de 1½ plazas/);
+  assert.doesNotMatch(result.reply,/compartiendo|1½|distribuci[oó]n|https?:/);
+  const before=structuredClone(contexts.get(channel+':two-beds'));
+  const details=await generateAiReply({...input,message:'Dame más detalles',history:[{author:'assistant',content:result.reply}]});
+  assert.equal(details.mode,'category_details');
+  assert.equal(details.reply,'Puedes ver fotos y detalles de las habitaciones aquí:\nhttps://www.casahuespedespimentel.com/habitaciones');
+  assert.deepEqual(contexts.get(channel+':two-beds'),before);
   await generateAiReply({...input,message:'Sí'});
   await confirmGlobalReservation({...input,categorySlug:'doble',totalAmount:480,childBedAvailabilityConfirmed:true});
   const state=contexts.get(channel+':two-beds').whatsapp_mvp;

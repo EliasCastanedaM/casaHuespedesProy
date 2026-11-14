@@ -1,98 +1,64 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import {
-  isRoomDetailsInquiry,
-  isHotelInformationInterruption,
-  formatRoomDetailsReply,
-} from "../src/modules/ai/ai.category-info.js";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { pool } from '../src/config/db.js';
+import { generateAiReply } from '../src/modules/ai/ai.service.js';
+import { isRoomDetailsInquiry, isHotelInformationInterruption, formatRoomDetailsReply,
+  isRoomDetailsFollowup, followsRoomQuote, ROOMS_PAGE_URL } from '../src/modules/ai/ai.category-info.js';
 
-const categories = [
-  { slug: "matrimonial", name: "Matrimonial Estándar", capacity: 2, bed_description: "1 cama de 2 plazas", price_per_night: 120, is_active: true },
-  { slug: "matrimonial-ejecutiva", name: "Matrimonial Ejecutiva", capacity: 2, bed_description: "1 cama de 2 plazas", price_per_night: 140, is_active: true },
-  { slug: "doble", name: "Doble - 2 Camas", capacity: 2, bed_description: "2 camas de plaza y media", price_per_night: 140, is_active: true },
-  { slug: "triple", name: "Triple - 3 Camas", capacity: 3, bed_description: "3 camas de plaza y media", price_per_night: 210, is_active: true },
-  { slug: "familiar", name: "Familiar 1", capacity: 5, bed_description: "Distribución familiar", price_per_night: 250, is_active: true },
-  { slug: "familiar-2", name: "Familiar 2", capacity: 5, bed_description: "Distribución familiar", price_per_night: 250, is_active: true },
-];
-
-test("responde detalles de las seis habitaciones incluso con reserva activa", () => {
-  for (const message of [
-    "Cuéntame más sobre esas categorías y esas habitaciones",
-    "Explícame cada una y cuál es",
-    "Qué habitaciones tienen",
-  ]) {
-    assert.equal(isRoomDetailsInquiry(message), true, message);
-    const reply = formatRoomDetailsReply(categories, message);
-    for (const category of categories) assert.ok(reply.includes(category.name), category.name);
-    assert.doesNotMatch(reply, /S\/\s*\d/);
-    assert.doesNotMatch(reply, /confirmada la disponibilidad|reservé|se creó/i);
+test('las consultas de habitaciones reciben la página oficial sin catálogo ni tarifas inventadas',()=>{
+  for(const message of ['Cuéntame más sobre esas categorías y esas habitaciones','Explícame cada una y cuál es',
+    'Qué habitaciones tienen','Cuéntame sobre Familiar 2','Compara Familiar 1 y Familiar 2']) {
+    assert.equal(isRoomDetailsInquiry(message),true,message);
+    assert.equal(formatRoomDetailsReply([],message), 'Puedes ver fotos y detalles de las habitaciones aquí:\n'+ROOMS_PAGE_URL);
   }
 });
 
-test("filtra una categoría individual y preserva el nombre sin cotizar el precio Full", () => {
-  const reply = formatRoomDetailsReply(categories, "Cuéntame sobre Familiar 2");
-  assert.match(reply, /Familiar 2/);
-  assert.doesNotMatch(reply, /Familiar 1/);
-  assert.doesNotMatch(reply, /S\/\s*\d/);
-});
-
-test("no confunde recomendaciones, selección y disponibilidad con detalles", () => {
-  for (const text of [
-    "Somos tres adultos qué habitaciones nos recomienda",
-    "Ahora quiero hacer una reserva",
-    "Matrimonial estándar",
-    "¿Tienen disponibilidad del 20/11/2026 al 22/11/2026?",
-  ]) assert.equal(isRoomDetailsInquiry(text), false, text);
-});
-
-test("las preguntas de hotel interrumpen una reserva sin reiniciarla", () => {
-  assert.equal(isHotelInformationInterruption("¿Dónde están ubicados?"), true);
-  assert.equal(isHotelInformationInterruption("¿Qué servicios incluyen?"), true);
-  assert.equal(isHotelInformationInterruption("¿Aceptan perros?"), true);
-  assert.equal(isHotelInformationInterruption("Ahora quiero reservar"), false);
-});
-
-
-test("compara Familiar 1 y Familiar 2 sin omitir ninguna y conserva sus diferencias", () => {
-  const families = categories.map(category => category.slug === "familiar"
-    ? { ...category, bed_description: "2 camas de 2 plazas + 3 camas de 1½ plazas",
-        description: "Segundo piso y vista interior." }
-    : category.slug === "familiar-2"
-      ? { ...category, bed_description: "1 cama de 2 plazas + 3 camas de 1½ plazas",
-          description: "Cuarto piso, acceso directo a terraza y vista al mar." }
-      : category);
-  const question = "Explícame las diferencias entre Familiar 1 y Familiar 2.";
-  assert.equal(isRoomDetailsInquiry(question), true);
-  const answer = formatRoomDetailsReply(families, question);
-  assert.match(answer, /Familiar 1/);
-  assert.match(answer, /Familiar 2/);
-  assert.match(answer, /Segundo piso y vista interior/);
-  assert.match(answer, /acceso directo a terraza y vista al mar/);
-  assert.doesNotMatch(answer, /S\/\s*\d/);
-  assert.doesNotMatch(answer, /Matrimonial Ejecutiva|Triple - 3 Camas/);
-});
-
-test("la comparación acepta otras formulaciones y dos nombres concretos", () => {
-  for (const question of [
-    "¿Cuál es la diferencia entre Familiar 1 y Familiar 2?",
-    "Compara Familiar 1 vs Familiar 2",
-    "Diferencias entre Familiar 1 y Familiar 2",
-    "Explícame las dos categorías, Familiar 1 y Familiar 2",
-  ]) {
-    assert.equal(isRoomDetailsInquiry(question), true, question);
-    const answer = formatRoomDetailsReply(categories, question);
-    assert.match(answer, /Familiar 1/);
-    assert.match(answer, /Familiar 2/);
-    assert.doesNotMatch(answer, /Triple - 3 Camas/);
+test('no confunde recomendaciones, selección ni disponibilidad con detalles',()=>{
+  for(const message of ['Somos tres adultos qué habitaciones nos recomienda','Ahora quiero hacer una reserva',
+    'Matrimonial estándar','¿Tienen disponibilidad del 20/11/2026 al 22/11/2026?','What is the room price?']) {
+    assert.equal(isRoomDetailsInquiry(message),false,message);
   }
-  const matrimonial = formatRoomDetailsReply(categories, "Compara Matrimonial Estándar y Matrimonial Ejecutiva");
-  assert.match(matrimonial, /Matrimonial Estándar/);
-  assert.match(matrimonial, /Matrimonial Ejecutiva/);
-  assert.doesNotMatch(matrimonial, /Familiar 2/);
 });
 
-test("preguntar por Familiar 2 individualmente sigue mostrando solo esa categoría", () => {
-  const answer = formatRoomDetailsReply(categories, "Cuéntame solo sobre Familiar 2");
-  assert.match(answer, /Familiar 2/);
-  assert.doesNotMatch(answer, /Familiar 1/);
+test('las preguntas de hotel interrumpen la reserva sin reiniciarla',()=>{
+  for(const message of ['¿Dónde están ubicados?','¿Qué servicios incluyen?','¿Aceptan perros?'])
+    assert.equal(isHotelInformationInterruption(message),true);
+  assert.equal(isHotelInformationInterruption('Ahora quiero reservar'),false);
+});
+
+test('las fotos explícitas de habitaciones usan el enlace en lugar de todas las redes',()=>{
+  for(const message of ['¿Dónde veo fotos de las habitaciones?','Can you show me room photos?',
+    'Fotos de los quartos','Photos des chambres']) assert.equal(isRoomDetailsInquiry(message),true,message);
+  assert.doesNotMatch(formatRoomDetailsReply(),/instagram|facebook|tiktok|plazas|capacidad/i);
+});
+
+test('un seguimiento breve se resuelve solo desde la última respuesta del asesor',()=>{
+  for(const message of ['Dame más detalles','Me puedes dar más detalles','Pásame el enlace','Dame el link'])
+    assert.equal(isRoomDetailsFollowup(message),true,message);
+  const quote={author:'assistant',content:'Doble - 2 Camas · S/ 160.00 por noche.'};
+  assert.equal(followsRoomQuote([quote]),true);
+  assert.equal(followsRoomQuote([quote,{author:'assistant',content:'El desayuno cuesta S/ 15.'}]),false);
+  assert.equal(followsRoomQuote([]),false);
+});
+
+test('el enlace tiene una frase breve en el idioma del huésped',()=>{
+  for(const language of ['es','en','pt','fr']) {
+    const reply=formatRoomDetailsReply([], '', language);
+    assert.equal(reply.split('\n').length,2);
+    assert.equal(reply.split('\n')[1],ROOMS_PAGE_URL);
+  }
+  assert.match(formatRoomDetailsReply([], '', 'en'),/^You can see/);
+});
+
+test('más detalles después de cotizar carga solo el historial y conserva el borrador',async t=>{
+  const queries=[];
+  t.mock.method(pool,'query',async sql=>{
+    queries.push(sql);
+    if(sql.includes('SELECT author, content'))return {rows:[{author:'assistant',content:'Doble - 2 Camas · S/ 160.00 por noche.'}]};
+    throw Error('No debe consultar ni modificar la reserva');
+  });
+  const result=await generateAiReply({channel:'instagram',externalUserId:'room-followup',message:'Más detalles'});
+  assert.equal(result.mode,'category_details');
+  assert.equal(result.reply,formatRoomDetailsReply());
+  assert.equal(queries.length,1);
 });
