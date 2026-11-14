@@ -33,7 +33,8 @@ test('las fotos explícitas de habitaciones usan el enlace en lugar de todas las
 });
 
 test('un seguimiento breve se resuelve solo desde la última respuesta del asesor',()=>{
-  assert.equal(isRoomDetailsFollowup('Dame más detalles'),true);
+  for(const message of ['Dame más detalles','Me puedes dar más detalles','Pásame el enlace','Dame el link'])
+    assert.equal(isRoomDetailsFollowup(message),true,message);
   const quote={author:'assistant',content:'Doble - 2 Camas · S/ 160.00 por noche.'};
   assert.equal(followsRoomQuote([quote]),true);
   assert.equal(followsRoomQuote([quote,{author:'assistant',content:'El desayuno cuesta S/ 15.'}]),false);

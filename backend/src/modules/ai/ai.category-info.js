@@ -27,7 +27,7 @@ export function formatRoomDetailsReply(_categories, _message, language = 'es') {
 }
 
 export function isRoomDetailsFollowup(message) {
-  return /^(?:quiero |dame |ver |muestrame |puedo ver |can i see |show me |i want )?(?:mas (?:detalles|informacion|fotos)|detalles|fotos|more (?:details|information|photos)|photos|details)[.!?¿¡\s]*$/.test(clean(message).trim());
+  return /^(?:quiero |dame |ver |muestrame |puedo ver |me puedes dar |puedes darme |pasame |can i see |show me |i want )?(?:mas (?:detalles|informacion|fotos)|detalles|fotos|el enlace|el link|more (?:details|information|photos)|photos|details)[.!?¿¡\s]*$/.test(clean(message).trim());
 }
 
 export function followsRoomQuote(history = []) {
