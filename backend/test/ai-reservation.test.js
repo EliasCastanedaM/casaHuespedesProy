@@ -44,6 +44,42 @@ test("una reserva con nuevas fechas no hereda datos de una consulta anterior", (
   assert.match(booking.reply, /Cuántas personas|Cu[aá]ntas personas/);
 });
 
+test("corrige cantidad y edades de niños en una cotización sin repetir la pregunta", () => {
+  const context = { whatsapp_mvp: {
+    state: "quoted", intent_id: "current", check_in: "2026-11-25", check_out: "2026-11-28",
+    adults: 2, children: 1, child_ages: [4], pets: 0, total_guests: 3,
+  } };
+  for (const message of [
+    "disculpe eran dos niños 1 de 4 y el otro de 7",
+    "disculpe eran dos niños uno de cuatro y el otro de siete",
+  ]) {
+    const result = turn(message, context);
+    assert.equal(result.action, "calculate_quote", message);
+    assert.deepEqual(result.context.whatsapp_mvp.child_ages, [4, 7]);
+    assert.equal(result.context.whatsapp_mvp.children, 2);
+    assert.equal(result.context.whatsapp_mvp.total_guests, 4);
+    assert.equal(result.context.whatsapp_mvp.adults, 2);
+    assert.equal(result.context.whatsapp_mvp.pets, 0);
+    assert.equal(result.context.whatsapp_mvp.intent_id, "current");
+  }
+});
+
+test("interpreta uno y otro como referencias a los niños al pedir edades", () => {
+  const context = { whatsapp_mvp: {
+    state: "collecting", awaiting: "ages", check_in: "2026-11-25", check_out: "2026-11-28",
+    adults: 2, children: 2, child_ages: [4], pets: 0,
+  } };
+  for (const message of ["1 tiene 4 y el otro 7", "uno tiene 4 años y el otro tiene 7 años"]) {
+    const result = turn(message, context);
+    assert.deepEqual(result.context.whatsapp_mvp.child_ages, [4, 7]);
+    assert.doesNotMatch(result.reply || "", /Qué edades/i);
+  }
+  for (const message of ["uno de 4", "uno de 4 y el otro de 70"]) {
+    const result = turn(message, context);
+    assert.match(result.reply, /Qué edades/i);
+  }
+});
+
 test("menú opcional no obliga a elegir ni elimina contexto", () => {
   const info = turn("Quiero reservar");
   const menu = turn("¿Qué opciones hay en el menú?", info.context);
