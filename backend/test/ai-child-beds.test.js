@@ -30,8 +30,9 @@ for(const age of [0,1,4])test('dos adultos y niño de '+age+' años: matrimonial
   const text=formatOccupancyQuote(result.quote,'es',{alternatives:result.alternatives});
   assert.match(text,/Estándar.*S\/ 120\.00.*S\/ 360\.00/);
   assert.match(text,/Ejecutiva.*S\/ 140\.00.*S\/ 420\.00/);
-  assert.equal(text.split('\n').length,3);
-  assert.doesNotMatch(text,/compartiendo|distribuci[oó]n|equipo|1½|https?:/);
+  assert.equal(text.split('\n\n')[0].split('\n').length,3);
+  assert.equal(text.split('https://www.casahuespedespimentel.com/habitaciones').length - 1,1);
+  assert.doesNotMatch(text,/compartiendo|distribuci[oó]n|equipo|1½/);
 });
 
 test('hasta dos niños de 4 años comparten; un tercero requiere plazas reales',()=>{
@@ -176,6 +177,9 @@ test('las opciones muestran habitación y precio; el cálculo de camas queda int
     '1) Doble - 2 Camas · S/ 160.00 por noche. Total 3 noche(s): S/ 480.00.',
     '2) Triple - 3 Camas · S/ 210.00 por noche. Total 3 noche(s): S/ 630.00.',
     '3) Familiar 1 · S/ 210.00 por noche. Total 3 noche(s): S/ 630.00.',
+    '',
+    'Si quieres ver más de las habitaciones, puedes entrar a nuestra página:',
+    'https://www.casahuespedespimentel.com/habitaciones',
   ].join('\n'));
 });
 
@@ -222,7 +226,8 @@ for(const channel of ['whatsapp','instagram','facebook'])test(channel+': flujo 2
   const input={channel,externalUserId:'two-beds'};
   const result=await generateAiReply({...input,message:'Quiero reservar del 25/11/2026 al 28/11/2026 para 2 adultos y 2 niños de 2 y 8 años sin mascotas'});
   assert.match(result.reply,/1\) Doble - 2 Camas.*160\.00.*480\.00/);
-  assert.doesNotMatch(result.reply,/compartiendo|1½|distribuci[oó]n|https?:/);
+  assert.doesNotMatch(result.reply,/compartiendo|1½|distribuci[oó]n/);
+  assert.equal(result.reply.split('https://www.casahuespedespimentel.com/habitaciones').length - 1,1);
   const before=structuredClone(contexts.get(channel+':two-beds'));
   const details=await generateAiReply({...input,message:'Dame más detalles',history:[{author:'assistant',content:result.reply}]});
   assert.equal(details.mode,'category_details');

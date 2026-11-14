@@ -5,6 +5,10 @@ const SITE_URL = "https://www.casahuespedespimentel.com";
 const DEFAULT_IMAGE = `${SITE_URL}/img/galeria/galeria-1.jpg`;
 
 const pageMetadata = {
+  "/que-hacer-en-pimentel": {
+    title: "Qué hacer en Pimentel | Casa Huéspedes Pimentel",
+    description: "Descubre Pimentel y Lambayeque: playa, gastronomía, cultura, arqueología, naturaleza y paseos en Chiclayo. Guía ilustrada de Casa Huéspedes Pimentel.",
+  },
   "/": {
     title:
       "Casa Huéspedes Pimentel | Hospedaje cerca de la playa en Pimentel",

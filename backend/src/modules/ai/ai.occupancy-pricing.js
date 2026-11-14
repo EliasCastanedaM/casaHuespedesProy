@@ -178,5 +178,11 @@ export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = fa
     ' · ' + money(item.total_nightly_amount) + ' ' + labels.night +
     '. ' + labels.total + ' ' + item.nights + ' ' + labels.nights + ': ' + money(item.total_amount) + '.');
   if (noLowerPrice) rows.push(labels.noLower);
-  return prefix + rows.join('\n');
+  const roomsLink = {
+    es: 'Si quieres ver más de las habitaciones, puedes entrar a nuestra página:',
+    en: 'To see more of our rooms, visit our website:',
+    pt: 'Para conhecer melhor os quartos, visite nossa página:',
+    fr: 'Pour en savoir plus sur nos chambres, consultez notre site :',
+  }[language];
+  return prefix + rows.join('\n') + '\n\n' + roomsLink + '\nhttps://www.casahuespedespimentel.com/habitaciones';
 }

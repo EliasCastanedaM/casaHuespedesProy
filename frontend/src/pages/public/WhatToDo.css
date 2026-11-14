@@ -1,0 +1,27 @@
+.pimentel-guide { background: #fbf7ef; color: #2b1d12; padding: 64px 24px 72px; }
+.pimentel-guide__intro { max-width: 780px; margin: 0 auto 42px; text-align: center; }
+.pimentel-guide__eyebrow { color: #a87545; font-size: 11px; font-weight: 800; letter-spacing: .16em; line-height: 1.8; text-transform: uppercase; }
+.pimentel-guide h1 { margin: 16px 0 20px; font: 500 clamp(40px, 6vw, 76px)/1.06 Georgia, serif; letter-spacing: -.04em; }
+.pimentel-guide__intro > p:not(.pimentel-guide__eyebrow) { color: #6f6257; line-height: 1.8; }
+.pimentel-guide__intro .pimentel-guide__lead { margin-bottom: 8px; color: #2b1d12; font: 24px/1.4 Georgia, serif; }
+.pimentel-guide__map { max-width: 1280px; margin: 0 auto; }
+.pimentel-guide__map img { display: block; width: 100%; height: auto; border-radius: 20px; box-shadow: 0 20px 55px #2b1d1214; }
+.pimentel-guide__map figcaption { padding: 14px 0; text-align: center; font-size: 12px; line-height: 1.6; color: #77695b; }
+.pimentel-guide__categories { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; max-width: 1100px; margin: 28px auto 40px; }
+.pimentel-guide__categories a { border: 1px solid #ddcbb5; padding: 10px 17px; border-radius: 24px; font-size: 13px; color: #5f4430; text-decoration: none; }
+.pimentel-guide__categories a:hover { background: #efe3d2; }
+.pimentel-guide__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; max-width: 1120px; margin: 0 auto; }
+.pimentel-guide__experience, .pimentel-guide__stay { padding: clamp(24px, 3.5vw, 44px); border: 1px solid #e6d8c7; border-radius: 20px; background: #fffdf8; scroll-margin-top: 110px; }
+.pimentel-guide__experience { border-top: 3px solid var(--experience-color); }
+.pimentel-guide__experience .pimentel-guide__eyebrow { color: var(--experience-color); }
+.pimentel-guide h2 { font: 500 clamp(27px, 3vw, 36px)/1.18 Georgia, serif; letter-spacing: -.025em; margin: 16px 0; }
+.pimentel-guide__experience > p:not(.pimentel-guide__eyebrow), .pimentel-guide__stay > p:not(.pimentel-guide__eyebrow) { font-size: 15px; line-height: 1.8; color: #6f6257; }
+.pimentel-guide__experience ul { list-style: none; padding: 0; margin: 24px 0 0; }
+.pimentel-guide__experience li { border-top: 1px solid #ece3d6; padding: 12px 0; font-size: 14px; line-height: 1.65; }
+.pimentel-guide__stay { display: flex; flex-direction: column; justify-content: center; background: #2b1d12; color: #fffaf2; }
+.pimentel-guide__stay .pimentel-guide__eyebrow { color: #d9b48f; }
+.pimentel-guide__stay > p:not(.pimentel-guide__eyebrow) { color: #e0d2c1; }
+.pimentel-guide__stay a { margin-top: 28px; color: #f3cea4; font-size: 14px; text-underline-offset: 6px; text-decoration: underline; line-height: 1.8; }
+.pimentel-guide__note { max-width: 760px; margin: 36px auto 0; text-align: center; font-size: 12px; line-height: 1.8; color: #77695b; }
+.pimentel-guide a:focus-visible { outline: 3px solid #a87545; outline-offset: 5px; }
+@media (max-width: 640px) { .pimentel-guide { padding: 40px 16px; } .pimentel-guide__grid { grid-template-columns: 1fr; gap: 18px; } .pimentel-guide__categories { gap: 8px; } .pimentel-guide__categories a { font-size: 12px; padding: 9px 13px; } .pimentel-guide__map img { border-radius: 12px; } }
