@@ -159,7 +159,7 @@ test("un aviso de Yape requiere revisión humana y no se procesa ni verifica com
   assert.equal(queries.some(({sql})=>/UPDATE|INSERT|FROM bookings/.test(sql)),false);
 });
 
-test("el asesor puede consultar el catálogo desde su herramienta sin revelar metadatos internos",async(t)=>{
+test("una herramienta no devuelve el catálogo para una pregunta sin servicio identificado",async(t)=>{
   fakeSources(t,{active:false});
   const requests=[];let generation=0;
   t.mock.method(OpenAI.Responses.prototype,"create",async req=>{
@@ -173,6 +173,8 @@ test("el asesor puede consultar el catálogo desde su herramienta sin revelar me
   assert.match(result.reply,/servicios/);
   const output=requests.flatMap(req=>Array.isArray(req.input)?req.input:[]).find(item=>item.type==="function_call_output");
   assert.ok(output);
-  assert.match(output.output,/Desayuno continental incluido/);
+  assert.deepEqual(JSON.parse(output.output).services,[]);
+  assert.equal(JSON.parse(output.output).information_unconfirmed,true);
   assert.doesNotMatch(output.output,/verification_status|source_kind|source_document|bank|account_number/);
 });
+

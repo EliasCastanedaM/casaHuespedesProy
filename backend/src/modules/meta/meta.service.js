@@ -1688,14 +1688,9 @@ export async function processMetaMessage(message, overrides = {}) {
       message.messageId
     );
     const greetingOnly = isOpeningGreetingOnly(message.text);
-    // Un saludo siempre recibe el texto aprobado, aunque el chat ya tenga historial.
-    const firstMessage = greetingOnly || await dependencies.isFirstMetaIncomingMessage(
-      message.channel,
-      message.externalUserId,
-      incomingId,
-      dependencies.db ?? pool,
-      message.text
-    );
+    // A concrete first question gets its answer directly. The approved menu
+    // and social follow-up belong to greetings, not every new guest turn.
+    const firstMessage = greetingOnly;
 
     const welcome = firstMessage ? globalAssistantWelcome(message.text) : "";
 
@@ -1770,3 +1765,4 @@ export async function processMetaMessage(message, overrides = {}) {
     throw error;
   }
 }
+

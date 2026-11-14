@@ -213,7 +213,7 @@ test("consultas de precios mantienen el alcance y preguntan solo lo pendiente",a
   assert.match(variation.reply,/categoría elegida y la cantidad de huéspedes/);
 });
 
-test("la bienvenida con menú precede al aviso de cálculo en un chat nuevo",async()=>{
+test("una cotización nueva conserva el aviso separado sin menú ni redes no solicitados",async()=>{
   const sent=[];
   await processMetaMessage({channel:"whatsapp",externalUserId:"new-quote",messageId:"new-quote",text:"Quiero reservar",messageType:"text"},{
     claim:async()=>({id:43}),release:async()=>{},complete:async()=>{},getHandoff:async()=>false,setHandoff:async()=>{},loadHistory:async()=>[],
@@ -221,13 +221,10 @@ test("la bienvenida con menú precede al aviso de cálculo en un chat nuevo",asy
     generateReply:async(_i,{onProcessing})=>{await onProcessing(processingQuoteReply());return {reply:"Cotización S/ 400.00",mode:"occupancy_quote"};},
     sendReply:async(_m,text)=>{sent.push(text);return {};},recordOutgoing:async()=>{},sleep:async()=>{},
   });
-  assert.equal(sent.length,3);
-  assert.ok(sent[0].startsWith("¡Hola!"));
-  assert.match(sent[0],/Habitaciones y tarifas/);
-  assert.match(sent[0],/En un momento te respondo/);
+  assert.equal(sent.length,2);
+  assert.equal(sent[0],processingQuoteReply());
   assert.equal(sent[1],"Cotización S/ 400.00");
-  assert.match(sent[2], /casahuespedespimentel\.com/);
-  assert.match(sent[2], /instagram\.com\/casahuespedes\.pimentel/);
+  assert.doesNotMatch(sent.join(' '),/Habitaciones y tarifas|casahuespedespimentel\.com/);
 });
 
 
@@ -426,3 +423,4 @@ test("una nueva reserva no reutiliza la cotización anterior ni envía aviso de 
     assert.equal(contexts.get(channel+":"+input.externalUserId).whatsapp_mvp.check_in,"2026-11-25");
   }
 });
+

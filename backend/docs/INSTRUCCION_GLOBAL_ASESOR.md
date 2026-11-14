@@ -1,43 +1,67 @@
-# Instrucción global del asesor
+# Instrucción global y arquitectura conversacional del asesor
 
-WhatsApp, Instagram y Facebook comparten una sola instrucción, construida en
-`src/modules/ai/ai.prompt.js`. La función `buildHotelAssistantPrompt()` no recibe
-el canal ni genera variantes por plataforma.
+WhatsApp, Facebook e Instagram comparten `buildHotelAssistantPrompt()` en
+`src/modules/ai/ai.prompt.js`. No hay variantes por canal ni un segundo prompt
+administrativo detectado en las fuentes inspeccionadas. El contrato se divide en:
 
-El comportamiento global usa la política que antes estaba activa en WhatsApp:
+1. Identidad y propósito.
+2. Reglas de conversación.
+3. Intención actual.
+4. Información oficial.
+5. Reglas comerciales y reserva.
+6. Herramientas y acciones.
+7. Seguridad y escalamiento.
+8. Comportamiento común y transporte.
 
-- Saludo breve, menú opcional y atención en el idioma del huésped.
-- Tarifas actuales del catálogo, sin afirmar disponibilidad automática.
-- Recopilación progresiva de fechas, adultos, niños y edades, mascotas y preferencias.
-- Revisión humana obligatoria de disponibilidad, categoría e importe.
-- Después de la aprobación, datos de contacto y elección entre pago en el
-  establecimiento o Culqi. Los avisos de pago no equivalen a verificación.
-- Los cambios comerciales posteriores a la aprobación vuelven a revisión.
+Las tarifas, servicios y políticas actuales pertenecen a sus fuentes comerciales;
+los cálculos y aprobaciones se mantienen en el motor determinista de reserva.
+El prompt no sustituye esas validaciones.
 
-`src/modules/ai/ai.reservation.js` contiene el flujo común. El servicio IA utiliza
-ese flujo en los tres canales y solo expone al modelo la consulta de categorías.
-El saludo, las tarifas y la recuperación del borrador tras la atención humana
-también comparten reglas. La ventana de historial es la misma en cada canal.
+## Selección de servicios
 
-## Compatibilidad y transporte
+`ai.services-info.js` devuelve una intención `none`, `general` o `specific`, con
+slugs, incertidumbre y nivel de detalle. Solamente una petición general explícita
+permite consultar todo el catálogo. Un servicio desconocido devuelve incertidumbre,
+no todos los registros. Los nombres exactos del catálogo amplían el reconocimiento.
 
-La clave persistida `whatsapp_mvp` conserva su nombre para mantener los chats
-guardados sin migraciones destructivas. No identifica una política exclusiva.
-`ai.whatsapp-mvp.js` contiene únicamente exportaciones de compatibilidad; no tiene
-instrucciones ni lógica de atención propias. Los borradores antiguos de otros
-canales conservan datos e intención; una consulta de disponibilidad antigua no
-se transforma en aprobación humana. Las reservas ya registradas conservan su
-identificador para los avisos de pago.
+La misma selección se aplica al formateador y a `listar_servicios`. Las condiciones,
+cargos y coordinación de los registros elegidos se conservan. Las consultas simples
+inequívocas no necesitan clasificador ni modelo generativo. Una traducción exacta
+revisada se usa solo cuando coincide con la descripción vigente; las demás se
+resuelven con el modelo y únicamente los datos pertinentes.
 
-Cada canal mantiene sus credenciales, envío, recepción y límites técnicos.
-Un identificador de Instagram/Facebook nunca se interpreta como teléfono.
-El teléfono de WhatsApp solo se aprovecha cuando el identificador es un número
-válido. La restricción operativa de confirmación de WhatsApp que ya existía en
-el panel se conserva; su habilitación es independiente de las instrucciones.
+## Contexto y continuidad
 
-## Validación
+La pregunta actual tiene prioridad. Los seguimientos sin tema usan el último tema
+explícito del huésped, atravesando solo seguimientos consecutivos, nunca un cambio
+de tema. Una consulta informativa no modifica el contexto ni repite cotizaciones.
+El historial del llamador prevalece sobre el de recuperación. Se conservan la
+ventana de contexto y la separación entre historial y estado persistido de reserva.
 
-`npm test` en `backend` incluye pruebas de igualdad del prompt y herramientas,
-recopilación y aprobación en los tres canales, contacto, opciones de pago,
-invalidación de aprobaciones, historial y compatibilidad con reservas anteriores.
-Las pruebas usan servicios simulados: no envían mensajes ni crean reservas reales.
+La clave `whatsapp_mvp` conserva su nombre para compatibilidad; no es una política
+exclusiva de WhatsApp. No se migran ni borran borradores. Los identificadores sociales
+nunca se convierten en teléfono. Se mantienen aprobación humana, capacidad física,
+niños, mascotas, preferencias, invalidación de aprobación ante cambios y verificación
+de pagos. Ningún mensaje del modelo registra reservas por sí mismo.
+
+## Presentación y entrega
+
+Los saludos reciben la bienvenida aprobada y las redes, gestionadas por Meta.
+Una pregunta concreta recibe su respuesta directamente, incluso en el primer turno.
+El menú continúa disponible bajo solicitud. El transporte conserva outbox,
+reintentos, límites de cada canal y pausa por operador antes y después de generar.
+
+La concisión depende de selección y redacción, no de recortar caracteres o imponer
+un límite pequeño de salida. `AI_MAX_OUTPUT_TOKENS` se retira de la conversación;
+se rechazan respuestas incompletas y llamadas pendientes tras agotar las rondas.
+
+## Verificación
+
+`npm test` en `backend` cubre contrato único, reservas, pagos, inventario y entrega
+simulada. `test/ai-relevance.test.js` añade consultas específicas, desconocidas,
+idiomas, seguimiento, preservación de siete fases de reserva, herramientas filtradas,
+respuestas incompletas y privacidad de diagnósticos.
+
+El informe [AUDITORIA_ASESOR_2026-11-14.md](AUDITORIA_ASESOR_2026-11-14.md) registra
+causas, archivos, resultados, ejemplos y limitaciones. Estas pruebas no sustituyen
+la validación en chats reales después de autorizar un despliegue.

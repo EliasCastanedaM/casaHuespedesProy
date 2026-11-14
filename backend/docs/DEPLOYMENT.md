@@ -23,7 +23,6 @@ JWT_SECRET=...              # aleatorio, mínimo 32 caracteres
 FRONTEND_URLS=https://casa-huespedes-proy.vercel.app
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5.6-luna
-AI_MAX_OUTPUT_TOKENS=500
 AI_INTERNAL_TOKEN=...       # aleatorio si /api/ai/chat lo consume otro servidor
 HOTEL_NAME=Casa Huéspedes Pimentel
 HOTEL_PHONE=...
@@ -118,3 +117,4 @@ Si aparece un problema:
 3. revisa logs y reproduce primero en un entorno de prueba.
 
 No elimines tablas ni columnas para revertir con la web atendiendo reservas.
+
