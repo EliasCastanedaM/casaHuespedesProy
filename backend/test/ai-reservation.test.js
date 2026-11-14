@@ -234,7 +234,7 @@ test("la recomendación elige la categoría de menor capacidad que admite al gru
   assert.equal(handoff.context.whatsapp_mvp.recommended_category.slug, "triple");
   assert.match(handoff.reply, /Triple/);
   const summary = formatGlobalHandoffSummary(handoff.context.whatsapp_mvp);
-  assert.match(summary, /50 % del diferencial/);
+  assert.match(summary, /S\/ 20 por niño y por noche/);
 });
 
 test("la aprobación humana habilita datos del huésped y dos métodos de pago", () => {
@@ -525,3 +525,4 @@ test("nuevo pedido de reserva inicia un contexto limpio en inglés, portugués y
     assert.notEqual(result.context.whatsapp_mvp.intent_id,"old");
   }
 });
+

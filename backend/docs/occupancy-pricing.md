@@ -1,13 +1,15 @@
-# Cotización global por ocupación
+# Cotización por ocupación y distribución de camas
 
-El mismo flujo atiende WhatsApp, Instagram y Facebook. La disponibilidad siempre requiere aprobación humana antes del registro y del pago.
+Actualización del propietario: 14/11/2026. La aclaración confirma que los 9 años
+se cobran como adulto y que el cargo infantil es por cada noche.
 
-## Catálogo interno aprobado
+## Tarifas de adultos
 
-Importes por noche en soles. No se publican como tabla al huésped.
+Se conserva la matriz vigente de `room_category_occupancy_rates`; no se inventan
+importes ni se recalculan tarifas de ocupación a partir del precio Full.
 
-| Categoría | Capacidad | 1 | 2 | 3 | 4 | 5 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Categoría | Plazas independientes registradas | 1 adulto | 2 adultos | 3 adultos | 4 adultos | 5 adultos |
+|---|---:|---:|---:|---:|---:|---:|
 | Matrimonial Estándar | 2 | 100 | 120 | — | — | — |
 | Matrimonial Ejecutiva | 2 | 120 | 140 | — | — | — |
 | Doble - 2 Camas | 2 | 120 | 140 | — | — | — |
@@ -15,28 +17,96 @@ Importes por noche en soles. No se publican como tabla al huésped.
 | Familiar 1 | 5 | 170 | 190 | 210 | 230 | 250 |
 | Familiar 2 | 5 | 170 | 190 | 210 | 230 | 250 |
 
-Todos los huéspedes cuentan para la capacidad, incluidos bebés y niños. Se elige la menor capacidad suficiente y, dentro de ella, primero la opción de mayor valor que respete las preferencias. Una solicitud de menor precio permite ofrecer la alternativa más económica de esa capacidad. Un presupuesto explícito limita las opciones. Las preferencias de camas, terraza y vista se respetan; no se promete una característica no confirmada.
+Importes en soles por noche, según la lectura del catálogo durante la revisión.
+El motor consulta siempre el registro vigente al cotizar y vuelve a verificarlo
+al aceptar. Una categoría no aparece en las opciones si el inventario consultado
+no tiene una unidad compatible libre para esas fechas.
 
-## Niños y mascotas
+## Nueva regla infantil
 
-- Hasta 4 años: sin cargo adicional usando las camas existentes, sujeto a revisión humana de camas.
-- De 5 a 8: por niño, 50 % de la diferencia entre la tarifa correspondiente a los adultos computables y la tarifa individual, en la misma categoría.
-- Desde 9: se cuentan como adultos para el cálculo comercial.
-- El alojamiento no supera la tarifa de esa misma categoría si todos los huéspedes del grupo pagaran como adultos. El tope se aplica al alojamiento antes del cargo por mascotas.
-- Mascotas: S/ 20 por mascota y noche, con admisión sujeta a autorización.
+- Hasta 4 años inclusive: sin cargo cuando no se añaden camas adicionales. Hasta
+  dos pueden compartir la cama de sus padres, de 2 o 1½ plazas. La propuesta lo indica
+  como condición; el equipo debe confirmar la distribución antes del registro.
+- De 5 a 8 años inclusive: S/ 20 por niño y por noche.
+- Desde 9 años: tarifa de adulto.
 
-Ejemplos por noche: 2 adultos + niño de 6 en Triple = S/ 190 + 50 % × (190 − 170) = S/ 200. Dos adultos + niños de 6 y 3 en Familiar = S/ 190 + S/ 10 = S/ 200. Cuatro adultos + niño de 6 en Familiar: S/ 230 + S/ 30, limitado a S/ 250. Dos adultos sin niños: Ejecutiva S/ 140; al pedir menor precio, Estándar S/ 120.
+Se retiran la fórmula del 50 % del diferencial y el tope por ocupación equivalente.
+Las mascotas conservan su cargo y autorización actuales.
 
-## Conversación y privacidad
+## Camas y huéspedes
 
-Se solicitan progresivamente fechas, adultos, cantidad y edades de niños, mascotas y preferencias necesarias. No se pide identidad, correo, teléfono adicional ni documentos durante la cotización. La fórmula y los tramos de edad permanecen internos. Se comunica categoría, precio por noche y total de la estadía. Si preguntan por variaciones de precio, se explica que dependen de la categoría y del número de huéspedes y que las edades de los niños se consideran de forma distinta.
+`guestComposition.js` comparte la validación entre cotización, aprobación y
+registro transaccional. Todos los huéspedes permanecen en el conteo: dos adultos
+y un bebé son tres huéspedes, aunque requieran dos plazas independientes.
 
-El aviso de procesamiento se guarda como mensaje `system`, separado de la respuesta final `assistant`. Ambos se asocian al mensaje entrante con índices únicos independientes. Un reintento recupera la respuesta final o el aviso pendiente sin confundirlos ni repetir un envío ya aceptado por Meta. No se añaden avisos al historial del modelo.
+Una cama de 2 plazas proporciona dos plazas independientes; una de 1½ o 1 plaza,
+una. El propietario autoriza que dos padres compartan una cama de 1½ plazas al
+viajar con niños. Hasta dos niños de hasta 4 años pueden compartir la cama de sus
+padres. Los niños restantes necesitan camas existentes disponibles. Esta excepción
+familiar no habilita adultos adicionales fuera de la capacidad y tarifa registradas.
+Si falta la ficha de camas, no se aplica automáticamente la excepción.
 
-La cotización mantiene el estado `quoted`; permite pedir una alternativa antes de aceptar la revisión humana. Al aceptar, se vuelve a calcular con las tarifas vigentes. Si cambia el importe, se presenta de nuevo y se espera otra aceptación. El estado `handoff` pausa la IA solo en ese chat. Los cambios posteriores invalidan el importe anterior. Grupos que exceden una habitación o de 8 o más se derivan para distribución y tarifa manual.
+Si un niño pequeño necesita cama propia, se buscan opciones desde Doble hacia
+arriba según las camas necesarias. No se añade una cama supletoria ni se inventa
+un suplemento para ese niño: cambia el precio de la categoría cuando corresponde.
+Los niños de 5 a 8 años conservan S/ 20 por niño/noche. Una preferencia de camas
+separadas para los adultos impide agrupar a ambos padres en una cama.
+Los grupos de ocho o más y las solicitudes de varias habitaciones mantienen
+gestión humana.
 
-## Despliegue y validación
+## Recomendación y disponibilidad
 
-Aplicar primero `database/migrations/20261107142116_global_occupancy_pricing.sql` y después desplegar el backend. La tabla interna tiene RLS activo y carece de acceso para roles Data API; solo la conexión del servidor consulta las tarifas. El campo público existente `price_per_night` no es la fuente de las cotizaciones del asesor.
+La primera opción es la categoría básica compatible y disponible. Se muestran
+como máximo dos alternativas superiores compatibles, manteniendo vistas, camas,
+presupuesto y preferencias. No se ofrece primero la más cara por defecto.
+Los números 1–3 eligen exclusivamente las opciones recién mostradas en la cotización.
 
-Ejecutar `npm test` en backend. Las pruebas cubren importes, capacidad, edades, tope, mascotas, preferencias, cambios de composición y tarifas, privacidad, filtro de alcance, los tres canales y recuperación del aviso de procesamiento. No envían mensajes reales ni generan reservas reales.
+La búsqueda inicial usa la ocupación con tarifa adulta para no excluir familias
+por su conteo total; después se comprueba cada
+categoría con su ficha real y preferencias. Al aceptar se revalida inventario y
+precio. La aprobación humana y el registro final repiten la comprobación de camas.
+El registro guarda el total real de huéspedes; un cuerpo de petición pública no
+puede habilitar la excepción de capacidad mediante una composición inventada.
+Solo la ruta interna con aprobación humana admite esa composición validada.
+
+## Ejemplos
+
+Para entrada el 25/11 y salida el 28/11 son tres noches, sin mascotas:
+
+| Grupo y condición | Categoría | Por noche | Total |
+|---|---|---:|---:|
+| 2 adultos + niño de 1 o 4 años compartiendo cama | Matrimonial Estándar | 120 | 360 |
+| Mismo grupo compartiendo cama | Matrimonial Ejecutiva | 140 | 420 |
+| 2 adultos + dos niños de hasta 4 años compartiendo cama | Matrimonial Estándar | 120 | 360 |
+| 2 adultos + niño pequeño con cama propia, padres comparten 1½ | Doble - 2 Camas | 140 | 420 |
+| 2 adultos + niño de 5 a 8 años, padres comparten 1½ | Doble - 2 Camas | 160 | 480 |
+| 2 adultos + niños de 2 y 8, pequeño comparte con padres | Doble - 2 Camas | 160 | 480 |
+| Mismo grupo, ambos niños con cama propia | Triple - 3 Camas | 210 | 630 |
+| 2 adultos + niños de 5 y 8, cada niño con cama propia | Triple - 3 Camas | 230 | 690 |
+| 2 adultos + niño de 9 años | Triple - 3 Camas | 210 | 630 |
+
+Los precios dependen del catálogo y las opciones de disponibilidad en las fechas
+consultadas; estos ejemplos no prometen stock real.
+
+## Publicación y datos
+
+El SQL `database/proposals/2026-11-14-child-beds-policy.sql` está preparado y **no
+se ha ejecutado en producción**. Debe acompañar el despliegue autorizado para
+reemplazar la regla anterior en `hotel_policy_rules` y ajustar la descripción de
+Familiar 2 a la imagen del propietario. No altera cantidades de habitaciones,
+capacidades registradas ni tarifas de adultos.
+
+La ficha de Familiar 1 describe siete plazas en camas, pero su capacidad
+administrativa sigue siendo cinco y no hay tarifas registradas para seis o siete
+adultos. Esta entrega conserva ese límite; no supone tarifas o autorizaciones
+adicionales. La propuesta de Familiar 2 distingue dos camas de 1½ y una de 1 plaza,
+conservando cinco plazas independientes en total.
+
+Las aprobaciones infantiles antiguas sin `children-2026-11-14-shared-parent-beds` vuelven a revisión
+antes de crear una reserva. Las reservas ya registradas y sus pagos no se recalculan.
+
+## Pruebas
+
+`npm test` en `backend` verifica importes, límites de edades, plazas de cama,
+negaciones de compartir, tres canales, selección de alternativas, disponibilidad,
+aprobación, registros transaccionales y ausencia de cambios en reservas existentes.

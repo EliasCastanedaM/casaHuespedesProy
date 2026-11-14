@@ -1,3 +1,4 @@
+import { minimumRequiredBedPlaces, categoryBedPlan } from './guestComposition.js';
 import { pool } from "../../config/db.js";
 import { getPublicRoomCategoriesService } from "./roomCategory.service.js";
 
@@ -22,8 +23,9 @@ export async function withAvailableReservationRooms(categories, state, db = pool
   const { searchAvailableRoomsService } = await import("../availability/availability.service.js");
   const result = await searchAvailableRoomsService({
     check_in: state.check_in, check_out: state.check_out,
-    guests_count: Number(state.adults)+Number(state.children),
+    guests_count: minimumRequiredBedPlaces(state),
     check_in_time: state.check_in_time,
   }, db);
-  return categories.map(c=>({ ...c, available_rooms: result.rooms.filter(room=>room.category_slug===c.slug) }));
+  return categories.map(c=>({ ...c, available_rooms: result.rooms.filter(room=>room.category_slug===c.slug && categoryBedPlan(c,state).fits) }));
 }
+

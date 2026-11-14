@@ -19,11 +19,12 @@ const categories = [
   ["familiar", "Familiar 1", 5, [170,190,210,230,250]],
   ["familiar-2", "Familiar 2", 5, [170,190,210,230,250]],
 ].map(([slug,name,capacity,rates]) => ({ slug,name,capacity,price_per_night: rates.at(-1),
+  bed_description: ({matrimonial:'1 cama de 2 plazas','matrimonial-ejecutiva':'1 cama de 2 plazas',doble:'2 camas de 1½ plazas',triple:'3 camas de 1½ plazas',familiar:'2 camas de 2 plazas + 3 camas de 1½ plazas','familiar-2':'1 cama de 2 plazas + 2 camas de 1½ plazas + 1 cama de 1 plaza'})[slug],
   occupancy_rates: Object.fromEntries(rates.map((amount,i) => [i+1,amount])) }));
 const stay = (extra = {}) => ({ check_in: "2026-11-20", check_out: "2026-11-22", adults: 2, children: 0, child_ages: [], pets: 0, ...extra });
 
-test("la capacidad mínima evita ocupar una familiar con grupos pequeños y ofrece mayor valor primero", () => {
-  for (const [adults,slug,amount] of [[1,"matrimonial-ejecutiva",120],[2,"matrimonial-ejecutiva",140],[3,"triple",210],[4,"familiar",230],[5,"familiar",250]]) {
+test("la capacidad mínima evita ocupar una familiar con grupos pequeños y ofrece la opción básica primero", () => {
+  for (const [adults,slug,amount] of [[1,"matrimonial",100],[2,"matrimonial",120],[3,"triple",210],[4,"familiar",230],[5,"familiar",250]]) {
     const {quote} = selectOccupancyQuote(categories, stay({adults}));
     assert.equal(quote.category_slug,slug);
     assert.equal(quote.nightly_amount,amount);
@@ -36,23 +37,23 @@ test("la capacidad mínima evita ocupar una familiar con grupos pequeños y ofre
   assert.equal(selectOccupancyQuote(categories,stay({pricing_quote:lower}),{cheaper:true}).reason,"no_lower_price");
 });
 
-test("los niños cuentan para capacidad y el suplemento usa adultos menos tarifa individual", () => {
+test("los niños pagan por edad y las camas compartidas permiten una matrimonial", () => {
   const cases = [
-    [{adults:2,children:1,child_ages:[6]},"triple",200],
-    [{adults:2,children:2,child_ages:[6,3]},"familiar",200],
-    [{adults:2,children:1,child_ages:[3]},"triple",190],
+    [{adults:2,children:1,child_ages:[6]},"doble",160],
+    [{adults:2,children:2,child_ages:[6,3]},"doble",160],
+    [{adults:2,children:1,child_ages:[3]},"matrimonial",120],
     [{adults:2,children:1,child_ages:[9]},"triple",210],
-    [{adults:1,children:1,child_ages:[6]},"matrimonial-ejecutiva",120],
+    [{adults:1,children:1,child_ages:[6]},"matrimonial",120],
     [{adults:4,children:1,child_ages:[6]},"familiar",250],
-    [{adults:2,children:2,child_ages:[6,8]},"familiar",210],
+    [{adults:2,children:2,child_ages:[6,8]},"triple",230],
   ];
   for (const [state,slug,amount] of cases) {
     const quote = selectOccupancyQuote(categories,stay(state)).quote;
     assert.equal(quote.category_slug,slug);
     assert.equal(quote.nightly_amount,amount, JSON.stringify(state));
   }
-  assert.equal(selectOccupancyQuote(categories,stay({adults:4,children:1,child_ages:[6]})).quote.child_cap_applied,true);
-  assert.equal(selectOccupancyQuote(categories,stay({pets:2})).quote.total_amount,360);
+  assert.equal(selectOccupancyQuote(categories,stay({adults:4,children:1,child_ages:[6]})).quote.child_cap_applied,false);
+  assert.equal(selectOccupancyQuote(categories,stay({pets:2})).quote.total_amount,320);
 });
 
 test("respeta camas, presupuesto, preferencias y categoría explícita sin sobrepasar capacidad", () => {
@@ -74,8 +75,8 @@ test("rechaza datos incompletos, edades inválidas y tarifas ausentes; no expone
   const quote = selectOccupancyQuote(categories,stay({children:1,child_ages:[6]})).quote;
   for (const lang of ["es","en","pt","fr"]) {
     const reply = formatOccupancyQuote(quote,lang);
-    assert.match(reply,/S\/ 200\.00/);
-    assert.match(reply,/S\/ 400\.00/);
+    assert.match(reply,/S\/ 160\.00/);
+    assert.match(reply,/S\/ 320\.00/);
     assert.doesNotMatch(reply,/50|diferencial|tarifa [12345]|Full|5 a 8|9 años|priced_adults/);
   }
 });
@@ -111,7 +112,7 @@ test("los tres canales cotizan, procesan, permiten precio menor y pasan al equip
     const send=(message)=>generateAiReply({channel,externalUserId,message,now:new Date("2026-11-07T18:00:00Z")},{onProcessing:async(text)=>notices.push(text)});
     const initial=await send("Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas");
     assert.equal(initial.mode,"occupancy_quote");
-    assert.match(initial.reply,/Matrimonial Ejecutiva.*S\/ 140\.00.*S\/ 280\.00/);
+    assert.match(initial.reply,/Matrimonial Estándar.*S\/ 120\.00.*S\/ 240\.00/);
     assert.deepEqual(notices,[processingQuoteReply()]);
     let state=contexts.get(channel+":"+externalUserId).whatsapp_mvp;
     assert.equal(state.state,"quoted");
@@ -119,7 +120,7 @@ test("los tres canales cotizan, procesan, permiten precio menor y pasan al equip
     assert.equal(state.customer_email,undefined);
     const cheaper=await send("¿Hay algo más barato?");
     assert.equal(cheaper.mode,"occupancy_quote");
-    assert.match(cheaper.reply,/Matrimonial Estándar.*S\/ 120\.00/);
+    assert.match(cheaper.reply,/más económica.*S\/ 120\.00/);
     const accepted=await send("Sí");
     assert.equal(accepted.mode,"human_review_required");
     state=contexts.get(channel+":"+externalUserId).whatsapp_mvp;
@@ -137,10 +138,10 @@ test("pregunta edades sin datos personales, recotiza niños y cambios de grupo",
   assert.match(ages.reply,/edades/);
   assert.doesNotMatch(ages.reply,/nombre|correo|documento|nacimiento/);
   const quoted=await send("6 y 3 años");
-  assert.match(quoted.reply,/Familiar 1.*S\/ 200\.00.*S\/ 400\.00/);
+  assert.match(quoted.reply,/1\) Doble - 2 Camas.*S\/ 160\.00.*S\/ 320\.00/);
   const changed=await send("Ahora son 4 adultos y 1 niño de 6 años");
   assert.match(changed.reply,/Familiar 1.*S\/ 250\.00.*S\/ 500\.00/);
-  assert.equal(contexts.get("whatsapp:family-quote").whatsapp_mvp.pricing_quote.child_cap_applied,true);
+  assert.equal(contexts.get("whatsapp:family-quote").whatsapp_mvp.pricing_quote.child_cap_applied,false);
   const fewer=await send("Somos 3 personas sin niños");
   assert.match(fewer.reply,/Triple - 3 Camas.*S\/ 210\.00/);
 });
@@ -153,7 +154,7 @@ test("tarifas modificadas entre cotizar y aceptar obligan a mostrar la nueva cot
   state.pricing_quote.total_amount=1;
   const result=await generateAiReply({...input,message:"Sí"});
   assert.equal(result.mode,"occupancy_quote");
-  assert.match(result.reply,/280\.00/);
+  assert.match(result.reply,/240\.00/);
 });
 
 for(const channel of ["whatsapp","instagram","facebook"]){
@@ -213,7 +214,7 @@ test("consultas de precios mantienen el alcance y preguntan solo lo pendiente",a
   assert.match(variation.reply,/categoría elegida y la cantidad de huéspedes/);
 });
 
-test("la bienvenida con menú precede al aviso de cálculo en un chat nuevo",async()=>{
+test("una cotización nueva conserva el aviso separado sin menú ni redes no solicitados",async()=>{
   const sent=[];
   await processMetaMessage({channel:"whatsapp",externalUserId:"new-quote",messageId:"new-quote",text:"Quiero reservar",messageType:"text"},{
     claim:async()=>({id:43}),release:async()=>{},complete:async()=>{},getHandoff:async()=>false,setHandoff:async()=>{},loadHistory:async()=>[],
@@ -221,13 +222,10 @@ test("la bienvenida con menú precede al aviso de cálculo en un chat nuevo",asy
     generateReply:async(_i,{onProcessing})=>{await onProcessing(processingQuoteReply());return {reply:"Cotización S/ 400.00",mode:"occupancy_quote"};},
     sendReply:async(_m,text)=>{sent.push(text);return {};},recordOutgoing:async()=>{},sleep:async()=>{},
   });
-  assert.equal(sent.length,3);
-  assert.ok(sent[0].startsWith("¡Hola!"));
-  assert.match(sent[0],/Habitaciones y tarifas/);
-  assert.match(sent[0],/En un momento te respondo/);
+  assert.equal(sent.length,2);
+  assert.equal(sent[0],processingQuoteReply());
   assert.equal(sent[1],"Cotización S/ 400.00");
-  assert.match(sent[2], /casahuespedespimentel\.com/);
-  assert.match(sent[2], /instagram\.com\/casahuespedes\.pimentel/);
+  assert.doesNotMatch(sent.join(' '),/Habitaciones y tarifas|casahuespedespimentel\.com/);
 });
 
 
@@ -263,9 +261,9 @@ test("mar y calle reservan una unidad exterior; las alternativas mantienen categ
   assert.equal(family.category_slug,"familiar-2");
   assert.equal(family.internal_assignment.room_id,405);
   const triple=selectOccupancyQuote(decorated,stay({adults:3,room_preferences:{view:"sea"}})).quote;
-  assert.equal(triple.category_slug,"triple");
-  assert.equal(triple.preference_fallback,true);
-  assert.equal(triple.actual_view,"interior");
+  assert.equal(triple.category_slug,"familiar-2");
+  assert.equal(triple.preference_fallback,false);
+  assert.equal(triple.actual_view,"sea");
   assert.doesNotMatch(formatOccupancyQuote(family),/405|505|room_id|room_number/);
 });
 
@@ -397,7 +395,7 @@ test("una nueva preferencia en atención humana actualiza el resumen y la asigna
   assert.equal(state.state,"handoff");
   assert.equal(state.room_preferences.view,"interior");
   assert.equal(state.room_preferences.near_window,true);
-  assert.equal(state.pricing_quote.internal_assignment.room_id,101);
+  assert.equal(state.pricing_quote.internal_assignment.room_id,205);
   assert.equal(state.pricing_quote.window_verification_required,true);
 });
 
@@ -426,3 +424,4 @@ test("una nueva reserva no reutiliza la cotización anterior ni envía aviso de 
     assert.equal(contexts.get(channel+":"+input.externalUserId).whatsapp_mvp.check_in,"2026-11-25");
   }
 });
+

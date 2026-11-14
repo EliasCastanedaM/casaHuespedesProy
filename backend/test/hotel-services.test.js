@@ -20,7 +20,7 @@ test("responde servicios generales con información real del catálogo", () => {
   assert.match(answer, /WiFi gratuito/);
   assert.match(answer, /Cocina compartida/);
   assert.match(answer, /Lavandería y planchado/);
-  assert.match(answer, /Desayuno continental incluido/);
+  assert.match(answer, /Incluidos en la estadía: Desayuno continental/);
   assert.doesNotMatch(answer, /S\/\s*\d+|tarifa gratis para lavandería/i);
 });
 
@@ -76,3 +76,4 @@ test("solo expone servicios activos de fuentes publicadas/aprobadas", async () =
   assert.equal(result[2].price, null);
   assert.equal(result[3].requires_coordination, true);
 });
+

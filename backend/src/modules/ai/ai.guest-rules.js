@@ -1,7 +1,7 @@
 import { HUMAN_ATTENTION_PHONE } from "./ai.human-assistance.js";
 
 // Reglas comerciales confirmadas: 0–4 años sin cargo con cama disponible,
-// 5–8 años al 50 % del diferencial de tarifa y desde 9 años tarifa de adulto.
+// 5–8 años S/ 20 por niño/noche y desde 9 años tarifa de adulto.
 // Niños, mascotas y grupos especiales conservan validación humana antes del cierre.
 function normalize(value) {
   return String(value || "")
@@ -92,3 +92,4 @@ export function isHotelSocialMediaInquiry(message) {
 
 // Compatibility names for existing consumers.
 export { globalAssistantWelcome as whatsAppMvpWelcome, globalAssistantReservationReply as whatsAppMvpReservationReply };
+

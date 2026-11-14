@@ -1,3 +1,4 @@
+import { guestComposition, categoryBedPlan } from '../rooms/guestComposition.js';
 import { pool } from "../../config/db.js";
 import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
@@ -65,6 +66,7 @@ async function getRoomForBooking(roomId, db = pool) {
       r.category_slug,
       rc.name AS category_name,
       rc.capacity AS category_capacity,
+      rc.bed_description AS category_bed_description,
       rc.price_per_night AS category_price_per_night,
       rc.is_active AS category_is_active
     FROM rooms r
@@ -215,7 +217,7 @@ function toPublicPaymentStatus(details) {
   };
 }
 
-function validateBookingRequest({ customer, room, guests_count, nights }) {
+function validateBookingRequest({ customer, room, guests_count, nights, guest_composition }) {
   if (!customer?.full_name || !customer?.phone) {
     const error = new Error("Nombre completo y celular son obligatorios.");
     error.statusCode = 400;
@@ -246,7 +248,8 @@ function validateBookingRequest({ customer, room, guests_count, nights }) {
 
   const capacity = Number(room.category_capacity || room.capacity || 0);
 
-  if (Number(guests_count) > capacity) {
+  const bedPlan = guest_composition ? categoryBedPlan({capacity,bed_description:room.category_bed_description},guest_composition,{allowAssumedSharing:false}) : null;
+  if (bedPlan ? !bedPlan.fits : Number(guests_count) > capacity) {
     const error = new Error(
       "La categoría seleccionada no admite esa cantidad de huéspedes."
     );
@@ -384,6 +387,7 @@ async function lockAndValidateRoom({
     customer: normalized.customer,
     room,
     guests_count: normalized.guests_count,
+    guest_composition: normalized.guest_composition,
     nights: normalized.nights,
   });
 
@@ -405,7 +409,9 @@ async function lockAndValidateRoom({
       check_out: normalized.check_out,
       nights: normalized.nights,
       check_in_time: normalized.check_in_time,
-      guests_count: normalized.guests_count,
+      guests_count: normalized.guest_composition
+        ? categoryBedPlan({capacity:Number(room.category_capacity || room.capacity),bed_description:room.category_bed_description},normalized.guest_composition,{allowAssumedSharing:false}).inventory_capacity_required
+        : normalized.guests_count,
     },
     client
   );
@@ -455,7 +461,7 @@ async function selectRoomByCategory({
 
   const categoryResult = await client.query(
     `
-    SELECT slug, name, capacity, price_per_night, is_active
+    SELECT slug, name, capacity, bed_description, price_per_night, is_active
     FROM room_categories
     WHERE slug = $1
       AND is_active = TRUE
@@ -471,7 +477,8 @@ async function selectRoomByCategory({
     throw error;
   }
 
-  if (Number(normalized.guests_count) > Number(category.capacity)) {
+  const plan=normalized.guest_composition ? categoryBedPlan(category,normalized.guest_composition,{allowAssumedSharing:false}) : null;
+  if (plan ? !plan.fits : Number(normalized.guests_count) > Number(category.capacity)) {
     const error = new Error(
       "La categoría seleccionada no admite esa cantidad de huéspedes."
     );
@@ -541,6 +548,14 @@ async function createBookingTransaction(
     const error = new Error("El importe final solo puede establecerse después de una validación humana.");
     error.statusCode = 403;
     throw error;
+  }
+  if (staffConfirmed && options.guestComposition) {
+    const party=guestComposition(options.guestComposition);
+    if(!party || party.total!==normalized.guests_count) {
+      const error=new Error('La composición del grupo no coincide con el total de huéspedes.');
+      error.statusCode=400;throw error;
+    }
+    normalized.guest_composition=structuredClone(options.guestComposition);
   }
   normalized.assigned_room_id = staffConfirmed && options.assignedRoomId ? Number(options.assignedRoomId) : null;
   normalized.window_verified_room_id = staffConfirmed && options.windowVerifiedRoomId ? Number(options.windowVerifiedRoomId) : null;
@@ -1205,3 +1220,4 @@ export async function deleteBookingService(id) {
     client.release();
   }
 }
+

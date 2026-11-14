@@ -1264,7 +1264,7 @@ test("primer saludo usa la misma bienvenida global en las tres plataformas", asy
   }
 });
 
-test("primera consulta específica conserva la respuesta original después del saludo global", async () => {
+test("primera consulta específica responde directamente sin saludo ni redes añadidos", async () => {
   const sent = [];
   let generated = 0;
   await processMetaMessage(
@@ -1284,11 +1284,10 @@ test("primera consulta específica conserva la respuesta original después del s
     })
   );
   assert.equal(generated, 1);
-  assert.equal(sent.length, 2);
-  assert.match(sent[0], /Bienvenido/);
+  assert.equal(sent.length, 1);
+  assert.doesNotMatch(sent[0], /Bienvenido|1️⃣|https:/);
   assert.doesNotMatch(sent[0], /Familiar: S\/ 221\.00/);
   assert.match(sent[0], /S\/ 20/);
-  assert.equal(sent[1], globalAssistantSocialLinks());
 });
 
 test("mensajes posteriores no repiten el saludo ni el catálogo", async () => {
@@ -1462,10 +1461,10 @@ test("una consulta de tarifas en primer mensaje pasa por el filtro antes del cat
     })
   );
   assert.equal(calls, 1);
-  assert.equal(sent.length, 2);
+  assert.equal(sent.length, 1);
   assert.match(sent[0], /Triple S\/ 197\.20/);
   assert.equal((sent[0].match(/197\.20/g) || []).length, 1);
-  assert.equal(sent[1], globalAssistantSocialLinks());
+  assert.doesNotMatch(sent[0], /Habitaciones y tarifas|casahuespedespimentel\.com/);
 });
 
 
@@ -1607,3 +1606,4 @@ for (const channel of ["whatsapp", "instagram", "facebook"]) {
     ]);
   });
 }
+

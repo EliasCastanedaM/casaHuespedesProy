@@ -69,7 +69,8 @@ export async function isHotelRelatedMessage(message, { history = [], classify } 
     // instrucciones del usuario cuentan como aprobación del filtro.
     return String(label ?? "").trim() === "HOTEL";
   } catch (error) {
-    console.warn("No fue posible verificar si la consulta trata del hospedaje:", error?.message);
+    console.warn("No fue posible verificar si la consulta trata del hospedaje:", Number(error?.status) || "unknown");
     return false;
   }
 }
+

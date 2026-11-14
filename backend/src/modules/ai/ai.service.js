@@ -1,3 +1,4 @@
+import { categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
 import OpenAI from "openai";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
@@ -18,7 +19,7 @@ import {
   isLocationMenuSelection,
   formatHotelLocationReply,
 } from "./ai.location-info.js";
-import { isHotelServicesInquiry, formatHotelServicesReply } from "./ai.services-info.js";
+import { isHotelServicesInquiry, formatHotelServicesReply, selectHotelServices, isSimpleServiceInquiry, isServiceFollowup, resolveServiceMessage, serviceReplyLanguage } from "./ai.services-info.js";
 import { formatTourismReply } from "./ai.tourism.js";
 import { paymentInformationType, formatHotelPaymentInfoReply, manualPaymentReviewReply } from "./ai.payment-info.js";
 import { getHotelPaymentInfoService } from "../services/hotelPaymentInfo.service.js";
@@ -48,6 +49,11 @@ import { selectOccupancyQuote, formatOccupancyQuote, processingQuoteReply, isPri
 
 import { hasRoomPreferences, normalizeRoomPreferences, roomPreferenceMatch, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 
+function diagnosticCode(error) {
+  const code = String(error?.code || error?.status || 'unknown');
+  return /^[A-Z0-9_]{2,40}$/.test(code) ? code : 'unknown';
+}
+
 const memoryResponses = new Map();
 const memoryBookingContexts = new Map();
 const conversationQueues = new Map();
@@ -71,7 +77,7 @@ export function activeBookingContextFromRow(row, now = Date.now()) {
 const tools = [
   {
     type: "function", name: "listar_servicios",
-    description: "Consulta el catálogo vigente de servicios del hotel, incluidos y adicionales. No informa disponibilidad de habitaciones ni autoriza pagos.",
+    description: "Consulta únicamente los servicios pertinentes a la pregunta actual. Solo devuelve el catálogo ante un pedido general explícito; un servicio desconocido devuelve incertidumbre. No informa disponibilidad de habitaciones ni autoriza pagos.",
     strict: true, parameters: { type: "object", properties: {}, required: [], additionalProperties: false },
   },
   {
@@ -124,7 +130,7 @@ async function getPreviousResponseId(channel, externalUserId) {
     if (!warnedMissingConversationTable) {
       console.warn(
         "No se pudo usar ai_conversations; se utilizará memoria temporal:",
-        error.message
+        diagnosticCode(error)
       );
       warnedMissingConversationTable = true;
     }
@@ -208,7 +214,7 @@ async function loadBookingContext(channel, externalUserId) {
     if (!warnedMissingBookingContext) {
       console.warn(
         "No se pudo persistir el contexto de reserva; se utilizará memoria temporal:",
-        error.message
+        diagnosticCode(error)
       );
       warnedMissingBookingContext = true;
     }
@@ -279,7 +285,7 @@ export async function updateGlobalReservationContextForHandoff({
   try {
     categories = await getPublicRoomCategoriesService();
   } catch (error) {
-    console.warn("No se pudieron cargar categorías al actualizar el handoff:", error.message);
+    console.warn("No se pudieron cargar categorías al actualizar el handoff:", diagnosticCode(error));
   }
   const progress = handleGlobalReservationTurn({ message, context: current, categories, externalUserId, channel });
   if (JSON.stringify(current) === JSON.stringify(progress.context)) return false;
@@ -294,7 +300,7 @@ export async function updateGlobalReservationContextForHandoff({
         updated.recommended_category={slug:quote.category_slug,name:quote.category_name,capacity:quote.capacity};
       }
     } catch(error) {
-      console.warn("No se pudo actualizar la asignación interna:",error.message);
+      console.warn("No se pudo actualizar la asignación interna:",diagnosticCode(error));
     }
   }
   await saveBookingContext(channel, externalUserId, progress.context);
@@ -308,6 +314,7 @@ function globalBookingSpecialRequests(state = {}, channel) {
     "Solicitud originada por " + channel,
     "Adultos: " + Number(state.adults || 0),
     "Niños: " + Number(state.children || 0) + (ages ? " (edades: " + ages + ")" : ""),
+    "Niños pequeños compartiendo cama con sus padres: " + Number(state.pricing_quote?.shared_children || 0),
     "Mascotas: " + Number(state.pets || 0) + (Number(state.pets || 0) > 0 ? " (S/ 20 por mascota/noche; autorización del hospedaje)" : ""),
     state.preferences ? "Preferencias aceptadas: " + state.preferences : "",
     state.requested_room_preferences ? "Preferencia original: " + roomPreferenceLabel(state.requested_room_preferences) : "",
@@ -381,7 +388,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     let inventoryVerified = true;
     try { availableCategories = await withAvailableReservationRooms(categories,effective); }
     catch (error) {
-      console.warn("No se pudo verificar inventario para la cotización:",error.message);
+      console.warn("No se pudo verificar inventario para la cotización:",diagnosticCode(error));
       inventoryVerified = false;
       availableCategories=categories.map(c=>({...c,available_rooms:[]}));
     }
@@ -401,7 +408,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     const signature = value => value && JSON.stringify([
       value.category_slug,value.total_amount,value.nightly_amount,value.pet_nightly_amount,
       value.check_in,value.check_out,value.guests,value.rate_signature,
-      value.room_preferences,value.window_verification_required,
+      value.room_preferences,value.window_verification_required,value.shared_children,value.parents_share_one_half_bed,
     ]);
     const unchanged = previous && !quote.preference_fallback && signature(previous) === signature(quote);
     const accepted = progress.action === "accept_quote" && unchanged;
@@ -409,6 +416,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
       ...(accepted ? effective : state), state: accepted ? "handoff" : "quoted", pricing_quote: quote,
       ...(accepted && previous?.preference_fallback ? { requested_room_preferences: state.room_preferences } : {}),
       category_slug: quote.category_slug,
+      quote_options: [quote,...(selection.alternatives || [])],
       recommended_category: { slug: quote.category_slug, name: quote.category_name, capacity: quote.capacity },
     };
     delete next.awaiting;
@@ -420,11 +428,18 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         pt: "Perfeito! 😊 Nossa equipe verificará a disponibilidade e confirmará o valor. Não é necessário repetir os dados.",
         fr: "Parfait ! 😊 Notre équipe vérifiera la disponibilité et confirmera le montant. Vous n'aurez pas à répéter vos informations.",
       })[state.language || "es"] || "Nuestro equipo confirmará disponibilidad e importe."
-        : formatOccupancyQuote(quote, state.language, { noLowerPrice: selection.reason === "no_lower_price" }),
+        : formatOccupancyQuote(quote, state.language, { noLowerPrice: selection.reason === "no_lower_price", alternatives: selection.alternatives }),
       responseId: null, deterministic: true, mode: accepted ? "human_review_required" : "occupancy_quote",
     };
   }
   if (progress.action === "create_booking") {
+    if (Number(state.children)>0 && state.staff_confirmation?.child_policy_version!==CHILD_POLICY_VERSION) {
+      const revised={...state,state:'handoff'};
+      delete revised.staff_confirmation;
+      delete revised.pricing_quote;
+      await saveBookingContext(channel,externalUserId,{...progress.context,whatsapp_mvp:revised});
+      return {reply:humanReviewReply('la actualización de las condiciones infantiles'),responseId:null,deterministic:true,mode:'human_review_required'};
+    }
     await saveBookingContext(channel, externalUserId, progress.context);
     try {
       const result = await createBookingByCategoryService({
@@ -447,6 +462,10 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         source: channel,
         paymentMethod: progress.paymentMethod,
         staffConfirmed: true,
+        guestComposition: {adults:state.adults,children:state.children,child_ages:state.child_ages,
+          bed_preference:state.bed_preference,
+          family_bed_arrangement_confirmed:state.staff_confirmation?.family_bed_arrangement_confirmed===true,
+          young_children_share_bed:state.young_children_share_bed !== false && state.staff_confirmation?.child_bed_availability_confirmed === true},
         finalAmount: state.staff_confirmation?.total_amount,
         assignedRoomId: state.staff_confirmation?.room_assignment?.room_id,
         windowVerifiedRoomId: state.staff_confirmation?.window_position_confirmed
@@ -478,7 +497,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         mode: "global_reservation_booking_created",
       };
     } catch (error) {
-      console.error("No se pudo registrar la reserva desde el asesor global:", error.message);
+      console.error("No se pudo registrar la reserva desde el asesor global:", diagnosticCode(error));
       if (error.statusCode === 409) {
         const retryState={ ...state, state:"quoted" };
         delete retryState.staff_confirmation;
@@ -489,7 +508,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
             channel,externalUserId,categories:await getReservationRoomCategoriesService(),onProcessing,
           });
         } catch (refreshError) {
-          console.warn("No se pudo recalcular la alternativa:",refreshError.message);
+          console.warn("No se pudo recalcular la alternativa:",diagnosticCode(refreshError));
         }
       }
       const retryState = { ...state, state: "handoff" };
@@ -525,7 +544,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         mode: "global_reservation_payment_reported",
       };
     } catch (error) {
-      console.error("No se pudo registrar el aviso de pago del asesor:", error.message);
+      console.error("No se pudo registrar el aviso de pago del asesor:", diagnosticCode(error));
       return {
         reply: "No pude registrar el aviso en este momento. Nuestro equipo puede revisar el pago contigo; conserva el comprobante de Culqi.",
         responseId: null,
@@ -563,7 +582,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         mode: "global_reservation_booking_status",
       };
     } catch (error) {
-      console.error("No se pudo consultar el estado de la reserva:", error.message);
+      console.error("No se pudo consultar el estado de la reserva:", diagnosticCode(error));
       return {
         reply: "No puedo consultar el estado de la reserva ahora mismo. Nuestro equipo puede revisarlo contigo.",
         responseId: null,
@@ -612,7 +631,7 @@ export async function confirmGlobalReservation({
   const maxCapacity = categories.length
     ? Math.max(...categories.map((item) => Number(item.capacity || 0)))
     : 0;
-  if (maxCapacity > 0 && Number(current.total_guests || 0) > maxCapacity) {
+  if (maxCapacity > 0 && minimumRequiredBedPlaces(current) > maxCapacity) {
     const error = new Error("La solicitud requiere varias habitaciones y debe gestionarse manualmente.");
     error.statusCode = 409;
     throw error;
@@ -623,7 +642,7 @@ export async function confirmGlobalReservation({
     error.statusCode = 400;
     throw error;
   }
-  if (Number(category.capacity) < Number(current.total_guests || 0)) {
+  if (!categoryBedPlan(category,current).fits) {
     const error = new Error("La categoría seleccionada no tiene capacidad para todos los huéspedes.");
     error.statusCode = 400;
     throw error;
@@ -645,7 +664,7 @@ export async function confirmGlobalReservation({
     }
     roomAssignment={room_id:Number(room.id),room_number:room.room_number,view_type:room.view_type};
   }
-  if (Number(current.total_guests) === 2 &&
+  if (categoryBedPlan(category,current).required_places <= 2 &&
       (current.bed_preference === "separate" && category.slug !== "doble" ||
        current.bed_preference === "matrimonial" && category.slug === "doble")) {
     const error = new Error("La categoría no respeta la preferencia de camas del huésped. Acuerda la alternativa antes de confirmar.");
@@ -682,13 +701,16 @@ function publicCategory(category) {
   };
 }
 
-async function executeTool(call) {
+async function executeTool(call, message) {
   try {
-    const args = JSON.parse(call.arguments || "{}");
+    JSON.parse(call.arguments || "{}");
 
     if (call.name === "listar_servicios") {
       const services=await getPublicHotelServicesService();
-      return JSON.stringify({success:true,services:services.map(({slug,name,description,price_type,price,requires_coordination})=>({slug,name,description,price_type,price,requires_coordination}))});
+      const selected=selectHotelServices(services,message);
+      return JSON.stringify({success:true,kind:selected.intent.kind,
+        information_unconfirmed:selected.intent.unknown || !selected.services.length,
+        services:selected.services.map(({slug,name,description,price_type,price,requires_coordination})=>({slug,name,description,price_type,price,requires_coordination}))});
     }
     if (call.name === "listar_habitaciones") {
       const categories = await getPublicRoomCategoriesService();
@@ -702,7 +724,7 @@ async function executeTool(call) {
   } catch (error) {
     return JSON.stringify({
       success: false,
-      error: error.message || "No se pudo ejecutar la consulta.",
+      error: "No se pudo confirmar la información solicitada.",
     });
   }
 }
@@ -729,16 +751,22 @@ async function loadStoredHistory(channel, externalUserId, currentMessage) {
 async function trackedResponse(openai, request, meta) {
   const response = await openai.responses.create(request);
   await recordOpenAiUsage(response, meta);
+  if (['incomplete', 'failed', 'cancelled'].includes(response.status)) {
+    const error = new Error('No se pudo completar la respuesta del asesor.');
+    error.code = 'AI_INCOMPLETE_RESPONSE';
+    error.statusCode = 502;
+    throw error;
+  }
   return response;
 }
 
 async function createFirstResponse(
   openai,
-  { message, previousResponseId, history, recoveryHistory, channel, externalUserId }
+  { message, previousResponseId, history, recoveryHistory, channel, externalUserId, serviceGrounding, serviceLanguage }
 ) {
   const reusePrevious = shouldReuseOpenAiResponseId(channel, previousResponseId);
   const historyOptions = { maxHistoryMessages: 8, maxHistoryCharacters: 3_200 };
-  const sourceHistory = recoveryHistory.length ? recoveryHistory : history;
+  const sourceHistory = history.length ? history : recoveryHistory;
   const request = {
     model: env.openai.model,
     instructions: buildHotelAssistantPrompt(),
@@ -747,10 +775,14 @@ async function createFirstResponse(
     input: responseInput(reusePrevious ? [] : sourceHistory, message, historyOptions),
     tools,
     parallel_tool_calls: false,
-    max_output_tokens: env.ai.maxOutputTokens,
     store: true,
   };
 
+  if (serviceGrounding) {
+    request.input.splice(-1,0,{role:"developer",content:
+      "Datos oficiales seleccionados para la pregunta actual; responde en el idioma " + serviceLanguage +
+      ". No añadas servicios ni condiciones ajenos a estos datos. " + JSON.stringify(serviceGrounding)});
+  }
   if (!reusePrevious) {
     return trackedResponse(openai, request, { channel, externalUserId, operation: "assistant_response" });
   }
@@ -829,9 +861,18 @@ async function generateAiReplyInternal({
     };
   }
 
+  // Resolve pronouns only from the most recent guest topic. Service inquiries
+  // bypass reservation parsing, including unknown amenities and follow-ups.
+  const serviceHistory = isServiceFollowup(message) && !history.length
+    ? await loadStoredHistory(channel, externalUserId, message) : history;
+  const serviceMessage = resolveServiceMessage(message, serviceHistory);
+  const serviceInquiry = isHotelServicesInquiry(serviceMessage);
+  const serviceLanguage = serviceReplyLanguage(message, serviceHistory);
+  let serviceGrounding;
   let scopeCheck;
   const checkHotelScope = async () => {
     if (scopeCheck !== undefined) return scopeCheck;
+    if (isSimpleServiceInquiry(serviceMessage)) return (scopeCheck = true);
     scopeCheck = await isHotelRelatedMessage(message, {
       history: history.length ? history : await loadStoredHistory(channel, externalUserId, message),
       classify: async ({ message: currentMessage, history: recentHistory }) => {
@@ -860,7 +901,6 @@ async function generateAiReplyInternal({
   const pricingIntent = isCategoryPriceInquiry(message);
   const locationInquiry = isHotelLocationInquiry(message);
   const paymentInfoType = paymentInformationType(message);
-  const serviceInquiry = isHotelServicesInquiry(message);
   if (isLocationMenuChoice(message)) {
     const menuHistory = history.some((item) => item.author === "assistant")
       ? history
@@ -883,7 +923,7 @@ async function generateAiReplyInternal({
       try {
         categories = await getReservationRoomCategoriesService();
       } catch (error) {
-        console.warn("No se pudieron cargar categorías para recomendar habitación:", error.message);
+        console.warn("No se pudieron cargar categorías para recomendar habitación:", diagnosticCode(error));
       }
     }
     const progress = handleGlobalReservationTurn({
@@ -939,7 +979,7 @@ async function generateAiReplyInternal({
     };
     let paymentInfo;
     try { paymentInfo=await getHotelPaymentInfoService(); }
-    catch(error) { console.warn("No se pudieron consultar los medios de pago:",error.message); }
+    catch(error) { console.warn("No se pudieron consultar los medios de pago:",diagnosticCode(error)); }
     const reply=formatHotelPaymentInfoReply(paymentInfo,message);
     return {
       reply: paymentInfoType === "manual_payment_request" ? reply+"\n\n"+manualPaymentReviewReply(paymentInfoType) : reply,
@@ -966,7 +1006,7 @@ async function generateAiReplyInternal({
     try {
       rules = await getHotelGuestPolicyRulesService();
     } catch (error) {
-      console.warn("No se pudieron consultar reglas de huéspedes:", error.message);
+      console.warn("No se pudieron consultar reglas de huéspedes:", diagnosticCode(error));
       // Una indisponibilidad de la base nunca debe dar lugar a un cargo
       // inventado. El formateador usa solo reglas conservadoras de respaldo.
     }
@@ -991,17 +1031,20 @@ async function generateAiReplyInternal({
 
   // Responder servicios reales desde Supabase incluso mientras haya una reserva
   // a medio completar. Las preguntas informativas no alteran el contexto.
-  if (isHotelServicesInquiry(message)) {
+  if (serviceInquiry) {
     try {
       const services = await getPublicHotelServicesService();
-      return {
-        reply: formatHotelServicesReply(services, message),
-        responseId: null,
-        deterministic: true,
-        mode: "hotel_services_information",
+      const reply = formatHotelServicesReply(services, serviceMessage, {language:serviceLanguage});
+      if (reply) return {
+        reply, responseId: null, deterministic: true, mode: "hotel_services_information",
       };
+      // A source sentence without an exact reviewed translation uses the model
+      // with only the requested facts. Do not translate by dropping conditions.
+      const selected=selectHotelServices(services,serviceMessage);
+      serviceGrounding={kind:selected.intent.kind,information_unconfirmed:selected.intent.unknown || !selected.services.length,
+        services:selected.services.map(({name,description,price_type,price,requires_coordination})=>({name,description,price_type,price,requires_coordination}))};
     } catch (error) {
-      console.warn("No se pudo consultar el catálogo de servicios:", error.message);
+      console.warn("No se pudo consultar el catálogo de servicios:", diagnosticCode(error));
       return {
         reply: "No puedo confirmar los servicios ahora mismo. Nuestro equipo puede revisar la información contigo.",
         responseId: null,
@@ -1023,7 +1066,7 @@ async function generateAiReplyInternal({
         mode: "category_details",
       };
     } catch (error) {
-      console.warn("No fue posible consultar las categorías:", error.message);
+      console.warn("No fue posible consultar las categorías:", diagnosticCode(error));
       return {
         reply: "No puedo confirmar los detalles de las habitaciones en este momento. Nuestro equipo puede ayudarte.",
         responseId: null,
@@ -1055,8 +1098,15 @@ async function generateAiReplyInternal({
     recoveryHistory,
     channel,
     externalUserId,
+    serviceGrounding,
+    serviceLanguage,
   });
 
+  const toolCache = new Map();
+  const cachedToolOutput = (call) => {
+    if (!toolCache.has(call.name)) toolCache.set(call.name, executeTool(call, serviceMessage));
+    return toolCache.get(call.name);
+  };
   for (let round = 0; round < 4; round += 1) {
     const calls = response.output.filter(
       (item) => item.type === "function_call"
@@ -1067,7 +1117,7 @@ async function generateAiReplyInternal({
       calls.map(async (call) => ({
         type: "function_call_output",
         call_id: call.call_id,
-        output: await executeTool(call),
+        output: await cachedToolOutput(call),
       }))
     );
 
@@ -1078,11 +1128,16 @@ async function generateAiReplyInternal({
       input: toolOutputs,
       tools,
       parallel_tool_calls: false,
-      max_output_tokens: env.ai.maxOutputTokens,
       store: true,
     }, { channel, externalUserId, operation: "tool_followup" });
   }
 
+  if (response.output.some(item => item.type === 'function_call')) {
+    const error=new Error('No se pudo completar la consulta del asesor.');
+    error.code='AI_TOOL_ROUND_LIMIT';
+    error.statusCode=502;
+    throw error;
+  }
   await savePreviousResponseId(channel, externalUserId, response.id);
 
   // Meta muestra a veces los asteriscos de Markdown literalmente. Entregar
@@ -1116,3 +1171,4 @@ export async function generateAiReply(input, options = {}) {
     }
   }
 }
+

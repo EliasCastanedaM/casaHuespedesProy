@@ -1,3 +1,4 @@
+import { CHILD_POLICY_VERSION, CHILD_NIGHTLY_SUPPLEMENT, guestComposition, categoryBedPlan } from '../rooms/guestComposition.js';
 import { normalizeRoomPreferences, collectRoomPreferences, hasRoomPreferences, roomPreferenceMatch, roomFeatures, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 
 // All monetary operations use integer cents. These details stay in the backend.
@@ -40,58 +41,66 @@ export function processingQuoteReply(language = "es") {
 export function quoteForCategory(category, state) {
   const adults = Number(state.adults);
   const children = Number(state.children);
-  const ages = state.child_ages || [];
+  const ages = Array.isArray(state.child_ages) ? state.child_ages : [];
   const pets = Number(state.pets);
   const guests = adults + children;
+  const party = guestComposition(state);
+  const bedPlan = categoryBedPlan(category, state);
   if (!Number.isInteger(adults) || adults < 1 || !Number.isInteger(children) || children < 0 ||
       !Number.isInteger(pets) || pets < 0 || ages.length !== children ||
       ages.some((age) => !Number.isInteger(age) || age < 0 || age > 17) ||
-      guests > Number(category.capacity) || guests >= 8) return null;
+      !party || !bedPlan.fits || guests >= 8) return null;
   const checkIn = Date.parse(state.check_in + "T00:00:00Z");
   const checkOut = Date.parse(state.check_out + "T00:00:00Z");
   const nights = (checkOut - checkIn) / 86_400_000;
   if (!Number.isInteger(nights) || nights < 1 || nights > 365) return null;
   const rates = category.occupancy_rates || {};
-  const pricedAdults = adults + ages.filter((age) => age >= 9).length;
-  const discountedChildren = ages.filter((age) => age >= 5 && age <= 8).length;
+  const pricedAdults = party.pricedAdults;
+  const discountedChildren = party.supplemented;
   const adultRate = cents(rates[pricedAdults]);
-  const singleRate = cents(rates[1]);
-  const samePartyAdultRate = cents(rates[guests]);
-  if (![adultRate, singleRate, samePartyAdultRate].every((value) => Number.isSafeInteger(value) && value > 0) || adultRate < singleRate) return null;
-  const childSupplement = Math.round((adultRate - singleRate) / 2) * discountedChildren;
-  const raw = adultRate + childSupplement;
-  const lodging = Math.min(raw, samePartyAdultRate);
+  if (!Number.isSafeInteger(adultRate) || adultRate <= 0) return null;
+  const childSupplement = cents(CHILD_NIGHTLY_SUPPLEMENT) * discountedChildren;
+  const lodging = adultRate + childSupplement;
   const petNightly = pets * 2000;
   return {
     category_slug: category.slug, category_name: category.name, capacity: Number(category.capacity),
     guests, priced_adults: pricedAdults, discounted_children: discountedChildren,
     adult_base_amount: adultRate / 100, child_supplement_amount: childSupplement / 100,
-    child_cap_applied: raw > samePartyAdultRate,
+    child_cap_applied: false,
+    child_policy_version: CHILD_POLICY_VERSION,
+    shared_children: bedPlan.shared_children, sharing_assumed: bedPlan.sharing_assumed,
+    required_bed_places: bedPlan.required_places,
+    parent_bed_size:bedPlan.parent_bed_size,parents_share_one_half_bed:bedPlan.parents_share_one_half_bed, bed_description: category.bed_description || null,
     nightly_amount: lodging / 100, pet_nightly_amount: petNightly / 100,
     total_nightly_amount: (lodging + petNightly) / 100,
     nights, total_amount: (lodging + petNightly) * nights / 100,
     check_in: state.check_in, check_out: state.check_out,
     pets, child_bed_review_required: ages.some((age) => age <= 4),
-    rate_signature: JSON.stringify([category.slug, category.occupancy_rates]),
+    rate_signature: JSON.stringify([CHILD_POLICY_VERSION, category.slug, category.occupancy_rates, category.capacity, category.bed_description]),
   };
 }
 
 export function selectOccupancyQuote(categories, state, { cheaper = false, explicitCategory = false } = {}) {
   const guests = Number(state.adults) + Number(state.children);
-  const active = categories.filter((c) => c.is_active !== false && Number(c.capacity) >= guests);
+  const active = categories.filter(c => c.is_active !== false && categoryBedPlan(c,state).fits);
   if (!active.length || guests >= 8) return { quote: null, reason: "multiple_rooms" };
-  const minimumCapacity = Math.min(...active.map((c) => Number(c.capacity)));
-  let fitting = active.filter((c) => Number(c.capacity) === minimumCapacity);
+  let fitting = active;
   if (explicitCategory && state.category_slug) {
-    const requested = active.find((c) => c.slug === state.category_slug);
+    const requested = active.find(c => c.slug === state.category_slug);
     if (requested) fitting = [requested];
     else return { quote: null, reason: "category_capacity" };
   }
-  if (state.bed_preference === "separate" && minimumCapacity === 2) {
-    fitting = fitting.filter((c) => c.slug === "doble");
-  } else if (state.bed_preference === "matrimonial" && minimumCapacity === 2) {
-    fitting = fitting.filter((c) => c.slug !== "doble");
-  }
+  const bedPreference = list => list.filter(c => {
+    const plan=categoryBedPlan(c,state);
+    if(state.bed_preference === 'separate' && plan.required_places <= 2) return c.slug === 'doble';
+    if(state.bed_preference === 'matrimonial' && plan.required_places <= 2) return c.slug !== 'doble';
+    return true;
+  });
+  fitting=bedPreference(fitting);
+  const categoryOrder=['matrimonial','matrimonial-ejecutiva','doble','triple','familiar','familiar-2'];
+  const rank=(a,b)=>Number(a.capacity)-Number(b.capacity)||Number(a.price_per_night)-Number(b.price_per_night)||categoryOrder.indexOf(a.slug)-categoryOrder.indexOf(b.slug);
+  const availableTiers=list=>list.filter(c=>!Array.isArray(c.available_rooms)||c.available_rooms.length>0).sort(rank).slice(0,3);
+  if(!explicitCategory)fitting=availableTiers(fitting);
   const preferences = normalizeRoomPreferences(state.room_preferences || collectRoomPreferences(state.preferences));
   const hasAvailability = active.some(c=>Array.isArray(c.available_rooms));
   const selectRooms = (list,prefs) => list.map(c=>({
@@ -110,10 +119,9 @@ export function selectOccupancyQuote(categories, state, { cheaper = false, expli
   if(!candidates.length && hasAvailability) {
     fallback=true;
     const relaxed = preferences.near_window ? {near_window:true} : {};
-    let alternatives=active.filter(c=>Number(c.capacity)===minimumCapacity);
-    if(state.bed_preference==="separate" && minimumCapacity===2) alternatives=alternatives.filter(c=>c.slug==="doble");
-    if(state.bed_preference==="matrimonial" && minimumCapacity===2) alternatives=alternatives.filter(c=>c.slug!=="doble");
-    candidates=selectRooms(alternatives,relaxed);
+    const alternatives=availableTiers(bedPreference(active));
+    candidates=selectRooms(alternatives,preferences);
+    if(!candidates.length)candidates=selectRooms(alternatives,relaxed);
   }
   let quotes=candidates.map(c=>{
     const quote=quoteForCategory(c,state);
@@ -136,17 +144,18 @@ export function selectOccupancyQuote(categories, state, { cheaper = false, expli
   }).filter(Boolean);
   if (Number(state.max_nightly_budget) > 0) quotes = quotes.filter((q) => q.total_nightly_amount <= Number(state.max_nightly_budget));
   if (!quotes.length) return { quote: null, reason: state.max_nightly_budget ? "budget" : hasAvailability ? "no_availability" : "rates_unavailable" };
-  const lower = cheaper || state.price_preference === "lower";
-  quotes.sort((a, b) => (lower ? 1 : -1) * (a.total_nightly_amount - b.total_nightly_amount) ||
-    (a.category_slug === "matrimonial-ejecutiva" ? -1 : b.category_slug === "matrimonial-ejecutiva" ? 1 : a.category_slug.localeCompare(b.category_slug)));
+  const order=['matrimonial','matrimonial-ejecutiva','doble','triple','familiar','familiar-2'];
+  quotes.sort((a,b)=>a.capacity-b.capacity || a.total_nightly_amount-b.total_nightly_amount ||
+    order.indexOf(a.category_slug)-order.indexOf(b.category_slug));
   const quote = quotes[0];
   if (cheaper && state.pricing_quote && quote.total_nightly_amount >= state.pricing_quote.total_nightly_amount) {
     return { quote, reason: "no_lower_price" };
   }
-  return { quote, reason: null };
+  return { quote, alternatives: explicitCategory ? [] : quotes.slice(1,3), reason: null };
 }
 
-export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = false } = {}) {
+export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = false, alternatives = [] } = {}) {
+  if (alternatives.length && !quote.preference_fallback && !quote.window_verification_required) return formatQuoteOptions([quote,...alternatives],language);
   if (noLowerPrice && !quote.preference_fallback) return ({
     es: "Para tu grupo, la opción de capacidad adecuada más económica mantiene el precio de " + money(quote.total_nightly_amount) + " por noche. Nuestro equipo puede evaluar otra alternativa para esas fechas. ¿Deseas que lo consulte?",
     en: "The lowest-priced category that fits your group remains " + money(quote.total_nightly_amount) + " per night. Would you like our team to review other options?",
@@ -175,10 +184,54 @@ export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = fa
     pt:" A preferência por ficar perto de uma janela foi registrada e será verificada pela equipe.",
     fr:" Votre souhait d'être près d'une fenêtre est enregistré et doit être vérifié par l'équipe.",
   })[language] || "" : "";
+  const sharingNote=sharingCondition(quote,language)+parentBedCondition(quote,language);
   return prefix + ({
-    es: "Para tu grupo, te recomiendo " + quote.category_name + ". El alojamiento cuesta " + money(quote.nightly_amount) + " por noche. Total por " + quote.nights + " noche(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + " La disponibilidad debe confirmarla nuestro equipo. ¿Deseas que solicitemos la confirmación para esas fechas?",
-    en: "For your group, I recommend " + quote.category_name + " at " + money(quote.nightly_amount) + " per night. Total for " + quote.nights + " night(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + " Our team must confirm availability. Shall I request confirmation?",
-    pt: "Para o grupo, recomendo " + quote.category_name + " por " + money(quote.nightly_amount) + " por noite. Total de " + quote.nights + " noite(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + " A equipe deve confirmar a disponibilidade. Deseja solicitar a confirmação?",
-    fr: "Pour votre groupe, je recommande " + quote.category_name + " à " + money(quote.nightly_amount) + " par nuit. Total pour " + quote.nights + " nuit(s) : " + money(quote.total_amount) + "." + detail + petNote + windowNote + " L'équipe doit confirmer la disponibilité. Souhaitez-vous demander confirmation ?",
+    es: "Para tu grupo, te recomiendo " + quote.category_name + ". El alojamiento cuesta " + money(quote.nightly_amount) + " por noche. Total por " + quote.nights + " noche(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " La disponibilidad debe confirmarla nuestro equipo. ¿Deseas que solicitemos la confirmación para esas fechas?",
+    en: "For your group, I recommend " + quote.category_name + " at " + money(quote.nightly_amount) + " per night. Total for " + quote.nights + " night(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " Our team must confirm availability. Shall I request confirmation?",
+    pt: "Para o grupo, recomendo " + quote.category_name + " por " + money(quote.nightly_amount) + " por noite. Total de " + quote.nights + " noite(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " A equipe deve confirmar a disponibilidade. Deseja solicitar a confirmação?",
+    fr: "Pour votre groupe, je recommande " + quote.category_name + " à " + money(quote.nightly_amount) + " par nuit. Total pour " + quote.nights + " nuit(s) : " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " L'équipe doit confirmer la disponibilité. Souhaitez-vous demander confirmation ?",
   })[language] || formatOccupancyQuote(quote, "es");
+}
+
+
+function sharingCondition(quote,language) {
+  if(!quote.shared_children)return '';
+  return ({
+    es:' El importe supone que '+quote.shared_children+' niño(s) de hasta 4 años comparte(n) la cama de '+quote.parent_bed_size+' plazas con sus padres, sin cama adicional; el equipo debe confirmar esta distribución.',
+    en:' This amount assumes '+quote.shared_children+' child(ren) aged 4 or under share the parent bed with their parents, without an extra bed; our team must confirm this arrangement.',
+    pt:' O valor considera '+quote.shared_children+' criança(s) de até 4 anos compartilhando a cama dos pais, sem cama extra; a equipe deve confirmar a distribuição.',
+    fr:' Ce montant suppose que '+quote.shared_children+' enfant(s) de 4 ans ou moins partagent le lit de leurs parents, sans lit supplémentaire ; notre équipe doit confirmer cette disposition.',
+  })[language] || sharingCondition(quote,'es');
+}
+function formatQuoteOptions(quotes,language='es') {
+  const labels={
+    es:{intro:'Estas son las opciones que se ajustan a tu grupo, de la más básica a las siguientes categorías:',night:'por noche',total:'Total',nights:'noche(s)',note:'Nuestro equipo debe confirmar disponibilidad y distribución de camas. ¿Cuál prefieres?'},
+    en:{intro:'These options fit your group, starting with the most basic category:',night:'per night',total:'Total',nights:'night(s)',note:'Our team must confirm availability and sleeping arrangements. Which would you prefer?'},
+    pt:{intro:'Estas opções atendem ao grupo, começando pela categoria mais básica:',night:'por noite',total:'Total',nights:'noite(s)',note:'A equipe deve confirmar a disponibilidade e as camas. Qual prefere?'},
+    fr:{intro:'Voici les options adaptées au groupe, de la catégorie la plus simple aux suivantes :',night:'par nuit',total:'Total',nights:'nuit(s)',note:'Notre équipe doit confirmer la disponibilité et les couchages. Laquelle préférez-vous ?'},
+  }[language];
+  if(!labels)return formatQuoteOptions(quotes,'es');
+  const rows=quotes.map((q,i)=>{
+    const shared=q.shared_children ? ({
+      es:' Niño(s) compartiendo la cama de '+q.parent_bed_size+' plazas con sus padres, sin cama adicional.',
+      en:' Young child(ren) share the parent bed with their parents, without an extra bed.',
+      pt:' Criança(s) compartilham a cama dos pais, sem cama extra.',
+      fr:' Les jeunes enfants partagent le lit de leurs parents, sans lit supplémentaire.',
+    })[language] : '';
+    const view=hasRoomPreferences(q.room_preferences)&&q.actual_view ? ' · '+roomPreferenceLabel({view:q.actual_view},language) : '';
+    return (i+1)+') '+q.category_name+(q.bed_description?' · '+q.bed_description:'')+
+      view+' · '+money(q.total_nightly_amount)+' '+labels.night+'. '+labels.total+' '+q.nights+' '+labels.nights+': '+money(q.total_amount)+'.'+shared+parentBedCondition(q,language);
+  });
+  const pet=quotes[0].pets>0 ? ({es:' El total incluye mascotas; su admisión requiere autorización.',en:' The total includes pets, subject to hotel approval.',pt:' O total inclui animais, sujeitos a autorização.',fr:' Le total inclut les animaux, sous réserve d’autorisation.'})[language] : '';
+  return [labels.intro,...rows,pet.trim(),labels.note].filter(Boolean).join('\n');
+}
+
+function parentBedCondition(quote,language='es') {
+  if(!quote.parents_share_one_half_bed)return '';
+  return ({
+    es:' Esta opción supone que los dos padres comparten una cama de 1½ plazas; las camas restantes son para quienes necesiten cama propia. El equipo confirmará la distribución.',
+    en:' This option assumes both parents share one 1½-plaza bed; the remaining beds are for guests needing their own bed. Our team must confirm the arrangement.',
+    pt:' Esta opção considera os dois pais compartilhando uma cama de 1½ praça; as outras camas são para quem precisar de cama própria. A equipe confirmará a distribuição.',
+    fr:' Cette option suppose que les deux parents partagent un lit de 1½ place ; les autres lits sont destinés aux occupants souhaitant leur propre lit. Notre équipe confirmera la disposition.',
+  })[language] || parentBedCondition(quote,'es');
 }

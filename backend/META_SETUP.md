@@ -83,7 +83,6 @@ Las variables existentes del asesor deben conservarse:
 ```text
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5.6-luna
-AI_MAX_OUTPUT_TOKENS=500
 AI_INTERNAL_TOKEN=...
 HOTEL_NAME=Casa Huéspedes Pimentel
 HOTEL_PHONE=...
@@ -297,3 +296,4 @@ trabajo en segundo plano dentro del proceso de Render. Para el volumen previsto 
 Casa Huéspedes esto evita infraestructura adicional. Si en el futuro el tráfico o
 la criticidad aumentan, conviene migrar el procesamiento a una cola durable con un
 worker independiente.
+

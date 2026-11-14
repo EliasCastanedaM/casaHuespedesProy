@@ -67,11 +67,6 @@ export const env = {
 
   ai: {
     internalToken: cleanEnvValue(process.env.AI_INTERNAL_TOKEN),
-    maxOutputTokens: boundedNumber(
-      process.env.AI_MAX_OUTPUT_TOKENS,
-      500,
-      { min: 100, max: 2_000 }
-    ),
     timeZone: cleanEnvValue(process.env.AI_SERVICE_TIMEZONE) || "America/Lima",
     serviceStart: cleanEnvValue(process.env.AI_SERVICE_START) || "23:00",
     serviceEnd: cleanEnvValue(process.env.AI_SERVICE_END) || "08:00",
@@ -155,3 +150,4 @@ export const env = {
     apiSecret: process.env.CLOUDINARY_API_SECRET,
   },
 };
+
