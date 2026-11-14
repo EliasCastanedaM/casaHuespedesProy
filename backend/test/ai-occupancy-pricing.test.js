@@ -39,13 +39,13 @@ test("la capacidad mínima evita ocupar una familiar con grupos pequeños y ofre
 
 test("los niños pagan por edad y las camas compartidas permiten una matrimonial", () => {
   const cases = [
-    [{adults:2,children:1,child_ages:[6]},"triple",210],
-    [{adults:2,children:2,child_ages:[6,3]},"familiar",210],
+    [{adults:2,children:1,child_ages:[6]},"doble",160],
+    [{adults:2,children:2,child_ages:[6,3]},"doble",160],
     [{adults:2,children:1,child_ages:[3]},"matrimonial",120],
     [{adults:2,children:1,child_ages:[9]},"triple",210],
     [{adults:1,children:1,child_ages:[6]},"matrimonial",120],
     [{adults:4,children:1,child_ages:[6]},"familiar",250],
-    [{adults:2,children:2,child_ages:[6,8]},"familiar",230],
+    [{adults:2,children:2,child_ages:[6,8]},"triple",230],
   ];
   for (const [state,slug,amount] of cases) {
     const quote = selectOccupancyQuote(categories,stay(state)).quote;
@@ -75,8 +75,8 @@ test("rechaza datos incompletos, edades inválidas y tarifas ausentes; no expone
   const quote = selectOccupancyQuote(categories,stay({children:1,child_ages:[6]})).quote;
   for (const lang of ["es","en","pt","fr"]) {
     const reply = formatOccupancyQuote(quote,lang);
-    assert.match(reply,/S\/ 210\.00/);
-    assert.match(reply,/S\/ 420\.00/);
+    assert.match(reply,/S\/ 160\.00/);
+    assert.match(reply,/S\/ 320\.00/);
     assert.doesNotMatch(reply,/50|diferencial|tarifa [12345]|Full|5 a 8|9 años|priced_adults/);
   }
 });
@@ -138,7 +138,7 @@ test("pregunta edades sin datos personales, recotiza niños y cambios de grupo",
   assert.match(ages.reply,/edades/);
   assert.doesNotMatch(ages.reply,/nombre|correo|documento|nacimiento/);
   const quoted=await send("6 y 3 años");
-  assert.match(quoted.reply,/Familiar 1.*S\/ 210\.00.*S\/ 420\.00/);
+  assert.match(quoted.reply,/1\) Doble - 2 Camas.*S\/ 160\.00.*S\/ 320\.00/);
   const changed=await send("Ahora son 4 adultos y 1 niño de 6 años");
   assert.match(changed.reply,/Familiar 1.*S\/ 250\.00.*S\/ 500\.00/);
   assert.equal(contexts.get("whatsapp:family-quote").whatsapp_mvp.pricing_quote.child_cap_applied,false);

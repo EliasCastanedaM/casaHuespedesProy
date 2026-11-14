@@ -3,7 +3,7 @@
 > Ampliación posterior solicitada por el propietario: la política infantil y el
 > orden de categorías de esta primera entrega fueron reemplazados según
 > [CAMBIO_INFANTIL_CAMAS_2026-11-14.md](CAMBIO_INFANTIL_CAMAS_2026-11-14.md).
-> La suite ampliada tiene 439 pruebas aprobadas. Las cifras de 414 y la afirmación
+> La suite ampliada tiene 447 pruebas aprobadas. Las cifras de 414 y la afirmación
 > de no cambiar reglas comerciales que siguen a continuación corresponden a la
 > primera entrega, antes de esa nueva autorización. El SQL comercial sigue preparado
 > para revisión y no se ha aplicado en producción.

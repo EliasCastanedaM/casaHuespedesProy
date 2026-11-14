@@ -410,7 +410,7 @@ async function lockAndValidateRoom({
       nights: normalized.nights,
       check_in_time: normalized.check_in_time,
       guests_count: normalized.guest_composition
-        ? categoryBedPlan({capacity:Number(room.category_capacity || room.capacity),bed_description:room.category_bed_description},normalized.guest_composition,{allowAssumedSharing:false}).required_places
+        ? categoryBedPlan({capacity:Number(room.category_capacity || room.capacity),bed_description:room.category_bed_description},normalized.guest_composition,{allowAssumedSharing:false}).inventory_capacity_required
         : normalized.guests_count,
     },
     client

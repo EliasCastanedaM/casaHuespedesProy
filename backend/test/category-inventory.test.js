@@ -43,7 +43,7 @@ function roomIsAvailable(state, room, checkIn, checkOut, checkInTime = null) {
   );
 }
 
-function createInventoryDatabase() {
+function createInventoryDatabase({categorySlug="matrimonial", bedDescription="1 cama de 2 plazas"} = {}) {
   let state = {
     categories: [
       {
@@ -82,6 +82,12 @@ function createInventoryDatabase() {
     nextBookingId: 1,
     nextPaymentId: 1,
   };
+  state.categories[0].slug=categorySlug;
+  state.categories[0].bed_description=bedDescription;
+  for(const room of state.rooms) {
+    room.category_slug=categorySlug;
+    room.category_bed_description=bedDescription;
+  }
   let categoryTail = Promise.resolve();
 
   function bookingDetails(source, bookingId) {
@@ -649,4 +655,34 @@ test('una cama compartida no permite ignorar una reserva o bloqueo real de inven
     guestComposition:{adults:2,children:1,child_ages:[1],young_children_share_bed:true},
   },dependencies(db)),e=>e.statusCode===409);
   assert.equal(db.snapshot().bookings.length,0);
+});
+
+test('Doble aprobada registra cuatro huéspedes con padres y bebé en una cama y niño de 8 en otra',async()=>{
+  const db=createInventoryDatabase({categorySlug:'doble',bedDescription:'2 camas de 1½ plazas'});
+  const composition={adults:2,children:2,child_ages:[2,8],young_children_share_bed:true,family_bed_arrangement_confirmed:true};
+  const deps=dependencies(db);
+  const check=deps.checkAvailabilityService;
+  let inventoryGuests;
+  deps.checkAvailabilityService=async(input,client)=>{inventoryGuests=input.guests_count;return check(input,client);};
+  const result=await createBookingByCategoryService(bookingInput(71,{category_slug:'doble',guests_count:4}),{
+    staffConfirmed:true,finalAmount:320,guestComposition:composition,
+  },deps);
+  assert.equal(result.booking.guests_count,4);
+  assert.equal(result.booking.total_amount,320);
+  assert.equal(inventoryGuests,2);
+  assert.equal(db.snapshot().bookings[0].guests_count,4);
+});
+
+test('el arreglo de padres en 1½ requiere validación interna y no permite omitir camas propias',async()=>{
+  for(const composition of [
+    {adults:2,children:2,child_ages:[2,8],young_children_share_bed:true},
+    {adults:2,children:2,child_ages:[2,8],young_children_share_bed:false,family_bed_arrangement_confirmed:true},
+    {adults:2,children:1,child_ages:[9],family_bed_arrangement_confirmed:true},
+  ]) {
+    const db=createInventoryDatabase({categorySlug:'doble',bedDescription:'2 camas de 1½ plazas'});
+    await assert.rejects(createBookingByCategoryService(bookingInput(72,{category_slug:'doble',guests_count:composition.adults+composition.children}),{
+      staffConfirmed:true,finalAmount:320,guestComposition:composition,
+    },dependencies(db)),e=>e.statusCode===400);
+    assert.equal(db.snapshot().bookings.length,0);
+  }
 });

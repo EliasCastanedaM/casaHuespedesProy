@@ -25,7 +25,7 @@ no tiene una unidad compatible libre para esas fechas.
 ## Nueva regla infantil
 
 - Hasta 4 años inclusive: sin cargo cuando no se añaden camas adicionales. Hasta
-  dos pueden compartir una cama de 2 plazas con sus padres. La propuesta lo indica
+  dos pueden compartir la cama de sus padres, de 2 o 1½ plazas. La propuesta lo indica
   como condición; el equipo debe confirmar la distribución antes del registro.
 - De 5 a 8 años inclusive: S/ 20 por niño y por noche.
 - Desde 9 años: tarifa de adulto.
@@ -40,15 +40,19 @@ registro transaccional. Todos los huéspedes permanecen en el conteo: dos adulto
 y un bebé son tres huéspedes, aunque requieran dos plazas independientes.
 
 Una cama de 2 plazas proporciona dos plazas independientes; una de 1½ o 1 plaza,
-una. Solo una cama de 2 plazas documentada admite la excepción de los niños
-pequeños que comparten con sus padres. No se deduce el tipo de cama por el nombre
-de la categoría. Si falta la ficha, no se aplica automáticamente la excepción.
-La capacidad independiente efectiva es el menor valor entre las plazas de cama
-calculadas y la capacidad registrada; no se amplía automáticamente esta última.
+una. El propietario autoriza que dos padres compartan una cama de 1½ plazas al
+viajar con niños. Hasta dos niños de hasta 4 años pueden compartir la cama de sus
+padres. Los niños restantes necesitan camas existentes disponibles. Esta excepción
+familiar no habilita adultos adicionales fuera de la capacidad y tarifa registradas.
+Si falta la ficha de camas, no se aplica automáticamente la excepción.
 
-Si el huésped rechaza compartir, se buscan las camas existentes necesarias para
-todos. No se añade una cama supletoria ni se inventa su precio. Los grupos de ocho
-o más y las solicitudes de varias habitaciones mantienen gestión humana.
+Si un niño pequeño necesita cama propia, se buscan opciones desde Doble hacia
+arriba según las camas necesarias. No se añade una cama supletoria ni se inventa
+un suplemento para ese niño: cambia el precio de la categoría cuando corresponde.
+Los niños de 5 a 8 años conservan S/ 20 por niño/noche. Una preferencia de camas
+separadas para los adultos impide agrupar a ambos padres en una cama.
+Los grupos de ocho o más y las solicitudes de varias habitaciones mantienen
+gestión humana.
 
 ## Recomendación y disponibilidad
 
@@ -57,7 +61,8 @@ como máximo dos alternativas superiores compatibles, manteniendo vistas, camas,
 presupuesto y preferencias. No se ofrece primero la más cara por defecto.
 Los números 1–3 eligen exclusivamente las opciones recién mostradas en la cotización.
 
-La búsqueda inicial usa las plazas mínimas de cama; después se comprueba cada
+La búsqueda inicial usa la ocupación con tarifa adulta para no excluir familias
+por su conteo total; después se comprueba cada
 categoría con su ficha real y preferencias. Al aceptar se revalida inventario y
 precio. La aprobación humana y el registro final repiten la comprobación de camas.
 El registro guarda el total real de huéspedes; un cuerpo de petición pública no
@@ -73,8 +78,11 @@ Para entrada el 25/11 y salida el 28/11 son tres noches, sin mascotas:
 | 2 adultos + niño de 1 o 4 años compartiendo cama | Matrimonial Estándar | 120 | 360 |
 | Mismo grupo compartiendo cama | Matrimonial Ejecutiva | 140 | 420 |
 | 2 adultos + dos niños de hasta 4 años compartiendo cama | Matrimonial Estándar | 120 | 360 |
-| 2 adultos + niño pequeño que necesita cama propia existente | Triple - 3 Camas | 190 | 570 |
-| 2 adultos + niño de 5 a 8 años | Triple - 3 Camas | 210 | 630 |
+| 2 adultos + niño pequeño con cama propia, padres comparten 1½ | Doble - 2 Camas | 140 | 420 |
+| 2 adultos + niño de 5 a 8 años, padres comparten 1½ | Doble - 2 Camas | 160 | 480 |
+| 2 adultos + niños de 2 y 8, pequeño comparte con padres | Doble - 2 Camas | 160 | 480 |
+| Mismo grupo, ambos niños con cama propia | Triple - 3 Camas | 210 | 630 |
+| 2 adultos + niños de 5 y 8, cada niño con cama propia | Triple - 3 Camas | 230 | 690 |
 | 2 adultos + niño de 9 años | Triple - 3 Camas | 210 | 630 |
 
 Los precios dependen del catálogo y las opciones de disponibilidad en las fechas
@@ -94,7 +102,7 @@ adultos. Esta entrega conserva ese límite; no supone tarifas o autorizaciones
 adicionales. La propuesta de Familiar 2 distingue dos camas de 1½ y una de 1 plaza,
 conservando cinco plazas independientes en total.
 
-Las aprobaciones infantiles antiguas sin `children-2026-11-14` vuelven a revisión
+Las aprobaciones infantiles antiguas sin `children-2026-11-14-shared-parent-beds` vuelven a revisión
 antes de crear una reserva. Las reservas ya registradas y sus pagos no se recalculan.
 
 ## Pruebas

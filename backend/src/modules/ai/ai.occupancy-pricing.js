@@ -69,7 +69,8 @@ export function quoteForCategory(category, state) {
     child_cap_applied: false,
     child_policy_version: CHILD_POLICY_VERSION,
     shared_children: bedPlan.shared_children, sharing_assumed: bedPlan.sharing_assumed,
-    required_bed_places: bedPlan.required_places, bed_description: category.bed_description || null,
+    required_bed_places: bedPlan.required_places,
+    parent_bed_size:bedPlan.parent_bed_size,parents_share_one_half_bed:bedPlan.parents_share_one_half_bed, bed_description: category.bed_description || null,
     nightly_amount: lodging / 100, pet_nightly_amount: petNightly / 100,
     total_nightly_amount: (lodging + petNightly) / 100,
     nights, total_amount: (lodging + petNightly) * nights / 100,
@@ -183,7 +184,7 @@ export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = fa
     pt:" A preferência por ficar perto de uma janela foi registrada e será verificada pela equipe.",
     fr:" Votre souhait d'être près d'une fenêtre est enregistré et doit être vérifié par l'équipe.",
   })[language] || "" : "";
-  const sharingNote=sharingCondition(quote,language);
+  const sharingNote=sharingCondition(quote,language)+parentBedCondition(quote,language);
   return prefix + ({
     es: "Para tu grupo, te recomiendo " + quote.category_name + ". El alojamiento cuesta " + money(quote.nightly_amount) + " por noche. Total por " + quote.nights + " noche(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " La disponibilidad debe confirmarla nuestro equipo. ¿Deseas que solicitemos la confirmación para esas fechas?",
     en: "For your group, I recommend " + quote.category_name + " at " + money(quote.nightly_amount) + " per night. Total for " + quote.nights + " night(s): " + money(quote.total_amount) + "." + detail + petNote + windowNote + sharingNote + " Our team must confirm availability. Shall I request confirmation?",
@@ -196,10 +197,10 @@ export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = fa
 function sharingCondition(quote,language) {
   if(!quote.shared_children)return '';
   return ({
-    es:' El importe supone que '+quote.shared_children+' niño(s) de hasta 4 años comparte(n) la cama de 2 plazas con sus padres, sin cama adicional; el equipo debe confirmar esta distribución.',
-    en:' This amount assumes '+quote.shared_children+' child(ren) aged 4 or under share the double bed with their parents, without an extra bed; our team must confirm this arrangement.',
-    pt:' O valor considera '+quote.shared_children+' criança(s) de até 4 anos compartilhando a cama de casal com os pais, sem cama extra; a equipe deve confirmar a distribuição.',
-    fr:' Ce montant suppose que '+quote.shared_children+' enfant(s) de 4 ans ou moins partagent le lit double avec leurs parents, sans lit supplémentaire ; notre équipe doit confirmer cette disposition.',
+    es:' El importe supone que '+quote.shared_children+' niño(s) de hasta 4 años comparte(n) la cama de '+quote.parent_bed_size+' plazas con sus padres, sin cama adicional; el equipo debe confirmar esta distribución.',
+    en:' This amount assumes '+quote.shared_children+' child(ren) aged 4 or under share the parent bed with their parents, without an extra bed; our team must confirm this arrangement.',
+    pt:' O valor considera '+quote.shared_children+' criança(s) de até 4 anos compartilhando a cama dos pais, sem cama extra; a equipe deve confirmar a distribuição.',
+    fr:' Ce montant suppose que '+quote.shared_children+' enfant(s) de 4 ans ou moins partagent le lit de leurs parents, sans lit supplémentaire ; notre équipe doit confirmer cette disposition.',
   })[language] || sharingCondition(quote,'es');
 }
 function formatQuoteOptions(quotes,language='es') {
@@ -212,15 +213,25 @@ function formatQuoteOptions(quotes,language='es') {
   if(!labels)return formatQuoteOptions(quotes,'es');
   const rows=quotes.map((q,i)=>{
     const shared=q.shared_children ? ({
-      es:' Niño(s) compartiendo la cama de 2 plazas con sus padres, sin cama adicional.',
-      en:' Young child(ren) share the double bed with their parents, without an extra bed.',
-      pt:' Criança(s) compartilham a cama de casal com os pais, sem cama extra.',
-      fr:' Les jeunes enfants partagent le lit double avec leurs parents, sans lit supplémentaire.',
+      es:' Niño(s) compartiendo la cama de '+q.parent_bed_size+' plazas con sus padres, sin cama adicional.',
+      en:' Young child(ren) share the parent bed with their parents, without an extra bed.',
+      pt:' Criança(s) compartilham a cama dos pais, sem cama extra.',
+      fr:' Les jeunes enfants partagent le lit de leurs parents, sans lit supplémentaire.',
     })[language] : '';
     const view=hasRoomPreferences(q.room_preferences)&&q.actual_view ? ' · '+roomPreferenceLabel({view:q.actual_view},language) : '';
     return (i+1)+') '+q.category_name+(q.bed_description?' · '+q.bed_description:'')+
-      view+' · '+money(q.total_nightly_amount)+' '+labels.night+'. '+labels.total+' '+q.nights+' '+labels.nights+': '+money(q.total_amount)+'.'+shared;
+      view+' · '+money(q.total_nightly_amount)+' '+labels.night+'. '+labels.total+' '+q.nights+' '+labels.nights+': '+money(q.total_amount)+'.'+shared+parentBedCondition(q,language);
   });
   const pet=quotes[0].pets>0 ? ({es:' El total incluye mascotas; su admisión requiere autorización.',en:' The total includes pets, subject to hotel approval.',pt:' O total inclui animais, sujeitos a autorização.',fr:' Le total inclut les animaux, sous réserve d’autorisation.'})[language] : '';
   return [labels.intro,...rows,pet.trim(),labels.note].filter(Boolean).join('\n');
+}
+
+function parentBedCondition(quote,language='es') {
+  if(!quote.parents_share_one_half_bed)return '';
+  return ({
+    es:' Esta opción supone que los dos padres comparten una cama de 1½ plazas; las camas restantes son para quienes necesiten cama propia. El equipo confirmará la distribución.',
+    en:' This option assumes both parents share one 1½-plaza bed; the remaining beds are for guests needing their own bed. Our team must confirm the arrangement.',
+    pt:' Esta opção considera os dois pais compartilhando uma cama de 1½ praça; as outras camas são para quem precisar de cama própria. A equipe confirmará a distribuição.',
+    fr:' Cette option suppose que les deux parents partagent un lit de 1½ place ; les autres lits sont destinés aux occupants souhaitant leur propre lit. Notre équipe confirmera la disposition.',
+  })[language] || parentBedCondition(quote,'es');
 }

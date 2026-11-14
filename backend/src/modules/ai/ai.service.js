@@ -314,7 +314,7 @@ function globalBookingSpecialRequests(state = {}, channel) {
     "Solicitud originada por " + channel,
     "Adultos: " + Number(state.adults || 0),
     "Niños: " + Number(state.children || 0) + (ages ? " (edades: " + ages + ")" : ""),
-    "Niños pequeños compartiendo cama de 2 plazas: " + Number(state.pricing_quote?.shared_children || 0),
+    "Niños pequeños compartiendo cama con sus padres: " + Number(state.pricing_quote?.shared_children || 0),
     "Mascotas: " + Number(state.pets || 0) + (Number(state.pets || 0) > 0 ? " (S/ 20 por mascota/noche; autorización del hospedaje)" : ""),
     state.preferences ? "Preferencias aceptadas: " + state.preferences : "",
     state.requested_room_preferences ? "Preferencia original: " + roomPreferenceLabel(state.requested_room_preferences) : "",
@@ -408,7 +408,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     const signature = value => value && JSON.stringify([
       value.category_slug,value.total_amount,value.nightly_amount,value.pet_nightly_amount,
       value.check_in,value.check_out,value.guests,value.rate_signature,
-      value.room_preferences,value.window_verification_required,value.shared_children,
+      value.room_preferences,value.window_verification_required,value.shared_children,value.parents_share_one_half_bed,
     ]);
     const unchanged = previous && !quote.preference_fallback && signature(previous) === signature(quote);
     const accepted = progress.action === "accept_quote" && unchanged;
@@ -463,6 +463,8 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
         paymentMethod: progress.paymentMethod,
         staffConfirmed: true,
         guestComposition: {adults:state.adults,children:state.children,child_ages:state.child_ages,
+          bed_preference:state.bed_preference,
+          family_bed_arrangement_confirmed:state.staff_confirmation?.family_bed_arrangement_confirmed===true,
           young_children_share_bed:state.young_children_share_bed !== false && state.staff_confirmation?.child_bed_availability_confirmed === true},
         finalAmount: state.staff_confirmation?.total_amount,
         assignedRoomId: state.staff_confirmation?.room_assignment?.room_id,
@@ -662,7 +664,7 @@ export async function confirmGlobalReservation({
     }
     roomAssignment={room_id:Number(room.id),room_number:room.room_number,view_type:room.view_type};
   }
-  if (minimumRequiredBedPlaces(current) <= 2 &&
+  if (categoryBedPlan(category,current).required_places <= 2 &&
       (current.bed_preference === "separate" && category.slug !== "doble" ||
        current.bed_preference === "matrimonial" && category.slug === "doble")) {
     const error = new Error("La categoría no respeta la preferencia de camas del huésped. Acuerda la alternativa antes de confirmar.");

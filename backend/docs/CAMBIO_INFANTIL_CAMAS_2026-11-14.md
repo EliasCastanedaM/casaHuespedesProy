@@ -14,7 +14,7 @@ prompt habría dejado esas tres validaciones incompatibles.
 
 | Edad | Cobro |
 |---|---|
-| 0 a 4 años | Sin cargo si no se añaden camas; hasta dos comparten cama de 2 plazas con sus padres |
+| 0 a 4 años | Sin cargo si no se añaden camas; hasta dos comparten la cama de sus padres (2 o 1½ plazas) |
 | 5 a 8 años | S/ 20 por niño y por noche |
 | Desde 9 años | Tarifa de adulto |
 
@@ -26,10 +26,10 @@ las condiciones anteriores y provoca una nueva evaluación.
 ## Archivos y controles
 
 - `rooms/guestComposition.js`: composición, edades, lectura de camas y excepción
-  de hasta dos niños, sin elevar plazas independientes registradas.
+  de hasta dos niños y padres compartiendo 1½ plazas, sin elevar capacidad adulta.
 - `ai.occupancy-pricing.js`: suplemento fijo, categorías básicas primero y hasta dos
   alternativas; precios consultados, sin fórmula anterior ni tope antiguo.
-- `roomOccupancyRates.service.js`: búsqueda por plazas y filtrado por camas reales.
+- `roomOccupancyRates.service.js`: búsqueda por ocupación adulta y filtrado por camas reales.
 - `ai.reservation.js` y `ai.service.js`: opciones numeradas, negaciones de compartir,
   revalidación y versión de la política en aprobaciones.
 - `booking.service.js`: validación de camas dentro de la transacción y persistencia
@@ -52,10 +52,25 @@ mascotas y compartiendo cama con sus padres:
 |---|---:|---:|
 | Matrimonial Estándar | S/ 120 | S/ 360 |
 | Matrimonial Ejecutiva | S/ 140 | S/ 420 |
-| Triple con cama propia existente para el niño | S/ 190 | S/ 570 |
+| Doble con cama compartida o cama propia para el niño | S/ 140 | S/ 420 |
 
 Se presentan únicamente las opciones compatibles que tengan unidades libres en el
 inventario consultado; el equipo confirma disponibilidad antes de cerrar.
+
+## Aclaración sobre Doble
+
+El propietario permite que los padres compartan una cama de 1½ plazas. Para dos
+adultos y niños de 2 y 8 años, el pequeño comparte con los padres y el mayor usa
+la segunda cama: Doble S/ 160/noche y S/ 480 por tres noches. Si ambos niños
+necesitan cama propia, corresponde Triple S/ 210/noche. No se cobra un suplemento
+infantil inventado al menor de hasta 4; se aplica el precio de la categoría y el
+cargo de S/ 20/noche al niño de 8. Con un único niño pequeño y cama propia, Doble
+cuesta S/ 140/noche, con los padres compartiendo una cama.
+
+La aprobación interna confirma la distribución familiar. Un cuerpo público no
+puede activar esta excepción. Los niños desde 9 años cuentan como adulto y siguen
+sujetos a la capacidad adulta registrada. La nueva versión invalida aprobaciones
+con la interpretación anterior, incluso si ya contenían la primera versión infantil.
 
 ## Datos y alcance pendiente
 
@@ -74,9 +89,10 @@ La especificación operativa completa y los ejemplos están en
 
 ## Validación de esta ampliación
 
-La suite completa terminó con 439 pruebas aprobadas, cero fallidas y cero omitidas
-(Node v24.22.1). Incluye 25 pruebas nuevas frente a las 414 de la entrega anterior.
-Se verificaron sintaxis de los 14 archivos JavaScript modificados y consistencia del
-diff. Las pruebas de registro confirman que se guardan tres huéspedes y se validan
-dos plazas para dos adultos con un niño compartiendo, sin saltarse los bloqueos de
-inventario. La composición incluida en una petición pública no habilita la excepción.
+La suite completa terminó con 447 pruebas aprobadas, cero fallidas y cero omitidas.
+Incluye 33 pruebas nuevas frente a las 414 de la revisión inicial. Se comprueban
+los tres canales, la cotización Doble a S/ 160, cama propia, límites de edades,
+negación de compartir, falta de camas, capacidad adulta, reservas y bloqueos.
+La transacción guarda cuatro huéspedes reales en el caso Doble de la captura y
+valida el inventario con la ocupación adulta aprobada. No se realizaron reservas,
+cobros ni envíos reales a huéspedes.

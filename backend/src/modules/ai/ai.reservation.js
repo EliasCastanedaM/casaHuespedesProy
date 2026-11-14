@@ -578,7 +578,8 @@ export function formatGlobalHandoffSummary(data = {}) {
       "Cotización calculada: S/ " + Number(data.pricing_quote.total_amount).toFixed(2),
       "Alojamiento por noche: S/ " + Number(data.pricing_quote.nightly_amount).toFixed(2),
       "Niños de 5 a 8 años: S/ 20 por niño y por noche; desde 9 años, tarifa de adulto.",
-      "Niños pequeños compartiendo cama de 2 plazas: " + Number(data.pricing_quote.shared_children || 0),
+      "Niños pequeños compartiendo cama con sus padres: " + Number(data.pricing_quote.shared_children || 0),
+      "Padres comparten cama de 1½ plazas: " + (data.pricing_quote.parents_share_one_half_bed ? "Sí" : "No requerido"),
     ] : []),
     "Ingreso: " + v(formatSummaryDate(data.check_in)),
     "Salida: " + v(formatSummaryDate(data.check_out)),
@@ -727,7 +728,7 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
     error.statusCode = 409;
     throw error;
   }
-  if (!categoryBedPlan(category,current,{allowAssumedSharing:childBedAvailabilityConfirmed}).fits) {
+  if (!categoryBedPlan(category,{...current,family_bed_arrangement_confirmed:true},{allowAssumedSharing:childBedAvailabilityConfirmed}).fits) {
     const error=new Error('La distribución de camas no admite al grupo con las condiciones indicadas.');
     error.statusCode=409;throw error;
   }
@@ -745,6 +746,7 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
     staff_confirmation: {
       confirmed: true,
       child_policy_version: CHILD_POLICY_VERSION,
+      family_bed_arrangement_confirmed: true,
       category_slug: categorySlug,
       category_name: categoryName,
       total_amount: amount,

@@ -70,7 +70,10 @@ la validación en chats reales después de autorizar un despliegue.
 
 Las opciones se ordenan desde la categoría básica compatible, con un máximo de
 dos alternativas superiores. Se diferencia el total real de huéspedes de las
-plazas de cama: hasta dos niños de 0 a 4 años pueden compartir una cama de 2 plazas
-con sus padres, sin cama adicional; de 5 a 8 años se cobran S/ 20 por niño/noche y
+plazas de cama: hasta dos niños de 0 a 4 años pueden compartir la cama de sus
+padres (2 o 1½ plazas), sin cama adicional; de 5 a 8 años se cobran S/ 20 por niño/noche y
 desde los 9 se aplica tarifa de adulto. La aprobación y la transacción revalidan
-la distribución. Véase [CAMBIO_INFANTIL_CAMAS_2026-11-14.md](CAMBIO_INFANTIL_CAMAS_2026-11-14.md).
+la distribución. El propietario permite que dos padres compartan una cama de
+1½ plazas: con niños de 2 y 8, se empieza por Doble; si ambos niños requieren
+cama propia, por Triple. No se añade un suplemento inventado al menor de hasta 4.
+Véase [CAMBIO_INFANTIL_CAMAS_2026-11-14.md](CAMBIO_INFANTIL_CAMAS_2026-11-14.md).

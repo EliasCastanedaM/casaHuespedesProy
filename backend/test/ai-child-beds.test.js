@@ -25,7 +25,7 @@ for(const age of [0,1,4])test('dos adultos y niño de '+age+' años: matrimonial
   assert.equal(result.quote.nightly_amount,120);
   assert.equal(result.quote.total_amount,360);
   assert.equal(result.quote.shared_children,1);
-  assert.deepEqual(result.alternatives.map(q=>q.category_slug),['matrimonial-ejecutiva','triple']);
+  assert.deepEqual(result.alternatives.map(q=>q.category_slug),['matrimonial-ejecutiva','doble']);
   assert.equal(result.alternatives[0].total_amount,420);
   const text=formatOccupancyQuote(result.quote,'es',{alternatives:result.alternatives});
   assert.match(text,/Estándar.*S\/ 120\.00.*S\/ 360\.00/);
@@ -45,14 +45,15 @@ test('hasta dos niños de 4 años comparten; un tercero requiere plazas reales',
 
 test('negar cama compartida cambia categoría sin agregar un cargo infantil inventado',()=>{
   const result=selectOccupancyQuote(categories,stay({young_children_share_bed:false}));
-  assert.equal(result.quote.category_slug,'triple');
+  assert.equal(result.quote.category_slug,'doble');
   assert.equal(result.quote.shared_children,0);
-  assert.equal(result.quote.nightly_amount,190);
+  assert.equal(result.quote.nightly_amount,140);
   assert.equal(result.quote.child_supplement_amount,0);
 });
 
-test('una cama de 1½ no se trata como cama doble; camas desconocidas no permiten compartir',()=>{
-  assert.equal(categoryBedPlan(categories[2],stay()).fits,false);
+test('el arreglo familiar permite compartir 1½; una cama desconocida no habilita excepciones',()=>{
+  assert.equal(categoryBedPlan(categories[2],stay()).fits,true);
+  assert.equal(bedInventory(categories[2]).oneHalf,2);
   assert.equal(categoryBedPlan({...categories[0],bed_description:null},stay()).fits,false);
   assert.equal(bedInventory(categories[3]).places,3);
   assert.equal(bedInventory(categories[4]).places,7);
@@ -96,7 +97,7 @@ test('consulta disponibilidad con plazas de cama sin perder el número real de h
   assert.equal(result[0].available_rooms.length,0);
   const chosen=selectOccupancyQuote(result,state);
   assert.equal(chosen.quote.category_slug,'matrimonial-ejecutiva');
-  assert.ok(chosen.alternatives.every(q=>q.category_slug!=='matrimonial'&&q.category_slug!=='doble'));
+  assert.ok(chosen.alternatives.every(q=>q.category_slug!=='matrimonial'));
 });
 
 function mockChat(t) {
@@ -167,15 +168,62 @@ test('negaciones de compartir cama se conservan como correcciones, sin invertir 
   }
 });
 
-test('cada alternativa describe su propia distribución, sin aplicar cama compartida a la Triple',()=>{
+test('cada alternativa describe el tamaño real de la cama compartida',()=>{
   const {quote,alternatives}=selectOccupancyQuote(categories,stay());
   const text=formatOccupancyQuote(quote,'es',{alternatives});
   assert.match(text.split('\n').find(line=>line.startsWith('1)')),/compartiendo/);
   assert.match(text.split('\n').find(line=>line.startsWith('2)')),/compartiendo/);
-  assert.doesNotMatch(text.split('\n').find(line=>line.startsWith('3)')),/compartiendo/);
+  assert.match(text.split('\n').find(line=>line.startsWith('3)')),/compartiendo la cama de 1½ plazas/);
 });
 
 test('edades inválidas en texto no provocan una cotización ni un error de tipo',()=>{
   assert.equal(quoteForCategory(categories[0],stay({child_ages:'4'})),null);
   assert.equal(quoteForCategory(categories[0],stay({child_ages:null})),null);
+});
+
+test('caso de la captura: dos padres con niños de 2 y 8 años empiezan por Doble a 160 por noche',()=>{
+  const state=stay({children:2,child_ages:[2,8]});
+  const {quote,alternatives}=selectOccupancyQuote(categories,state);
+  assert.equal(quote.category_slug,'doble');
+  assert.equal(quote.guests,4);
+  assert.equal(quote.shared_children,1);
+  assert.equal(quote.parent_bed_size,'1½');
+  assert.equal(quote.parents_share_one_half_bed,true);
+  assert.equal(quote.adult_base_amount,140);
+  assert.equal(quote.child_supplement_amount,20);
+  assert.equal(quote.total_amount,480);
+  assert.deepEqual(alternatives.map(q=>q.category_slug),['triple','familiar']);
+  const ownBed=selectOccupancyQuote(categories,{...state,young_children_share_bed:false}).quote;
+  assert.equal(ownBed.category_slug,'triple');
+  assert.equal(ownBed.nightly_amount,210);
+});
+
+test('la familia respeta camas separadas, camas de una plaza y capacidad adulta',()=>{
+  const state=stay({children:2,child_ages:[2,8]});
+  assert.equal(categoryBedPlan({...categories[2],bed_description:'2 camas de 1 plaza'},state).fits,false);
+  assert.equal(selectOccupancyQuote(categories,{...state,bed_preference:'separate'}).quote.category_slug,'triple');
+  assert.equal(categoryBedPlan(categories[2],stay({child_ages:[9]})).fits,false);
+  assert.equal(categoryBedPlan(categories[2],state,{allowAssumedSharing:false}).fits,false);
+  assert.equal(categoryBedPlan(categories[2],{...state,young_children_share_bed:true,family_bed_arrangement_confirmed:true},{allowAssumedSharing:false}).fits,true);
+});
+
+test('dos niños de 5 a 8 usan camas propias en Triple y conservan el suplemento de 40',()=>{
+  const q=selectOccupancyQuote(categories,stay({children:2,child_ages:[5,8]})).quote;
+  assert.equal(q.category_slug,'triple');
+  assert.equal(q.child_supplement_amount,40);
+  assert.equal(q.nightly_amount,230);
+});
+
+for(const channel of ['whatsapp','instagram','facebook'])test(channel+': flujo 2 y 8 elige Doble, confirma distribución y mantiene cuatro huéspedes',async t=>{
+  const {contexts}=mockChat(t);
+  const input={channel,externalUserId:'two-beds'};
+  const result=await generateAiReply({...input,message:'Quiero reservar del 25/11/2026 al 28/11/2026 para 2 adultos y 2 niños de 2 y 8 años sin mascotas'});
+  assert.match(result.reply,/1\) Doble - 2 Camas.*160\.00.*480\.00/);
+  assert.match(result.reply,/compartiendo la cama de 1½ plazas/);
+  await generateAiReply({...input,message:'Sí'});
+  await confirmGlobalReservation({...input,categorySlug:'doble',totalAmount:480,childBedAvailabilityConfirmed:true});
+  const state=contexts.get(channel+':two-beds').whatsapp_mvp;
+  assert.equal(state.total_guests,4);
+  assert.equal(state.staff_confirmation.family_bed_arrangement_confirmed,true);
+  assert.equal(state.staff_confirmation.child_policy_version,CHILD_POLICY_VERSION);
 });
