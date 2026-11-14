@@ -287,6 +287,13 @@ function parseAgeList(text) {
   return ages;
 }
 
+function parseDescribedChildAges(text) {
+  // In "1 tiene 4 y el otro 7", 1 identifies the child; it is not an age.
+  const pattern = new RegExp("\\b(?:(?:uno|una|1)\\s+(?:tiene|de)|(?:el\\s+|la\\s+)?(?:otro|otra)(?:\\s+(?:tiene|de))?)\\s+(" + COUNT_TOKEN_PATTERN + ")\\b", "g");
+  const ages = [...normalize(text).matchAll(pattern)].map((match) => parseCountToken(match[1]));
+  return ages.length && ages.every((age) => age !== null && age >= 0 && age <= 17) ? ages : null;
+}
+
 function isNegativeAnswer(text) {
   const cleaned = normalize(text).replace(/[.,!?¡¿]/g, " ").replace(/\s+/g, " ").trim();
   return /^(?:no|nope|ningun[oa]?|ninguna|ninguno|sem|nao|non|none|not any)$/.test(cleaned);
@@ -369,6 +376,12 @@ function collect(message, previous = {}, now = new Date()) {
     next.child_ages = (ageText.match(/\d{1,2}/g) || []).map(Number);
     if (next.children === undefined) next.children = next.child_ages.length;
   }
+  if (Number(next.children) > 0) {
+    const describedAges = parseDescribedChildAges(text);
+    if (describedAges && describedAges.length === Number(next.children)) {
+      next.child_ages = describedAges;
+    }
+  }
 
   if (next.children === 0) next.child_ages = [];
   if(/\b(?:no (?:va a |van a )?(?:compart(?:e|en|ira|iran|ir)|dorm(?:ira|iran))|cama (?:propia|separada|adicional) para (?:el |mi |los )?(?:bebe|nino)|separate bed for (?:the )?child|not share)\b/.test(text))next.young_children_share_bed=false;
@@ -423,7 +436,7 @@ function containsStructuredBookingAnswer(message, state = {}, now = new Date()) 
     mentionsNoCategory(text, CHILD_WORDS) ||
     mentionsNoCategory(text, PET_WORDS) ||
     (["children", "pets"].includes(state?.awaiting) && isNegativeAnswer(text)) ||
-    (state?.awaiting === "ages" && parseAgeList(text) !== null);
+    (state?.awaiting === "ages" && (parseAgeList(text) !== null || parseDescribedChildAges(text) !== null));
 }
 
 function changedBookingFields(previous, next) {
