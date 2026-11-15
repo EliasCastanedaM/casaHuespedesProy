@@ -19,7 +19,7 @@ import {
   isLocationMenuSelection,
   formatHotelLocationReply,
 } from "./ai.location-info.js";
-import { isHotelServicesInquiry, formatHotelServicesReply, selectHotelServices, isSimpleServiceInquiry, isServiceFollowup, resolveServiceMessage, serviceReplyLanguage } from "./ai.services-info.js";
+import { isHotelServicesInquiry, formatHotelServicesReply, selectHotelServices, isSimpleServiceInquiry, isServiceFollowup, resolveServiceMessage, serviceReplyLanguage, classifyServiceInquiry, hotelServicesPageReply } from "./ai.services-info.js";
 import { formatTourismReply } from "./ai.tourism.js";
 import { paymentInformationType, formatHotelPaymentInfoReply, manualPaymentReviewReply } from "./ai.payment-info.js";
 import { getHotelPaymentInfoService } from "../services/hotelPaymentInfo.service.js";
@@ -709,6 +709,7 @@ async function executeTool(call, message) {
     JSON.parse(call.arguments || "{}");
 
     if (call.name === "listar_servicios") {
+      if (classifyServiceInquiry(message).kind === "general") return JSON.stringify({ success: true, kind: "general", reply: hotelServicesPageReply(serviceReplyLanguage(message)) });
       const services=await getPublicHotelServicesService();
       const selected=selectHotelServices(services,message);
       return JSON.stringify({success:true,kind:selected.intent.kind,
@@ -886,7 +887,7 @@ async function generateAiReplyInternal({
   let scopeCheck;
   const checkHotelScope = async () => {
     if (scopeCheck !== undefined) return scopeCheck;
-    if (isSimpleServiceInquiry(serviceMessage)) return (scopeCheck = true);
+    if (classifyServiceInquiry(serviceMessage).kind === "general" || isSimpleServiceInquiry(serviceMessage)) return (scopeCheck = true);
     scopeCheck = await isHotelRelatedMessage(message, {
       history: history.length ? history : await loadStoredHistory(channel, externalUserId, message),
       classify: async ({ message: currentMessage, history: recentHistory }) => {
@@ -1074,6 +1075,9 @@ async function generateAiReplyInternal({
   // Responder servicios reales desde Supabase incluso mientras haya una reserva
   // a medio completar. Las preguntas informativas no alteran el contexto.
   if (serviceInquiry) {
+    if (classifyServiceInquiry(serviceMessage).kind === "general") return {
+      reply: hotelServicesPageReply(serviceLanguage), responseId: null, deterministic: true, mode: "hotel_services_information",
+    };
     try {
       const services = await getPublicHotelServicesService();
       const reply = formatHotelServicesReply(services, serviceMessage, {language:serviceLanguage});

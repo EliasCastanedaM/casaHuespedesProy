@@ -13,15 +13,13 @@ const sample = [
   { slug: "lavanderia", name: "Lavandería y planchado", description: "Sujeto a coordinación.", price_type: "on_request", price: null, requires_coordination: true },
 ];
 
-test("responde servicios generales con información real del catálogo", () => {
+test("servicios generales remiten brevemente a la página sin enumerar ni contar", () => {
   const text = "Antes de seguir, ¿qué servicios incluye el hospedaje?";
   assert.equal(isHotelServicesInquiry(text), true);
   const answer = formatHotelServicesReply(sample, text);
-  assert.match(answer, /WiFi gratuito/);
-  assert.match(answer, /Cocina compartida/);
-  assert.match(answer, /Lavandería y planchado/);
-  assert.match(answer, /Incluidos en la estadía: Desayuno continental/);
-  assert.doesNotMatch(answer, /S\/\s*\d+|tarifa gratis para lavandería/i);
+  assert.match(answer, /https:\/\/www.casahuespedespimentel.com\/servicios/);
+  assert.match(answer, /Para conocer todos los servicios/);
+  assert.doesNotMatch(answer, /WiFi|continental|lavandería|\b\d+ servicios\b/i);
 });
 
 test("consulta por lavandería informa coordinación y tarifa sin etiquetas robóticas", () => {
@@ -59,7 +57,7 @@ test("no interrumpe procesos de reserva ni inventa políticas", () => {
   for (const text of ["Ahora quiero reservar", "Confirma mi reserva", "¿Tienen disponibilidad el sábado?"]) {
     assert.equal(isHotelServicesInquiry(text), false, text);
   }
-  assert.match(formatHotelServicesReply([], "¿Qué servicios incluyen?"), /No tengo un servicio confirmado/);
+  assert.match(formatHotelServicesReply([], "¿Qué servicios incluyen?"), /casahuespedespimentel.com\/servicios/);
 });
 
 test("solo expone servicios activos de fuentes publicadas/aprobadas", async () => {

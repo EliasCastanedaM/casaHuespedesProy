@@ -35,8 +35,11 @@ const UNKNOWN_AMENITY = /\b(?:aire acondicionado|air condition(?:ing|er)?|a\/c|p
 const EXTERNAL = /\b(?:restaurantes?|cafeterias?|restaurants?|cafes?)\b.*\b(?:cerca|cercanos?|alrededor|nearby|near|fuera)\b|\b(?:donde comer|where to eat)\b/;
 // Anchored whole-request grammar: a trailing unknown subject ("de masajes")
 // makes a query specific, even if it starts with "qué servicios".
-const GENERAL = /^(?:(?:antes de seguir|hola|por favor|dime|muestrame|cuentame|dame)\s*,?\s*)*(?:(?:que|cuales|what|which)\s+)?(?:(?:otros?|todos los|todas las|all|every)\s+)?(?:servicios?|comodidades|amenidades|services|amenities|facilities)(?:\s+(?:tienen|ofrecen|incluye|incluyen|hay|estan incluidos|do you have|are available))?(?:\s+(?:en|del|el|la|mi|su|de|the|at|your)\s*(?:hotel|hospedaje|reserva|alojamiento|establecimiento|property))?(?:\s+(?:con detalles|en detalle|completos|completo|detallados|in detail))?$/;
-function isGeneralRequest(text) { return GENERAL.test(text.replace(/[¿?¡!.,]/g,' ').replace(/\s+/g,' ').trim()); }
+const GENERAL = /^(?:(?:antes de seguir|hola|por favor|dime|muestrame|cuentame|dame)\s*,?\s*)*(?:(?:que|cuales|what|which)\s+)?(?:(?:otros?|todos los|todas las|all|every)\s+)?(?:servicios?|comodidades|amenidades|services|amenities|facilities)(?:\s+(?:tiene|tienen|ofrece|ofrecen|incluye|incluyen|hay|estan incluidos|do you have|does (?:the|your) hotel (?:have|offer)|are available))?(?:\s+(?:en|del|el|la|mi|su|de|the|at|your)\s*(?:hotel|hospedaje|reserva|alojamiento|establecimiento|property))?(?:\s+(?:con detalles|en detalle|completos|completo|detallados|in detail))?$/;
+function isGeneralRequest(text) {
+  const clean = text.replace(/[¿?¡!.,]/g,' ').replace(/\s+/g,' ').trim();
+  return GENERAL.test(clean) || /^(?:que|cuales) son (?:los |todos los )?servicios(?: (?:del|de su|de este) (?:hotel|hospedaje))?$/.test(clean);
+}
 
 const EXPAND = /\b(?:detallad[oa]s?|detalles|descripcion completa|en detalle|detailed|in detail)\b/;
 const ALL = /\b(?:todos|todas|completo|completa|all|every)\b/;
@@ -136,31 +139,38 @@ export function serviceReplyLanguage(message, history = []) {
     lang([...history].reverse().find(x=>x.author==='client'||x.role==='user')?.content)) || 'es';
 }
 
+export const SERVICES_PAGE_URL = "https://www.casahuespedespimentel.com/servicios";
+export function hotelServicesPageReply(language = 'es') {
+  const text = {
+    es: 'Para conocer todos los servicios de Casa Huéspedes Pimentel, ingresa aquí:',
+    en: 'To discover all the services at Casa Huéspedes Pimentel, visit:',
+    pt: 'Para conhecer todos os serviços da Casa Huéspedes Pimentel, acesse:',
+    fr: 'Pour découvrir tous les services de Casa Huéspedes Pimentel, consultez :',
+  }[language] || 'Para conocer todos los servicios de Casa Huéspedes Pimentel, ingresa aquí:';
+  return text + '\n' + SERVICES_PAGE_URL;
+}
+
 export function formatHotelServicesReply(services,message,{language='es'}={}) {
   const {intent,services:chosen}=selectHotelServices(services,message);
+  if (intent.kind === 'general') return hotelServicesPageReply(language);
   const unknown=intent.unknown || intent.slugs.some(id=>!chosen.some(s=>s.slug===id));
   const uncertain=language==='en' ? "I don't have confirmed information about that service." : 'No tengo un servicio confirmado para esa consulta.';
   if(!['es','en'].includes(language))return null;
-  if(!chosen.length)return uncertain;
+  if(!chosen.length) {
+    // Ventilation is a directly relevant alternative, only if the current
+    // approved catalogue confirms it. Absence of AC is never inferred.
+    const fan = selectHotelServices(services, '¿Tienen ventilador?').services.find(s => s.slug === 'ventilador');
+    if (/\b(?:aire acondicionado|air condition(?:ing|er)?|a\/c)\b/.test(normalized(message)) && fan && ['es','en'].includes(language)) {
+      const fanText = language === 'es' ? detail(fan) : ENGLISH.get(fan.description);
+      if (fanText) return (language === 'en' ? "Air conditioning is not confirmed in the available information. " : 'El aire acondicionado no está confirmado en la información disponible. ') + fanText;
+    }
+    return uncertain;
+  }
   const aspect=serviceQuestionAspect(message);
   if(aspect && !chosen.every(s=>aspect.evidence.test(s.description||'')))return language==='en'
     ? "I don't have confirmed information about " + aspect.en + ' for that service.'
     : 'No tengo información confirmada sobre '+aspect.es+' de ese servicio.';
   if(language==='en' && chosen.some(s=>!ENGLISH.has(s.description)))return null;
-  if(intent.kind==='general' && !intent.detailed) {
-    const visible=intent.all?chosen:chosen.slice(0,6);
-    // Names alone do not preserve charges, e.g. a pet charge per night. Keep
-    // paid/coordinated services out of the short included-services summary.
-    const included=visible.filter(s=>s.price_type==='included'&&!s.requires_coordination);
-    const other=visible.filter(s=>!included.includes(s));
-    if(language==='en')return chosen.map(s=>ENGLISH.get(s.description)).join(' ');
-    const lines=[];
-    if(included.length)lines.push('Incluidos en la estadía: '+included.map(s=>s.name).join(', ')+'.');
-    for(const s of other)lines.push(detail(s));
-    if(chosen.length>visible.length)lines.push('También hay otros servicios; puedes preguntarme por alguno en particular.');
-    if(other.some(s=>s.requires_coordination||s.price_type==='on_request'))lines.push('El equipo confirmará la tarifa y disponibilidad antes de contratar los servicios adicionales.');
-    return lines.join('\n');
-  }
   const lines=chosen.map(s=>language==='en'?ENGLISH.get(s.description):detail(s));
   if(unknown)lines.unshift(uncertain);
   if(chosen.some(s=>s.requires_coordination||s.price_type==='on_request'))lines.push(language==='en'
