@@ -263,6 +263,15 @@ function additionalAdultRelativeCount(text) {
     : 0;
 }
 
+function coupleAdultCount(text) {
+  const partner = "(?:pareja|espos[oa]|novi[oa])";
+  const couple = new RegExp("\\b(?:yo\\s+y\\s+mi\\s+" + partner + "|mi\\s+" + partner + "\\s+y\\s+yo|somos\\s+(?:una\\s+)?pareja|(?:voy|viajo|ire|viajare|vamos|viajamos)\\s+con\\s+mi\\s+" + partner + ")\\b");
+  if (!couple.test(text) || /\b(?:no somos|no vamos|no viajamos|sin mi pareja|sin mi espos[oa]|sin mi novi[oa])\b/.test(text)) return null;
+  // Other groups or relatives need clarification rather than an undercount.
+  if (/\b(?:otra pareja|mis padres|mis amigos|herman[oa]s?|amig[oa]s?|tios?|tias?)\b/.test(text)) return null;
+  return 2;
+}
+
 function parseStandaloneCount(text) {
   const cleaned = normalize(text)
     .replace(/[.,!?¡¿]/g, " ")
@@ -351,7 +360,7 @@ function collect(message, previous = {}, now = new Date()) {
     else if (!next.check_out && dates[0] !== next.check_in) next.check_out = dates[0];
   }
 
-  const adults = namedCount(text, ADULT_WORDS);
+  const adults = namedCount(text, ADULT_WORDS) ?? coupleAdultCount(text);
   const children = namedCount(text, CHILD_WORDS);
   const total = namedCount(text, TOTAL_WORDS) ??
     (previous.awaiting !== "ages" && /^(?:somos|seremos|we are|nous sommes)\s/.test(text) ? parseStandaloneCount(text) : null);
@@ -430,6 +439,7 @@ function containsStructuredBookingAnswer(message, state = {}, now = new Date()) 
       JSON.stringify(state.room_preferences || collectRoomPreferences(state.preferences)) ||
     extractDateTokens(message, now, state?.check_in).length > 0 ||
     namedCount(text, ADULT_WORDS) !== null ||
+    coupleAdultCount(text) !== null ||
     namedCount(text, CHILD_WORDS) !== null ||
     namedCount(text, TOTAL_WORDS) !== null ||
     namedCount(text, PET_WORDS) !== null ||
@@ -504,7 +514,7 @@ function formatHandoffUpdateReply(data = {}, changed = []) {
 const labels = {
   es: {
     dates: "¡Perfecto! 😊 ¿Qué fechas de entrada y salida necesitas?",
-    guests: "¿Cuántas personas vienen? Indícame los adultos y, si hay niños, sus edades.",
+    guests: "¿Cuántas personas vienen? Indícame los adultos y, si hay niños, sus edades. Por ejemplo: 2 adultos y un niño de 3 años.",
     children: "¿Viajan niños? Si es así, dime cuántos y sus edades.",
     ages: "¿Qué edades tienen los niños?",
     pets: "¿Llevarán mascotas? Si es así, ¿cuántas?",
@@ -520,7 +530,7 @@ const labels = {
   },
   en: {
     dates: "Perfect! 😊 What are your check-in and check-out dates?",
-    guests: "How many people are coming? Please tell me the number of adults and children's ages, if any.",
+    guests: "How many people are coming? Please tell me the number of adults and children's ages, if any. For example: 2 adults and a 3-year-old child.",
     children: "Are there any children? If so, how many and what are their ages?",
     ages: "How old are the children?",
     pets: "Will you bring any pets? If so, how many?",
@@ -536,7 +546,7 @@ const labels = {
   },
   pt: {
     dates: "Perfeito! 😊 Quais são as datas de entrada e saída?",
-    guests: "Quantas pessoas vêm? Informe o número de adultos e as idades das crianças, se houver.",
+    guests: "Quantas pessoas vêm? Informe o número de adultos e as idades das crianças, se houver. Por exemplo: 2 adultos e uma criança de 3 anos.",
     children: "Há crianças na viagem? Se sim, quantas e quais são as idades?",
     ages: "Quais são as idades das crianças?",
     pets: "Vocês trarão animais de estimação? Quantos?",
@@ -552,7 +562,7 @@ const labels = {
   },
   fr: {
     dates: "Parfait ! 😊 Quelles sont vos dates d'arrivée et de départ ?",
-    guests: "Combien de personnes voyagent ? Précisez le nombre d'adultes et l'âge des enfants, le cas échéant.",
+    guests: "Combien de personnes voyagent ? Précisez le nombre d'adultes et l'âge des enfants, le cas échéant. Par exemple : 2 adultes et un enfant de 3 ans.",
     children: "Y a-t-il des enfants ? Si oui, combien et quel âge ont-ils ?",
     ages: "Quel âge ont les enfants ?",
     pets: "Voyagez-vous avec des animaux ? Si oui, combien ?",

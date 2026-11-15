@@ -120,6 +120,35 @@ test("nunca supone que dos adultos implica ausencia de niños", () => {
   assert.equal(done.context.whatsapp_mvp.children, 0);
 });
 
+test("reconoce parejas en lenguaje natural y pregunta solo si viajan niños", () => {
+  const start = turn("Quiero reservar del 25 al 28 de noviembre");
+  assert.match(start.reply, /Por ejemplo: 2 adultos y un niño de 3 años/);
+  for (const message of ["yo y mi pareja", "mi pareja y yo", "mi esposa y yo", "yo y mi esposo", "somos una pareja", "viajo con mi novia"]) {
+    const result = turn(message, start.context);
+    assert.equal(result.context.whatsapp_mvp.adults, 2, message);
+    assert.equal(result.context.whatsapp_mvp.children, undefined);
+    assert.match(result.reply, /Viajan niños/);
+    assert.doesNotMatch(result.reply, /Cuántas personas/);
+  }
+});
+
+test("una pareja puede informar edades y mascotas sin repetir los adultos", () => {
+  const start = turn("Quiero reservar del 25 al 28 de noviembre");
+  const result = turn("yo y mi pareja y un niño de 3 años, sin mascotas", start.context);
+  assert.equal(result.context.whatsapp_mvp.adults, 2);
+  assert.equal(result.context.whatsapp_mvp.children, 1);
+  assert.deepEqual(result.context.whatsapp_mvp.child_ages, [3]);
+  assert.equal(result.context.whatsapp_mvp.total_guests, 3);
+  assert.equal(result.context.whatsapp_mvp.pets, 0);
+  const numeric = turn("2 adultos y y un niño de 3 años", start.context);
+  assert.equal(numeric.context.whatsapp_mvp.adults, 2);
+  assert.deepEqual(numeric.context.whatsapp_mvp.child_ages, [3]);
+  for (const message of ["mi pareja", "no somos una pareja", "yo y mi pareja y mis amigos"]) {
+    const ambiguous = turn(message, start.context);
+    assert.equal(ambiguous.context.whatsapp_mvp.adults, undefined, message);
+  }
+});
+
 test("un mensaje autónomo sobre el menú no inicia reserva", () => {
   const menu = turn("¿Qué opciones hay en el menú?");
   assert.equal(menu.mode, "global_reservation_menu");
