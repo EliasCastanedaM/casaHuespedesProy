@@ -123,7 +123,8 @@ test("cada canal recoge datos, espera al equipo y continúa con los mismos pagos
     assert.equal(done.mode, "human_review_required");
     assert.equal(done.reply, commonHandoffReply ?? done.reply);
     commonHandoffReply = done.reply;
-    assert.doesNotMatch(done.reply, /Pagar ahora|https:\/\//);
+    assert.doesNotMatch(done.reply, /Pagar ahora|checkout|culqi/i);
+    assert.deepEqual(done.reply.match(/https:\/\/\S+/g), ["https://www.casahuespedespimentel.com/habitaciones"]);
 
     db.setHandoff(false);
     await assert.rejects(confirmGlobalReservation({

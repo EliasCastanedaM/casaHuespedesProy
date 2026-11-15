@@ -178,7 +178,7 @@ test('las opciones muestran habitación y precio; el cálculo de camas queda int
     '2) Triple - 3 Camas · S/ 210.00 por noche. Total 3 noche(s): S/ 630.00.',
     '3) Familiar 1 · S/ 210.00 por noche. Total 3 noche(s): S/ 630.00.',
     '',
-    'Si quieres ver más de las habitaciones, puedes entrar a nuestra página:',
+    '¿Quieres saber cómo son nuestras habitaciones? Ingresa a este enlace:',
     'https://www.casahuespedespimentel.com/habitaciones',
   ].join('\n'));
 });

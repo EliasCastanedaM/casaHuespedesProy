@@ -46,6 +46,7 @@ import { isReservationIntent } from "./ai.booking-flow.js";
 
 import { getReservationRoomCategoriesService, withAvailableReservationRooms } from "../rooms/roomOccupancyRates.service.js";
 import { selectOccupancyQuote, formatOccupancyQuote, processingQuoteReply, isPriceVariationInquiry, priceVariationReply } from "./ai.occupancy-pricing.js";
+import { appendRoomInvitation } from "./ai.room-invitation.js";
 
 import { hasRoomPreferences, normalizeRoomPreferences, roomPreferenceMatch, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 
@@ -422,13 +423,13 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     delete next.awaiting;
     await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: next });
     return {
-      reply: accepted ? ({
+      reply: appendRoomInvitation(accepted ? ({
         es: "¡Perfecto! 😊 Nuestro equipo revisará la disponibilidad y confirmará el importe para esas fechas. Ya tiene los datos que compartiste; no necesitas repetirlos.",
         en: "Perfect! 😊 Our team will check availability and confirm the amount for those dates. You won't need to repeat your details.",
         pt: "Perfeito! 😊 Nossa equipe verificará a disponibilidade e confirmará o valor. Não é necessário repetir os dados.",
         fr: "Parfait ! 😊 Notre équipe vérifiera la disponibilité et confirmera le montant. Vous n'aurez pas à répéter vos informations.",
       })[state.language || "es"] || "Nuestro equipo confirmará disponibilidad e importe."
-        : formatOccupancyQuote(quote, state.language, { noLowerPrice: selection.reason === "no_lower_price", alternatives: selection.alternatives }),
+        : formatOccupancyQuote(quote, state.language, { noLowerPrice: selection.reason === "no_lower_price", alternatives: selection.alternatives }), state.language),
       responseId: null, deterministic: true, mode: accepted ? "human_review_required" : "occupancy_quote",
     };
   }
@@ -491,7 +492,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
       const nextContext = { state: "whatsapp_mvp", whatsapp_mvp: nextState };
       await saveBookingContext(channel, externalUserId, nextContext);
       return {
-        reply: globalBookingCreatedReply(nextState, result, progress.paymentMethod),
+        reply: appendRoomInvitation(globalBookingCreatedReply(nextState, result, progress.paymentMethod), nextState.language),
         responseId: null,
         deterministic: true,
         mode: "global_reservation_booking_created",
