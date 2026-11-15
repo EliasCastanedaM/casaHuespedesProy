@@ -31,6 +31,7 @@ import { requiresManualReview, humanReviewReply, globalAssistantSocialLinks, isH
 import {
   globalReservationContext,
   handleGlobalReservationTurn,
+  reservationContextForMessage,
   isAssistantMenuRequest,
   prepareGlobalReservation as prepareGlobalReservationContext,
 } from "./ai.reservation.js";
@@ -47,6 +48,7 @@ import { isReservationIntent } from "./ai.booking-flow.js";
 import { getReservationRoomCategoriesService, withAvailableReservationRooms } from "../rooms/roomOccupancyRates.service.js";
 import { selectOccupancyQuote, formatOccupancyQuote, processingQuoteReply, isPriceVariationInquiry, priceVariationReply } from "./ai.occupancy-pricing.js";
 import { appendRoomInvitation } from "./ai.room-invitation.js";
+import { BOOKING_UNDERSTANDING_PROMPT, BOOKING_UNDERSTANDING_SCHEMA, bookingUnderstandingInput, shouldUnderstandBooking, validateBookingUnderstanding } from "./ai.booking-understanding.js";
 
 import { hasRoomPreferences, normalizeRoomPreferences, roomPreferenceMatch, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 
@@ -749,8 +751,8 @@ async function loadStoredHistory(channel, externalUserId, currentMessage) {
   }
 }
 
-async function trackedResponse(openai, request, meta) {
-  const response = await openai.responses.create(request);
+async function trackedResponse(openai, request, meta, options) {
+  const response = await openai.responses.create(request, options);
   await recordOpenAiUsage(response, meta);
   if (['incomplete', 'failed', 'cancelled'].includes(response.status)) {
     const error = new Error('No se pudo completar la respuesta del asesor.');
@@ -938,6 +940,33 @@ async function generateAiReplyInternal({
         console.warn("No se pudieron cargar categorías para recomendar habitación:", diagnosticCode(error));
       }
     }
+    let understanding = null;
+    const interpretationState = reservationContextForMessage(message, current).whatsapp_mvp;
+    if (env.openai.apiKey && shouldUnderstandBooking(message, interpretationState, isReservationIntent(message) || pricingIntent)) {
+      try {
+        const interpreted = await trackedResponse(getClient(), {
+          model: env.openai.model,
+          instructions: BOOKING_UNDERSTANDING_PROMPT,
+          input: bookingUnderstandingInput(message, interpretationState, now),
+          text: { format: { type: "json_schema", name: "hotel_booking_understanding", strict: true, schema: BOOKING_UNDERSTANDING_SCHEMA } },
+          max_output_tokens: 1800, store: false,
+        }, { channel, externalUserId, operation: "assistant_response" }, { timeout: 10000, maxRetries: 0 });
+        understanding = validateBookingUnderstanding(interpreted.output_text, message, interpretationState);
+        if (!understanding) {
+          try {
+            const rejected = JSON.parse(interpreted.output_text);
+            if (rejected?.intent && Array.isArray(rejected.updates)) understanding = { intent: "unclear", fields: {}, clarification: "¿Puedes confirmar qué datos deseas cambiar y cuáles se mantienen?" };
+          } catch { /* A non-structured provider reply uses the existing fallback. */ }
+        }
+        if (understanding && ["details", "correction"].includes(understanding.intent) && !Object.keys(understanding.fields).length && !understanding.clarification) understanding = null;
+      } catch (error) {
+        // A refusal, schema error or timeout keeps the existing validated flow.
+        console.warn("No se pudo interpretar la solicitud de reserva:", diagnosticCode(error));
+      }
+      if (!understanding && interpretationState && /[¿?]/.test(message)) {
+        understanding = { intent: "unclear", fields: {}, clarification: "¿Quieres confirmar un cambio en tu solicitud o solo consultar otra opción?" };
+      }
+    }
     const progress = handleGlobalReservationTurn({
       message,
       context: current,
@@ -946,6 +975,7 @@ async function generateAiReplyInternal({
       categories,
       pricingIntent,
       now,
+      understanding,
     });
     if (progress.action) {
       const actionResult = await executeGlobalReservationAction({

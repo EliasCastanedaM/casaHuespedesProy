@@ -2,6 +2,7 @@ import { guestComposition, categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLI
 import { collectRoomPreferences, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 import { randomUUID } from "node:crypto";
 import { appendRoomInvitation } from "./ai.room-invitation.js";
+import { applyBookingUnderstanding } from "./ai.booking-understanding.js";
 import { hasOccupancyRates, acceptsQuote, isCheaperRequest } from "./ai.occupancy-pricing.js";
 
 // Flujo global progresivo de atención y reservas. La disponibilidad y el importe requieren aprobación humana;
@@ -76,6 +77,10 @@ function startsIndependentReservation(message, context = {}) {
   const suppliesStay = /\b(?:del|desde|para el|from|for)\b.*\b(?:\d{1,2}|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(text)
     || /\b(?:check[ -]?in|check[ -]?out|ingreso|salida|entrada|llegada)\b/.test(text);
   return suppliesStay;
+}
+
+export function reservationContextForMessage(message, context = {}) {
+  return isExplicitNewReservation(message) || startsIndependentReservation(message, context) ? {} : (context || {});
 }
 
 export function isAssistantMenuRequest(message) {
@@ -316,7 +321,12 @@ function mentionsNoCategory(text, words) {
   return new RegExp("\\b" + negative + "\\s+" + verb + "(?:" + words + ")\\b").test(value);
 }
 
-function collect(message, previous = {}, now = new Date()) {
+function collect(message, previous = {}, now = new Date(), understanding = null) {
+  if (understanding) {
+    const next = applyBookingUnderstanding(previous, understanding.fields);
+    if (next.room_preferences) next.preferences = roomPreferenceLabel(next.room_preferences);
+    return next;
+  }
   const text = normalize(message);
   const next = { ...previous };
   // Normaliza también borradores guardados por versiones anteriores, que
@@ -804,6 +814,15 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
 }
 
 export function handleGlobalReservationTurn(input) {
+  const understood = input.understanding;
+  if (understood?.intent === "information") return { handled: false, context: input.context || {} };
+  if (understood?.intent === "hypothetical" || understood?.intent === "unclear") {
+    return { handled: true, context: input.context || {}, mode: "global_reservation_clarification",
+      reply: understood.clarification || (understood.intent === "hypothetical"
+        ? "¿Quieres cambiar la solicitud actual o solo consultar otra opción?"
+        : "¿Puedes confirmar los adultos y, si viajan niños, sus edades cumplidas?"),
+    };
+  }
   const result = handleReservationTurn(input);
   const previous = input.context?.whatsapp_mvp || {};
   const next = result.context?.whatsapp_mvp || {};
@@ -821,20 +840,21 @@ function handleReservationTurn({
   channel,
   categories = [],
   pricingIntent = false,
+  understanding = null,
 }) {
   const text = normalize(message);
   const previousLanguage = context.whatsapp_mvp?.language || "es";
-  if (isExplicitNewReservation(message) || startsIndependentReservation(message, context)) context = {};
+  context = understanding?.intent === "new_request" ? {} : reservationContextForMessage(message, context);
   const state = context.whatsapp_mvp || null;
   const language = detectLanguage(message, state?.language || previousLanguage);
   const dictionary = labels[language] || labels.es;
-  const intent = reservationIntent(text) || pricingIntent;
+  const intent = reservationIntent(text) || pricingIntent || understanding?.intent === "new_request";
   if (isAssistantMenuRequest(message)) {
     return { handled: true, reply: dictionary.menu, mode: "global_reservation_menu", context };
   }
 
   if (state?.state === "quoted") {
-    const updated = collect(message, state, now);
+    const updated = collect(message, state, now, understanding);
     const optionNumber=String(message).trim().match(/^(?:opci[oó]n\s*)?([1-3])[.! ]*$/i)?.[1];
     if(optionNumber && state.quote_options?.[Number(optionNumber)-1])updated.category_slug=state.quote_options[Number(optionNumber)-1].category_slug;
     updated.language = language;
@@ -861,7 +881,7 @@ function handleReservationTurn({
   }
 
   if (state?.state === "handoff") {
-    const updated = collect(message, state, now);
+    const updated = collect(message, state, now, understanding);
     updated.language = language;
     updated.state = "handoff";
     delete updated.awaiting;
@@ -1016,7 +1036,7 @@ function handleReservationTurn({
   }
 
   if (!state && !intent) {
-    const preliminary = collect(message, {}, now);
+    const preliminary = collect(message, {}, now, understanding);
     const hasDetails = ["check_in", "total_guests", "adults", "children", "pets", "category_slug", "preferences"]
       .some((key) => preliminary[key] !== undefined);
     if (!hasDetails) return { handled: false, context };
@@ -1033,16 +1053,16 @@ function handleReservationTurn({
       handled: false,
       context: {
         ...context,
-        whatsapp_mvp: { ...collect(message, state, now), language, state: "browsing" },
+        whatsapp_mvp: { ...collect(message, state, now, understanding), language, state: "browsing" },
       },
     };
   }
-  if (state?.state === "collecting" && !intent && /[¿?]/.test(String(message)) &&
+  if (state?.state === "collecting" && !intent && !understanding && /[¿?]/.test(String(message)) &&
       !containsStructuredBookingAnswer(message, state, now)) {
     return { handled: false, context };
   }
 
-  const data = collect(message, state || {}, now);
+  const data = collect(message, state || {}, now, understanding);
   data.language = language;
   data.reservation_requested = state?.reservation_requested || reservationIntent(text);
   data.state = "collecting";
