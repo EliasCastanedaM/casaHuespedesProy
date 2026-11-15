@@ -1,6 +1,7 @@
 import { guestComposition, categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
 import { collectRoomPreferences, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 import { randomUUID } from "node:crypto";
+import { appendRoomInvitation } from "./ai.room-invitation.js";
 import { hasOccupancyRates, acceptsQuote, isCheaperRequest } from "./ai.occupancy-pricing.js";
 
 // Flujo global progresivo de atención y reservas. La disponibilidad y el importe requieren aprobación humana;
@@ -788,11 +789,21 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
   };
   return {
     context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: next },
-    reply: postApprovalReply(language, categoryName, amount),
+    reply: appendRoomInvitation(postApprovalReply(language, categoryName, amount), language),
   };
 }
 
-export function handleGlobalReservationTurn({
+export function handleGlobalReservationTurn(input) {
+  const result = handleReservationTurn(input);
+  const previous = input.context?.whatsapp_mvp || {};
+  const next = result.context?.whatsapp_mvp || {};
+  if (result.reply && changedBookingFields(previous, next).length > 0) {
+    return { ...result, reply: appendRoomInvitation(result.reply, next.language) };
+  }
+  return result;
+}
+
+function handleReservationTurn({
   message,
   context = {},
   now = new Date(),
