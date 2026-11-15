@@ -40,6 +40,9 @@ export function processingQuoteReply(language = "es") {
 }
 
 export function quoteForCategory(category, state) {
+  // Missing confirmations are not zero. In particular, Number(null) === 0
+  // must never silently mean "no children" or "no pets".
+  if (!state || ["adults", "children", "pets"].some(key => state[key] == null)) return null;
   const adults = Number(state.adults);
   const children = Number(state.children);
   const ages = Array.isArray(state.child_ages) ? state.child_ages : [];

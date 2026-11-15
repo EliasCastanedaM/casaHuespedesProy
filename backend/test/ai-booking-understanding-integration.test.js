@@ -72,3 +72,61 @@ test("fallo del proveedor mantiene respuesta de aclaración y no modifica una co
   assert.match(result.reply, /cambio|consultar/);
   assert.deepEqual(db.context().whatsapp_mvp, state);
 });
+
+for (const channel of ["whatsapp", "instagram", "facebook"]) test(channel + ": petición relativa nueva exige confirmar adultos, niños y mascotas", async t => {
+  const message = "quiero reservar para mañana y el dia siguiente";
+  let processing = 0;
+  const db = setup(t, { ...active, state: "quoted", adults: 2, children: 0, child_ages: [], pets: 0,
+    category_slug: "matrimonial", pricing_quote: { total_amount: 120 } }, input => {
+    if (input.mensaje_actual === message) {
+      assert.equal(input.solicitud_actual.adults, undefined);
+      assert.equal(input.solicitud_actual.children, undefined);
+      assert.equal(input.solicitud_actual.pets, undefined);
+      // Even if the model chooses 'details' instead of 'new_request', the
+      // application boundary must not inherit the old party.
+      return { intent: "details", updates: [
+        { field: "check_in", value: "2026-11-16", evidence: "mañana" },
+        { field: "check_out", value: "2026-11-17", evidence: "el dia siguiente" },
+      ], clarification: null };
+    }
+    return { intent: "details", updates: [{ field: "adults", value: 2, evidence: "2 adultos" }], clarification: null };
+  });
+  const send = text => generateAiReply({ channel, externalUserId: "relative-fresh-" + channel, message: text, now: new Date("2026-11-15T15:00:00Z") }, { onProcessing: () => { processing++; } });
+  const fresh = await send(message);
+  assert.match(fresh.reply, /Cuántas personas/);
+  assert.doesNotMatch(fresh.reply, /S\//);
+  for (const key of ["adults", "children", "child_ages", "pets", "pricing_quote", "category_slug"]) assert.equal(db.context().whatsapp_mvp[key], undefined, key);
+  const adults = await send("2 adultos");
+  assert.match(adults.reply, /Viajan niños/);
+  assert.equal(db.context().whatsapp_mvp.children, undefined);
+  assert.equal(db.context().whatsapp_mvp.pets, undefined);
+  const children = await send("no");
+  assert.match(children.reply, /mascotas/);
+  assert.equal(db.context().whatsapp_mvp.children, 0);
+  assert.equal(db.context().whatsapp_mvp.pets, undefined);
+  assert.equal(processing, 0);
+  const complete = await send("no");
+  assert.equal(db.context().whatsapp_mvp.pets, 0);
+  assert.equal(complete.mode, "human_review_required");
+});
+
+test("aclarar las fechas de una petición nueva no resucita la reserva vieja", async t => {
+  const message = "quiero reservar para mañana y el dia siguiente";
+  const db = setup(t, { ...active, state: "quoted", adults: 2, children: 0, child_ages: [], pets: 0 }, input => {
+    if (input.mensaje_actual === message) return { intent: "unclear", updates: [], clarification: "¿Qué fechas de entrada y salida deseas?" };
+    return { intent: "details", updates: [
+      { field: "check_in", value: "2026-11-16", evidence: "16 al 17 de noviembre de 2026" },
+      { field: "check_out", value: "2026-11-17", evidence: "16 al 17 de noviembre de 2026" },
+    ], clarification: null };
+  });
+  const send = text => generateAiReply({ channel: "instagram", externalUserId: "clarify-fresh", message: text });
+  const ambiguous = await send(message);
+  assert.match(ambiguous.reply, /entrada y salida/);
+  assert.equal(db.context().whatsapp_mvp.state, "collecting");
+  assert.equal(db.context().whatsapp_mvp.adults, undefined);
+  assert.equal(db.context().whatsapp_mvp.pets, undefined);
+  const dates = await send("Del 16 al 17 de noviembre de 2026");
+  assert.match(dates.reply, /Cuántas personas/);
+  assert.equal(db.context().whatsapp_mvp.children, undefined);
+  assert.equal(db.context().whatsapp_mvp.pets, undefined);
+});

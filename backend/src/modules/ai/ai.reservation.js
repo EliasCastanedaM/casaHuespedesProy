@@ -65,18 +65,20 @@ function isExplicitNewReservation(message) {
     /\b(?:quiero|quisiera|deseo|necesito|hacer|iniciar|crear|empezar|i want|i would like|start|make|create|quero|gostaria|je veux|je voudrais|faire)\b/.test(text);
 }
 
-// A reservation message that supplies a new stay (especially dates) starts a
-// fresh request. Previous chat messages must not fill in missing occupants,
-// children or pets unless the guest explicitly asks to continue or modify the
-// existing request.
+// A fresh booking request starts with no old occupants, independently of how
+// its dates are phrased. This boundary runs before model interpretation.
 function startsIndependentReservation(message, context = {}) {
   if (!context?.whatsapp_mvp || !reservationIntent(normalize(message))) return false;
   if (isExplicitNewReservation(message)) return true;
   const text = normalize(message);
   if (/\b(?:continuar|seguir|retomar|modificar|cambiar|corregir|editar|actualizar|agregar|añadir|ahora somos|continue|resume|modify|change|edit|update|add)\b/.test(text)) return false;
-  const suppliesStay = /\b(?:del|desde|para el|from|for)\b.*\b(?:\d{1,2}|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(text)
-    || /\b(?:check[ -]?in|check[ -]?out|ingreso|salida|entrada|llegada)\b/.test(text);
-  return suppliesStay;
+  if (/\b(?:no quiero|no deseo|no necesito|do not want|don't want|nao quero)\b/.test(text)) return false;
+  if (/\b(?:mi reserva|my booking|my reservation|la misma reserva|esa reserva|esta reserva|esa habitacion|esa opcion)\b|\breservar\s+(?:esa|esta|la primera|la segunda|la tercera|la que)\b/.test(text)) return false;
+  // A bare intention can continue the current exchange; a request with details
+  // starts independently unless it explicitly refers to the current request.
+  if (/^(?:(?:quiero|quisiera|deseo|necesito)\s+)?reservar(?:\s+por favor)?[.! ]*$/.test(text)) return false;
+  return /\b(?:quiero|quisiera|deseo|necesito|me gustaria|i want|i would like|i'd like|quero|gostaria|je veux|je voudrais)\b.{0,70}\b(?:reservar|reserva|book|booking|reservation|reserver)\b/.test(text)
+    || /^(?:(?:una|a|une)\s+)?(?:reservar|reserva|book|booking|reserver|reservation)\s+\S/.test(text);
 }
 
 export function reservationContextForMessage(message, context = {}) {
@@ -817,7 +819,17 @@ export function handleGlobalReservationTurn(input) {
   const understood = input.understanding;
   if (understood?.intent === "information") return { handled: false, context: input.context || {} };
   if (understood?.intent === "hypothetical" || understood?.intent === "unclear") {
-    return { handled: true, context: input.context || {}, mode: "global_reservation_clarification",
+    let context = input.context || {};
+    if (understood.intent === "unclear") {
+      context = reservationContextForMessage(input.message, context);
+      if (!context.whatsapp_mvp && reservationIntent(normalize(input.message))) {
+        context = { ...context, state: "whatsapp_mvp", whatsapp_mvp: {
+          state: "collecting", awaiting: "dates", reservation_requested: true,
+          language: detectLanguage(input.message, input.context?.whatsapp_mvp?.language || "es"), intent_id: randomUUID(),
+        } };
+      }
+    }
+    return { handled: true, context, mode: "global_reservation_clarification",
       reply: understood.clarification || (understood.intent === "hypothetical"
         ? "¿Quieres cambiar la solicitud actual o solo consultar otra opción?"
         : "¿Puedes confirmar los adultos y, si viajan niños, sus edades cumplidas?"),
