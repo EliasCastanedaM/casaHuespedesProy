@@ -18,7 +18,17 @@ El flujo de reserva contestaba antes de llegar al modelo. Las expresiones regula
 4. Los datos propuestos deben pertenecer a una lista de campos permitidos y aportar evidencia literal del mensaje. Se validan tipos, cantidades, edades, fechas, categorías y coherencia antes de aplicarlos.
 5. El flujo existente pregunta por datos pendientes y consulta el motor de camas, tarifas e inventario. La interpretación no puede establecer importes, descuentos, unidades físicas, confirmaciones, reservas ni pagos.
 
-Los mensajes hipotéticos y ambiguos conservan la solicitud sin modificaciones. Una salida estructurada inválida se convierte en una aclaración. Si el proveedor falla o no devuelve JSON utilizable, se conserva el tratamiento anterior; las preguntas ambiguas de una reserva no modifican su estado durante ese fallo.
+Las consultas hipotéticas e informativas no modifican la solicitud. Un mensaje parcialmente ambiguo conserva los datos inequívocos y pregunta únicamente por la duda. Una salida estructurada inválida se convierte en una aclaración. Si el proveedor falla o no devuelve JSON utilizable, se conserva el tratamiento anterior; las preguntas ambiguas de una reserva no modifican su estado durante ese fallo.
+
+## Fechas propuestas y continuidad
+
+Se detectaron dos instrucciones contradictorias con el comportamiento deseado: el intérprete exigía fechas exactas ante «mañana y el día siguiente», y el prompt general exigía decir explícitamente «nueva reserva» para limpiar el borrador. Se reemplazaron por interpretación con confirmación y separación de solicitudes independientes.
+
+El contrato distingue `updates` (hechos confirmados), `proposal` (entrada/salida pendientes), `clarification` y el campo al que corresponde esa pregunta. Incluye el idioma del mensaje. El intérprete recibe también el idioma y las fechas propuestas de la solicitud actual; no recibe una transcripción de reservas anteriores.
+
+Una propuesta no activa la cotización ni reemplaza fechas confirmadas. El backend pregunta por entrada, salida y número de noches; una aceptación explícita valida las fechas de nuevo y continúa con los datos pendientes. Una negativa conserva los huéspedes y exige aclarar las fechas antes de cotizar. Una propuesta vencida no se confirma. Otra reserva elimina la propuesta anterior. Si el huésped aporta adultos o edades mientras decide, se guardan sin convertir la propuesta en una confirmación.
+
+La pregunta de aclaración conserva su tema para aceptar respuestas cortas como «4». Al completar edades parcialmente conocidas, no se borra la edad anterior. El idioma de la interpretación guía las preguntas siguientes; los nombres comerciales de categorías permanecen intactos. Los cambios de datos que afectan una cotización invalidan el importe previo y la aprobación del equipo.
 
 ## Especialización del hotel
 
@@ -33,17 +43,21 @@ Los mensajes hipotéticos y ambiguos conservan la solicitud sin modificaciones. 
 
 ## Evaluación
 
-El conjunto `test/fixtures/booking-understanding-cases.js` contiene 30 casos ficticios: parejas, familias, bebés sin edad, correcciones, edades parciales, niños mayores, mascotas, vistas, camas, fechas, reservas independientes, grupos grandes y cuatro idiomas.
+El conjunto de desarrollo `test/fixtures/booking-understanding-cases.js` contiene 30 casos ficticios: parejas, familias, bebés sin edad, correcciones, edades parciales, niños mayores, mascotas, vistas, camas, fechas, reservas independientes, grupos grandes y cuatro idiomas. Algunos coinciden con ejemplos del prompt y no cuentan como evaluación reservada.
+
+`test/fixtures/booking-understanding-holdout.js` conserva 12 casos adicionales y tres conversaciones de varios turnos fuera de los ejemplos del prompt. Incluye errores de escritura, cambios de idioma, correcciones, consultas hipotéticas, confirmaciones de fechas y separación de solicitudes. No trasladar sus frases al prompt para mejorar artificialmente el resultado; si se usan para ajustar instrucciones, deben pasar a desarrollo y reemplazarse por casos nuevos.
 
 Las pruebas de contrato y orquestación verifican validaciones y efectos del flujo usando respuestas simuladas. No prueban que el modelo acierte esos casos. Las pruebas de integración comprueban además el orden de interpretación, los tres canales, la exclusión de datos anteriores, los fallos del proveedor y la ausencia de cambios en consultas hipotéticas.
 
 Para medir el modelo real, con la clave y el modelo ya configurados en el entorno del backend:
 
 ```sh
-node scripts/evaluate-booking-understanding.mjs 30
+node scripts/evaluate-booking-understanding.mjs --split holdout
+node scripts/evaluate-booking-understanding.mjs --split conversations
+node scripts/evaluate-booking-understanding.mjs --split development 30
 ```
 
-El número permite una evaluación menor, con un máximo de 30 solicitudes. Consume llamadas al proveedor; utiliza solo los casos ficticios y no almacena respuestas del modelo. Falla explícitamente si no hay clave o si algún caso no satisface la expectativa. No imprime credenciales ni mensajes reales de huéspedes.
+El número opcional limita casos o conversaciones. Por defecto se evalúa el conjunto reservado. La separación de contexto utiliza la misma función que producción, sin dar al modelo la intención esperada como pista. Se comprueban intención, campos confirmados, idioma y propuesta; las conversaciones añaden comprobaciones del borrador tras cada turno. Consume llamadas al proveedor; utiliza solo datos ficticios y no almacena respuestas del modelo. No ejecuta consultas de inventario, reservas ni pagos. Falla explícitamente si no hay clave o si algún caso no satisface la expectativa. No imprime credenciales ni mensajes reales de huéspedes.
 
 Antes de dar por demostrada la calidad semántica, revisar los errores del modelo real, ajustar instrucciones y repetir el conjunto. Mantener ejemplos de evaluación reservados, ampliar con fallos anonimizados autorizados y revisar manualmente casos ambiguos. No incorporar conversaciones privadas sin autorización ni cambiar expectativas para ocultar errores.
 

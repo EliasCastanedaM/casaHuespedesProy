@@ -9,6 +9,12 @@ export const BOOKING_UNDERSTANDING_SCHEMA = {
   type: "object", additionalProperties: false,
   properties: {
     intent: { type: "string", enum: intents },
+    language: { type: "string", enum: ["es", "en", "pt", "fr"] },
+    proposal: { anyOf: [{ type: "null" }, {
+      type: "object", additionalProperties: false,
+      properties: { check_in: { type: "string" }, check_out: { type: "string" }, evidence: { type: "string" } },
+      required: ["check_in", "check_out", "evidence"],
+    }] },
     updates: { type: "array", items: {
       type: "object", additionalProperties: false,
       properties: {
@@ -18,7 +24,8 @@ export const BOOKING_UNDERSTANDING_SCHEMA = {
       }, required: ["field", "value", "evidence"],
     } },
     clarification: { type: ["string", "null"] },
-  }, required: ["intent", "updates", "clarification"],
+    clarification_field: { type: ["string", "null"], enum: [null, "dates", "guests", "children", "ages", "pets", "preferences"] },
+  }, required: ["intent", "language", "updates", "clarification", "clarification_field", "proposal"],
 };
 
 export const BOOKING_UNDERSTANDING_PROMPT = `Eres el intérprete de solicitudes de Casa Huéspedes Pimentel, Perú.
@@ -32,7 +39,11 @@ new_request: pide otra/nueva reserva independiente. Usa SOLO lo que aporta en es
 continue: pide expresamente seguir con la solicitud actual.
 hypothetical: pregunta por un escenario distinto sin afirmar un cambio. No actualices la solicitud.
 information: pregunta por servicios, políticas, ubicación, características o estado. No conviertas una pregunta en preferencia ni en cambio de huéspedes.
-unclear: falta información para interpretar lo dicho sin adivinar; formula una pregunta breve en el idioma del huésped.
+unclear: una parte necesita aclaración. Conserva en updates los otros datos inequívocos del mensaje y pregunta SOLO por la duda, sin exigir repetirlos.
+clarification_field indica a qué responde esa pregunta: dates, guests (adultos), children (cantidad), ages, pets o preferences. Usa null si no preguntas por un dato concreto. Una pregunta sobre edad permite contestar simplemente «4» sin repetir la familia. No hagas dos preguntas de temas distintos en clarification.
+
+IDIOMA
+language indica el idioma del mensaje (es, en, pt, fr). Acompaña los cambios entre español e inglés. En respuestas cortas sin idioma claro, conserva el de solicitud_actual. No traduzcas los nombres comerciales de habitaciones.
 
 DATOS
 Devuelve únicamente los campos nuevos o corregidos, con una cita literal breve del mensaje en evidence para cada campo. Nunca repitas datos del contexto como si se hubieran proporcionado ahora. Los campos no mencionados se omiten.
@@ -40,7 +51,8 @@ Cuenta personas, no palabras. Mi esposa y yo / yo con mi pareja son dos adultos.
 No deduzcas ausencia de niños o mascotas por silencio. Solo 0 si lo niega expresamente o afirma inequívocamente que no hay más viajeros en esa categoría. Mi bebé, mi peque o mi hijita indican un menor, pero no una edad concreta. Casi cinco / el bebé / uno pequeño requieren aclarar edad cumplida.
 Las listas de edades corresponden a los niños declarados; puedes informar una lista parcial de edades conocidas, pero nunca inventes las faltantes. Para completar una lista parcial puedes conservar las edades ya confirmadas de ESTA solicitud y añadir las nuevas. Pregunta las faltantes; nunca uses edades de otra reserva.
 Para sumar o restar viajeros usa el contexto actual solo si es inequívoco quién se añade o retira. Uno no viene sin decir si es adulto o niño requiere aclaración.
-Fechas: resuelve fechas con fecha_hoy_peru y la solicitud ACTUAL. Nunca inventes un mes o día. Otra reserva sin fechas no hereda fechas anteriores. "Para mañana y el día siguiente" no distingue claramente entre salida al día siguiente y dos noches: usa unclear sin updates y pregunta las fechas de entrada y salida. Solo convierte fechas relativas en una estancia cuando entrada, salida o número de noches sean inequívocos.
+Fechas: resuelve fechas con fecha_hoy_peru (America/Lima) y la solicitud ACTUAL. Otra reserva sin fechas no hereda fechas anteriores. Distingue días, noches, entrada y salida. Si son inequívocas, devuelve fechas confirmadas en updates. Si hay dos interpretaciones razonables, ofrece una sola en proposal con entrada/salida ISO y evidencia literal; NO pongas esas fechas también en updates. Para una petición que menciona alojarse mañana y el día siguiente, propone esas dos noches con salida al tercer día. El sistema preguntará brevemente si es correcto y guardará la propuesta sin confirmarla. Nunca inventes una fecha si faltan datos para una propuesta razonable; entonces pregunta únicamente el dato pendiente en clarification. proposal=null en los demás casos.
+Una propuesta pendiente no equivale a fechas confirmadas: no la copies a updates salvo aceptación expresa del huésped. Las consultas hipotéticas o informativas nunca incluyen proposal ni updates.
 category_slug: solo matrimonial (Matrimonial Estándar), matrimonial-ejecutiva, doble, triple, familiar (Familiar 1), familiar-2. No traduzcas ni combines las familiares.
 view: sea, street, interior. near_window es booleano. bed_preference: separate o matrimonial. young_children_share_bed es booleano y solo se informa si el huésped expresa compartir o necesitar cama propia; el motor valida su viabilidad.
 No incluyas datos personales, números de habitación, tarifas, descuentos, aprobaciones, pagos ni campos fuera del esquema.
@@ -70,7 +82,10 @@ export function shouldUnderstandBooking(message, state, bookingIntent = false) {
 }
 
 export function bookingUnderstandingInput(message, state = {}, now = new Date()) {
-  const selected = { state: state.state, awaiting: state.awaiting };
+  const selected = { state: state.state, awaiting: state.awaiting, language: state.language, dates_need_confirmation: state.dates_need_confirmation };
+  if (state.pending_proposal) selected.pending_proposal = {
+    check_in: state.pending_proposal.check_in, check_out: state.pending_proposal.check_out,
+  };
   for (const key of fieldNames) if (state[key] !== undefined) selected[key] = state[key];
   if (state.room_preferences) selected.room_preferences = {
     view: state.room_preferences.view, near_window: state.room_preferences.near_window,
@@ -92,8 +107,10 @@ export function validateBookingUnderstanding(raw, message, state = {}) {
   let result;
   try { result = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { return null; }
   if (!result || !intents.includes(result.intent) || !Array.isArray(result.updates) || result.updates.length > fieldNames.length) return null;
-  if (Object.keys(result).some(key => !["intent", "updates", "clarification"].includes(key))) return null;
-  if (["hypothetical", "information", "unclear"].includes(result.intent) && result.updates.length) return null;
+  if (Object.keys(result).some(key => !["intent", "language", "updates", "clarification", "clarification_field", "proposal"].includes(key))) return null;
+  if (result.clarification_field != null && !["dates", "guests", "children", "ages", "pets", "preferences"].includes(result.clarification_field)) return null;
+  if (result.language != null && !["es", "en", "pt", "fr"].includes(result.language)) return null;
+  if (["hypothetical", "information"].includes(result.intent) && (result.updates.length || result.proposal)) return null;
   const fields = {};
   for (const update of result.updates) {
     if (!update || Object.keys(update).some(key => !["field", "value", "evidence"].includes(key))) return null;
@@ -126,7 +143,16 @@ export function validateBookingUnderstanding(raw, message, state = {}) {
     if (typeof result.clarification !== "string" || result.clarification.length > 240 || /https?:|www\.|S\/|\bsoles\b|\$|<|>/i.test(result.clarification)) return null;
     clarification = result.clarification.trim() || null;
   }
-  return { intent: result.intent, fields, clarification };
+  let proposal = null;
+  if (result.proposal != null) {
+    const p = result.proposal;
+    if (!p || Object.keys(p).some(key => !["check_in", "check_out", "evidence"].includes(key)) ||
+        !validDate(p.check_in) || !validDate(p.check_out) || p.check_out <= p.check_in ||
+        fields.check_in || fields.check_out || typeof p.evidence !== "string" || !normalize(p.evidence) ||
+        !normalize(message).includes(normalize(p.evidence))) return null;
+    proposal = { check_in: p.check_in, check_out: p.check_out };
+  }
+  return { intent: result.intent, fields, clarification, ...(result.clarification_field ? { clarification_field: result.clarification_field } : {}), ...(result.language ? { language: result.language } : {}), ...(proposal ? { proposal } : {}) };
 }
 
 export function applyBookingUnderstanding(previous, fields) {

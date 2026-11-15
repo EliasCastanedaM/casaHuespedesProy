@@ -958,7 +958,7 @@ async function generateAiReplyInternal({
             if (rejected?.intent && Array.isArray(rejected.updates)) understanding = { intent: "unclear", fields: {}, clarification: "¿Puedes confirmar qué datos deseas cambiar y cuáles se mantienen?" };
           } catch { /* A non-structured provider reply uses the existing fallback. */ }
         }
-        if (understanding && ["details", "correction"].includes(understanding.intent) && !Object.keys(understanding.fields).length && !understanding.clarification) understanding = null;
+        if (understanding && ["details", "correction"].includes(understanding.intent) && !Object.keys(understanding.fields).length && !understanding.clarification && !understanding.proposal && !understanding.language) understanding = null;
       } catch (error) {
         // A refusal, schema error or timeout keeps the existing validated flow.
         console.warn("No se pudo interpretar la solicitud de reserva:", diagnosticCode(error));
