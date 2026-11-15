@@ -130,3 +130,22 @@ test("aclarar las fechas de una petición nueva no resucita la reserva vieja", a
   assert.equal(db.context().whatsapp_mvp.children, undefined);
   assert.equal(db.context().whatsapp_mvp.pets, undefined);
 });
+
+for (const channel of ["whatsapp", "instagram", "facebook"]) test(channel + ": propuesta y confirmación avanzan aun si el proveedor falla después", async t => {
+  const message = "Quiero reservar para mañana y el día siguiente";
+  const db = setup(t, { ...active, state: "quoted", adults: 5, children: 0, pets: 0 }, input => {
+    if (input.mensaje_actual === message) return { intent: "details", language: "es", updates: [], clarification: null,
+      proposal: { check_in: "2026-11-16", check_out: "2026-11-18", evidence: "mañana y el día siguiente" } };
+    throw Object.assign(new Error("mock timeout"), { code: "ETIMEDOUT" });
+  });
+  const send = message => generateAiReply({ channel, externalUserId: "proposal-" + channel, message, now: new Date("2026-11-15T12:00:00Z") });
+  const offered = await send(message);
+  assert.match(offered.reply, /2 noches/);
+  assert.equal(db.context().whatsapp_mvp.check_in, undefined);
+  assert.equal(db.context().whatsapp_mvp.adults, undefined);
+  const confirmed = await send("yes please");
+  assert.match(confirmed.reply, /adults/);
+  assert.equal(db.context().whatsapp_mvp.check_out, "2026-11-18");
+  assert.equal(db.context().whatsapp_mvp.children, undefined);
+  assert.equal(db.context().whatsapp_mvp.pets, undefined);
+});

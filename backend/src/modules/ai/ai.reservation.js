@@ -326,6 +326,7 @@ function mentionsNoCategory(text, words) {
 function collect(message, previous = {}, now = new Date(), understanding = null) {
   if (understanding) {
     const next = applyBookingUnderstanding(previous, understanding.fields);
+    if (understanding.fields.check_in || understanding.fields.check_out) delete next.dates_need_confirmation;
     if (next.room_preferences) next.preferences = roomPreferenceLabel(next.room_preferences);
     return next;
   }
@@ -356,10 +357,15 @@ function collect(message, previous = {}, now = new Date(), understanding = null)
   }
   if (previous.awaiting === "ages") {
     const ages = parseAgeList(text);
-    if (ages) next.child_ages = ages;
+    if (ages) {
+      const known = Array.isArray(previous.child_ages) ? previous.child_ages : [];
+      next.child_ages = known.length > 0 && known.length < previous.children && ages.length <= previous.children - known.length
+        ? [...known, ...ages] : ages;
+    }
   }
 
   const dates = extractDateTokens(message, now, previous.check_in);
+  if (dates.length) delete next.dates_need_confirmation;
   if (dates.length === 2) {
     next.check_in = dates[0];
     next.check_out = dates[1];
@@ -592,7 +598,7 @@ const labels = {
 
 function missingQuestion(data, l) {
   const dictionary = labels[l] || labels.es;
-  if (!data.check_in || !data.check_out) return dictionary.dates;
+  if (data.dates_need_confirmation || !data.check_in || !data.check_out) return dictionary.dates;
   if (data.adults == null) return dictionary.guests;
   if (data.children == null) return dictionary.children;
   if (data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length !== data.children)) return dictionary.ages;
@@ -816,29 +822,96 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
 }
 
 export function handleGlobalReservationTurn(input) {
-  const understood = input.understanding;
+  let understood = input.understanding;
   if (understood?.intent === "information") return { handled: false, context: input.context || {} };
-  if (understood?.intent === "hypothetical" || understood?.intent === "unclear") {
-    let context = input.context || {};
-    if (understood.intent === "unclear") {
-      context = reservationContextForMessage(input.message, context);
-      if (!context.whatsapp_mvp && reservationIntent(normalize(input.message))) {
-        context = { ...context, state: "whatsapp_mvp", whatsapp_mvp: {
-          state: "collecting", awaiting: "dates", reservation_requested: true,
-          language: detectLanguage(input.message, input.context?.whatsapp_mvp?.language || "es"), intent_id: randomUUID(),
-        } };
-      }
+  const originalContext = input.context || {};
+  const context = understood?.intent === "new_request" ? {} : reservationContextForMessage(input.message, originalContext);
+  const previous = context.whatsapp_mvp || {};
+  const language = understood?.language || detectLanguage(input.message, previous.language || originalContext.whatsapp_mvp?.language || "es");
+  const clarification = understood?.clarification || (language === "en"
+    ? "Which detail would you like to change or clarify?"
+    : "¿Qué dato deseas cambiar o aclarar?");
+  if (understood?.intent === "hypothetical") {
+    return { handled: true, context: originalContext, mode: "global_reservation_clarification",
+      reply: understood.clarification || (language === "en"
+        ? "Would you like to change your request or just explore another option?"
+        : "¿Quieres cambiar la solicitud actual o solo consultar otra opción?") };
+  }
+
+  const pending = previous.pending_proposal;
+  const answer = normalize(input.message).replace(/[.!¡¿?,]/g, "").trim();
+  const acceptsProposal = /^(?:si|si por favor|si correcto|correcto|exacto|asi es|yes|yes please|yes thats right|that's right|correct|ok|vale|confirmo|confirmed|confirm)$/.test(answer);
+  const rejectsProposal = /^(?:no|no gracias|no thanks|nope)$/.test(answer);
+  if (pending && (acceptsProposal || rejectsProposal)) {
+    const answerLanguage = /^(?:yes|yes please|yes thats right|that's right|correct|confirmed|confirm|no thanks|nope)$/.test(answer) ? "en"
+      : /^(?:si|si por favor|si correcto|correcto|exacto|asi es|confirmo|vale)$/.test(answer) ? "es" : language;
+    const draft = { ...previous, language: answerLanguage };
+    delete draft.pending_proposal;
+    if (rejectsProposal) {
+      draft.awaiting = "dates";
+      draft.dates_need_confirmation = true;
+      return { handled: true, context: { ...context, whatsapp_mvp: draft }, mode: "global_reservation_collecting",
+        reply: labels[draft.language]?.dates || labels.es.dates };
     }
-    return { handled: true, context, mode: "global_reservation_clarification",
-      reply: understood.clarification || (understood.intent === "hypothetical"
-        ? "¿Quieres cambiar la solicitud actual o solo consultar otra opción?"
-        : "¿Puedes confirmar los adultos y, si viajan niños, sus edades cumplidas?"),
-    };
+    // Persisted proposals are validated again before becoming confirmed dates.
+    const from = pending.check_in, to = pending.check_out;
+    const validIso = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+      !Number.isNaN(Date.parse(value + "T00:00:00Z")) && new Date(value + "T00:00:00Z").toISOString().slice(0, 10) === value;
+    if (!validIso(from) || !validIso(to) || to <= from || from < limaToday(input.now || new Date()).iso) {
+      draft.awaiting = "dates";
+      draft.dates_need_confirmation = true;
+      return { handled: true, context: { ...context, whatsapp_mvp: draft }, mode: "global_reservation_collecting", reply: labels[draft.language]?.dates || labels.es.dates };
+    }
+    understood = { intent: "details", fields: { check_in: from, check_out: to }, language: draft.language };
+    input = { ...input, context: { ...context, whatsapp_mvp: draft }, understanding: understood };
+  } else if (understood?.proposal || (pending && !understood?.fields?.check_in && !understood?.fields?.check_out)) {
+    const draft = applyBookingUnderstanding(previous, understood?.fields || {});
+    draft.pending_proposal = understood?.proposal || pending;
+    draft.state = "collecting";
+    draft.language = language;
+    draft.intent_id ||= randomUUID();
+    draft.reservation_requested = previous.reservation_requested || reservationIntent(normalize(input.message));
+    draft.awaiting = "proposal_confirmation";
+    delete draft.pricing_quote;
+    delete draft.quote_options;
+    delete draft.staff_confirmation;
+    const p = draft.pending_proposal;
+    const nights = Math.round((Date.parse(p.check_out + "T00:00:00Z") - Date.parse(p.check_in + "T00:00:00Z")) / 86400000);
+    const date = value => new Intl.DateTimeFormat(language === "en" ? "en-GB" : language, {
+      day: "numeric", month: "long", year: "numeric", timeZone: "America/Lima",
+    }).format(new Date(value + "T12:00:00Z"));
+    const reply = language === "en"
+      ? `Would you stay ${nights} ${nights === 1 ? "night" : "nights"}, arriving on ${date(p.check_in)} and leaving on ${date(p.check_out)}?`
+      : language === "pt"
+        ? `Seriam ${nights} noite(s), de ${date(p.check_in)} até ${date(p.check_out)}?`
+        : language === "fr"
+          ? `Confirmez-vous ${nights} nuit(s), du ${date(p.check_in)} au ${date(p.check_out)} ?`
+          : `¿Te quedarías ${nights} ${nights === 1 ? "noche" : "noches"}, con entrada el ${date(p.check_in)} y salida el ${date(p.check_out)}?`;
+    return { handled: true, context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: draft },
+      mode: "global_reservation_clarification", reply: appendRoomInvitation(understood?.clarification ? clarification + " " + reply : reply, language) };
+  } else if (pending) {
+    const draft = { ...previous };
+    delete draft.pending_proposal;
+    input = { ...input, context: { ...context, whatsapp_mvp: draft } };
+  }
+
+  if (understood?.intent === "unclear") {
+    let nextContext = context;
+    if (Object.keys(understood.fields || {}).length || understood.clarification_field || (!previous.state && reservationIntent(normalize(input.message)))) {
+      const draft = applyBookingUnderstanding(previous, understood.fields || {});
+      Object.assign(draft, { state: "collecting", language, intent_id: previous.intent_id || randomUUID(),
+        awaiting: understood.clarification_field || (draft.children > 0 && !draft.child_ages ? "ages" : "clarification") });
+      delete draft.pricing_quote;
+      delete draft.quote_options;
+      delete draft.staff_confirmation;
+      nextContext = { ...context, state: "whatsapp_mvp", whatsapp_mvp: draft };
+    }
+    return { handled: true, context: nextContext, mode: "global_reservation_clarification",
+      reply: changedBookingFields(previous, nextContext.whatsapp_mvp || {}).length ? appendRoomInvitation(clarification, language) : clarification };
   }
   const result = handleReservationTurn(input);
-  const previous = input.context?.whatsapp_mvp || {};
   const next = result.context?.whatsapp_mvp || {};
-  if (result.reply && changedBookingFields(previous, next).length > 0) {
+  if (result.reply && changedBookingFields(originalContext.whatsapp_mvp || {}, next).length > 0) {
     return { ...result, reply: appendRoomInvitation(result.reply, next.language) };
   }
   return result;
@@ -858,7 +931,7 @@ function handleReservationTurn({
   const previousLanguage = context.whatsapp_mvp?.language || "es";
   context = understanding?.intent === "new_request" ? {} : reservationContextForMessage(message, context);
   const state = context.whatsapp_mvp || null;
-  const language = detectLanguage(message, state?.language || previousLanguage);
+  const language = understanding?.language || detectLanguage(message, state?.language || previousLanguage);
   const dictionary = labels[language] || labels.es;
   const intent = reservationIntent(text) || pricingIntent || understanding?.intent === "new_request";
   if (isAssistantMenuRequest(message)) {
@@ -874,11 +947,15 @@ function handleReservationTurn({
     const cheaper = isCheaperRequest(message);
     if (changed.length || cheaper) {
       delete updated.staff_confirmation;
+      if (changed.length) {
+        delete updated.pricing_quote;
+        delete updated.quote_options;
+      }
       if (cheaper) updated.price_preference = "lower";
       const question = missingQuestion(updated, language);
       if (question) {
         updated.state = "collecting";
-        updated.awaiting = !updated.check_in || !updated.check_out ? "dates"
+        updated.awaiting = updated.dates_need_confirmation || !updated.check_in || !updated.check_out ? "dates"
           : updated.adults == null ? "guests" : updated.children == null ? "children"
           : updated.children > 0 && (!updated.child_ages || updated.child_ages.length !== updated.children) ? "ages" : "pets";
         return { handled: true, context: { ...context, whatsapp_mvp: updated }, reply: question, mode: "global_reservation_collecting" };
@@ -1103,7 +1180,7 @@ function handleReservationTurn({
   const nextContext = { ...context, whatsapp_mvp: data, state: "whatsapp_mvp" };
   const question = missingQuestion(data, language);
   if (question) {
-    data.awaiting = !data.check_in || !data.check_out ? "dates"
+    data.awaiting = data.dates_need_confirmation || !data.check_in || !data.check_out ? "dates"
       : data.adults == null ? "guests"
       : data.children == null ? "children"
       : data.children > 0 && (!Array.isArray(data.child_ages) || data.child_ages.length !== data.children) ? "ages"
