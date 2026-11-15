@@ -6,8 +6,8 @@ import TourismGuideSection from "../../components/TourismRouteCTA";
 const includedServices = [
   {
     icon: "☕",
-    title: "Cafetería",
-    description: "Espacio cómodo para iniciar el día durante la estadía.",
+    title: "Desayuno continental",
+    description: "Incluido en la tarifa de alojamiento.",
   },
   {
     icon: "🚿",

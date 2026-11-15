@@ -12,8 +12,7 @@ import { classifyServiceInquiry, selectHotelServices, formatHotelServicesReply,
 const {services}=JSON.parse(readFileSync(new URL('./fixtures/hotel-reference-20261107.json',import.meta.url),'utf8'));
 const channels=['whatsapp','facebook','instagram'];
 
-for(const message of ['¿Tienen aire acondicionado?','¿Tienen servicio de aire acondicionado?',
-  'Pero y el aire acondicionado?','¿Tienen piscina?','¿Ofrecen servicio de masajes?',
+for(const message of ['¿Tienen piscina?','¿Ofrecen servicio de masajes?',
   '¿Qué servicios tienen de aromaterapia?','¿Tienen secadora?']) {
   test('servicio desconocido sin catálogo: '+message,()=>{
     const selected=selectHotelServices(services,message);
@@ -39,16 +38,14 @@ for(const [message,slug,expected] of [
   assert.doesNotMatch(reply,/¡Claro!|¿Quieres|¿Deseas/);
 });
 
-test('resumen, catálogo completo y ampliación son peticiones diferentes',()=>{
+test('las consultas generales comparten enlace; las específicas conservan su respuesta directa',()=>{
   const brief=formatHotelServicesReply(services,'¿Qué servicios tienen?');
   const all=formatHotelServicesReply(services,'Todos los servicios');
   const details=formatHotelServicesReply(services,'Todos los servicios con detalles');
-  assert.match(brief,/Incluidos en la estadía/);
-  assert.doesNotMatch(brief,/cámaras|solárium|lavandería/i);
-  assert.ok(brief.length<all.length && all.length<details.length);
-  assert.match(all,/S\/ 20.*mascota.*noche/);
-  assert.match(all,/autorización/i);
-  assert.match(details,/cuarto piso/);
+  assert.match(brief,/casahuespedespimentel.com\/servicios/);
+  assert.equal(brief,all);
+  assert.equal(all,details);
+  assert.doesNotMatch(brief,/cámaras|solárium|lavandería|\b\d+ servicios/i);
   assert.equal(classifyServiceInquiry('¿Hay restaurantes cerca?').kind,'none');
   assert.equal(classifyServiceInquiry('¿Hay algo más barato?').kind,'none');
   assert.equal(classifyServiceInquiry('¿Tienen habitaciones?').kind,'none');
@@ -132,7 +129,7 @@ test('seguimiento desde el historial persistido se resuelve sin reabrir la reser
 });
 
 for(const [message,expected] of [
-  ['Do you have WiFi?',/Free WiFi/],['Do you have air conditioning?',/confirmed information/],
+  ['Do you have WiFi?',/Free WiFi/],['Do you have air conditioning?',/Air conditioning is not confirmed/],
   ['And the breakfast?',/Continental breakfast is included/],['Is there a swimming pool?',/confirmed information/],
 ])test('inglés sin catálogo ni traducción comercial inventada: '+message,async t=>{
   sourceMocks(t);
@@ -171,7 +168,8 @@ for(const channel of channels)test(channel+': la primera pregunta sale por Meta 
   });
   assert.equal(result.status,'replied');
   assert.equal(sent.length,1);
-  assert.match(sent[0],/No tengo un servicio confirmado/);
+  assert.match(sent[0],/aire acondicionado no está confirmado/);
+  assert.match(sent[0],/ventilador/);
   assert.doesNotMatch(sent[0],/1️⃣|WiFi|https:|Bienvenido/);
 });
 

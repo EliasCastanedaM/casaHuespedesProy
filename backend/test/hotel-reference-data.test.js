@@ -133,7 +133,7 @@ test("todos los canales consultan servicios y pagos sin modificar una reserva ni
   for(const channel of ["whatsapp","instagram","facebook"]){
     for(const [message,expected,mode] of [
       ["¿Mi reserva incluye desayuno?",/continental incluido/,"hotel_services_information"],
-      ["Qué servicios incluye mi reserva",/Desayuno continental/,"hotel_services_information"],
+      ["Qué servicios incluye mi reserva",/casahuespedespimentel.com\/servicios/,"hotel_services_information"],
       ["¿Hay menú para niños?",/menú para niños/,"hotel_services_information"],
       ["¿Me compartes el Yape?",/997 369 352/,"hotel_payment_information"],
       ["¿Qué formas de pago aceptan?",/Visa y Mastercard/,"hotel_payment_information"],
