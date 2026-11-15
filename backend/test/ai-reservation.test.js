@@ -611,3 +611,15 @@ test("nuevo pedido de reserva inicia un contexto limpio en inglés, portugués y
   }
 });
 
+test("una petición nueva con fechas relativas tampoco hereda el grupo anterior", () => {
+  const previous = { whatsapp_mvp: { state: "quoted", intent_id: "old", check_in: "2026-11-20", check_out: "2026-11-22", adults: 2, children: 0, pets: 0, child_ages: [], pricing_quote: { total_amount: 120 } } };
+  for (const message of ["quiero reservar para mañana y el dia siguiente", "Quiero reservar para el próximo fin de semana", "Quisiera reservar para Navidad", "I want to book for tomorrow", "Quero reservar para amanhã"]) {
+    const result = turn(message, previous);
+    assert.notEqual(result.context.whatsapp_mvp.intent_id, "old", message);
+    for (const key of ["adults", "children", "pets", "child_ages", "pricing_quote"]) assert.equal(result.context.whatsapp_mvp[key], undefined, message + ":" + key);
+    assert.doesNotMatch(result.reply, /S\//);
+  }
+  const continued = turn("Quiero continuar con mi reserva para mañana", previous);
+  assert.equal(continued.context.whatsapp_mvp.intent_id, "old");
+});
+

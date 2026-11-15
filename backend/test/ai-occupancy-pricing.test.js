@@ -23,6 +23,13 @@ const categories = [
   occupancy_rates: Object.fromEntries(rates.map((amount,i) => [i+1,amount])) }));
 const stay = (extra = {}) => ({ check_in: "2026-11-20", check_out: "2026-11-22", adults: 2, children: 0, child_ages: [], pets: 0, ...extra });
 
+test("nunca convierte confirmaciones ausentes de adultos, niños o mascotas en cero", () => {
+  for (const key of ["adults", "children", "pets"]) {
+    for (const value of [null, undefined]) assert.equal(quoteForCategory(categories[0], stay({ [key]: value })), null, key);
+  }
+  assert.ok(quoteForCategory(categories[0], stay({ children: 0, pets: 0 })));
+});
+
 test("la capacidad mínima evita ocupar una familiar con grupos pequeños y ofrece la opción básica primero", () => {
   for (const [adults,slug,amount] of [[1,"matrimonial",100],[2,"matrimonial",120],[3,"triple",210],[4,"familiar",230],[5,"familiar",250]]) {
     const {quote} = selectOccupancyQuote(categories, stay({adults}));
