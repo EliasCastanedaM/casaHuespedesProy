@@ -117,7 +117,7 @@ test("el menú y las redes se repiten al saludar otro día, pero no en una pregu
     assert.equal(sent.length, 5);
     assert.equal(sent[0], globalAssistantWelcome());
     assert.equal(sent[1], globalAssistantSocialLinks());
-    assert.equal(sent[2], "Tenemos varias categorías de habitaciones.");
+    assert.equal(sent[2], "Tenemos varias categorías de habitaciones. 😊");
     assert.equal(sent[3], globalAssistantWelcome());
     assert.equal(sent[4], globalAssistantSocialLinks());
   }

@@ -556,7 +556,7 @@ test("entrega el tramo manual a la IA y registra la respuesta enviada", async ()
 
   assert.equal(result.status, "replied");
   assert.deepEqual(aiInput.history, history);
-  assert.equal(recorded[1], "Con gusto");
+  assert.equal(recorded[1], "Con gusto 😊");
   assert.equal(recorded[2], "assistant");
   assert.equal(recorded[3].messages[0].id, "wamid.out");
   assert.equal(completed, 1);
@@ -831,7 +831,7 @@ test("un mensaje manual largo de Instagram persiste completo antes de enviar sus
 test("si falla una parte de Instagram conserva el outgoing completo y no repite OpenAI", async () => {
   const previousFetch = globalThis.fetch;
   const previousConfig = { ...env.meta };
-  const reply = `${"A".repeat(1000)}${"FALLO".repeat(30)}`;
+  const reply = `${"A".repeat(1000)}${"FALLO".repeat(30)} 😊`;
   let aiCalls = 0;
   let persistedOutgoing;
   let failedRecord;
@@ -896,7 +896,7 @@ test("si falla una parte de Instagram conserva el outgoing completo y no repite 
 });
 
 test("Instagram reanuda durablemente desde la parte fallida después de un reinicio", async () => {
-  const reply = `${"A".repeat(1000)}${"B".repeat(1000)}${"C".repeat(1000)}`;
+  const reply = `${"A".repeat(1000)}${"B".repeat(1000)}${"C".repeat(998)}😊`;
   const db = createInstagramDeliveryDb();
   const calls = [];
   let aiCalls = 0;
@@ -1307,7 +1307,7 @@ test("mensajes posteriores no repiten el saludo ni el catálogo", async () => {
       },
     })
   );
-  assert.equal(sent, "Con mucho gusto.");
+  assert.equal(sent, "Con mucho gusto. 😊");
 });
 
 test("identifica correctamente el primer mensaje aunque haya dos entrantes guardados", async () => {
@@ -1438,7 +1438,7 @@ test("un tema académico en chat existente se rechaza sin repetir catálogo", as
       },
     })
   );
-  assert.equal(sent, "Solo puedo ayudarte con el hospedaje y las reservas.");
+  assert.equal(sent, "Solo puedo ayudarte con el hospedaje y las reservas. 😊");
 });
 
 test("una consulta de tarifas en primer mensaje pasa por el filtro antes del catálogo", async () => {
@@ -1574,7 +1574,7 @@ test("WhatsApp no antepone catálogo a consultas ajenas al hotel", async () => {
       },
     })
   );
-  assert.equal(reply, "Solo atiendo consultas del hospedaje.");
+  assert.equal(reply, "Solo atiendo consultas del hospedaje. 😊");
 });
 
 

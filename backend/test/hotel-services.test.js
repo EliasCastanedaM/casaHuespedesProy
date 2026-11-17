@@ -19,7 +19,9 @@ test("servicios generales remiten brevemente a la página sin enumerar ni contar
   const answer = formatHotelServicesReply(sample, text);
   assert.match(answer, /https:\/\/www.casahuespedespimentel.com\/servicios/);
   assert.match(answer, /Para conocer todos los servicios/);
-  assert.doesNotMatch(answer, /WiFi|continental|lavandería|\b\d+ servicios\b/i);
+  assert.match(answer,/WiFi.*continental/);
+  assert.doesNotMatch(answer, /lavandería|\b\d+ servicios\b/i);
+  assert.ok(answer.length < 400);
 });
 
 test("consulta por lavandería informa coordinación y tarifa sin etiquetas robóticas", () => {

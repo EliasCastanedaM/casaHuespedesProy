@@ -179,7 +179,7 @@ for(const channel of ["whatsapp","instagram","facebook"]){
     assert.deepEqual(sent,[processingQuoteReply()]);
     failFinal=false;
     assert.equal((await processMetaMessage(message,deps)).status,"replied_recovered");
-    assert.deepEqual(sent,[processingQuoteReply(),"Total S/ 400.00"]);
+    assert.deepEqual(sent,[processingQuoteReply(),"Total S/ 400.00 😊"]);
     assert.equal(outgoing.size,2);
   });
 }
@@ -194,7 +194,7 @@ test("un aviso previo no se confunde con la respuesta final cuando la generació
   const m={channel:"whatsapp",externalUserId:"retry-quote",messageId:"retry",text:"No",messageType:"text"};
   await assert.rejects(processMetaMessage(m,deps));fail=false;
   assert.equal((await processMetaMessage(m,deps)).status,"replied");
-  assert.deepEqual(sent,[processingQuoteReply(),"Total S/ 400.00"]);
+  assert.deepEqual(sent,[processingQuoteReply(),"Total S/ 400.00 😊"]);
 });
 
 
@@ -231,7 +231,7 @@ test("una cotización nueva conserva el aviso separado sin menú ni redes no sol
   });
   assert.equal(sent.length,2);
   assert.equal(sent[0],processingQuoteReply());
-  assert.equal(sent[1],"Cotización S/ 400.00");
+  assert.equal(sent[1],"Cotización S/ 400.00 😊");
   assert.doesNotMatch(sent.join(' '),/Habitaciones y tarifas|casahuespedespimentel\.com/);
 });
 
