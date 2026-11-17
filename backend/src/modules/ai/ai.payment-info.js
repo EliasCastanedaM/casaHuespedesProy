@@ -1,6 +1,4 @@
-import { HUMAN_ATTENTION_PHONE } from "./ai.human-assistance.js";
-
-export const PAYMENT_AVAILABILITY_WARNING = "⚠️ ATENCIÓN: No realices pagos sin que nuestro equipo haya confirmado la disponibilidad para las fechas de tu estadía. Consulta aquí: " + HUMAN_ATTENTION_PHONE + ".";
+export const PAYMENT_AVAILABILITY_WARNING = "⚠️ ATENCIÓN: No realices ningún pago hasta que nuestro equipo confirme la disponibilidad para las fechas de tu estadía.";
 
 const clean=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 const MANUAL=/\b(?:yape|yapee|plin|bcp|cci|transferencia|transferi|transferido|bank transfer)\b/;

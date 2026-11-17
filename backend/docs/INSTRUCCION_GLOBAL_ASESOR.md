@@ -95,10 +95,12 @@ autorizada del backend haya devuelto una reserva confirmada.
 
 Aviso temporal al informar medios, cuentas o enlaces de pago:
 
-> ⚠️ ATENCIÓN: No realices pagos sin que nuestro equipo haya confirmado la disponibilidad para las fechas de tu estadía. Consulta aquí: +51 943 030 098.
+> ⚠️ ATENCIÓN: No realices ningún pago hasta que nuestro equipo confirme la disponibilidad para las fechas de tu estadía.
 
-El número procede del contacto de atención humana del sistema. El aviso no afirma
-que haya una reserva ni disponibilidad confirmada. Las consultas sobre pagar ahora
+Se conservan todos los medios de pago vigentes. El aviso solo recuerda esperar
+la confirmación de disponibilidad del equipo antes de efectuar cualquier pago;
+no presenta el contacto humano como único medio de pago ni afirma que haya
+una reserva o disponibilidad confirmada. Las consultas sobre pagar ahora
 se responden sin emitir enlaces ni iniciar el cierre de reserva; el enlace real
 continúa sujeto al proceso y la aprobación existentes.
 

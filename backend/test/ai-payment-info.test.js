@@ -51,13 +51,13 @@ for(const channel of ['whatsapp','facebook','instagram'])test(channel+': consult
   assert.equal(queries.some(sql=>/booking_context|bookings|room_categories/i.test(sql)),false);
 });
 
-test('medios de pago y enlace llevan el aviso temporal y el contacto oficial',()=>{
+test('medios de pago y enlace llevan solo el aviso temporal de disponibilidad',()=>{
   for(const message of ['¿Qué otros medios de pago hay?','¿Cuál es su CCI?','¿Puedo pagar por Yape?','¿Y si quiero pagar ahora? ¿Existe algún link o algo?']) {
     assert.equal(paymentInformationType(message),'payment_information');
     const reply=formatHotelPaymentInfoReply(info,message);
     assert.ok(reply.endsWith(PAYMENT_AVAILABILITY_WARNING));
-    assert.match(reply,/⚠️ ATENCIÓN: No realices pagos/);
-    assert.match(reply,/Consulta aquí: \+51 943 030 098/);
+    assert.match(reply,/⚠️ ATENCIÓN: No realices ningún pago/);
+    assert.equal(PAYMENT_AVAILABILITY_WARNING,"⚠️ ATENCIÓN: No realices ningún pago hasta que nuestro equipo confirme la disponibilidad para las fechas de tu estadía.");
     assert.equal(reply.split(PAYMENT_AVAILABILITY_WARNING).length,2);
     assert.doesNotMatch(reply,/reserva (?:está|queda) confirmada|registramos|https?:/i);
   }
