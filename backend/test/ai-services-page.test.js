@@ -7,7 +7,7 @@ import { generateAiReply } from "../src/modules/ai/ai.service.js";
 import { classifyServiceInquiry, formatHotelServicesReply, SERVICES_PAGE_URL, SERVICES_IMAGE_URL } from "../src/modules/ai/ai.services-info.js";
 const { services } = JSON.parse(readFileSync(new URL("./fixtures/hotel-reference-20261107.json", import.meta.url), "utf8"));
 
-for (const message of ["que servicios tienes ?", "que servicios tienes", "que servicios tiene el hotel?", "¿Qué servicios ofrecen?", "¿Cuáles son los servicios del hotel?", "Todos los servicios con detalles", "What services does your hotel offer?", "What services do you have?"]) {
+for (const message of ["tiene servicios el hotel?", "¿El hotel tiene servicios?", "¿Con qué servicios cuenta el hotel?", "¿Me puedes contar qué servicios ofrecen?", "¿Tienen servicios?", "¿Hay comodidades en el hospedaje?", "que servicios tienes ?", "que servicios tienes", "que servicios tiene el hotel?", "¿Qué servicios ofrecen?", "¿Cuáles son los servicios del hotel?", "Todos los servicios con detalles", "What services does your hotel offer?", "What services do you have?"]) {
   test("consulta general resume y enlaza sin catálogo completo: " + message, () => {
     assert.equal(classifyServiceInquiry(message).kind, "general");
     const reply = formatHotelServicesReply(services, message);
@@ -21,7 +21,7 @@ for (const message of ["que servicios tienes ?", "que servicios tienes", "que se
 for (const channel of ["whatsapp", "facebook", "instagram"]) test(channel + ": pregunta general comparte resumen y foto sin depender del modelo", async t => {
   t.mock.method(pool, "query", async () => { throw new Error("No necesita SQL para compartir el enlace público"); });
   t.mock.method(OpenAI.Responses.prototype, "create", async () => { throw new Error("No necesita modelo"); });
-  for (const [message, expected] of [["que servicios tiene el hotel?", /Para conocer todos los servicios/], ["What services does your hotel offer?", /To discover all the services/]]) {
+  for (const [message, expected] of [["tiene servicios el hotel?", /Para conocer todos los servicios/], ["que servicios tiene el hotel?", /Para conocer todos los servicios/], ["What services does your hotel offer?", /To discover all the services/]]) {
     const result = await generateAiReply({ channel, externalUserId: "services-link-" + channel, message });
     assert.equal(result.mode, "hotel_services_information");
     assert.match(result.reply, expected);
@@ -47,6 +47,9 @@ test("preguntas concretas no reciben el enlace general y conservan condiciones",
     assert.match(reply, expected);
     assert.ok(!reply.includes(SERVICES_PAGE_URL));
   }
-  assert.equal(classifyServiceInquiry("¿Qué servicios tienen de masajes?").kind, "specific");
+  for (const message of ["¿Qué servicios tienen de masajes?", "¿Tiene servicios de masajes el hotel?", "¿El hotel tiene servicio de sauna?"]) {
+    assert.equal(classifyServiceInquiry(message).kind, "specific", message);
+    assert.ok(!formatHotelServicesReply(services, message).includes(SERVICES_PAGE_URL), message);
+  }
   assert.equal(classifyServiceInquiry("¿Hay restaurantes cerca?").kind, "none");
 });

@@ -38,7 +38,15 @@ const EXTERNAL = /\b(?:restaurantes?|cafeterias?|restaurants?|cafes?)\b.*\b(?:ce
 const GENERAL = /^(?:(?:antes de seguir|hola|por favor|dime|muestrame|cuentame|dame)\s*,?\s*)*(?:(?:que|cuales|what|which)\s+)?(?:(?:otros?|todos los|todas las|all|every)\s+)?(?:servicios?|comodidades|amenidades|services|amenities|facilities)(?:\s+(?:tiene|tienes|tienen|ofrece|ofreces|ofrecen|incluye|incluyen|hay|estan incluidos|do you have|does (?:the|your) hotel (?:have|offer)|are available))?(?:\s+(?:en|del|el|la|mi|su|de|the|at|your)\s*(?:hotel|hospedaje|reserva|alojamiento|establecimiento|property|ustedes))?(?:\s+(?:con detalles|en detalle|completos|completo|detallados|in detail))?$/;
 function isGeneralRequest(text) {
   const clean = text.replace(/[¿?¡!.,]/g,' ').replace(/\s+/g,' ').trim();
-  return GENERAL.test(clean) || /^(?:que|cuales) son (?:los |todos los )?servicios(?: (?:del|de su|de este) (?:hotel|hospedaje))?$/.test(clean);
+  if (GENERAL.test(clean) || /^(?:que|cuales) son (?:los |todos los )?servicios(?: (?:del|de su|de este) (?:hotel|hospedaje))?$/.test(clean)) return true;
+  // Accept normal subject/verb order variations without hiding an unknown
+  // specific amenity. "¿Tiene servicios el hotel?" is general;
+  // "¿Tiene servicios de masajes el hotel?" retains "masajes" and is specific.
+  if (!/\b(?:servicios?|comodidades|amenidades)\b/.test(clean)) return false;
+  const subject = clean
+    .replace(/\b(?:servicios?|comodidades|amenidades|tiene|tienes|tienen|tenemos|ofrece|ofreces|ofrecen|ofrecemos|cuenta|cuentan|dispone|disponen|incluye|incluyen|hay|son|estan|puedes|puede|podrias|podria|saber|conocer|contar|decir|mostrar|explicar|me|contarme|decirme|mostrarme|explicarme|dime|cuentame|muestrame|hablame|hola|buenas|por|favor|que|cuales|cual|el|la|los|las|un|una|unos|unas|del|de|en|con|sobre|para|su|sus|tu|tus|este|esta|ese|esa|hotel|hospedaje|alojamiento|establecimiento|ustedes|todos|todas|otros|otras|incluidos|incluidas|disponibles|detalles|detalle|completos|completas|detallados|detalladas)\b/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  return !subject;
 }
 
 const EXPAND = /\b(?:detallad[oa]s?|detalles|descripcion completa|en detalle|detailed|in detail)\b/;
