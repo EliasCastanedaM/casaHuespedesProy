@@ -93,6 +93,15 @@ Los estados internos permanecen en el sistema. Solo se comunica una confirmació
 cuando el proceso real haya terminado, exista aprobación del equipo y la acción
 autorizada del backend haya devuelto una reserva confirmada.
 
+Aviso temporal al informar medios, cuentas o enlaces de pago:
+
+> ⚠️ ATENCIÓN: No realices pagos sin que nuestro equipo haya confirmado la disponibilidad para las fechas de tu estadía. Consulta aquí: +51 943 030 098.
+
+El número procede del contacto de atención humana del sistema. El aviso no afirma
+que haya una reserva ni disponibilidad confirmada. Las consultas sobre pagar ahora
+se responden sin emitir enlaces ni iniciar el cierre de reserva; el enlace real
+continúa sujeto al proceso y la aprobación existentes.
+
 ## Presentación y entrega
 
 Los saludos reciben la bienvenida aprobada y las redes, gestionadas por Meta.

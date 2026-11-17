@@ -1,3 +1,7 @@
+import { HUMAN_ATTENTION_PHONE } from "./ai.human-assistance.js";
+
+export const PAYMENT_AVAILABILITY_WARNING = "⚠️ ATENCIÓN: No realices pagos sin que nuestro equipo haya confirmado la disponibilidad para las fechas de tu estadía. Consulta aquí: " + HUMAN_ATTENTION_PHONE + ".";
+
 const clean=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 const MANUAL=/\b(?:yape|yapee|plin|bcp|cci|transferencia|transferi|transferido|bank transfer)\b/;
 const PROPERTY=/\b(?:en (?:el )?(?:establecimiento|hotel|hospedaje)|al llegar|a la llegada|pay (?:at (?:the )?(?:property|hotel)|on arrival))\b/;
@@ -8,9 +12,16 @@ function isPropertyPaymentQuestion(message) {
 }
 
 
+function isPaymentLinkQuestion(message) {
+  const text=clean(message);
+  return /\b(?:pagar|pago|pagos|pay|payment)\b/.test(text) &&
+    /\b(?:ahora|link|enlace|now|online)\b/.test(text) &&
+    (/[?¿]/.test(message) || /\b(?:puedo|podemos|como|existe|hay|can i|can we)\b/.test(text));
+}
+
 export function paymentInformationType(message) {
   const text=clean(message);
-  if(isPropertyPaymentQuestion(message))return "payment_information";
+  if(isPropertyPaymentQuestion(message)||isPaymentLinkQuestion(message))return "payment_information";
   const topic=/\b(?:(?:formas?|metodos?|medios?|opciones?) de pago|payment methods?|formas de pagamento|moyens de paiement|cuenta bancaria|cuenta de ahorros|bank account|bank transfer|numero de cuenta|yape|yapee|plin|bcp|cci|visa|mastercard|tarjetas?|cards?|efectivo|cash|transferencia)\b/.test(text);
   const general=/\b(?:como (?:puedo |podemos |se )?pagar|con que (?:puedo |se )?pagar|aceptan pagos|how (?:can i|to) pay)\b/.test(text);
   if(!topic&&!general)return null;
@@ -31,13 +42,14 @@ function safePaymentInfo(info) {
 const phone=value=>"+51 "+value.replace(/(\d{3})(\d{3})(\d{3})/,"$1 $2 $3");
 
 export function formatHotelPaymentInfoReply(info,message) {
-  if(!safePaymentInfo(info))return "No puedo confirmar los datos de pago en este momento. Nuestro equipo puede compartirte los medios vigentes antes de realizar el pago.";
+  if(!safePaymentInfo(info))return "No puedo confirmar los datos de pago en este momento.\n\n" + PAYMENT_AVAILABILITY_WARNING;
   const text=clean(message);
   if (/\b(?:titular|a nombre de|a quien pertenece)\b/.test(text)) return "Nuestro equipo debe confirmar el nombre del titular de la cuenta antes de que realices una transferencia.";
   // A payment question reports an available method, never a booking state.
   if(isPropertyPaymentQuestion(message))return /\b(?:efectivo|cash)\b/.test(text)
     ? "Sí, puedes pagar en efectivo en el establecimiento."
     : "Sí, puedes pagar en el establecimiento.";
+  if(isPaymentLinkQuestion(message))return "El enlace de pago se facilita durante el proceso de reserva, después de que nuestro equipo confirme la disponibilidad y el importe.\n\n" + PAYMENT_AVAILABILITY_WARNING;
   const bank=/\b(?:bcp|cci|cuenta|transferencia|bank account|bank transfer)\b/.test(text);
   const yape=/\byape\b/.test(text),plin=/\bplin\b/.test(text);
   const cards=/\b(?:tarjeta|tarjetas|visa|mastercard|cards?)\b/.test(text);
@@ -49,7 +61,7 @@ export function formatHotelPaymentInfoReply(info,message) {
   if(!specific||yape)lines.push("Yape: "+phone(info.yape));
   if(!specific||plin)lines.push("Plin: "+phone(info.plin));
   if(!specific||cards)lines.push("Tarjetas: "+info.cards.filter(c=>["Visa","Mastercard"].includes(c)).join(" y ")+".");
-  return ["Estos son los medios de pago de Casa Huéspedes:",...lines,"","Antes de realizar un pago de reserva, nuestro equipo confirmará la disponibilidad, el importe y las indicaciones correspondientes."].join("\n");
+  return ["Estos son los medios de pago de Casa Huéspedes:",...lines,"",PAYMENT_AVAILABILITY_WARNING].join("\n");
 }
 
 export function manualPaymentReviewReply(type) {

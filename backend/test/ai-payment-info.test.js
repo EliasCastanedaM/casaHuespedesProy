@@ -5,7 +5,7 @@ import { pool } from '../src/config/db.js';
 import { env } from '../src/config/env.js';
 import { HOTEL_SCOPE_CLASSIFIER_PROMPT } from '../src/modules/ai/ai.scope.js';
 import { generateAiReply } from '../src/modules/ai/ai.service.js';
-import { paymentInformationType, formatHotelPaymentInfoReply } from '../src/modules/ai/ai.payment-info.js';
+import { paymentInformationType, formatHotelPaymentInfoReply, PAYMENT_AVAILABILITY_WARNING } from '../src/modules/ai/ai.payment-info.js';
 
 const info={"bank":{"name":"BCP","account_number":"12345678901234","cci":"12345678901234567890"},"cards":["Visa","Mastercard"],"yape":"900000001","plin":"900000002"};
 const questions=["¿Puedo pagar en el establecimiento?","Puedo pagar en el hotel","¿Podemos pagar al llegar?","¿Se puede pagar en el hospedaje?","¿Es posible pagar a la llegada?"];
@@ -43,5 +43,24 @@ for(const channel of ['whatsapp','facebook','instagram'])test(channel+': consult
   assert.equal(result.mode,'hotel_payment_information');
   assert.equal(result.reply,'Sí, puedes pagar en el establecimiento.');
   assert.doesNotMatch(result.reply,/registrad|confirmad|separad|reserva|pendiente/i);
+  for(const message of ['¿Qué otros medios de pago hay?','¿Y si quiero pagar ahora? ¿Existe algún link o algo?']) {
+    const payment=await generateAiReply({channel,externalUserId:'payment-question',history,message});
+    assert.equal(payment.mode,'hotel_payment_information');
+    assert.ok(payment.reply.endsWith(PAYMENT_AVAILABILITY_WARNING));
+  }
   assert.equal(queries.some(sql=>/booking_context|bookings|room_categories/i.test(sql)),false);
+});
+
+test('medios de pago y enlace llevan el aviso temporal y el contacto oficial',()=>{
+  for(const message of ['¿Qué otros medios de pago hay?','¿Cuál es su CCI?','¿Puedo pagar por Yape?','¿Y si quiero pagar ahora? ¿Existe algún link o algo?']) {
+    assert.equal(paymentInformationType(message),'payment_information');
+    const reply=formatHotelPaymentInfoReply(info,message);
+    assert.ok(reply.endsWith(PAYMENT_AVAILABILITY_WARNING));
+    assert.match(reply,/⚠️ ATENCIÓN: No realices pagos/);
+    assert.match(reply,/Consulta aquí: \+51 943 030 098/);
+    assert.equal(reply.split(PAYMENT_AVAILABILITY_WARNING).length,2);
+    assert.doesNotMatch(reply,/reserva (?:está|queda) confirmada|registramos|https?:/i);
+  }
+  assert.equal(paymentInformationType('Pagar ahora'),null);
+  assert.ok(formatHotelPaymentInfoReply(null,'¿Qué medios de pago hay?').endsWith(PAYMENT_AVAILABILITY_WARNING));
 });
