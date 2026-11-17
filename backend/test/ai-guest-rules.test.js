@@ -14,10 +14,10 @@ test("las reglas de huéspedes incluyen los niños, mascotas, grupos y seis cate
 
 
 
-  assert.match(prompt, /solicita cantidad y edades/);
-  assert.doesNotMatch(prompt, /50 % del diferencial|Desde los 9 años/);
-  assert.match(prompt, /S\/ 20/);
-  assert.ok(prompt.includes("S/ 20 por mascota y por noche"));
+  assert.match(prompt, /una edad concreta.*únicamente la condición confirmada para esa edad/);
+  assert.doesNotMatch(prompt, /S\/ (?:20|30)|50 % del diferencial|máximo\(/);
+  assert.match(prompt, /El cálculo permanece en el sistema/);
+  assert.match(prompt, /regla pendiente, ausente, retirada/);
 
   assert.match(prompt, /8 o más huéspedes/);
   assert.match(prompt, /Familiar 1 y Familiar 2/);

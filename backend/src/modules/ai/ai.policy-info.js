@@ -1,5 +1,6 @@
 import { isTariffProposalActive } from '../commercial/tariffProposal.service.js';
 import { TARIFF_PROPOSAL } from '../../config/tariffProposal.js';
+import { policyQuestionFocus } from './ai.policy-focus.js';
 
 // Consultas informativas sobre políticas del hospedaje: no modifican reservas.
 // Una petición real de reserva con menores o mascotas sigue requiriendo revisión humana.
@@ -37,58 +38,104 @@ export function policyInformationType(message) {
   return null;
 }
 
-// Mantiene un respaldo conservador si hay una incidencia de conexión.
-// Cuando se suministran reglas de Supabase, SOLO sus estados activos se usan.
-const FALLBACK = {
-  ninos_0_4: { review_status: "verified", config: { no_charge_when_using_existing_beds: true } },
-  ninos_5_8: { review_status: "verified", config: { amount_pen: 20, charge_frequency: "child_per_night" } },
-  ninos_9_mas: { review_status: "verified", config: { adult_rate_confirmed: true, quote_requires_manual_review: false } },
-  mascotas: { review_status: "verified", config: { amount_pen: 20, vat_included: true, charge_frequency: "pet_per_night", approval_required: true, automatic_final_quote: false } },
-  grupos_8: { review_status: "verified", config: { min_total_guests: 8 } },
-};
+// Only approved facts are publishable. Missing/unavailable/retired sources
+// never fall back to an embedded price. Private calculation fields stay here.
+const unavailable = 'No tengo confirmado ese importe; nuestro equipo puede verificarlo.';
+function verified(rule) {
+  return rule?.active !== false && rule?.review_status === 'verified' ? rule.config || {} : null;
+}
+
+function childReply(age, get) {
+  const activeProposal=isTariffProposalActive();
+  if(age<=4) {
+    const config=activeProposal ? {no_charge_when_using_existing_beds:true} : verified(get('ninos_0_4'));
+    return config?.no_charge_when_using_existing_beds === true
+      ? `Para un niño de ${age} años no hay cargo adicional si utiliza las camas existentes.` : unavailable;
+  }
+  if(age<=8) {
+    const config=activeProposal ? {amount_pen:TARIFF_PROPOSAL.child_amount,charge_frequency:'child_per_night'} : verified(get('ninos_5_8'));
+    const amount=config?.amount_pen;
+    if(typeof amount!=='number' || !Number.isFinite(amount) || amount<=0 || config.charge_frequency!=='child_per_night')return unavailable;
+    return activeProposal
+      ? `Para un niño de ${age} años se consideran S/ ${amount} por noche en el precio de la habitación.`
+      : `Para un niño de ${age} años, el cargo adicional es de S/ ${amount} por noche.`;
+  }
+  const config=activeProposal ? {adult_rate_confirmed:true} : verified(get('ninos_9_mas'));
+  return config?.adult_rate_confirmed===true
+    ? `Para un niño de ${age} años se aplica la tarifa de adulto.` : unavailable;
+}
+
+function childrenReply(message,get) {
+  const focus=policyQuestionFocus(message);
+  if(focus.sharing) {
+    const rule=verified(get('ninos_0_4'));
+    if(focus.sharingCount && Number.isInteger(rule?.max_children_sharing_parent_bed) && rule.max_children_sharing_parent_bed>0) {
+      return `Pueden compartir hasta ${rule.max_children_sharing_parent_bed} niños de hasta 4 años, según las camas disponibles.`;
+    }
+    return 'La distribución de camas debe confirmarla el hospedaje para la habitación elegida.';
+  }
+  if(focus.ages.length) {
+    if(focus.ageRange) {
+      return [focus.ages.filter(age=>age<=4),focus.ages.filter(age=>age>=5&&age<=8),focus.ages.filter(age=>age>=9)]
+        .filter(ages=>ages.length).map(ages=>{
+          const first=Math.min(...ages),last=Math.max(...ages);
+          const reply=childReply(first,get);
+          return first===last ? reply : reply.replace(`Para un niño de ${first} años`,`Para niños de ${first} a ${last} años`)
+            .replace('por noche.','por niño y noche.');
+        }).filter((reply,index,all)=>all.indexOf(reply)===index).join(' ');
+    }
+    // One short fact per requested age; no other age band, formula, room minimum
+    // or invitation to reserve is appended.
+    return focus.ages.map(age=>childReply(age,get)).filter((reply,index,all)=>all.indexOf(reply)===index).join(' ');
+  }
+  if(focus.threshold) {
+    if(focus.adultThreshold)return isTariffProposalActive() || verified(get('ninos_9_mas'))?.adult_rate_confirmed===true
+      ? 'Desde los 9 años se aplica la tarifa de adulto.' : unavailable;
+    const free=verified(get('ninos_0_4'));
+    if(focus.freeThreshold)return isTariffProposalActive() || free?.no_charge_when_using_existing_beds===true
+      ? 'Hasta los 4 años no hay cargo adicional si utiliza las camas existentes.' : unavailable;
+    const paid=verified(get('ninos_5_8'));
+    return isTariffProposalActive() || (free?.no_charge_when_using_existing_beds===true && paid?.charge_frequency==='child_per_night' && Number(paid.amount_pen)>0)
+      ? 'Desde los 5 años se aplica el cobro por alojamiento.' : unavailable;
+  }
+  if(focus.general) {
+    const free=childReply(4,get), paid=childReply(6,get), adult=childReply(9,get);
+    if([free,paid,adult].some(reply=>reply===unavailable))return 'Nuestro equipo debe confirmar las condiciones para niños.';
+    const amount=isTariffProposalActive() ? TARIFF_PROPOSAL.child_amount : verified(get('ninos_5_8')).amount_pen;
+    return isTariffProposalActive()
+      ? `Hasta 4 años, sin cargo usando las camas existentes. De 5 a 8, se consideran S/ ${amount} por niño y noche en el precio de la habitación. Desde 9 años, tarifa adulta.`
+      : `Hasta 4 años, sin cargo usando las camas existentes. De 5 a 8, S/ ${amount} adicionales por niño y noche. Desde 9 años, tarifa adulta.`;
+  }
+  if(focus.admission && !focus.price) {
+    return isTariffProposalActive() || verified(get('ninos_0_4'))
+      ? 'Sí, los niños pueden alojarse acompañados por un adulto.'
+      : 'Nuestro equipo debe confirmar las condiciones para alojarse con niños.';
+  }
+  return '¿Qué edad tiene el niño?';
+}
 
 export function formatPolicyInformationReply(message, { rules } = {}) {
   const type = policyInformationType(message);
   if (!type) return null;
-  const catalog = rules === undefined ? FALLBACK : rules;
-  const get = (code) => catalog?.[code] || null;
-  const human = "Nuestro equipo confirmará los detalles antes de cotizar o autorizar una excepción.";
-
-  if (type === "children") {
-    if (isTariffProposalActive()) return `De 0 a 4 años no se añade importe ni plaza tarifaria, verificando camas y seguridad. De 5 a 8 años se consideran S/ ${TARIFF_PROPOSAL.child_amount} por niño y noche dentro del cálculo sujeto al mínimo de habitación, y sí ocupan plaza tarifaria; desde los 9 años se aplica tarifa adulta. Para cotizar, dime cuántos adultos y niños viajan y sus edades.`;
-    const rule=get('ninos_5_8');
-    if(rule?.review_status==='verified' && rule.config?.amount_pen===20 && rule.config?.charge_frequency==='child_per_night') {
-      return "Los niños de hasta 4 años no pagan si no usan camas adicionales; hasta dos pueden compartir la cama de sus padres (de 2 o 1½ plazas). De 5 a 8 años se cobran S/ 20 por niño y por noche; desde los 9 años se aplica tarifa de adulto. Para cotizar, dime cuántos adultos y niños viajan y sus edades.";
-    }
-    return "Los niños tienen un tratamiento distinto en la cotización. Para calcular el importe de tu estadía, dime cuántos adultos y niños viajarán y qué edades tienen los niños. 😊";
+  const catalog=rules || {};
+  const get=code=>catalog[code] || null;
+  if(type==='children')return childrenReply(message,get);
+  if(type==='pets') {
+    const focus=policyQuestionFocus(message);
+    const config=verified(get('mascotas'));
+    if(!config)return focus.price
+      ? 'Nuestro equipo debe confirmar el importe y la admisión de la mascota.'
+      : 'La admisión de mascotas debe confirmarla el hospedaje.';
+    if(!focus.price && !focus.general)return 'Sí, con autorización previa del hospedaje.';
+    const amount=config.amount_pen;
+    const frequency={pet_per_night:'por mascota y por noche',per_stay:'por estadía'}[config.charge_frequency];
+    if(typeof amount!=='number' || !Number.isFinite(amount) || amount<=0 || !frequency)return unavailable;
+    return `El cargo es de S/ ${amount}${config.vat_included===true ? ' (IGV incluido)' : ''} ${frequency}, con autorización previa del hospedaje.`;
   }
-
-  if (type === "pets") {
-    const rule = get("mascotas");
-    if (!rule) return "Las mascotas están sujetas a autorización del hospedaje. " + human;
-    const amount = Number(rule.config?.amount_pen);
-    const amountLabel = Number.isFinite(amount) && amount > 0
-      ? "La regla comercial indica un cargo adicional de S/ " + amount.toFixed(0) +
-        (rule.config?.vat_included === true ? ", IGV incluido" : "")
-      : "El cargo adicional debe confirmarlo el equipo";
-    const frequency = rule.review_status === "verified"
-      ? rule.config?.charge_frequency : null;
-    const frequencyText = frequency === "pet_per_night"
-      ? ", por mascota y por noche."
-      : frequency === "per_stay"
-        ? ", por estadía."
-        : ", pero todavía está pendiente confirmar si se aplica por mascota y noche o por estadía.";
-    return "Aceptamos mascotas únicamente con autorización previa del hospedaje. " +
-      amountLabel + frequencyText + " Nuestro equipo verificará el cobro antes de confirmarlo.";
-  }
-
-  if (type === "groups") {
-    const rule = get("grupos_8");
-    const threshold = Number(rule?.config?.min_total_guests);
-    const min = Number.isInteger(threshold) && threshold >= 8 ? threshold : 8;
-    return "Para grupos de " + min +
-      " o más huéspedes podemos evaluar una tarifa especial. El precio y las condiciones deben ser confirmados por una persona de nuestro equipo; no hay un descuento automático.";
+  if(type==='groups') {
+    const config=verified(get('grupos_8'));
+    if(!Number.isInteger(config?.min_total_guests) || config.min_total_guests<8)return 'Las tarifas para grupos deben consultarse con el hospedaje.';
+    return `Podemos evaluar una tarifa especial para grupos de ${config.min_total_guests} o más huéspedes, con confirmación del equipo.`;
   }
   return null;
 }
-

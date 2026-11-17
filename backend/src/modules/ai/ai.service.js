@@ -26,6 +26,7 @@ import { paymentInformationType, formatHotelPaymentInfoReply, manualPaymentRevie
 import { getHotelPaymentInfoService } from "../services/hotelPaymentInfo.service.js";
 import { getPublicHotelServicesService } from "../services/service.service.js";
 import { formatPolicyInformationReply, policyInformationType } from "./ai.policy-info.js";
+import { isPolicyFollowup, resolvePolicyMessage } from './ai.policy-focus.js';
 import { getHotelGuestPolicyRulesService } from "../services/hotelPolicy.service.js";
 import { isRoomDetailsInquiry, formatRoomDetailsReply, isRoomDetailsFollowup, followsRoomQuote, guestCategoryDescription } from "./ai.category-info.js";
 import { requiresManualReview, humanReviewReply, globalAssistantSocialLinks, isHotelSocialMediaInquiry } from "./ai.guest-rules.js";
@@ -884,6 +885,10 @@ async function generateAiReplyInternal({
   const serviceMessage = resolveServiceMessage(message, serviceHistory);
   const serviceInquiry = isHotelServicesInquiry(serviceMessage);
   const serviceLanguage = serviceReplyLanguage(message, serviceHistory);
+  const policyHistory = isPolicyFollowup(message) && !history.length
+    ? (isServiceFollowup(message) ? serviceHistory : await loadStoredHistory(channel,externalUserId,message)) : history;
+  const policyMessage = resolvePolicyMessage(message,policyHistory,policyInformationType);
+  const policyType = policyInformationType(policyMessage);
   let serviceGrounding;
   let scopeCheck;
   const checkHotelScope = async () => {
@@ -906,12 +911,12 @@ async function generateAiReplyInternal({
   };
   // Precio también puede referirse a asuntos ajenos al hotel. Conserva el filtro
   // antes de iniciar una cotización nueva o explicar cambios comerciales.
-  if (isCategoryPriceInquiry(message) || isPriceVariationInquiry(message)) {
+  if (!policyType && (isCategoryPriceInquiry(message) || isPriceVariationInquiry(message))) {
     if (!await checkHotelScope()) return {
       reply: OUT_OF_HOTEL_SCOPE_REPLY, responseId: null, deterministic: true, mode: "outside_hotel_scope",
     };
   }
-  if (isPriceVariationInquiry(message)) return {
+  if (!policyType && isPriceVariationInquiry(message)) return {
     reply: priceVariationReply(), responseId: null, deterministic: true, mode: "price_variation_information",
   };
   const pricingIntent = isCategoryPriceInquiry(message);
@@ -932,7 +937,7 @@ async function generateAiReplyInternal({
   // Las respuestas estructuradas del flujo global (fechas, edades, nombre,
   // correo y elección de pago) se procesan antes del clasificador de alcance.
   // Así un "no", un número o un correo no se confunden con una consulta ajena.
-  if (!locationInquiry && !policyInformationType(message) && !paymentInfoType && !serviceInquiry) {
+  if (!locationInquiry && !policyType && !paymentInfoType && !serviceInquiry) {
     const current = await loadBookingContext(channel, externalUserId);
     let categories = [];
     if (current?.whatsapp_mvp || isReservationIntent(message) || pricingIntent) {
@@ -1045,16 +1050,16 @@ async function generateAiReplyInternal({
   // Una consulta sobre reglas comerciales no equivale a modificar la reserva.
   // Responderla antes de la recolección de datos/guardias de atención humana
   // evita repetir "¿cuáles son las fechas?" cuando ya hay un borrador abierto.
-  if (policyInformationType(message)) {
-    let rules;
+  if (policyType) {
+    let rules = {};
     try {
       rules = await getHotelGuestPolicyRulesService();
     } catch (error) {
       console.warn("No se pudieron consultar reglas de huéspedes:", diagnosticCode(error));
-      // Una indisponibilidad de la base nunca debe dar lugar a un cargo
-      // inventado. El formateador usa solo reglas conservadoras de respaldo.
+      // No publishable amount without its approved source. There is no
+      // hardcoded commercial fallback when the source cannot be read.
     }
-    const policyReply = formatPolicyInformationReply(message, { rules });
+    const policyReply = formatPolicyInformationReply(policyMessage, { rules });
     return {
       reply: policyReply,
       responseId: null,

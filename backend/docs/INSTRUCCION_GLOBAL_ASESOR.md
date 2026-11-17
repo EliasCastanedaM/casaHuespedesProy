@@ -48,6 +48,25 @@ resuelven con el modelo y únicamente los datos pertinentes.
 
 ## Contexto y continuidad
 
+### Consultas de políticas: datos mínimos y confirmados
+
+Una consulta sobre una edad recibe únicamente la condición vigente para esa edad,
+normalmente en una oración. No enumera otros tramos ni invita a reservar o pide
+fechas, adultos o mascotas. Si falta la edad necesaria, pregunta solo esa edad.
+Un seguimiento sustituye la edad anterior sin modificar la composición de una
+reserva. No atraviesa un cambio de tema para recuperar una política antigua.
+
+Cada dato publicado necesita su propia regla activa y verificada. Una propuesta,
+regla retirada, valor ausente o error de consulta no autoriza publicar importes.
+Se retira el respaldo de precios fijos ante fallos de la fuente. El prompt no
+contiene cantidades comerciales ni fórmulas: el cálculo, las capacidades y las
+aprobaciones permanecen en el motor. La vista administrativa conserva las
+propuestas pendientes sin exponerlas en las respuestas a huéspedes.
+
+Para mascotas se distingue admisión de precio: preguntar si se aceptan no publica
+el cargo. Las consultas generales explícitas reciben un resumen breve; los
+detalles se amplían únicamente cuando se solicitan.
+
 La pregunta actual tiene prioridad. Los seguimientos sin tema usan el último tema
 explícito del huésped, atravesando solo seguimientos consecutivos, nunca un cambio
 de tema. Una consulta informativa no modifica el contexto ni repite cotizaciones.

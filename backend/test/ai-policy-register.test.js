@@ -20,11 +20,11 @@ test("registro comercial se consulta de Supabase sin escribir ni aprobar datos",
   const rules = await getHotelGuestPolicyRulesService(db);
   assert.equal(Object.keys(rules).length, 2);
   const pets = formatPolicyInformationReply("¿Aceptan mascotas y cuál es la tarifa?", { rules });
-  assert.match(pets, /S\/ 20/);
-  assert.match(pets, /pendiente confirmar/);
+  assert.doesNotMatch(pets, /S\/ 20/);
+  assert.match(pets, /debe confirmar/);
   assert.doesNotMatch(pets, /S\/ 20 por mascota y por noche/);
   const nine = formatPolicyInformationReply("¿Qué pasa si mi hijo tiene 9 años?", { rules });
-  assert.match(nine, /tratamiento distinto/);
+  assert.match(nine, /No tengo confirmado/);
 });
 
 test("no aplica reglas pendientes incluso si contienen una posible frecuencia o tarifa", () => {
@@ -32,8 +32,8 @@ test("no aplica reglas pendientes incluso si contienen una posible frecuencia o 
     mascotas: { review_status: "pending_review", config: {amount_pen: 20,vat_included: true,charge_frequency: "pet_per_night"} },
     ninos_9_mas: { review_status: "pending_review", config: {adult_rate_confirmed: true} },
   };
-  assert.match(formatPolicyInformationReply("¿Cuánto cuesta llevar perros?", { rules }), /pendiente confirmar/);
-  assert.match(formatPolicyInformationReply("¿Mi hija de 9 años paga como adulto?", { rules }), /tratamiento distinto/);
+  assert.match(formatPolicyInformationReply("¿Cuánto cuesta llevar perros?", { rules }), /debe confirmar/);
+  assert.match(formatPolicyInformationReply("¿Mi hija de 9 años paga como adulto?", { rules }), /No tengo confirmado/);
 });
 
 test("las reglas de mascotas se actualizan y los detalles infantiles se mantienen internos", () => {
@@ -45,15 +45,15 @@ test("las reglas de mascotas se actualizan y los detalles infantiles se mantiene
   const pets = formatPolicyInformationReply("¿Cuánto cobras por mascotas?", { rules });
   assert.match(pets, /S\/ 25/);
   assert.match(pets, /por mascota y por noche/);
-  assert.match(formatPolicyInformationReply("¿Mi hijo de 9 años paga adulto?", { rules }), /tratamiento distinto/);
-  assert.match(formatPolicyInformationReply("¿Qué condiciones aplican a los niños de 6 años?", { rules }), /tratamiento distinto/);
+  assert.match(formatPolicyInformationReply("¿Mi hijo de 9 años paga adulto?", { rules }), /tarifa de adulto/);
+  assert.match(formatPolicyInformationReply("¿Qué condiciones aplican a los niños de 6 años?", { rules }), /No tengo confirmado/);
 });
 
 test("no inventa tarifas de una regla ausente o retirada", () => {
   const out = formatPolicyInformationReply("¿Mi hijo de 6 años paga?", { rules: {} });
-  assert.match(out, /tratamiento distinto/);
+  assert.match(out, /No tengo confirmado/);
   assert.doesNotMatch(out, /50 %/);
   const pets = formatPolicyInformationReply("¿Aceptan mascotas?", { rules: {} });
-  assert.match(pets, /Nuestro equipo confirmará/);
+  assert.match(pets, /debe confirmarla el hospedaje/);
   assert.doesNotMatch(pets, /S\/ 20/);
 });

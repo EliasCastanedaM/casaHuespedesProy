@@ -114,7 +114,8 @@ test("el asesor global exige aprobación humana antes de reservar", () => {
   assert.match(prompt, /equipo confirme disponibilidad, categoría e importe/);
   assert.match(prompt, /Solo la acción autorizada del backend/);
   assert.match(prompt, /mascotas.*autorización previa/i);
-  assert.match(prompt, /S\/ 20/);
+  assert.doesNotMatch(prompt, /S\/ 20/);
+  assert.match(prompt, /importe y frecuencia confirmados/);
   assert.doesNotMatch(prompt, /S\/ 35/);
   assert.match(prompt, /No se permite ruido excesivo/i);
   assert.match(prompt, /Nunca menciones, muestres ni solicites números físicos/i);

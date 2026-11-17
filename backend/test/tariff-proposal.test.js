@@ -93,8 +93,8 @@ test('la propuesta permanece bloqueada; simular y enviar datos de aprobación no
   assert.equal(quoteForCategory(category,malicious).nightly_amount,210);
   previewTariff({tariff_key:'triple',adults:2,child_ages:[7],season:'low'});
   assert.equal(quoteForCategory(category,state).total_amount,420);
-  assert.match(formatPolicyInformationReply('¿Cuánto pagan los niños?'),/S\/ 20/);
-  assert.match(buildHotelAssistantPrompt(),/De 5 a 8 años, S\/ 20/);
+  assert.match(formatPolicyInformationReply('¿Cuánto paga un niño de 6 años?',{rules:{ninos_5_8:{review_status:'verified',config:{amount_pen:20,charge_frequency:'child_per_night'}}}}),/S\/ 20/);
+  assert.doesNotMatch(buildHotelAssistantPrompt(),/S\/ (?:20|30)|maximo\(|máximo\(/);
   assert.throws(()=>{TARIFF_PROPOSAL.status='approved';},TypeError);
   assert.equal(categoryBedPlan(category,state).fits,true);
 });
