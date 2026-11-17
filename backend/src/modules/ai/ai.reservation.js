@@ -91,24 +91,11 @@ function startsIndependentReservation(message, context = {}) {
     || /^(?:(?:una|a|une)\s+)?(?:reservar|reserva|book|booking|reserver|reservation)\s+\S/.test(text);
 }
 
-export function hasCurrentReservationOffer(history = []) {
-  const entries = Array.isArray(history) ? history : [];
-  const last = [...entries].reverse().find((entry) =>
-    entry?.author === "assistant" || entry?.role === "assistant"
-  );
-  const text = normalize(last?.content || last?.text || "");
-  return /quieres (?:reservar|continuar con la reserva)|would you like to reserve|quer reservar|souhaitez[- ]vous reserver/.test(text);
+export function reservationContextForMessage(message, context = {}) {
+  // «quiero reservar» es una solicitud nueva, no la aceptación de una oferta anterior.\n  const standaloneReservation = /^(?:(?:quiero|quisiera|deseo|necesito)\\s+reservar)(?:\\s+por favor)?[.! ]*$/i.test(normalize(message));\n  if(context.whatsapp_mvp?.state === "quoted" && acceptsQuote(message) && !standaloneReservation)return context;
+  return isExplicitNewReservation(message) || startsIndependentReservation(message, context) ? {} : (context || {});
 }
 
-export function reservationContextForMessage(message, context = {}, options = {}) {
-  const offerIsCurrent = Boolean(options.offerIsCurrent);
-  if (context.whatsapp_mvp?.state === "quoted" && acceptsQuote(message) && offerIsCurrent) {
-    return context;
-  }
-  // A request explicitly described as new is independent. Ambiguous reservation
-  // language is left for the booking-understanding model to interpret.
-  return isExplicitNewReservation(message) ? {} : (context || {});
-}
 export function isAssistantMenuRequest(message) {
   const cleaned = normalize(message).replace(/[¿?¡!.,]/g, " ").replace(/\s+/g, " ").trim();
   return /^(?:menu|opciones|opcoes|options|choix|mostrar menu|ver menu|show menu|show me the menu|que opciones hay|que opciones hay en el menu|cuales son las opciones|que opciones tienes|what are the options|me muestras el menu|me das el menu)$/.test(cleaned);
@@ -851,14 +838,7 @@ export function handleGlobalReservationTurn(input) {
   let understood = input.understanding;
   if (understood?.intent === "information") return { handled: false, context: input.context || {} };
   const originalContext = input.context || {};
-  const staleOfferReply = acceptsQuote(input.message) &&
-    originalContext.whatsapp_mvp?.state === "quoted" &&
-    input.offerIsCurrent === false;
-  const context = understood?.intent === "new_request" || staleOfferReply
-    ? {}
-    : reservationContextForMessage(input.message, originalContext, {
-        offerIsCurrent: input.offerIsCurrent,
-      });
+  const context = understood?.intent === "new_request" ? {} : reservationContextForMessage(input.message, originalContext);
   const previous = context.whatsapp_mvp || {};
   const language = understood?.language || detectLanguage(input.message, previous.language || originalContext.whatsapp_mvp?.language || "es");
   const clarification = understood?.clarification || (language === "en"
