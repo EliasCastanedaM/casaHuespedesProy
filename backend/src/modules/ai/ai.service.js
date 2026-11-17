@@ -1,3 +1,4 @@
+import { isConversationPresenceCheck, PRESENCE_REPLY } from "./ai.human-assistance.js";
 import { normalizeFaqInquiry, isDirectFaqQuestion } from "./ai.faq-questions.js";
 import { reservationOfferQuestion, reservationInterestReply } from "./ai.reservation-consent.js";
 import { categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
@@ -834,6 +835,11 @@ async function generateAiReplyInternal({
       deterministic: true,
       mode: "human_redirect",
     };
+  }
+
+  if (isConversationPresenceCheck(message)) {
+    return { reply: PRESENCE_REPLY, responseId: null, deterministic: true,
+      mode: "conversation_presence" };
   }
 
   if (isSpecificInquiryRequest(message)) {

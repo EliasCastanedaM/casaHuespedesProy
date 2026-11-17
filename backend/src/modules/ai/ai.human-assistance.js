@@ -43,3 +43,14 @@ export function isSpecificInquiryRequest(message) {
   return /^(?:(?:quiero|quisiera|deseo|necesito|me gustaria)\s+)?(?:hablar(?:\s+(?:de|sobre))?|preguntar|consultar|saber)\s+(?:algo|(?:un\s+)?tema)(?:\s+(?:en\s+)?especifico)?$/.test(text) ||
     /^(?:algo(?: en)? especifico|tengo (?:una (?:consulta|pregunta|duda)|algo que (?:preguntar|consultar))|(?:puedo|te puedo) (?:hacer(?:te)? una pregunta|preguntar(?:te)? algo))$/.test(text);
 }
+
+
+export const PRESENCE_REPLY = "¡Aquí estoy! Soy el asesor virtual de Casa Huéspedes 😊. ¿En qué puedo ayudarte?";
+
+// A whole conversational turn checking whether the chat is being attended.
+// Explicit requests for a human retain their own contact/consent flow.
+export function isConversationPresenceCheck(message) {
+  const text = normalize(message).replace(/^(?:hola|buenas|disculpa|disculpe)\s+/, "")
+    .replace(/\s+por favor$/, "");
+  return /^(?:hay alguien(?: (?:ahi|por ahi|para atender(?:me)?|que (?:me )?pueda atender(?:me)?))?|alguien (?:ahi|me (?:atiende|responde|contesta)|puede atenderme)|(?:estas|estan|sigues|siguen) ahi|(?:me )?(?:atienden|escuchan|leen)|me (?:puedes|pueden) (?:atender|responder)|anyone (?:there|here)|is (?:anyone|someone) (?:there|here)|are you (?:there|still there))$/.test(text);
+}
