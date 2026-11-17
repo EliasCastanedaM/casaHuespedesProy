@@ -20,7 +20,7 @@ import {
   isLocationMenuSelection,
   formatHotelLocationReply,
 } from "./ai.location-info.js";
-import { isHotelServicesInquiry, formatHotelServicesReply, selectHotelServices, isSimpleServiceInquiry, isServiceFollowup, resolveServiceMessage, serviceReplyLanguage, classifyServiceInquiry, hotelServicesPageReply } from "./ai.services-info.js";
+import { isHotelServicesInquiry, formatHotelServicesReply, selectHotelServices, isSimpleServiceInquiry, isServiceFollowup, resolveServiceMessage, serviceReplyLanguage, classifyServiceInquiry, hotelServicesPageReply, SERVICES_IMAGE_URL } from "./ai.services-info.js";
 import { formatTourismReply } from "./ai.tourism.js";
 import { paymentInformationType, formatHotelPaymentInfoReply, manualPaymentReviewReply } from "./ai.payment-info.js";
 import { getHotelPaymentInfoService } from "../services/hotelPaymentInfo.service.js";
@@ -711,7 +711,7 @@ async function executeTool(call, message) {
     JSON.parse(call.arguments || "{}");
 
     if (call.name === "listar_servicios") {
-      if (classifyServiceInquiry(message).kind === "general") return JSON.stringify({ success: true, kind: "general", reply: hotelServicesPageReply(serviceReplyLanguage(message)) });
+      if (classifyServiceInquiry(message).kind === "general") return JSON.stringify({ success: true, kind: "general", reply: hotelServicesPageReply(serviceReplyLanguage(message),await getPublicHotelServicesService()), image_url: SERVICES_IMAGE_URL });
       const services=await getPublicHotelServicesService();
       const selected=selectHotelServices(services,message);
       return JSON.stringify({success:true,kind:selected.intent.kind,
@@ -1081,9 +1081,15 @@ async function generateAiReplyInternal({
   // Responder servicios reales desde Supabase incluso mientras haya una reserva
   // a medio completar. Las preguntas informativas no alteran el contexto.
   if (serviceInquiry) {
-    if (classifyServiceInquiry(serviceMessage).kind === "general") return {
-      reply: hotelServicesPageReply(serviceLanguage), responseId: null, deterministic: true, mode: "hotel_services_information",
-    };
+    if (classifyServiceInquiry(serviceMessage).kind === "general") {
+      let services=[];
+      try { services=await getPublicHotelServicesService(); }
+      catch(error) { console.warn("No se pudo consultar el resumen de servicios:",diagnosticCode(error)); }
+      return {
+        reply: hotelServicesPageReply(serviceLanguage,services), image_url: SERVICES_IMAGE_URL,
+        responseId: null, deterministic: true, mode: "hotel_services_information",
+      };
+    }
     try {
       const services = await getPublicHotelServicesService();
       const reply = formatHotelServicesReply(services, serviceMessage, {language:serviceLanguage});

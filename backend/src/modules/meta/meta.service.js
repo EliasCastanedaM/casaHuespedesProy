@@ -1,3 +1,5 @@
+import { withAssistantEmoji } from "../ai/ai.presentation.js";
+import { SERVICES_PAGE_URL, SERVICES_IMAGE_URL, classifyServiceInquiry } from "../ai/ai.services-info.js";
 import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
@@ -810,6 +812,7 @@ async function createOutgoingMessage(
   inReplyToMessageId = null,
   db = pool
 ) {
+  if(author !== "admin" && reply !== SERVICES_IMAGE_URL)reply=withAssistantEmoji(reply);
   await db.query(
     `INSERT INTO meta_conversations
       (channel, external_user_id, last_message_at, updated_at)
@@ -825,12 +828,12 @@ async function createOutgoingMessage(
       `INSERT INTO meta_messages
         (channel, external_user_id, direction, author, message_type, content,
          status, meta_timestamp, in_reply_to_message_id)
-       VALUES ($1, $2, 'outgoing', $3, 'text', $4, 'pending', CURRENT_TIMESTAMP, $5)
+       VALUES ($1, $2, 'outgoing', $3, $6, $4, 'pending', CURRENT_TIMESTAMP, $5)
        RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
                  direction, author, message_type, content, status, error_detail,
                  processing_attempts, delivery_part_count, delivery_next_part_index,
                  delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
-      [message.channel, message.externalUserId, author, reply, inReplyToMessageId]
+      [message.channel, message.externalUserId, author, reply, inReplyToMessageId, reply === SERVICES_IMAGE_URL ? 'image' : 'text']
     );
     return saved.rows[0];
   } catch (error) {
@@ -1026,8 +1029,9 @@ async function sendWhatsApp(externalUserId, reply, inboundPhoneNumberId = "") {
       messaging_product: "whatsapp",
       recipient_type: "individual",
       ...whatsappRecipientAddress(externalUserId),
-      type: "text",
-      text: { preview_url: false, body: reply },
+      ...(reply === SERVICES_IMAGE_URL
+        ? {type:"image",image:{link:SERVICES_IMAGE_URL,caption:"Nuestra terraza 📷"}}
+        : {type:"text",text:{preview_url:false,body:reply}}),
     }
   );
 }
@@ -1040,7 +1044,9 @@ async function sendFacebook(externalUserId, reply) {
     {
       messaging_type: "RESPONSE",
       recipient: { id: externalUserId },
-      message: { text: reply },
+      message: reply === SERVICES_IMAGE_URL
+        ? {attachment:{type:"image",payload:{url:SERVICES_IMAGE_URL,is_reusable:true}}}
+        : {text:reply},
     }
   );
 }
@@ -1403,6 +1409,19 @@ async function deliverPersistedOutgoing(
 // El segundo mensaje de bienvenida se vincula al primer outgoing, no al
 // mensaje entrante. Así ambas burbujas quedan registradas por separado sin
 // vulnerar el índice único de respuestas y pueden recuperarse tras una caída.
+function shouldSendServicesImage(message,outgoing) {
+  return classifyServiceInquiry(message.text).kind === "general" &&
+    String(outgoing?.content || '').includes(SERVICES_PAGE_URL);
+}
+async function deliverServicesImageFollowUp(message,primaryOutgoing,dependencies) {
+  if(await dependencies.getHandoff(message.channel,message.externalUserId))return;
+  const linkedId=primaryOutgoing?.id ?? null;
+  const saved=linkedId ? await dependencies.findOutgoing(linkedId) : null;
+  if(saved?.meta_message_id || ["sent","delivered","read"].includes(saved?.status))return saved;
+  const outgoing=saved || await dependencies.createOutgoing(message,SERVICES_IMAGE_URL,"assistant",linkedId);
+  return deliverPersistedOutgoing(message,outgoing,dependencies,"assistant");
+}
+
 async function deliverWelcomeSocialFollowUp(message, primaryOutgoing, dependencies) {
   const linkedId = primaryOutgoing?.id ?? null;
   const saved = linkedId
@@ -1582,6 +1601,10 @@ export async function processMetaMessage(message, overrides = {}) {
         new Promise((resolve) => setTimeout(resolve, milliseconds))),
   };
 
+  const createOutgoing=dependencies.createOutgoing;
+  dependencies.createOutgoing=(target,content,author,parentId)=>createOutgoing(
+    target, author === "admin" || content === SERVICES_IMAGE_URL ? content : withAssistantEmoji(content), author, parentId
+  );
   const claimed = await dependencies.claim(message);
   if (!claimed) {
     return { status: "duplicate" };
@@ -1619,6 +1642,9 @@ export async function processMetaMessage(message, overrides = {}) {
           message, incomingId, existingOutgoing, dependencies
         )) {
           await deliverWelcomeSocialFollowUp(message, existingOutgoing, dependencies);
+        }
+        if(shouldSendServicesImage(message,existingOutgoing)) {
+          await deliverServicesImageFollowUp(message,existingOutgoing,dependencies);
         }
         await dependencies.complete(message);
         return { status: acceptedByMeta
@@ -1754,6 +1780,9 @@ export async function processMetaMessage(message, overrides = {}) {
       incomingId
     );
     await deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
+    if(shouldSendServicesImage(message,outgoing)) {
+      await deliverServicesImageFollowUp(message,outgoing,dependencies);
+    }
     if (sendSocialFollowUp) {
       await deliverWelcomeSocialFollowUp(message, outgoing, dependencies);
     }

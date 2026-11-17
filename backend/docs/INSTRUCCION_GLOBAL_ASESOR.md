@@ -33,6 +33,25 @@ Las tarifas, servicios y políticas actuales pertenecen a sus fuentes comerciale
 los cálculos y aprobaciones se mantienen en el motor determinista de reserva.
 El prompt no sustituye esas validaciones.
 
+## Presentación de servicios y emojis
+
+Una pregunta específica recibe únicamente el servicio consultado y sus condiciones.
+Una consulta general, incluida «¿qué servicios tienes?», recibe una oración de
+resumen con hasta tres servicios del catálogo vigente, una invitación breve a
+https://www.casahuespedespimentel.com/servicios y la foto de terraza utilizada por
+esa página. Si la fuente falla, el resumen es genérico y no inventa servicios.
+No se enumera el catálogo completo ni se informa su cantidad total.
+
+Cada mensaje de texto del asesor lleva emojis discretos. La capa de presentación
+conserva los emojis ya presentes y añade uno cuando falta; no cambia importes,
+enlaces o condiciones. La regla también cubre avisos de procesamiento y respuestas
+fijas. Los mensajes escritos por operadores no se modifican.
+
+La fotografía se entrega como imagen nativa en los tres canales, en un outgoing
+separado vinculado a la respuesta principal. Se reutilizan las comprobaciones de
+atención humana, persistencia, reintentos y recuperación sin repetir una imagen
+ya aceptada por Meta. La API de chat también devuelve image_url para los clientes.
+
 ## Selección de servicios
 
 `ai.services-info.js` devuelve una intención `none`, `general` o `specific`, con

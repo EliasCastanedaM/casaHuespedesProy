@@ -35,7 +35,7 @@ const UNKNOWN_AMENITY = /\b(?:aire acondicionado|air condition(?:ing|er)?|a\/c|p
 const EXTERNAL = /\b(?:restaurantes?|cafeterias?|restaurants?|cafes?)\b.*\b(?:cerca|cercanos?|alrededor|nearby|near|fuera)\b|\b(?:donde comer|where to eat)\b/;
 // Anchored whole-request grammar: a trailing unknown subject ("de masajes")
 // makes a query specific, even if it starts with "qué servicios".
-const GENERAL = /^(?:(?:antes de seguir|hola|por favor|dime|muestrame|cuentame|dame)\s*,?\s*)*(?:(?:que|cuales|what|which)\s+)?(?:(?:otros?|todos los|todas las|all|every)\s+)?(?:servicios?|comodidades|amenidades|services|amenities|facilities)(?:\s+(?:tiene|tienen|ofrece|ofrecen|incluye|incluyen|hay|estan incluidos|do you have|does (?:the|your) hotel (?:have|offer)|are available))?(?:\s+(?:en|del|el|la|mi|su|de|the|at|your)\s*(?:hotel|hospedaje|reserva|alojamiento|establecimiento|property))?(?:\s+(?:con detalles|en detalle|completos|completo|detallados|in detail))?$/;
+const GENERAL = /^(?:(?:antes de seguir|hola|por favor|dime|muestrame|cuentame|dame)\s*,?\s*)*(?:(?:que|cuales|what|which)\s+)?(?:(?:otros?|todos los|todas las|all|every)\s+)?(?:servicios?|comodidades|amenidades|services|amenities|facilities)(?:\s+(?:tiene|tienes|tienen|ofrece|ofreces|ofrecen|incluye|incluyen|hay|estan incluidos|do you have|does (?:the|your) hotel (?:have|offer)|are available))?(?:\s+(?:en|del|el|la|mi|su|de|the|at|your)\s*(?:hotel|hospedaje|reserva|alojamiento|establecimiento|property|ustedes))?(?:\s+(?:con detalles|en detalle|completos|completo|detallados|in detail))?$/;
 function isGeneralRequest(text) {
   const clean = text.replace(/[¿?¡!.,]/g,' ').replace(/\s+/g,' ').trim();
   return GENERAL.test(clean) || /^(?:que|cuales) son (?:los |todos los )?servicios(?: (?:del|de su|de este) (?:hotel|hospedaje))?$/.test(clean);
@@ -140,19 +140,25 @@ export function serviceReplyLanguage(message, history = []) {
 }
 
 export const SERVICES_PAGE_URL = "https://www.casahuespedespimentel.com/servicios";
-export function hotelServicesPageReply(language = 'es') {
+export const SERVICES_IMAGE_URL = "https://www.casahuespedespimentel.com/img/galeria/galeria-3.jpg";
+export function hotelServicesPageReply(language = 'es', services = []) {
   const text = {
     es: 'Para conocer todos los servicios de Casa Huéspedes Pimentel, ingresa aquí:',
     en: 'To discover all the services at Casa Huéspedes Pimentel, visit:',
     pt: 'Para conhecer todos os serviços da Casa Huéspedes Pimentel, acesse:',
     fr: 'Pour découvrir tous les services de Casa Huéspedes Pimentel, consultez :',
   }[language] || 'Para conocer todos los servicios de Casa Huéspedes Pimentel, ingresa aquí:';
-  return text + '\n' + SERVICES_PAGE_URL;
+  const approved=selectHotelServices(services,'¿Qué servicios ofrecen?').services;
+  const names=['wifi','desayuno-continental','terraza'].map(slug=>approved.find(s=>s.slug===slug)?.name).filter(Boolean);
+  const summary=language==='es' && names.length
+    ? 'Contamos con '+names.join(', ')+'. 😊'
+    : ({es:'Contamos con servicios y espacios para disfrutar tu estadía. 😊',en:'We offer services and shared spaces for your stay. 😊',pt:'Oferecemos serviços e espaços para sua estadia. 😊',fr:'Nous proposons des services et des espaces pour votre séjour. 😊'}[language] || 'Contamos con servicios y espacios para disfrutar tu estadía. 😊');
+  return summary + '\n\n' + text + '\n' + SERVICES_PAGE_URL;
 }
 
 export function formatHotelServicesReply(services,message,{language='es'}={}) {
   const {intent,services:chosen}=selectHotelServices(services,message);
-  if (intent.kind === 'general') return hotelServicesPageReply(language);
+  if (intent.kind === 'general') return hotelServicesPageReply(language,services);
   const unknown=intent.unknown || intent.slugs.some(id=>!chosen.some(s=>s.slug===id));
   const uncertain=language==='en' ? "I don't have confirmed information about that service." : 'No tengo un servicio confirmado para esa consulta.';
   if(!['es','en'].includes(language))return null;

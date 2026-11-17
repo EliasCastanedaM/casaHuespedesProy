@@ -4,20 +4,21 @@ import { readFileSync } from "node:fs";
 import OpenAI from "openai";
 import { pool } from "../src/config/db.js";
 import { generateAiReply } from "../src/modules/ai/ai.service.js";
-import { classifyServiceInquiry, formatHotelServicesReply, SERVICES_PAGE_URL } from "../src/modules/ai/ai.services-info.js";
+import { classifyServiceInquiry, formatHotelServicesReply, SERVICES_PAGE_URL, SERVICES_IMAGE_URL } from "../src/modules/ai/ai.services-info.js";
 const { services } = JSON.parse(readFileSync(new URL("./fixtures/hotel-reference-20261107.json", import.meta.url), "utf8"));
 
-for (const message of ["que servicios tiene el hotel?", "¿Qué servicios ofrecen?", "¿Cuáles son los servicios del hotel?", "Todos los servicios con detalles", "What services does your hotel offer?", "What services do you have?"]) {
-  test("consulta general enlaza la página sin catálogo: " + message, () => {
+for (const message of ["que servicios tienes ?", "que servicios tienes", "que servicios tiene el hotel?", "¿Qué servicios ofrecen?", "¿Cuáles son los servicios del hotel?", "Todos los servicios con detalles", "What services does your hotel offer?", "What services do you have?"]) {
+  test("consulta general resume y enlaza sin catálogo completo: " + message, () => {
     assert.equal(classifyServiceInquiry(message).kind, "general");
     const reply = formatHotelServicesReply(services, message);
     assert.ok(reply.includes(SERVICES_PAGE_URL));
     assert.equal(reply.split(SERVICES_PAGE_URL).length - 1, 1);
-    assert.doesNotMatch(reply, /\d+ servicios|WiFi|Netflix|lavandería|continental/);
+    assert.doesNotMatch(reply, /\d+ servicios|Netflix|lavandería/);
+    assert.ok(reply.length < 400);
   });
 }
 
-for (const channel of ["whatsapp", "facebook", "instagram"]) test(channel + ": pregunta exacta de captura no depende del modelo ni de consultar catálogo", async t => {
+for (const channel of ["whatsapp", "facebook", "instagram"]) test(channel + ": pregunta general comparte resumen y foto sin depender del modelo", async t => {
   t.mock.method(pool, "query", async () => { throw new Error("No necesita SQL para compartir el enlace público"); });
   t.mock.method(OpenAI.Responses.prototype, "create", async () => { throw new Error("No necesita modelo"); });
   for (const [message, expected] of [["que servicios tiene el hotel?", /Para conocer todos los servicios/], ["What services does your hotel offer?", /To discover all the services/]]) {
@@ -25,7 +26,8 @@ for (const channel of ["whatsapp", "facebook", "instagram"]) test(channel + ": p
     assert.equal(result.mode, "hotel_services_information");
     assert.match(result.reply, expected);
     assert.ok(result.reply.includes(SERVICES_PAGE_URL));
-    assert.doesNotMatch(result.reply, /No tengo|confirmado|WiFi|\d+ servicios/);
+    assert.doesNotMatch(result.reply, /No tengo|confirmado|\d+ servicios/);
+    assert.equal(result.image_url,SERVICES_IMAGE_URL);
   }
 });
 

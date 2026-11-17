@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { env } from "../../config/env.js";
+import { withAssistantEmoji } from "./ai.presentation.js";
 import { generateAiReply } from "./ai.service.js";
 
 const ALLOWED_CHANNELS = new Set([
@@ -67,7 +68,7 @@ export async function chatController(req, res, next) {
 
     return res.json({
       success: true,
-      data: { reply: result.reply },
+      data: { reply: withAssistantEmoji(result.reply), ...(result.image_url ? { image_url: result.image_url } : {}) },
     });
   } catch (error) {
     next(error);

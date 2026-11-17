@@ -1,3 +1,4 @@
+import { SERVICES_IMAGE_URL } from "../ai/ai.services-info.js";
 import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 
@@ -69,7 +70,9 @@ async function instagramPost(externalUserId, reply) {
       },
       body: JSON.stringify({
         recipient: { id: externalUserId },
-        message: { text: reply },
+        message: reply === SERVICES_IMAGE_URL
+          ? {attachment:{type:"image",payload:{url:SERVICES_IMAGE_URL}}}
+          : {text:reply},
       }),
       signal: AbortSignal.timeout(15_000),
     }
