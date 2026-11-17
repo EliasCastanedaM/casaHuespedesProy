@@ -859,12 +859,12 @@ export function handleGlobalReservationTurn(input) {
     }
     if (parsed) {
       const known = Array.isArray(prior.child_ages) ? prior.child_ages : [];
-      if (known.length > 0 && known.length < prior.children && parsed.ages.length <= prior.children-known.length) {
+      if (/\botr[oa]\b/.test(normalize(input.message)) && known.length > 0 && known.length < prior.children && parsed.ages.length <= prior.children-known.length) {
         parsed.ages = [...known,...parsed.ages];
       }
       if (parsed.ages.length !== prior.children) {
         return {handled:true,context:input.context,mode:"global_reservation_clarification",
-          reply:"¿Me confirmas la edad de cada uno de los "+prior.children+" niños? 😊"};
+          reply:"¿Me confirmas qué edades tienen los "+prior.children+" niños? 😊"};
       }
       if (parsed.uncertain) {
         return {handled:true,context:{...input.context,whatsapp_mvp:{...input.context.whatsapp_mvp,pending_child_ages:parsed.ages}},
