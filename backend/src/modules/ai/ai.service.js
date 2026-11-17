@@ -994,6 +994,7 @@ async function generateAiReplyInternal({
        current?.whatsapp_mvp?.guest_reservation_consent?.confirmed &&
        !current.whatsapp_mvp.staff_confirmation) {
       const revised={...progress.context.whatsapp_mvp,state:"collecting"};
+      if(revised.category_slug===current.whatsapp_mvp.category_slug)delete revised.category_slug;
       delete revised.guest_reservation_consent;delete revised.reservation_offer;
       progress=handleGlobalReservationTurn({
         message,context:{...progress.context,whatsapp_mvp:revised},
