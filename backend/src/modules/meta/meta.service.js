@@ -586,7 +586,11 @@ export async function listActiveHandoffs(db = pool) {
      FROM meta_conversations c
      LEFT JOIN ai_conversations a
        ON a.channel = c.channel AND a.external_user_id = c.external_user_id
-     WHERE c.handoff_active = TRUE
+     WHERE c.handoff_active = TRUE OR (
+       a.booking_context->'whatsapp_mvp'->>'state' = 'handoff'
+       AND a.booking_context->'whatsapp_mvp'->'guest_reservation_consent'->>'confirmed' = 'true'
+       AND NOT (a.booking_context->'whatsapp_mvp' ? 'staff_confirmation')
+     )
      ORDER BY c.handoff_requested_at ASC NULLS LAST, c.updated_at ASC;`
   );
   return result.rows;

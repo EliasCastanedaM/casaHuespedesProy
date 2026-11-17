@@ -1,3 +1,4 @@
+import { acceptsReservationOffer, reservationOfferQuestion } from "./ai.reservation-consent.js";
 import { CHILD_POLICY_VERSION, CHILD_NIGHTLY_SUPPLEMENT, guestComposition, categoryBedPlan } from '../rooms/guestComposition.js';
 import { appendRoomInvitation } from './ai.room-invitation.js';
 import { isTariffProposalActive, getConfirmedTariff, hasConfirmedTariffForCategory } from '../commercial/tariffProposal.service.js';
@@ -23,9 +24,7 @@ export function priceVariationReply() {
   return "El precio varía según la categoría elegida y la cantidad de huéspedes. Cuando viajan niños, también tomamos en cuenta sus edades para calcular el importe de la estadía. 😊";
 }
 
-export function acceptsQuote(message) {
-  return /^(?:si(?: por favor)?|si quiero|si quiero reservar|si reservemos|si esta bien|esta bien|perfecto|de acuerdo|me gusta|acepto|confirmo|dale|esa|esa esta bien|quiero esa|quiero reservar|reservar|reserva|ok|okay|yes|yes please|book it|sim|oui)[.!\s]*$/.test(clean(message).replace(/[¡!¿?,]/g, "").trim());
-}
+export function acceptsQuote(message) { return acceptsReservationOffer(message); }
 
 export function hasOccupancyRates(categories) {
   if (isTariffProposalActive()) return categories.some(c => hasConfirmedTariffForCategory(c.slug));
@@ -211,5 +210,5 @@ export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = fa
       ? money(item.min_nightly_amount) + '–' + money(item.max_nightly_amount) : money(item.total_nightly_amount)) + ' ' + labels.night +
     '. ' + labels.total + ' ' + item.nights + ' ' + labels.nights + ': ' + money(item.total_amount) + '.');
   if (noLowerPrice) rows.push(labels.noLower);
-  return appendRoomInvitation(prefix + rows.join('\n'), language);
+  return appendRoomInvitation(prefix + rows.join('\n'), language) + '\n\n' + reservationOfferQuestion(language);
 }

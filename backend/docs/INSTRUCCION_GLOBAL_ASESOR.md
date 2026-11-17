@@ -123,6 +123,24 @@ una reserva o disponibilidad confirmada. Las consultas sobre pagar ahora
 se responden sin emitir enlaces ni iniciar el cierre de reserva; el enlace real
 continúa sujeto al proceso y la aprobación existentes.
 
+## Aceptación explícita después de recomendar
+
+La recomendación o cotización finaliza preguntando «¿Quieres reservar esta
+habitación? Para confirmar, responde “sí quiero”». Ni los datos aportados ni el
+historial ni expresiones como «ok», «me gusta» o «sí» aislado autorizan continuar.
+
+Solo una respuesta explícita posterior a la oferta vigente, como «sí quiero» o
+«sí, quiero reservar», acepta la recomendación. Se normalizan tildes, mayúsculas,
+puntuación y espacios. Cambiar datos o elegir otra categoría genera otra
+recomendación y renueva la pregunta; esa elección no es aceptación.
+
+Después de aceptar: «¡Perfecto! 😊 Nuestro equipo te confirmará la disponibilidad
+en breve y se comunicará contigo para continuar con la reserva. ¿Tienes alguna
+otra duda?». Se conserva una solicitud pendiente para revisión del equipo,
+sin crear una reserva ni solicitar datos personales o pagos. La solicitud figura
+en la cola de revisión; la IA continúa disponible para dudas hasta que un operador
+tome el chat. La aprobación administrativa sigue requiriendo atención humana activa.
+
 ## Presentación y entrega
 
 Los saludos reciben la bienvenida aprobada y las redes, gestionadas por Meta.

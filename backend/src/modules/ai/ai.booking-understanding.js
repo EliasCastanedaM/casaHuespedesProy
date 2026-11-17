@@ -1,3 +1,4 @@
+import { acceptsReservationOffer } from "./ai.reservation-consent.js";
 // The model interprets guest language only. It cannot set prices, availability,
 // staff approvals, payment status, identifiers or customer identity.
 const fieldNames = ["adults", "children", "child_ages", "total_guests", "pets", "check_in", "check_out", "category_slug", "view", "near_window", "young_children_share_bed", "bed_preference"];
@@ -74,6 +75,7 @@ Si el mensaje no aporta datos ni un cambio afirmativo, updates debe estar vacío
 export function shouldUnderstandBooking(message, state, bookingIntent = false) {
   const text = normalize(message);
   if (!text || text.length > 2400) return false;
+  if(state?.state==="quoted" && acceptsReservationOffer(message))return false;
   if (state && !["collecting", "quoted", "handoff", "browsing"].includes(state.state)) return false;
   if (!state && !bookingIntent) return false;
   // These answers already have an unambiguous meaning in the current step.

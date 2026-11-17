@@ -1,3 +1,4 @@
+import { reservationOfferQuestion, reservationInterestReply } from "./ai.reservation-consent.js";
 import { guestComposition, categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION, CHILD_NIGHTLY_SUPPLEMENT } from '../rooms/guestComposition.js';
 import { collectRoomPreferences, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 import { randomUUID } from "node:crypto";
@@ -48,6 +49,11 @@ function detectLanguage(message, prior = "es") {
   return prior;
 }
 
+export function isRoomRecommendationInquiry(message) {
+  const text=normalize(message);
+  return /\b(?:recomiend\w*|recomendacion|recommend\w*)\b/.test(text) &&
+    /\b(?:habitacion|habitaciones|hotel|alojamiento|hospedaje|adultos?|nin[oa]s?|personas?|pareja|room|rooms|adults?|children)\b/.test(text);
+}
 function reservationIntent(text) {
   return /\b(?:reservar|reserva|separar|apartar|book|booking|reservation|reserve|reservar|reserva|reserver|reservation)\b/.test(text) &&
     !/\b(?:cancelar|cancel|anular|modificar|change|cambiar)\b/.test(text);
@@ -82,6 +88,7 @@ function startsIndependentReservation(message, context = {}) {
 }
 
 export function reservationContextForMessage(message, context = {}) {
+  if(context.whatsapp_mvp?.state === "quoted" && acceptsQuote(message))return context;
   return isExplicitNewReservation(message) || startsIndependentReservation(message, context) ? {} : (context || {});
 }
 
@@ -935,7 +942,7 @@ function handleReservationTurn({
   const state = context.whatsapp_mvp || null;
   const language = understanding?.language || detectLanguage(message, state?.language || previousLanguage);
   const dictionary = labels[language] || labels.es;
-  const intent = reservationIntent(text) || pricingIntent || understanding?.intent === "new_request";
+  const intent = reservationIntent(text) || isRoomRecommendationInquiry(message) || pricingIntent || understanding?.intent === "new_request";
   if (isAssistantMenuRequest(message)) {
     return { handled: true, reply: dictionary.menu, mode: "global_reservation_menu", context };
   }
@@ -949,6 +956,8 @@ function handleReservationTurn({
     const cheaper = isCheaperRequest(message);
     if (changed.length || cheaper) {
       delete updated.staff_confirmation;
+      delete updated.reservation_offer;
+      delete updated.guest_reservation_consent;
       if (changed.length) {
         delete updated.pricing_quote;
         delete updated.quote_options;
@@ -966,7 +975,20 @@ function handleReservationTurn({
         explicitCategory: changed.includes("category_slug"),
         context: { ...context, whatsapp_mvp: updated }, mode: "occupancy_quote" };
     }
-    if (acceptsQuote(message)) return { handled: true, action: "accept_quote", context, mode: "human_review_required" };
+    if (/^(?:no(?: gracias)?|no quiero(?: reservar)?|solo (?:estoy )?consultando|not now|no thanks)[.! ]*$/.test(text)) {
+      const next={...state,state:"browsing"};
+      delete next.reservation_offer; delete next.guest_reservation_consent;
+      return {handled:true,context:{...context,whatsapp_mvp:next},reply:"Claro 😊. Puedes seguir consultándome lo que necesites.",mode:"reservation_offer_declined"};
+    }
+    if (acceptsQuote(message) && state.reservation_offer?.version===1) return {
+      handled:true,action:state.reservation_offer.requires_quote ? "accept_quote" : "request_staff_review",
+      context,mode:"reservation_interest_confirmed"
+    };
+    if (acceptsQuote(message) || /^(?:si|si por favor|ok|okay|dale|perfecto|de acuerdo|me gusta|esa|gracias|confirmo)[.! ]*$/.test(text)) {
+      return {handled:true,context:{...context,whatsapp_mvp:{...state,reservation_offer:{version:1,requires_quote:Boolean(state.pricing_quote)}}},
+        reply:reservationOfferQuestion(language,Number(state.total_guests)>Number(state.max_single_room_capacity || 5)),
+        mode:"reservation_offer"};
+    }
     if (pricingIntent || intent) return { handled: true, action: "calculate_quote", context, mode: "occupancy_quote" };
     return { handled: false, context };
   }
@@ -1198,26 +1220,15 @@ function handleReservationTurn({
     };
   }
 
-  data.state = "handoff";
-  const largeGroup = Number(data.total_guests || 0) >= 8;
-  const needsMultipleRooms = Number(data.max_single_room_capacity || 0) > 0 &&
-    minimumRequiredBedPlaces(data) > Number(data.max_single_room_capacity);
-  let handoffReply = largeGroup
-    ? (labels[language]?.largeGroupHandoff || labels.es.largeGroupHandoff)
-    : needsMultipleRooms
-      ? (labels[language]?.multiRoomHandoff || labels.es.multiRoomHandoff)
-      : dictionary.handoff;
-  if (!largeGroup && data.recommended_category) {
-    const recommendation = data.recommended_category.name;
-    handoffReply += " Por el tamaño del grupo, la categoría que mejor se ajusta es " + recommendation +
-      " (capacidad " + data.recommended_category.capacity + "). Esto no confirma disponibilidad.";
-  }
-  return {
-    handled: true,
-    context: nextContext,
-    reply: handoffReply,
-    mode: "human_review_required",
-    internalSummary: formatGlobalHandoffSummary(data),
-  };
+  data.state = "quoted";
+  data.reservation_offer={version:1,requires_quote:false};
+  delete data.guest_reservation_consent;
+  const multiple=Number(data.total_guests || 0)>=8 ||
+    minimumRequiredBedPlaces(data)>Number(data.max_single_room_capacity || 5);
+  const recommendation=multiple ? "Por el tamaño de tu grupo, te recomendamos varias habitaciones."
+    : data.recommended_category ? "Te recomendamos la categoría "+data.recommended_category.name+"."
+    : "Nuestro equipo puede orientarte sobre una habitación adecuada para tu grupo.";
+  return {handled:true,context:nextContext,
+    reply:appendRoomInvitation(recommendation,language)+"\n\n"+reservationOfferQuestion(language,multiple),
+    mode:"reservation_offer"};
 }
-

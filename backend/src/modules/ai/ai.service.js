@@ -1,3 +1,4 @@
+import { reservationOfferQuestion, reservationInterestReply } from "./ai.reservation-consent.js";
 import { categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
 import { isTariffProposalActive } from '../commercial/tariffProposal.service.js';
 import OpenAI from "openai";
@@ -35,6 +36,7 @@ import {
   handleGlobalReservationTurn,
   reservationContextForMessage,
   isAssistantMenuRequest,
+  isRoomRecommendationInquiry,
   prepareGlobalReservation as prepareGlobalReservationContext,
 } from "./ai.reservation.js";
 import {
@@ -383,6 +385,12 @@ function globalBookingFailureReply(language) {
 
 async function executeGlobalReservationAction({ progress, channel, externalUserId, categories = [], onProcessing }) {
   const state = progress.context?.whatsapp_mvp || {};
+  if(progress.action==="request_staff_review") {
+    const next={...state,state:"handoff",guest_reservation_consent:{confirmed:true,source:"explicit_offer_reply"}};
+    delete next.reservation_offer;
+    await saveBookingContext(channel,externalUserId,{...progress.context,whatsapp_mvp:next});
+    return {reply:reservationInterestReply(state.language),responseId:null,deterministic:true,mode:"reservation_interest_confirmed"};
+  }
   if (["calculate_quote", "accept_quote"].includes(progress.action)) {
     if (onProcessing) await onProcessing(processingQuoteReply(state.language));
     const accepting = progress.action === "accept_quote";
@@ -402,12 +410,13 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     });
     const quote = selection.quote;
     if (!quote) {
-      const next = { ...state, state: "handoff" };
-      delete next.pricing_quote;
-      await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: next });
-      return { reply: selection.reason === "no_availability" && inventoryVerified
-        ? "Para esas fechas no figura una categoría compatible con tu solicitud en nuestro registro. Nuestro equipo puede revisar otras fechas o una distribución alternativa; conservé los datos que compartiste."
-        : humanReviewReply("esta solicitud de alojamiento"), responseId: null, deterministic: true, mode: "human_review_required" };
+      const next={...state,state:"quoted",reservation_offer:{version:1,requires_quote:false}};
+      delete next.pricing_quote;delete next.guest_reservation_consent;
+      await saveBookingContext(channel,externalUserId,{...progress.context,whatsapp_mvp:next});
+      const reason=selection.reason==="no_availability" && inventoryVerified
+        ? "Para esas fechas no figura una categoría compatible con tu solicitud. Podemos consultar otras opciones con nuestro equipo."
+        : "Nuestro equipo puede orientarte sobre una opción adecuada para tu grupo.";
+      return {reply:reason+"\n\n"+reservationOfferQuestion(state.language),responseId:null,deterministic:true,mode:"reservation_offer"};
     }
     const previous = state.pricing_quote;
     const signature = value => value && JSON.stringify([
@@ -416,25 +425,22 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
       value.room_preferences,value.window_verification_required,value.shared_children,value.parents_share_one_half_bed,
     ]);
     const unchanged = previous && !quote.preference_fallback && signature(previous) === signature(quote);
-    const accepted = progress.action === "accept_quote" && unchanged;
+    const accepted = progress.action === "accept_quote" && state.reservation_offer?.version===1 && unchanged;
     const next = {
       ...(accepted ? effective : state), state: accepted ? "handoff" : "quoted", pricing_quote: quote,
       ...(accepted && previous?.preference_fallback ? { requested_room_preferences: state.room_preferences } : {}),
       category_slug: quote.category_slug,
       quote_options: [quote,...(selection.alternatives || [])],
       recommended_category: { slug: quote.category_slug, name: quote.category_name, capacity: quote.capacity },
+      reservation_offer: accepted ? undefined : {version:1,requires_quote:true,category_slug:quote.category_slug},
+      guest_reservation_consent: accepted ? {confirmed:true,source:"explicit_offer_reply"} : undefined,
     };
     delete next.awaiting;
     await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: next });
     return {
-      reply: appendRoomInvitation(accepted ? ({
-        es: "¡Perfecto! 😊 Nuestro equipo revisará la disponibilidad y confirmará el importe para esas fechas. Ya tiene los datos que compartiste; no necesitas repetirlos.",
-        en: "Perfect! 😊 Our team will check availability and confirm the amount for those dates. You won't need to repeat your details.",
-        pt: "Perfeito! 😊 Nossa equipe verificará a disponibilidade e confirmará o valor. Não é necessário repetir os dados.",
-        fr: "Parfait ! 😊 Notre équipe vérifiera la disponibilité et confirmera le montant. Vous n'aurez pas à répéter vos informations.",
-      })[state.language || "es"] || "Nuestro equipo confirmará disponibilidad e importe."
-        : formatOccupancyQuote(quote, state.language, { noLowerPrice: selection.reason === "no_lower_price", alternatives: selection.alternatives }), state.language),
-      responseId: null, deterministic: true, mode: accepted ? "human_review_required" : "occupancy_quote",
+      reply: accepted ? reservationInterestReply(state.language)
+        : formatOccupancyQuote(quote,state.language,{noLowerPrice:selection.reason==="no_lower_price",alternatives:selection.alternatives}),
+      responseId:null,deterministic:true,mode:accepted ? "reservation_interest_confirmed" : "occupancy_quote",
     };
   }
   if (progress.action === "create_booking") {
@@ -940,7 +946,7 @@ async function generateAiReplyInternal({
   if (!locationInquiry && !policyType && !paymentInfoType && !serviceInquiry) {
     const current = await loadBookingContext(channel, externalUserId);
     let categories = [];
-    if (current?.whatsapp_mvp || isReservationIntent(message) || pricingIntent) {
+    if (current?.whatsapp_mvp || isReservationIntent(message) || isRoomRecommendationInquiry(message) || pricingIntent) {
       try {
         categories = await getReservationRoomCategoriesService();
       } catch (error) {
@@ -1070,13 +1076,7 @@ async function generateAiReplyInternal({
 
 
 
-  // Las excepciones conservan la misma revisión humana en todos los canales.
-  const specialQuoteReason = requiresManualReview(message, {
-    hasReservationIntent: isReservationIntent(message) || isCategoryPriceInquiry(message),
-  });
-  if (specialQuoteReason) {
-    return { reply: humanReviewReply(specialQuoteReason), responseId: null, deterministic: true, mode: "human_review_required" };
-  }
+  // Las condiciones especiales se revisan tras la aceptación explícita de la recomendación.
 
   // Responder servicios reales desde Supabase incluso mientras haya una reserva
   // a medio completar. Las preguntas informativas no alteran el contexto.
