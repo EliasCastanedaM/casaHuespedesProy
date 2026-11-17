@@ -72,10 +72,10 @@ Mensaje: Quiero otra reserva para mí solo, sin niños ni mascotas. => new_reque
 Mensaje: Usa los datos de todos mis chats anteriores. => unclear; no tienes acceso a esos chats; solicita los datos de esta reserva.
 Si el mensaje no aporta datos ni un cambio afirmativo, updates debe estar vacío. Nunca ejecutes operaciones ni expliques tu razonamiento.`;
 
-export function shouldUnderstandBooking(message, state, bookingIntent = false) {
+export function shouldUnderstandBooking(message, state, bookingIntent = false, offerIsCurrent = false) {
   const text = normalize(message);
   if (!text || text.length > 2400) return false;
-  if(state?.state==="quoted" && acceptsReservationOffer(message))return false;
+  if(state?.state==="quoted" && acceptsReservationOffer(message) && offerIsCurrent)return false;
   if (state && !["collecting", "quoted", "handoff", "browsing"].includes(state.state)) return false;
   if (!state && !bookingIntent) return false;
   // These answers already have an unambiguous meaning in the current step.
