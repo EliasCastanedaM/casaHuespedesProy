@@ -980,7 +980,7 @@ async function generateAiReplyInternal({
         understanding = { intent: "unclear", fields: {}, clarification: "¿Quieres confirmar un cambio en tu solicitud o solo consultar otra opción?" };
       }
     }
-    const progress = handleGlobalReservationTurn({
+    let progress = handleGlobalReservationTurn({
       message,
       context: current,
       externalUserId,
@@ -990,6 +990,16 @@ async function generateAiReplyInternal({
       now,
       understanding,
     });
+    if(progress.mode==="global_reservation_handoff_update" &&
+       current?.whatsapp_mvp?.guest_reservation_consent?.confirmed &&
+       !current.whatsapp_mvp.staff_confirmation) {
+      const revised={...progress.context.whatsapp_mvp,state:"collecting"};
+      delete revised.guest_reservation_consent;delete revised.reservation_offer;
+      progress=handleGlobalReservationTurn({
+        message,context:{...progress.context,whatsapp_mvp:revised},
+        externalUserId,channel,categories,pricingIntent,now,understanding
+      });
+    }
     if (progress.action) {
       const actionResult = await executeGlobalReservationAction({
         progress,

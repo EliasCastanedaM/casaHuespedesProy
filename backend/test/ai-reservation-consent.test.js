@@ -66,6 +66,11 @@ for(const [channel,acceptance] of [['whatsapp','SÍ QUIERO'],['instagram','si qu
     sendReply:async()=>({message_id:'mock'}),recordOutgoing:async()=>{},sleep:async()=>{},
   });
   assert.equal(pauses,0,'La IA sigue disponible para otras dudas hasta que el equipo tome el chat');
+  const revised=await send('Ahora somos tres adultos sin niños ni mascotas');
+  assert.equal(revised.mode,'occupancy_quote');
+  assert.match(revised.reply,/Triple/);
+  assert.match(revised.reply,/Quieres reservar/);
+  assert.equal(contexts.get(channel+':'+externalUserId).whatsapp_mvp.guest_reservation_consent,undefined);
 });
 test('una oferta antigua sin pregunta vigente no autoriza revisión por contexto',()=>{
   const context={whatsapp_mvp:{state:'quoted',check_in:'2026-11-20',check_out:'2026-11-22',adults:2,children:0,child_ages:[],pets:0,total_guests:2,max_single_room_capacity:5}};
