@@ -5,13 +5,13 @@
 
 export const TOURISM_PLACES = Object.freeze([
   // Restaurantes y cafés dentro del distrito de Pimentel.
-  { id:"tintorera", name:"Picantería La Tintorera", kind:"dining", area:"pimentel",
+  { id:"tintorera", placeId:"ChIJz5U8I8H6TJARC_3RF5oilzs", name:"Picantería La Tintorera", kind:"dining", area:"pimentel",
     address:"Manuel Seoane 733, Pimentel", source:"https://www.google.com/maps/search/?api=1&query=Picanteria+La+Tintorera+Manuel+Seoane+733+Pimentel" },
-  { id:"bertikas", name:"Bertika's", kind:"dining", area:"pimentel",
+  { id:"bertikas", placeId:"ChIJS2X2Wr_6TJARlzP7xdfaAgA", name:"Bertika's", kind:"dining", area:"pimentel",
     address:"Calle Lima 200, Pimentel", source:"https://pe.todosnegocios.com/bertikas-979-732-537" },
-  { id:"tienda-pato", name:"La Tienda del Pato", kind:"dining", area:"pimentel",
+  { id:"tienda-pato", placeId:"ChIJZ5u7RB_7TJARYhJ6y4CTUSs", name:"La Tienda del Pato", kind:"dining", area:"pimentel",
     address:"Calle José Quiñones, Pimentel (numeración por confirmar)", source:"https://www.google.com/maps/search/?api=1&query=La+Tienda+del+Pato+Pimentel" },
-  { id:"picanteria-mar", name:"Picantería del Mar", kind:"dining", area:"pimentel",
+  { id:"picanteria-mar", placeId:"ChIJAzX2PsH6TJARIk4LPZi0Ems", name:"Picantería del Mar", kind:"dining", area:"pimentel",
     address:"Rivera del Mar 164, Pimentel", source:"https://www.google.com/maps/search/?api=1&query=Picanteria+del+Mar+Rivera+del+Mar+164+Pimentel" },
   { id:"mintha", name:"Mintha Café Pimentel", kind:"dining", area:"pimentel",
     address:"Manuel Seoane 725, Pimentel", source:"https://www.google.com/maps/search/?api=1&query=Mintha+Cafe+Manuel+Seoane+725+Pimentel" },
@@ -76,7 +76,7 @@ const normalize = (value) => String(value || "")
   .toLowerCase().replace(/[’‘]/g, "'").replace(/\s+/g, " ").trim();
 
 const LABELS = {
-  es: { maps:"Ver ubicación en Google Maps", intro:"Estos son algunos lugares de interés en", near:"Pimentel", outer:"Lambayeque", address:"Ubicación",
+  es: { groupMaps:"Ver estos lugares juntos en Google Maps", maps:"Ver ubicación en Google Maps", intro:"Estos son algunos lugares de interés en", near:"Pimentel", outer:"Lambayeque", address:"Ubicación",
     dining:"Algunos restaurantes y cafés en Pimentel:", coast:"Para pasear por Pimentel:",
     museum:"Museos y lugares arqueológicos para visitar en la región:",
     city:"Paseos en Chiclayo:", nature:"Lugares de naturaleza en la región:",
@@ -86,7 +86,7 @@ const LABELS = {
     more:"Si deseas, puedo mencionarte más lugares de esta categoría.",
     uncertain:"La dirección exacta de algunos negocios aún necesita confirmación.",
     notfound:"Por ahora no tengo una ubicación verificada para ese lugar. Puedo indicarte otros sitios conocidos de la zona." },
-  en: { maps:"View location on Google Maps", address:"Location", dining:"Some restaurants and cafés in Pimentel:", coast:"Places to visit along Pimentel's coast:",
+  en: { groupMaps:"View these places together on Google Maps", maps:"View location on Google Maps", address:"Location", dining:"Some restaurants and cafés in Pimentel:", coast:"Places to visit along Pimentel's coast:",
     museum:"Museums and archaeological sites in the region:", city:"Places to visit in Chiclayo:",
     nature:"Nature destinations in the region:", general:"Some places to explore during your stay:",
     note:"Opening hours and access conditions may change; please check before visiting.",
@@ -94,7 +94,7 @@ const LABELS = {
     more:"I can share more places in this category if you'd like.",
     uncertain:"Some business addresses still need confirmation.",
     notfound:"I don't have a verified address for that place yet. I can suggest other destinations nearby." },
-  pt: { maps:"Ver localização no Google Maps", address:"Localização", dining:"Alguns restaurantes e cafés em Pimentel:", coast:"Passeios em Pimentel:",
+  pt: { groupMaps:"Ver estes locais juntos no Google Maps", maps:"Ver localização no Google Maps", address:"Localização", dining:"Alguns restaurantes e cafés em Pimentel:", coast:"Passeios em Pimentel:",
     museum:"Museus e sítios arqueológicos da região:", city:"Passeios em Chiclayo:",
     nature:"Destinos naturais da região:", general:"Lugares para conhecer durante sua estadia:",
     note:"Horários e condições de acesso podem mudar; confirme antes de visitar.",
@@ -102,7 +102,7 @@ const LABELS = {
     more:"Posso indicar mais lugares dessa categoria, se desejar.",
     uncertain:"Alguns endereços ainda precisam de confirmação.",
     notfound:"Ainda não tenho endereço verificado para esse local. Posso sugerir outros passeios na região." },
-  fr: { maps:"Voir sur Google Maps", address:"Adresse", dining:"Quelques restaurants et cafés à Pimentel :", coast:"Promenades à Pimentel :",
+  fr: { groupMaps:"Voir ces lieux ensemble sur Google Maps", maps:"Voir sur Google Maps", address:"Adresse", dining:"Quelques restaurants et cafés à Pimentel :", coast:"Promenades à Pimentel :",
     museum:"Musées et sites archéologiques de la région :", city:"Sites à découvrir à Chiclayo :",
     nature:"Espaces naturels dans la région :", general:"Quelques lieux à découvrir pendant votre séjour :",
     note:"Les horaires et conditions d'accès peuvent changer ; vérifiez avant la visite.",
@@ -170,6 +170,15 @@ export function tourismMapsUrl(place) {
     encodeURIComponent(place.name + ", " + address);
 }
 
+// Only exact, verified listings can form a shortlist. Never silently omit a place.
+export function tourismGroupMapsUrl(places) {
+  if (!Array.isArray(places) || !places.length || places.length > 20 ||
+      places.some((place) => !/^ChIJ[A-Za-z0-9_-]{20,}$/.test(place?.placeId || ""))) return null;
+  const ids = [...new Set(places.map((place) => place.placeId))];
+  return "https://www.google.com/maps/@?api=1&map_action=shortlist&place_ids=" +
+    encodeURIComponent(ids.join(","));
+}
+
 export function formatTourismReply(message) {
   if (!isTourismInquiry(message)) return null;
   const locale = LABELS[detectLanguage(message)];
@@ -199,10 +208,15 @@ export function formatTourismReply(message) {
 
   if (!selected.length) return locale.notfound;
   const title = selected.length === 1 ? "" : locale[kind] || locale.general;
-  const lines = selected.map((place) => "- " + place.name + "\n📍 " + locale.address + ": " + place.address + ".\n" + locale.maps + ":\n" + tourismMapsUrl(place));
+  const groupUrl = selected.length > 1 ? tourismGroupMapsUrl(selected) : null;
+  const lines = selected.map((place, index) =>
+    (selected.length > 1 ? (index + 1) + ". " : "") + place.name +
+    "\n" + place.address +
+    (groupUrl ? "" : "\n📍 " + locale.maps + ":\n" + tourismMapsUrl(place)));
+  const mapLink = groupUrl ? "📍 " + locale.groupMaps + ":\n" + groupUrl : "";
   const note = kind === "museum" || kind === "nature" ||
     selected.some((place) => place.kind === "museum" || place.kind === "nature")
     ? locale.travel + " " + locale.note : locale.note;
-  return [title, ...lines, note, selected.length > 1 ? locale.more : ""]
-    .filter(Boolean).join("\n");
+  return [title, ...lines, mapLink, note, selected.length > 1 ? locale.more : ""]
+    .filter(Boolean).join("\n\n");
 }

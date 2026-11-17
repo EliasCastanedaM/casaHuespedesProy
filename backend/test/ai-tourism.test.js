@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import OpenAI from "openai";
 import { pool } from "../src/config/db.js";
 import {
-  TOURISM_PLACES, isTourismInquiry, formatTourismReply, tourismMapsUrl,
+  TOURISM_PLACES, isTourismInquiry, formatTourismReply, tourismMapsUrl, tourismGroupMapsUrl,
 } from "../src/modules/ai/ai.tourism.js";
 import { generateAiReply } from "../src/modules/ai/ai.service.js";
 
@@ -119,10 +119,9 @@ test("las listas y ampliaciones mantienen una ubicación por lugar",()=>{
     "¿Qué museos visitar?","¿Qué otros museos visitar?","¿Qué hacer en Pimentel?",
     "¿Qué lugares de naturaleza podemos visitar?","Paseos en Chiclayo"]) {
     const reply=formatTourismReply(question);
-    const count=reply.split("\n").filter(line=>line.startsWith("- ")).length;
+    const count=reply.split("\n").filter(line=>/^\d+\. /.test(line)).length;
     assert.ok(count>0);
-    assert.equal((reply.match(/https:\/\/www\.google\.com\/maps\/search\//g)||[]).length,count);
-    assert.equal((reply.match(/📍 Ubicación:/g)||[]).length,count);
+    assert.equal((reply.match(/https:\/\/www\.google\.com\/maps\//g)||[]).length,question==="¿Hay restaurantes cerca de Pimentel?"?1:count);
     assert.ok(reply.length<2000,question);
   }
 });
@@ -132,4 +131,26 @@ test("no convierte una dirección pendiente en una dirección exacta",()=>{
   const query=new URL(tourismMapsUrl(TOURISM_PLACES.find(p=>p.id==="tienda-pato"))).searchParams.get("query");
   assert.match(query,/La Tienda del Pato.*Pimentel/);
   assert.doesNotMatch(query,/por confirmar/);
+});
+
+test("restaurantes se presentan ordenados con un único mapa de las cuatro fichas exactas", () => {
+  const selected = TOURISM_PLACES.filter(p => p.kind === "dining").slice(0,4);
+  const reply = formatTourismReply("¿Hay restaurantes cerca de Pimentel?");
+  const links = reply.match(/https:\/\/\S+/g);
+  assert.equal(links.length, 1);
+  const url = new URL(links[0]);
+  assert.equal(url.searchParams.get("map_action"), "shortlist");
+  assert.deepEqual(url.searchParams.get("place_ids").split(","), selected.map(p=>p.placeId));
+  for (const [i,p] of selected.entries()) assert.ok(reply.includes((i+1)+". "+p.name+"\n"+p.address));
+  assert.ok(reply.includes("\n\n2. "));
+  assert.equal(reply.includes("/maps/dir/"), false);
+});
+
+test("un mapa conjunto nunca omite ubicaciones pendientes ni inventa fichas", () => {
+  assert.equal(tourismGroupMapsUrl([]), null);
+  assert.equal(tourismGroupMapsUrl([TOURISM_PLACES[0], TOURISM_PLACES.find(p=>p.id==="mintha")]), null);
+  assert.equal(tourismGroupMapsUrl(Array(21).fill(TOURISM_PLACES[0])), null);
+  const museums = formatTourismReply("¿Qué museos visitar?");
+  assert.doesNotMatch(museums, /map_action=shortlist/);
+  assert.match(museums, /maps\/search/);
 });

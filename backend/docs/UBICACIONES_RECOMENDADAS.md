@@ -1,15 +1,24 @@
 # Ubicaciones de recomendaciones turísticas
 
-Cada restaurante, café, museo, paseo y destino natural recomendado incluye:
+Las listas se presentan numeradas, con nombre y dirección, separadas por espacios.
+La selección inicial de restaurantes de Pimentel incluye un único enlace de Google
+Maps que abre las cuatro fichas juntas (shortlist). Se comprobó el 17/11/2026 en
+Google Maps: La Tintorera, Bertika's, La Tienda del Pato y Picantería del Mar.
 
-- Nombre del lugar.
-- Dirección o referencia guardada.
-- Enlace individual de búsqueda en Google Maps.
+Los identificadores placeId corresponden a esas fichas exactas. El enlace agrupa
+solo la selección mostrada, sin generar un recorrido ni añadir lugares distintos.
+No requiere llamadas al modelo ni a una API de pago.
 
-Los enlaces ya guardados de Google Maps se reutilizan. Para los demás registros,
-la búsqueda se genera con el nombre y la dirección documentada. No representa una
-verificación de coordenadas ni de un local exacto. Las direcciones incompletas
-conservan la nota de confirmación pendiente. No se inventan numeraciones, horarios,
-precios o tiempos de viaje.
+Una consulta de un lugar concreto conserva su enlace individual. Si una selección
+incluye un lugar sin placeId verificado, conserva los enlaces individuales; nunca
+se omite un sitio ni se afirma que todos están marcados cuando faltan fichas.
+Las direcciones incompletas conservan su nota de confirmación pendiente.
 
-La respuesta sigue siendo directa desde el catálogo, sin llamadas al modelo de IA.
+Documentación oficial:
+https://developers.google.com/maps/documentation/urls/get-started#create-a-shortlist
+
+Fuentes de identificación:
+- La Tintorera: ficha de Google Maps, Manuel Seoane 733, CID 0x904cfac1233c95cf:0x3b97229a17d1fd0b.
+- Bertika's: https://pe.todosnegocios.com/bertikas-979-732-537 (mapa de la ficha).
+- La Tienda del Pato: https://wanderlog.com/place/details/11886652/la-tienda-del-pato
+- Picantería del Mar: https://wanderlog.com/place/details/3250515/picanteria-del-mar
