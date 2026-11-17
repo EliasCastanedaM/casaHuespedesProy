@@ -87,7 +87,6 @@ function startsIndependentReservation(message, context = {}) {
   if (/\b(?:mi reserva|my booking|my reservation|la misma reserva|esa reserva|esta reserva|esa habitacion|esa opcion)\b|\breservar\s+(?:esa|esta|la primera|la segunda|la tercera|la que)\b/.test(text)) return false;
   // A bare intention can continue the current exchange; a request with details
   // starts independently unless it explicitly refers to the current request.
-  if (/^(?:(?:quiero|quisiera|deseo|necesito)\s+)?reservar(?:\s+por favor)?[.! ]*$/.test(text)) return false;
   return /\b(?:quiero|quisiera|deseo|necesito|me gustaria|i want|i would like|i'd like|quero|gostaria|je veux|je voudrais)\b.{0,70}\b(?:reservar|reserva|book|booking|reservation|reserver)\b/.test(text)
     || /^(?:(?:una|a|une)\s+)?(?:reservar|reserva|book|booking|reserver|reservation)\s+\S/.test(text);
 }
