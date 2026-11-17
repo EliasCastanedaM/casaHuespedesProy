@@ -76,7 +76,7 @@ const normalize = (value) => String(value || "")
   .toLowerCase().replace(/[’‘]/g, "'").replace(/\s+/g, " ").trim();
 
 const LABELS = {
-  es: { intro:"Estos son algunos lugares de interés en", near:"Pimentel", outer:"Lambayeque", address:"Ubicación",
+  es: { maps:"Ver ubicación en Google Maps", intro:"Estos son algunos lugares de interés en", near:"Pimentel", outer:"Lambayeque", address:"Ubicación",
     dining:"Algunos restaurantes y cafés en Pimentel:", coast:"Para pasear por Pimentel:",
     museum:"Museos y lugares arqueológicos para visitar en la región:",
     city:"Paseos en Chiclayo:", nature:"Lugares de naturaleza en la región:",
@@ -86,7 +86,7 @@ const LABELS = {
     more:"Si deseas, puedo mencionarte más lugares de esta categoría.",
     uncertain:"La dirección exacta de algunos negocios aún necesita confirmación.",
     notfound:"Por ahora no tengo una ubicación verificada para ese lugar. Puedo indicarte otros sitios conocidos de la zona." },
-  en: { address:"Location", dining:"Some restaurants and cafés in Pimentel:", coast:"Places to visit along Pimentel's coast:",
+  en: { maps:"View location on Google Maps", address:"Location", dining:"Some restaurants and cafés in Pimentel:", coast:"Places to visit along Pimentel's coast:",
     museum:"Museums and archaeological sites in the region:", city:"Places to visit in Chiclayo:",
     nature:"Nature destinations in the region:", general:"Some places to explore during your stay:",
     note:"Opening hours and access conditions may change; please check before visiting.",
@@ -94,7 +94,7 @@ const LABELS = {
     more:"I can share more places in this category if you'd like.",
     uncertain:"Some business addresses still need confirmation.",
     notfound:"I don't have a verified address for that place yet. I can suggest other destinations nearby." },
-  pt: { address:"Localização", dining:"Alguns restaurantes e cafés em Pimentel:", coast:"Passeios em Pimentel:",
+  pt: { maps:"Ver localização no Google Maps", address:"Localização", dining:"Alguns restaurantes e cafés em Pimentel:", coast:"Passeios em Pimentel:",
     museum:"Museus e sítios arqueológicos da região:", city:"Passeios em Chiclayo:",
     nature:"Destinos naturais da região:", general:"Lugares para conhecer durante sua estadia:",
     note:"Horários e condições de acesso podem mudar; confirme antes de visitar.",
@@ -102,7 +102,7 @@ const LABELS = {
     more:"Posso indicar mais lugares dessa categoria, se desejar.",
     uncertain:"Alguns endereços ainda precisam de confirmação.",
     notfound:"Ainda não tenho endereço verificado para esse local. Posso sugerir outros passeios na região." },
-  fr: { address:"Adresse", dining:"Quelques restaurants et cafés à Pimentel :", coast:"Promenades à Pimentel :",
+  fr: { maps:"Voir sur Google Maps", address:"Adresse", dining:"Quelques restaurants et cafés à Pimentel :", coast:"Promenades à Pimentel :",
     museum:"Musées et sites archéologiques de la région :", city:"Sites à découvrir à Chiclayo :",
     nature:"Espaces naturels dans la région :", general:"Quelques lieux à découvrir pendant votre séjour :",
     note:"Les horaires et conditions d'accès peuvent changer ; vérifiez avant la visite.",
@@ -158,6 +158,18 @@ function isSpecificPlaceMention(message, item) {
   return message.includes(name) || (cleanName.length >= 8 && message.includes(cleanName));
 }
 
+// A Maps search link uses only the saved name and documented address.
+// It is not a claim that an exact coordinate or business listing was verified.
+export function tourismMapsUrl(place) {
+  if (/^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=/.test(place.source || '')) {
+    return place.source;
+  }
+  const address = String(place.address || '')
+    .replace(/\s*\([^)]*por confirmar[^)]*\)/gi, '').trim();
+  return "https://www.google.com/maps/search/?api=1&query=" +
+    encodeURIComponent(place.name + ", " + address);
+}
+
 export function formatTourismReply(message) {
   if (!isTourismInquiry(message)) return null;
   const locale = LABELS[detectLanguage(message)];
@@ -187,7 +199,7 @@ export function formatTourismReply(message) {
 
   if (!selected.length) return locale.notfound;
   const title = selected.length === 1 ? "" : locale[kind] || locale.general;
-  const lines = selected.map((place) => "- " + place.name + " — " + place.address + ".");
+  const lines = selected.map((place) => "- " + place.name + "\n📍 " + locale.address + ": " + place.address + ".\n" + locale.maps + ":\n" + tourismMapsUrl(place));
   const note = kind === "museum" || kind === "nature" ||
     selected.some((place) => place.kind === "museum" || place.kind === "nature")
     ? locale.travel + " " + locale.note : locale.note;

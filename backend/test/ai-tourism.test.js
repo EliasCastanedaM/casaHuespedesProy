@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import OpenAI from "openai";
 import { pool } from "../src/config/db.js";
 import {
-  TOURISM_PLACES, isTourismInquiry, formatTourismReply,
+  TOURISM_PLACES, isTourismInquiry, formatTourismReply, tourismMapsUrl,
 } from "../src/modules/ai/ai.tourism.js";
 import { generateAiReply } from "../src/modules/ai/ai.service.js";
 
@@ -100,4 +100,36 @@ test("respeta inglés en respuestas y no inventa horarios o tiempos", () => {
   assert.match(reply, /restaurants and caf[eé]s in Pimentel/i);
   assert.match(reply, /Location|hours|Opening hours/i);
   assert.doesNotMatch(reply, /10 min|walking distance|open now|best restaurant/i);
+});
+
+test("cada recomendación guardada lleva dirección y enlace de ubicación",()=>{
+  for(const place of TOURISM_PLACES) {
+    const url=new URL(tourismMapsUrl(place));
+    assert.equal(url.origin,"https://www.google.com");
+    assert.equal(url.pathname,"/maps/search/");
+    assert.equal(url.searchParams.get("api"),"1");
+    assert.ok(url.searchParams.get("query").length>5,place.name);
+    const reply=formatTourismReply(place.name);
+    assert.ok(reply.includes(place.address),place.name);
+    assert.ok(reply.includes(tourismMapsUrl(place)),place.name);
+  }
+});
+test("las listas y ampliaciones mantienen una ubicación por lugar",()=>{
+  for(const question of ["¿Hay restaurantes cerca de Pimentel?","¿Hay otros restaurantes en Pimentel?",
+    "¿Qué museos visitar?","¿Qué otros museos visitar?","¿Qué hacer en Pimentel?",
+    "¿Qué lugares de naturaleza podemos visitar?","Paseos en Chiclayo"]) {
+    const reply=formatTourismReply(question);
+    const count=reply.split("\n").filter(line=>line.startsWith("- ")).length;
+    assert.ok(count>0);
+    assert.equal((reply.match(/https:\/\/www\.google\.com\/maps\/search\//g)||[]).length,count);
+    assert.equal((reply.match(/📍 Ubicación:/g)||[]).length,count);
+    assert.ok(reply.length<2000,question);
+  }
+});
+test("no convierte una dirección pendiente en una dirección exacta",()=>{
+  const reply=formatTourismReply("¿Dónde está La Tienda del Pato?");
+  assert.match(reply,/numeración por confirmar/);
+  const query=new URL(tourismMapsUrl(TOURISM_PLACES.find(p=>p.id==="tienda-pato"))).searchParams.get("query");
+  assert.match(query,/La Tienda del Pato.*Pimentel/);
+  assert.doesNotMatch(query,/por confirmar/);
 });
