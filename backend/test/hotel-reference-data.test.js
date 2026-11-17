@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import { pool } from "../src/config/db.js";
 import { env } from "../src/config/env.js";
 import { getHotelPaymentInfoService } from "../src/modules/services/hotelPaymentInfo.service.js";
-import { paymentInformationType, formatHotelPaymentInfoReply } from "../src/modules/ai/ai.payment-info.js";
+import { paymentInformationType, formatHotelPaymentInfoReply, PAYMENT_AVAILABILITY_WARNING } from "../src/modules/ai/ai.payment-info.js";
 import { isHotelServicesInquiry, formatHotelServicesReply } from "../src/modules/ai/ai.services-info.js";
 import { policyInformationType } from "../src/modules/ai/ai.policy-info.js";
 import { formatHotelLocationReply, isHotelLocationInquiry } from "../src/modules/ai/ai.location-info.js";
@@ -46,7 +46,7 @@ test("destinos de pago respetan los números y ceros iniciales sin inventar titu
   assert.match(formatHotelPaymentInfoReply(info,"¿Cuál es el Plin?"),/943 030 098/);
   const general=formatHotelPaymentInfoReply(info,"¿Qué formas de pago aceptan?");
   for(const word of ["Efectivo","Transferencia","Yape","Plin","Visa","Mastercard"])assert.ok(general.includes(word),word);
-  assert.match(general,/Antes de realizar un pago.*confirmará/);
+  assert.ok(general.endsWith(PAYMENT_AVAILABILITY_WARNING));
   assert.doesNotMatch(formatHotelPaymentInfoReply(info,"¿Quién es el titular de la cuenta bancaria?"),/Señor Pepe|30506479111043/);
 });
 
@@ -55,7 +55,9 @@ test("sin un registro vigente o con números inválidos no entrega datos de pago
   for(const info of [null,{}, {...data.payments,bank:{...data.payments.bank,cci:"230510647911104315"}}]){
     const answer=formatHotelPaymentInfoReply(info,"¿Cuál es el BCP?");
     assert.match(answer,/No puedo confirmar/);
-    assert.doesNotMatch(answer,/305064|002305|997 369|943 030/);
+    assert.ok(answer.endsWith(PAYMENT_AVAILABILITY_WARNING));
+    // The contact is independently approved for assistance, not a payment destination.
+    assert.doesNotMatch(answer.replace(PAYMENT_AVAILABILITY_WARNING,""),/305064|002305|997 369|943 030|Yape:|Plin:/);
   }
 });
 
