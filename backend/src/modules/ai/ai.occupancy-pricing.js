@@ -1,5 +1,6 @@
 import { CHILD_POLICY_VERSION, CHILD_NIGHTLY_SUPPLEMENT, guestComposition, categoryBedPlan } from '../rooms/guestComposition.js';
 import { appendRoomInvitation } from './ai.room-invitation.js';
+import { isTariffProposalActive, getConfirmedTariff, hasConfirmedTariffForCategory } from '../commercial/tariffProposal.service.js';
 import { normalizeRoomPreferences, collectRoomPreferences, hasRoomPreferences, roomPreferenceMatch, roomFeatures, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 
 // All monetary operations use integer cents. These details stay in the backend.
@@ -27,6 +28,7 @@ export function acceptsQuote(message) {
 }
 
 export function hasOccupancyRates(categories) {
+  if (isTariffProposalActive()) return categories.some(c => hasConfirmedTariffForCategory(c.slug));
   return categories.some((c) => c.occupancy_rates && Object.keys(c.occupancy_rates).length > 0);
 }
 
@@ -58,6 +60,31 @@ export function quoteForCategory(category, state) {
   const checkOut = Date.parse(state.check_out + "T00:00:00Z");
   const nights = (checkOut - checkIn) / 86_400_000;
   if (!Number.isInteger(nights) || nights < 1 || nights > 365) return null;
+  if (isTariffProposalActive()) {
+    const proposed = getConfirmedTariff(category,{...state,adults,children,child_ages:ages});
+    if (!proposed) return null; // Never fall back to the previous price after activation.
+    const petNightly = pets * 20;
+    return {
+      category_slug: category.slug, category_name: category.name, capacity: Number(category.capacity),
+      guests, priced_adults: party.pricedAdults, discounted_children: party.supplemented,
+      adult_base_amount: proposed.adultAmount, child_supplement_amount: proposed.childAmount,
+      minimum_adjustment_amount: proposed.base - proposed.adultAmount - proposed.childAmount,
+      child_cap_applied: false, child_policy_version: CHILD_POLICY_VERSION,
+      shared_children: bedPlan.shared_children, sharing_assumed: bedPlan.sharing_assumed,
+      required_bed_places: bedPlan.required_places, parent_bed_size: bedPlan.parent_bed_size,
+      parents_share_one_half_bed: bedPlan.parents_share_one_half_bed,
+      bed_description: category.bed_description || null,
+      nightly_amount: proposed.total_amount / nights, pet_nightly_amount: petNightly,
+      total_nightly_amount: proposed.total_amount / nights + petNightly,
+      min_nightly_amount: proposed.min_nightly_amount + petNightly,
+      max_nightly_amount: proposed.max_nightly_amount + petNightly,
+      nightly_breakdown: proposed.nightly, nights,
+      total_amount: proposed.total_amount + petNightly * nights,
+      check_in: state.check_in, check_out: state.check_out, pets,
+      child_bed_review_required: ages.some(age => age <= 4),
+      rate_signature: JSON.stringify([proposed.signature,category.capacity,category.bed_description]),
+    };
+  }
   const rates = category.occupancy_rates || {};
   const pricedAdults = party.pricedAdults;
   const discountedChildren = party.supplemented;
@@ -86,7 +113,8 @@ export function quoteForCategory(category, state) {
 
 export function selectOccupancyQuote(categories, state, { cheaper = false, explicitCategory = false } = {}) {
   const guests = Number(state.adults) + Number(state.children);
-  const active = categories.filter(c => c.is_active !== false && categoryBedPlan(c,state).fits);
+  const active = categories.filter(c => c.is_active !== false && categoryBedPlan(c,state).fits &&
+    (!isTariffProposalActive() || hasConfirmedTariffForCategory(c.slug)));
   if (!active.length || guests >= 8) return { quote: null, reason: "multiple_rooms" };
   let fitting = active;
   if (explicitCategory && state.category_slug) {
@@ -179,7 +207,8 @@ export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = fa
     ? [quote, ...alternatives] : [quote];
   const rows = quotes.map((item, index) =>
     (quotes.length > 1 ? (index + 1) + ') ' : '') + item.category_name +
-    ' · ' + money(item.total_nightly_amount) + ' ' + labels.night +
+    ' · ' + (item.min_nightly_amount != null && item.min_nightly_amount !== item.max_nightly_amount
+      ? money(item.min_nightly_amount) + '–' + money(item.max_nightly_amount) : money(item.total_nightly_amount)) + ' ' + labels.night +
     '. ' + labels.total + ' ' + item.nights + ' ' + labels.nights + ': ' + money(item.total_amount) + '.');
   if (noLowerPrice) rows.push(labels.noLower);
   return appendRoomInvitation(prefix + rows.join('\n'), language);

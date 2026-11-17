@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../services/api";
+import TariffProposalReview from './TariffProposalReview';
 
 const CATEGORIES = {
   rates:"Tarifas", guests:"Huéspedes", pets:"Mascotas", stays:"Estadías",
@@ -131,7 +132,7 @@ function ReviewList({items,canApprove,decision,type}) {
 }
 
 export default function CommercialAdmin() {
-  const [tab,setTab]=useState("rules");
+  const [tab,setTab]=useState("tariff");
   const [data,setData]=useState(null);
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
@@ -216,7 +217,8 @@ export default function CommercialAdmin() {
   }
   const pendingCount=(data?.rule_proposals||[]).filter(x=>x.status==="pending").length+
     (data?.seasons||[]).filter(x=>x.status==="pending").length+
-    (data?.rates||[]).filter(x=>x.status==="pending").length;
+    (data?.rates||[]).filter(x=>x.status==="pending").length+
+    (data?.tariff_proposal?.status==="pending_confirmation"?1:0);
   const chosenCategory=data?.categories?.find(c=>c.slug===rate.category_slug);
   const base=Number(chosenCategory?.price_per_night||0);
   const suggested=Number(rate.suggested_price||0);
@@ -252,8 +254,9 @@ export default function CommercialAdmin() {
           </button>
         </div>
 
-        <nav aria-label="Secciones comerciales" className="mt-6 grid gap-2 sm:grid-cols-3">
+        <nav aria-label="Secciones comerciales" className="mt-6 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {[
+            ["tariff","Tarifario del cliente"],
             ["rules","📋 Reglas de la casa"],
             ["seasons","🗓️ Temporadas"],
             ["rates","💰 Tarifas propuestas"],
@@ -268,6 +271,8 @@ export default function CommercialAdmin() {
         </nav>
 
         {loading&&!data?<div className="mt-8 p-8 bg-white rounded-2xl" role="status">Cargando reglas comerciales…</div>:null}
+
+        {data&&tab==="tariff"&&<TariffProposalReview proposal={data.tariff_proposal} categories={data.categories}/>}
 
         {data&&tab==="rules"&&(
           <>

@@ -1,4 +1,4 @@
-import { guestComposition, categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
+import { guestComposition, categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION, CHILD_NIGHTLY_SUPPLEMENT } from '../rooms/guestComposition.js';
 import { collectRoomPreferences, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 import { randomUUID } from "node:crypto";
 import { appendRoomInvitation } from "./ai.room-invitation.js";
@@ -619,7 +619,7 @@ export function formatGlobalHandoffSummary(data = {}) {
     : null;
   const childPolicy = Array.isArray(data.child_ages)
     ? data.child_ages.map((age) => age <= 4 ? age + " años: sin cargo si usa cama disponible"
-      : age <= 8 ? age + " años: S/ 20 por niño y por noche"
+      : age <= 8 ? age + " años: S/ " + CHILD_NIGHTLY_SUPPLEMENT + " por niño y por noche dentro del cálculo"
       : age + " años: tarifa de adulto").join("; ") || "No aplica"
     : "Pendiente";
   const petCharge = Number(data.pets || 0) > 0 && nights
@@ -632,8 +632,10 @@ export function formatGlobalHandoffSummary(data = {}) {
     "SOLICITUD DE RESERVA — VALIDACIÓN HUMANA",
     ...(data.pricing_quote ? [
       "Cotización calculada: S/ " + Number(data.pricing_quote.total_amount).toFixed(2),
-      "Alojamiento por noche: S/ " + Number(data.pricing_quote.nightly_amount).toFixed(2),
-      "Niños de 5 a 8 años: S/ 20 por niño y por noche; desde 9 años, tarifa de adulto.",
+      data.pricing_quote.min_nightly_amount != null && data.pricing_quote.min_nightly_amount !== data.pricing_quote.max_nightly_amount
+        ? "Importes por noche (incluidos adicionales): S/ " + Number(data.pricing_quote.min_nightly_amount).toFixed(2) + "–S/ " + Number(data.pricing_quote.max_nightly_amount).toFixed(2)
+        : "Alojamiento por noche: S/ " + Number(data.pricing_quote.nightly_amount).toFixed(2),
+      "Niños de 5 a 8 años: S/ " + CHILD_NIGHTLY_SUPPLEMENT + " por niño y por noche dentro del cálculo; desde 9 años, tarifa de adulto.",
       "Niños pequeños compartiendo cama con sus padres: " + Number(data.pricing_quote.shared_children || 0),
       "Padres comparten cama de 1½ plazas: " + (data.pricing_quote.parents_share_one_half_bed ? "Sí" : "No requerido"),
     ] : []),

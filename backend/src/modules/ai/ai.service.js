@@ -1,4 +1,5 @@
 import { categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
+import { isTariffProposalActive } from '../commercial/tariffProposal.service.js';
 import OpenAI from "openai";
 import { env } from "../../config/env.js";
 import { pool } from "../../config/db.js";
@@ -436,7 +437,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     };
   }
   if (progress.action === "create_booking") {
-    if (Number(state.children)>0 && state.staff_confirmation?.child_policy_version!==CHILD_POLICY_VERSION) {
+    if ((Number(state.children)>0 || isTariffProposalActive()) && state.staff_confirmation?.child_policy_version!==CHILD_POLICY_VERSION) {
       const revised={...state,state:'handoff'};
       delete revised.staff_confirmation;
       delete revised.pricing_quote;

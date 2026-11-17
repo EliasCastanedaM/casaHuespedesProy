@@ -1,7 +1,11 @@
+import { isTariffProposalActive } from '../commercial/tariffProposal.service.js';
+import { TARIFF_PROPOSAL } from '../../config/tariffProposal.js';
+
 // Shared by quoting, administrative approval and transactional booking. Guest
 // headcount is never reduced; this models existing sleeping places separately.
-export const CHILD_POLICY_VERSION = 'children-2026-11-14-shared-parent-beds';
-export const CHILD_NIGHTLY_SUPPLEMENT = 20;
+export const CHILD_POLICY_VERSION = isTariffProposalActive()
+  ? TARIFF_PROPOSAL.version : 'children-2026-11-14-shared-parent-beds';
+export const CHILD_NIGHTLY_SUPPLEMENT = isTariffProposalActive() ? TARIFF_PROPOSAL.child_amount : 20;
 
 export function guestComposition(state = {}) {
   const adults = Number(state.adults);
@@ -40,6 +44,9 @@ export function categoryBedPlan(category, state, { allowAssumedSharing = true } 
   // Adult-priced guests must still fit the registered adult rate/capacity.
   // Children's sleeping arrangements are checked against the actual beds.
   if (party.pricedAdults > declared) return { fits: false, reason: 'adult_capacity' };
+  if (isTariffProposalActive() && party.pricedAdults + party.supplemented > declared) {
+    return { fits: false, reason: 'tariff_capacity' };
+  }
   const sharingAllowed = state.young_children_share_bed !== false &&
     (allowAssumedSharing || state.young_children_share_bed === true);
   const eligibleParentBed = beds.double > 0 || beds.oneHalf > 0;
@@ -63,7 +70,7 @@ export function categoryBedPlan(category, state, { allowAssumedSharing = true } 
     parents_share_one_half_bed: parentsShareOneHalf,
     family_bed_review_required: shared > 0 || parentsShareOneHalf,
     available_places: places, total_guests: party.total, beds,
-    inventory_capacity_required: party.pricedAdults,
+    inventory_capacity_required: party.pricedAdults + (isTariffProposalActive() ? party.supplemented : 0),
     reason: fits ? null : 'insufficient_beds' };
 }
 
@@ -72,5 +79,5 @@ export function minimumRequiredBedPlaces(state) {
   if (!party) return Number(state.adults || 0) + Number(state.children || 0);
   // Search broadly by adult-priced occupancy, then validate the complete
   // family layout per category. Searching by total headcount hides the Doble.
-  return party.pricedAdults;
+  return party.pricedAdults + (isTariffProposalActive() ? party.supplemented : 0);
 }

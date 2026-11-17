@@ -1,3 +1,6 @@
+import { isTariffProposalActive } from '../commercial/tariffProposal.service.js';
+import { TARIFF_PROPOSAL } from '../../config/tariffProposal.js';
+
 // Consultas informativas sobre políticas del hospedaje: no modifican reservas.
 // Una petición real de reserva con menores o mascotas sigue requiriendo revisión humana.
 function normalize(value) {
@@ -52,6 +55,7 @@ export function formatPolicyInformationReply(message, { rules } = {}) {
   const human = "Nuestro equipo confirmará los detalles antes de cotizar o autorizar una excepción.";
 
   if (type === "children") {
+    if (isTariffProposalActive()) return `De 0 a 4 años no se añade importe ni plaza tarifaria, verificando camas y seguridad. De 5 a 8 años se consideran S/ ${TARIFF_PROPOSAL.child_amount} por niño y noche dentro del cálculo sujeto al mínimo de habitación, y sí ocupan plaza tarifaria; desde los 9 años se aplica tarifa adulta. Para cotizar, dime cuántos adultos y niños viajan y sus edades.`;
     const rule=get('ninos_5_8');
     if(rule?.review_status==='verified' && rule.config?.amount_pen===20 && rule.config?.charge_frequency==='child_per_night') {
       return "Los niños de hasta 4 años no pagan si no usan camas adicionales; hasta dos pueden compartir la cama de sus padres (de 2 o 1½ plazas). De 5 a 8 años se cobran S/ 20 por niño y por noche; desde los 9 años se aplica tarifa de adulto. Para cotizar, dime cuántos adultos y niños viajan y sus edades.";

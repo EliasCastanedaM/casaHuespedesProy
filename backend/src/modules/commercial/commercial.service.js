@@ -1,4 +1,5 @@
 import { pool } from "../../config/db.js";
+import { getTariffProposalOverview } from './tariffProposal.service.js';
 
 // Solo campos comerciales explícitamente admitidos. Las reglas de
 // automatización/seguridad quedan inmutables desde esta interfaz.
@@ -127,6 +128,7 @@ export async function getCommercialOverview(db = pool) {
     rules: rules.rows, seasons: seasons.rows,
     rates: rates.rows, rule_proposals: changes.rows,
     categories: categories.rows,
+    tariff_proposal: getTariffProposalOverview(),
     editable_rule_fields: EDITABLE_RULES,
     note: "La aprobación de temporadas y tarifas NO modifica aún los precios de reservas, Booking ni Airbnb.",
   };

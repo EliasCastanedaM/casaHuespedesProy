@@ -1,5 +1,21 @@
 # Instrucción global y arquitectura conversacional del asesor
 
+## Revisión comercial del tarifario del 15/11/2026
+
+La especificación solicitada más reciente está en
+[INSTRUCCIONES_ASESOR_TARIFARIO_BASE.md](INSTRUCCIONES_ASESOR_TARIFARIO_BASE.md).
+Después de su confirmación sustituirá las instrucciones anteriores de tarifas y
+capacidad tarifaria: adulto
+S/ 60, niño de 5 a 8 años S/ 30 dentro de una suma sujeta al mínimo de habitación;
+niños de 0 a 4 sin cargo ni plaza tarifaria, con validación física separada.
+Temporadas alta y baja desactivadas: factor 1,00 para todas las fechas.
+
+Esta entrega prepara instrucciones, cálculo y vista administrativa detrás de
+confirmaciones de servidor. Mientras estén pendientes, el asesor conserva la
+política anterior. La base, las temporadas, el calendario y las correspondencias
+siguen sin confirmar. El procedimiento está en
+[TARIFARIO_PENDIENTE_ACTIVACION.md](TARIFARIO_PENDIENTE_ACTIVACION.md).
+
 WhatsApp, Facebook e Instagram comparten `buildHotelAssistantPrompt()` en
 `src/modules/ai/ai.prompt.js`. No hay variantes por canal ni un segundo prompt
 administrativo detectado en las fuentes inspeccionadas. El contrato se divide en:
@@ -66,17 +82,28 @@ El informe [AUDITORIA_ASESOR_2026-11-14.md](AUDITORIA_ASESOR_2026-11-14.md) regi
 causas, archivos, resultados, ejemplos y limitaciones. Estas pruebas no sustituyen
 la validación en chats reales después de autorizar un despliegue.
 
-## Actualización infantil del 14/11/2026
+## Niños, camas y capacidad tarifaria: instrucciones revisadas
 
-Las opciones se ordenan desde la categoría básica compatible, con un máximo de
-dos alternativas superiores. Se diferencia el total real de huéspedes de las
-plazas de cama: hasta dos niños de 0 a 4 años pueden compartir la cama de sus
-padres (2 o 1½ plazas), sin cama adicional; de 5 a 8 años se cobran S/ 20 por niño/noche y
-desde los 9 se aplica tarifa de adulto. La aprobación y la transacción revalidan
-la distribución. El propietario permite que dos padres compartan una cama de
-1½ plazas: con niños de 2 y 8, se empieza por Doble; si ambos niños requieren
-cama propia, por Triple. No se añade un suplemento inventado al menor de hasta 4.
-Véase [CAMBIO_INFANTIL_CAMAS_2026-11-14.md](CAMBIO_INFANTIL_CAMAS_2026-11-14.md).
+El importe de alojamiento por noche se define como el máximo entre el mínimo de
+la categoría y S/ 60 por huésped con tarifa adulta más S/ 30 por niño de 5 a 8.
+El importe infantil entra en la suma antes de aplicar el mínimo. Desde 9 años se
+conserva la tarifa adulta previamente aprobada, sin convertir a los menores en
+adultos acompañantes. Se exige al menos un adulto real por reserva.
+
+Los niños de 0 a 4 no añaden cargo ni plaza tarifaria; conservan su registro como
+huéspedes y la validación de camas y seguridad. Los de 5 a 8 sí ocupan plaza
+tarifaria. Compartir una cama de 1½ plazas no permite exceder ese límite.
+
+Para dos adultos y niños de 2 y 8 años corresponden tres plazas tarifarias:
+Triple S/ 150 por noche, sujeto a camas y disponibilidad. El ejemplo anterior de
+Doble S/ 160 queda sustituido. Dos adultos y dos niños de 5 a 8 necesitan cuatro
+plazas tarifarias: Familiar S/ 180, no Triple. Un adulto y un niño de 6 años en
+Matrimonial cuestan S/ 100 por el mínimo, no S/ 130.
+
+Las categorías pendientes de correspondencia no reciben importes por inferencia.
+La Ejecutiva no tiene tarifa nueva definida y el PDF no distingue Familiar 1 de
+Familiar 2. La especificación enlazada detalla estos límites y el control de
+publicación conjunta del motor y sus instrucciones.
 
 ## Presentación de cotizaciones y detalles (14/11/2026)
 
