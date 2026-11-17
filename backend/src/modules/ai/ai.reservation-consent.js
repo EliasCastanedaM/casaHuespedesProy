@@ -1,7 +1,7 @@
 export function acceptsReservationOffer(message) {
   const text=String(message || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .toLowerCase().replace(/[¡!¿?,.;:«»"“”]/g,' ').replace(/\s+/g,' ').trim();
-  return /^(?:(?:si )?(?:quiero|deseo|quisiera|me gustaria) (?:reservar(?: (?:esa|esta|la) (?:habitacion|opcion))?|(?:esa|esta) habitacion)|si quiero|si (?:reservemos|reservenla)|(?:yes )?(?:i want to book|book it)|sim quero reservar|oui je veux reserver)(?: por favor| please)?$/.test(text);
+  // Solo una afirmación explícita confirma la oferta actual.\n  // «quiero reservar» por sí solo inicia una solicitud nueva y nunca\n  // confirma la habitación mencionada antes.\n  return /^(?:(?:si )?(?:quiero|deseo|quisiera|me gustaria) (?:esa|esta|la) (?:habitacion|opcion)|si (?:quiero|deseo|quisiera)(?: reservar)?|si (?:reservemos|reservenla)|yes,? (?:i want to book|book it)|sim,? quero reservar|oui,? je veux reserver)(?: por favor| please)?$/.test(text);
 }
 export function reservationOfferQuestion(language='es',multiple=false) {
   return ({
