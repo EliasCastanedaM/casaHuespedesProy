@@ -287,7 +287,7 @@ test("falta de vista propone una alternativa explícita, espera aceptación y co
     assert.equal(state.state,"quoted");
     assert.equal(state.room_preferences.view,"sea");
     const accepted=await generateAiReply({...input,message:"Sí quiero"});
-    assert.equal(accepted.mode,"human_review_required");
+    assert.equal(accepted.mode,"reservation_interest_confirmed");
     state=contexts.get(channel+":"+input.externalUserId).whatsapp_mvp;
     assert.equal(state.room_preferences.view,"interior");
     assert.equal(state.requested_room_preferences.view,"sea");

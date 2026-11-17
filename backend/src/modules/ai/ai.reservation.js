@@ -1225,9 +1225,13 @@ function handleReservationTurn({
   delete data.guest_reservation_consent;
   const multiple=Number(data.total_guests || 0)>=8 ||
     minimumRequiredBedPlaces(data)>Number(data.max_single_room_capacity || 5);
-  const recommendation=multiple ? "Por el tamaño de tu grupo, te recomendamos varias habitaciones."
-    : data.recommended_category ? "Te recomendamos la categoría "+data.recommended_category.name+"."
-    : "Nuestro equipo puede orientarte sobre una habitación adecuada para tu grupo.";
+  const categoryName=data.recommended_category?.name;
+  const recommendation=({
+    es:multiple ? "Por el tamaño de tu grupo, te recomendamos varias habitaciones." : categoryName ? "Te recomendamos la categoría "+categoryName+"." : "Nuestro equipo puede orientarte sobre una habitación adecuada para tu grupo.",
+    en:multiple ? "For your group, we recommend several rooms." : categoryName ? "We recommend "+categoryName+"." : "Our team can help you find a suitable room for your group.",
+    pt:multiple ? "Para seu grupo, recomendamos vários quartos." : categoryName ? "Recomendamos "+categoryName+"." : "Nossa equipe pode orientar sobre um quarto adequado para seu grupo.",
+    fr:multiple ? "Pour votre groupe, nous recommandons plusieurs chambres." : categoryName ? "Nous recommandons "+categoryName+"." : "Notre équipe peut vous aider à choisir une chambre adaptée à votre groupe.",
+  })[language];
   return {handled:true,context:nextContext,
     reply:appendRoomInvitation(recommendation,language)+"\n\n"+reservationOfferQuestion(language,multiple),
     mode:"reservation_offer"};
