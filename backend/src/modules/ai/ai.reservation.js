@@ -859,7 +859,7 @@ export function handleGlobalReservationTurn(input) {
     }
     if (parsed) {
       const known = Array.isArray(prior.child_ages) ? prior.child_ages : [];
-      if (/\botr[oa]\b/.test(normalize(input.message)) && known.length > 0 && known.length < prior.children && parsed.ages.length <= prior.children-known.length) {
+      if (!/\b(?:uno|una)\b/.test(normalize(input.message)) && known.length > 0 && known.length < prior.children && parsed.ages.length <= prior.children-known.length) {
         parsed.ages = [...known,...parsed.ages];
       }
       if (parsed.ages.length !== prior.children) {
