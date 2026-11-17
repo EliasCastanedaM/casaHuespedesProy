@@ -16,6 +16,12 @@ export function normalizeFaqInquiry(value) {
 export function isDirectFaqQuestion(message) {
   const text = normalizeFaqInquiry(message);
   if (!text || text.length > 240) return false;
+  const raw = String(message || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const asks = /[¿?]/.test(raw) ||
+    /\b(?:saber|conocer|consultar|decirme|contarme|indicarme|explicarme)\b/.test(raw) ||
+    /^(?:que|cual|cuales|cuanto|cuantos|cuantas|como|donde|tiene|tienen|hay|aceptan|admiten|permiten|incluye|incluyen|puedo|podemos|es posible)\b/.test(text) ||
+    /^(?:wifi|internet|desayuno|servicios|ubicacion|direccion|medios de pago|formas de pago)$/.test(text);
+  if (!asks) return false;
   // All words must belong to a single FAQ domain. Unrecognized subjects,
   // mixed requests and commands retain the normal AI interpretation.
   const domains = [

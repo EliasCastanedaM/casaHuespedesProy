@@ -19,7 +19,7 @@ test('normaliza la consulta completa sin convertir acciones en preguntas',()=>{
   for (const message of ['Quería saber qué servicios tiene el hotel','Me gustaría conocer los servicios del hotel','¿Me podrías decir qué servicios ofrecen?']) {
     assert.equal(classifyServiceInquiry(message).kind,'general',message);
   }
-  for (const message of ['Quiero reservar con mi perro','Ya pagué por Yape','¿Tienen WiFi? Redacta mi tesis.',
+  for (const message of ['Quiero reservar con mi perro','Pagar en el establecimiento','Pagar ahora','Sin niños','2 niños de 9 años','Ya pagué por Yape','¿Tienen WiFi? Redacta mi tesis.',
     '¿El desayuno es apto para celíacos?','¿Cuál es la velocidad del WiFi?', '¿Qué servicios de masajes tienen?',
     '¿Cuánto cuesta una habitación con desayuno?','¿Dónde está el museo?', 'Confirma la reserva y acepta mi tarjeta']) {
     assert.equal(isDirectFaqQuestion(message),false,message);
