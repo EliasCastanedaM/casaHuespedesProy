@@ -1,8 +1,10 @@
 // Selection and presentation share one intent contract; an unmatched specific
 // question NEVER falls back to the catalogue. Commercial text stays in sources.
+import { normalizeFaqInquiry } from "./ai.faq-questions.js";
 function normalized(value) {
-  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  return normalizeFaqInquiry(value);
 }
+
 const BOOKING_WORDS=/\b(?:reservar|reserva|cancelar|cambiar|modificar|confirmar|disponibilidad|bloquear|book|booking|reserve)\b/;
 const groups=[
   [/\b(?:wi[ -]?fi|internet)\b/,['wifi']],
@@ -44,7 +46,7 @@ function isGeneralRequest(text) {
   // "¿Tiene servicios de masajes el hotel?" retains "masajes" and is specific.
   if (!/\b(?:servicios?|comodidades|amenidades)\b/.test(clean)) return false;
   const subject = clean
-    .replace(/\b(?:servicios?|comodidades|amenidades|tiene|tienes|tienen|tenemos|ofrece|ofreces|ofrecen|ofrecemos|cuenta|cuentan|dispone|disponen|incluye|incluyen|hay|son|estan|puedes|puede|podrias|podria|saber|conocer|contar|decir|mostrar|explicar|me|contarme|decirme|mostrarme|explicarme|dime|cuentame|muestrame|hablame|hola|buenas|por|favor|que|cuales|cual|el|la|los|las|un|una|unos|unas|del|de|en|con|sobre|para|su|sus|tu|tus|este|esta|ese|esa|hotel|hospedaje|alojamiento|establecimiento|ustedes|todos|todas|otros|otras|incluidos|incluidas|disponibles|detalles|detalle|completos|completas|detallados|detalladas)\b/g, ' ')
+    .replace(/\b(?:servicios?|comodidades|amenidades|tiene|tienes|tienen|tenemos|ofrece|ofreces|ofrecen|ofrecemos|cuenta|cuentan|dispone|disponen|incluye|incluyen|hay|son|estan|puedes|puede|podrias|podria|saber|conocer|contar|decir|mostrar|explicar|me|contarme|decirme|mostrarme|explicarme|dime|cuentame|muestrame|hablame|hola|buenas|por|favor|si|que|cuales|cual|el|la|los|las|un|una|unos|unas|del|de|en|con|sobre|para|su|sus|tu|tus|este|esta|ese|esa|hotel|hospedaje|alojamiento|establecimiento|ustedes|todos|todas|otros|otras|incluidos|incluidas|disponibles|detalles|detalle|completos|completas|detallados|detalladas)\b/g, ' ')
     .replace(/\s+/g, ' ').trim();
   return !subject;
 }

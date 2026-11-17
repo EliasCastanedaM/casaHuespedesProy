@@ -1,3 +1,4 @@
+import { normalizeFaqInquiry, isDirectFaqQuestion } from "./ai.faq-questions.js";
 import { reservationOfferQuestion, reservationInterestReply } from "./ai.reservation-consent.js";
 import { categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
 import { isTariffProposalActive } from '../commercial/tariffProposal.service.js';
@@ -884,21 +885,27 @@ async function generateAiReplyInternal({
     };
   }
 
+  // A complete, bounded FAQ can use approved data without a scope/model call.
+  // The original message remains untouched for reservation and ambiguous turns.
+  const directFaqQuestion = isDirectFaqQuestion(message);
+  const inquiryMessage = directFaqQuestion ? normalizeFaqInquiry(message) + "?" : message;
+
   // Resolve pronouns only from the most recent guest topic. Service inquiries
   // bypass reservation parsing, including unknown amenities and follow-ups.
   const serviceHistory = isServiceFollowup(message) && !history.length
     ? await loadStoredHistory(channel, externalUserId, message) : history;
-  const serviceMessage = resolveServiceMessage(message, serviceHistory);
+  const serviceMessage = resolveServiceMessage(inquiryMessage, serviceHistory);
   const serviceInquiry = isHotelServicesInquiry(serviceMessage);
   const serviceLanguage = serviceReplyLanguage(message, serviceHistory);
   const policyHistory = isPolicyFollowup(message) && !history.length
     ? (isServiceFollowup(message) ? serviceHistory : await loadStoredHistory(channel,externalUserId,message)) : history;
-  const policyMessage = resolvePolicyMessage(message,policyHistory,policyInformationType);
+  const policyMessage = resolvePolicyMessage(inquiryMessage,policyHistory,policyInformationType);
   const policyType = policyInformationType(policyMessage);
   let serviceGrounding;
   let scopeCheck;
   const checkHotelScope = async () => {
     if (scopeCheck !== undefined) return scopeCheck;
+    if (directFaqQuestion) return (scopeCheck = true);
     if (classifyServiceInquiry(serviceMessage).kind === "general" || isSimpleServiceInquiry(serviceMessage)) return (scopeCheck = true);
     scopeCheck = await isHotelRelatedMessage(message, {
       history: history.length ? history : await loadStoredHistory(channel, externalUserId, message),
@@ -926,8 +933,8 @@ async function generateAiReplyInternal({
     reply: priceVariationReply(), responseId: null, deterministic: true, mode: "price_variation_information",
   };
   const pricingIntent = isCategoryPriceInquiry(message);
-  const locationInquiry = isHotelLocationInquiry(message);
-  const paymentInfoType = paymentInformationType(message);
+  const locationInquiry = isHotelLocationInquiry(inquiryMessage);
+  const paymentInfoType = paymentInformationType(inquiryMessage);
   if (isLocationMenuChoice(message)) {
     const menuHistory = history.some((item) => item.author === "assistant")
       ? history
@@ -1046,7 +1053,7 @@ async function generateAiReplyInternal({
     let paymentInfo;
     try { paymentInfo=await getHotelPaymentInfoService(); }
     catch(error) { console.warn("No se pudieron consultar los medios de pago:",diagnosticCode(error)); }
-    const reply=formatHotelPaymentInfoReply(paymentInfo,message);
+    const reply=formatHotelPaymentInfoReply(paymentInfo,inquiryMessage);
     return {
       reply: paymentInfoType === "manual_payment_request" ? reply+"\n\n"+manualPaymentReviewReply(paymentInfoType) : reply,
       responseId:null,deterministic:true,
