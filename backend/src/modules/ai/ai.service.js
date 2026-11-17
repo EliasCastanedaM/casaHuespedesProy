@@ -32,7 +32,8 @@ import { getHotelGuestPolicyRulesService } from "../services/hotelPolicy.service
 import { isRoomDetailsInquiry, formatRoomDetailsReply, isRoomDetailsFollowup, followsRoomQuote, guestCategoryDescription } from "./ai.category-info.js";
 import { requiresManualReview, humanReviewReply, globalAssistantSocialLinks, isHotelSocialMediaInquiry } from "./ai.guest-rules.js";
 import {
-  globalReservationContext,\n  hasCurrentReservationOffer,
+  globalReservationContext,
+  hasCurrentReservationOffer,
   handleGlobalReservationTurn,
   reservationContextForMessage,
   isAssistantMenuRequest,
@@ -954,7 +955,8 @@ async function generateAiReplyInternal({
       }
     }
     let understanding = null;
-    const offerIsCurrent = hasCurrentReservationOffer(history);\n    const interpretationState = reservationContextForMessage(message, current, { offerIsCurrent }).whatsapp_mvp;
+    const offerIsCurrent = hasCurrentReservationOffer(history);
+    const interpretationState = reservationContextForMessage(message, current, { offerIsCurrent }).whatsapp_mvp;
     if (env.openai.apiKey && shouldUnderstandBooking(message, interpretationState, isReservationIntent(message) || pricingIntent, offerIsCurrent)) {
       try {
         const interpreted = await trackedResponse(getClient(), {
