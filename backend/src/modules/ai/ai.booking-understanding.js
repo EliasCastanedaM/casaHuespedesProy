@@ -50,6 +50,7 @@ DATOS
 Devuelve únicamente los campos nuevos o corregidos, con una cita literal breve del mensaje en evidence para cada campo. Nunca repitas datos del contexto como si se hubieran proporcionado ahora. Los campos no mencionados se omiten.
 Cuenta personas, no palabras. Mi esposa y yo / yo con mi pareja son dos adultos. Si viajan dos adultos y niños, children contiene TODOS los menores de 18 con sus edades reales, incluso de 9 a 17: el motor decide su tarifa. Nunca conviertas sus edades en adultos para cobrar.
 No deduzcas ausencia de niños o mascotas por silencio. Solo 0 si lo niega expresamente o afirma inequívocamente que no hay más viajeros en esa categoría. Mi bebé, mi peque o mi hijita indican un menor, pero no una edad concreta. Casi cinco / el bebé / uno pequeño requieren aclarar edad cumplida.
+Si solicitud_actual.pending_child_ages existe, son edades tentativas que el asesor acaba de pedir confirmar. Interpreta una afirmación equivalente (por ejemplo «eso mismo») como continue sin updates; si el huésped corrige, extrae solo las edades que dice ahora; si no es claro, pide aclaración. No confundas esta confirmación de edades con aceptación de una reserva.
 Si solicitud_actual.awaiting es ages, interpreta respuestas como «tienen 9 años uno y 15 el otro» como edades, no servicios. Si el mensaje es ambiguo o incierto, pregunta brevemente «¿Me confirmas que…?» usando solo edades presentes en el mensaje; nunca inventes o cambies edades. Devuelve intent unclear y clarification_field ages; no guardes edades inciertas en updates.
 Las listas de edades corresponden a los niños declarados; puedes informar una lista parcial de edades conocidas, pero nunca inventes las faltantes. Para completar una lista parcial puedes conservar las edades ya confirmadas de ESTA solicitud y añadir las nuevas. Pregunta las faltantes; nunca uses edades de otra reserva.
 Para sumar o restar viajeros usa el contexto actual solo si es inequívoco quién se añade o retira. Uno no viene sin decir si es adulto o niño requiere aclaración.
@@ -86,6 +87,7 @@ export function shouldUnderstandBooking(message, state, bookingIntent = false) {
 
 export function bookingUnderstandingInput(message, state = {}, now = new Date()) {
   const selected = { state: state.state, awaiting: state.awaiting, language: state.language, dates_need_confirmation: state.dates_need_confirmation };
+  if (Array.isArray(state.pending_child_ages)) selected.pending_child_ages = [...state.pending_child_ages];
   if (state.pending_proposal) selected.pending_proposal = {
     check_in: state.pending_proposal.check_in, check_out: state.pending_proposal.check_out,
   };

@@ -843,7 +843,8 @@ export function handleGlobalReservationTurn(input) {
   if (prior?.awaiting === "ages" && prior.children > 0) {
     const pending = prior.pending_child_ages;
     const answer = normalize(input.message).replace(/[¿?¡!.,]/g,"").trim();
-    const yes = /^(?:si|si correcto|si asi es|correcto|exacto|asi es|confirmo)$/.test(answer);
+    const yes = /^(?:si|si correcto|si asi es|correcto|exacto|asi es|confirmo)$/.test(answer) ||
+      (understood?.intent === "continue" && !understood.clarification && !Object.keys(understood.fields || {}).length);
     const no = /^(?:no|no es correcto|incorrecto)$/.test(answer);
     const parsed = childAgeAnswer(input.message);
     if (pending && (yes || no || parsed)) {

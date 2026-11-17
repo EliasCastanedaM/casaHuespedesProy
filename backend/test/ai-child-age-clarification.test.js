@@ -49,3 +49,13 @@ test('una amenidad o pregunta de tarifa no se trata como respuesta de edad',()=>
   for(const message of ['¿Tienen piscina?','¿Cuánto paga un niño de 4 años?','tienen internet','tienen 9 perros'])assert.equal(childAgeAnswer(message),null,message);
   assert.equal(classifyServiceInquiry('¿Tienen piscina?').kind,'specific');
 });
+
+test('una afirmación interpretada confirma solo las edades tentativas',()=>{
+  const first=turn('creo que uno tiene 4 y el otro 15');
+  const r=handleGlobalReservationTurn({message:'eso mismo',context:first.context,
+    understanding:{intent:'continue',fields:{},clarification:null}});
+  assert.deepEqual(r.context.whatsapp_mvp.child_ages,[4,15]);
+  assert.equal(r.context.whatsapp_mvp.pending_child_ages,undefined);
+  assert.match(r.reply,/mascotas/);
+  assert.equal(r.context.whatsapp_mvp.guest_reservation_consent,undefined);
+});
