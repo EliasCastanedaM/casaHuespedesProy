@@ -49,7 +49,7 @@ test("preguntas concretas no reciben el enlace general y conservan condiciones",
   }
   for (const message of ["¿Qué servicios tienen de masajes?", "¿Tiene servicios de masajes el hotel?", "¿El hotel tiene servicio de sauna?"]) {
     assert.equal(classifyServiceInquiry(message).kind, "specific", message);
-    assert.ok(!formatHotelServicesReply(services, message).includes(SERVICES_PAGE_URL), message);
+    assert.ok(formatHotelServicesReply(services, message).includes(SERVICES_PAGE_URL), message);
   }
   assert.equal(classifyServiceInquiry("¿Hay restaurantes cerca?").kind, "none");
 });

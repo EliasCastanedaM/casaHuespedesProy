@@ -5,7 +5,7 @@ export function normalizeFaqInquiry(value) {
     .toLowerCase().replace(/[¿?¡!.,;:]/g, ' ').replace(/\s+/g, ' ').trim();
   for (let i = 0; i < 4; i++) {
     const next = text
-      .replace(/^(?:hola|buenas(?: tardes| noches)?|buenos dias|por favor|una consulta|consulta|disculpa|disculpe)\s+/, '')
+      .replace(/^(?:primero|hola|buenas(?: tardes| noches)?|buenos dias|por favor|una consulta|consulta|disculpa|disculpe)\s+/, '')
       .replace(/^(?:(?:yo )?(?:queria|quisiera|quiero|deseo|necesito|me gustaria) (?:saber|conocer|consultar)(?: sobre)?|(?:me )?(?:puedes|podrias|puede|podria) (?:decir|decirme|contar|contarme|indicar|indicarme|explicar|explicarme))\s+/, '');
     if (next === text) break;
     text = next;

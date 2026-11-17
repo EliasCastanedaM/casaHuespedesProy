@@ -19,8 +19,8 @@ for(const message of ['¿Tienen piscina?','¿Ofrecen servicio de masajes?',
     assert.equal(selected.intent.kind,'specific');
     assert.equal(selected.services.length,0);
     const answer=formatHotelServicesReply(services,message);
-    assert.match(answer,/No tengo un servicio confirmado/);
-    assert.doesNotMatch(answer,/WiFi|Netflix|desayuno|lavandería|no (?:tenemos|hay|contamos)/i);
+    assert.match(answer,/Actualmente no contamos con ese servicio en nuestra lista/);
+    assert.doesNotMatch(answer,/WiFi|Netflix|desayuno|lavandería|Pepe|943 030/i);
   });
 }
 
@@ -58,7 +58,7 @@ test('catálogo ampliado reconoce nombres nuevos; inactivos o pendientes no son 
   assert.match(reply,/confirmará la tarifa y disponibilidad/);
   assert.doesNotMatch(reply,/WiFi/);
   for(const extra of [{is_active:false},{verification_status:'pending_review'}]) {
-    assert.match(formatHotelServicesReply([{...custom,...extra}],'¿Tienen secador de cabello?'),/No tengo/);
+    assert.match(formatHotelServicesReply([{...custom,...extra}],'¿Tienen secador de cabello?'),/Actualmente no contamos/);
   }
 });
 
@@ -130,7 +130,7 @@ test('seguimiento desde el historial persistido se resuelve sin reabrir la reser
 
 for(const [message,expected] of [
   ['Do you have WiFi?',/Free WiFi/],['Do you have air conditioning?',/Air conditioning is not confirmed/],
-  ['And the breakfast?',/Continental breakfast is included/],['Is there a swimming pool?',/confirmed information/],
+  ['And the breakfast?',/Continental breakfast is included/],['Is there a swimming pool?',/not currently listed/],
 ])test('inglés sin catálogo ni traducción comercial inventada: '+message,async t=>{
   sourceMocks(t);
   t.mock.method(OpenAI.Responses.prototype,'create',async()=>{throw new Error('No model for reviewed translation');});
@@ -184,7 +184,7 @@ test('contrato único contiene ocho capas, datos oficiales y prioridad de la pre
 
 test('responde la parte confirmada y reconoce incertidumbre en una consulta mixta',()=>{
   const answer=formatHotelServicesReply(services,'¿Tienen WiFi y servicio de aromaterapia?');
-  assert.match(answer,/No tengo un servicio confirmado/);
+  assert.match(answer,/Actualmente no contamos con ese servicio en nuestra lista/);
   assert.match(answer,/WiFi gratuita/);
   assert.doesNotMatch(answer,/Netflix|desayuno/i);
 });

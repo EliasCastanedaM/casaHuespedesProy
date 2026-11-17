@@ -8,6 +8,7 @@ function normalized(value) {
 
 const BOOKING_WORDS=/\b(?:reservar|reserva|cancelar|cambiar|modificar|confirmar|disponibilidad|bloquear|book|booking|reserve)\b/;
 const groups=[
+  [/\b(?:servicio (?:al cuarto|a la habitacion|en la habitacion|de habitaciones)|room service)\b/,['servicio-habitacion']],
   [/\b(?:wi[ -]?fi|internet)\b/,['wifi']],
   [/\b(?:estacionamiento|cochera)\b/,['estacionamiento']],
   [/\b(?:taxi|movilidad)\b/,['taxi']],
@@ -78,7 +79,7 @@ export function classifyServiceInquiry(message, services = []) {
   const empty={kind:'none', slugs:[], unknown:false, detailed:false, all:false};
   if (!text || EXTERNAL.test(text) || childAgeAnswer(message)) return empty;
   if (/\b(?:prefiero|quisiera|quiero|me gustaria|puede ser|podria ser)\b.{0,30}\b(?:terraza|balcon|vista|ventana)\b/.test(text) && !/terraza comun|usar la terraza/.test(text)) return empty;
-  const asks=/[?¿]/.test(message)||/\b(?:que|cuales|cual|incluye|incluyen|tienen|tiene|ofrecen|cuanto|cuesta|costo|hay|hablame|cuentame|explicame|aceptan|permiten|proporcionan|do you|is there|what|which|is|are|services|servicios)\b/.test(text);
+  const asks=/[?¿]/.test(message)||/\b(?:que|cuales|cual|incluye|incluyen|tienen|tiene|ofrecen|cuanto|cuesta|costo|hay|hablame|cuentame|explicame|aceptan|permiten|proporcionan|do you|is there|what|which|is|are|services|servicios|saber|consultar|traen)\b/.test(text);
   const commonTerrace=/\b(?:terraza comun|usar la terraza|subir a la terraza)\b/.test(text);
   if (!asks && !commonTerrace && !/^(?:y |and |pero y )/.test(text)) return empty;
   if (BOOKING_WORDS.test(text) && (!asks || /\b(?:quiero|quisiera|deseo) (?:hacer una reserva|reservar)\b|\b(?:want to book|book a room)\b/.test(text))) return empty;
@@ -120,7 +121,7 @@ export function isSimpleServiceInquiry(message) {
   let rest=normalized(message).replace(/[¿?¡!.,:—-]/g,' ');
   for(const [pattern] of groups)rest=rest.replace(new RegExp(pattern.source,'g'),' ');
   rest=rest.replace(new RegExp(UNKNOWN_AMENITY.source,'g'),' ');
-  rest=rest.replace(/\b(?:y|and|pero|el|la|los|las|un|una|de|del|en|con|por|para|mi|su|sus|al|a|esta|estan|es|son|se|que|cuales|cual|tienen|tiene|hay|ofrecen|incluye|incluyen|servicio|servicios|comodidades|amenidades|todos|todas|otros|mas|hotel|hospedaje|establecimiento|habitacion|habitaciones|reserva|gratuito|gratuita|gratis|incluido|incluida|incluidos|costo|cuanto|cuesta|vale|do|you|have|is|it|there|are|what|which|all|services|amenities|included|free|the|rooms|room|at|your|and|how|much|does|cost|before|seguir|antes)\b/g,' ');
+  rest=rest.replace(/\b(?:y|and|pero|si|traen|el|la|los|las|un|una|de|del|en|con|por|para|mi|su|sus|al|a|esta|estan|es|son|se|que|cuales|cual|tienen|tiene|hay|ofrecen|incluye|incluyen|servicio|servicios|comodidades|amenidades|todos|todas|otros|mas|hotel|hospedaje|establecimiento|habitacion|habitaciones|reserva|gratuito|gratuita|gratis|incluido|incluida|incluidos|costo|cuanto|cuesta|vale|do|you|have|is|it|there|are|what|which|all|services|amenities|included|free|the|rooms|room|at|your|and|how|much|does|cost|before|seguir|antes)\b/g,' ');
   return !rest.trim();
 }
 
@@ -171,7 +172,9 @@ export function formatHotelServicesReply(services,message,{language='es'}={}) {
   const {intent,services:chosen}=selectHotelServices(services,message);
   if (intent.kind === 'general') return hotelServicesPageReply(language,services);
   const unknown=intent.unknown || intent.slugs.some(id=>!chosen.some(s=>s.slug===id));
-  const uncertain=language==='en' ? "I don't have confirmed information about that service." : 'No tengo un servicio confirmado para esa consulta.';
+  const uncertain=language==='en'
+    ? "That service is not currently listed in our services catalogue. 😊 You can see all our services here:\n" + SERVICES_PAGE_URL
+    : "Actualmente no contamos con ese servicio en nuestra lista de servicios. 😊 Para conocer todos nuestros servicios, ingresa aquí:\n" + SERVICES_PAGE_URL;
   if(!['es','en'].includes(language))return null;
   if(!chosen.length) {
     // Ventilation is a directly relevant alternative, only if the current
