@@ -1,3 +1,4 @@
+import { childAgeAnswer } from "./ai.child-age-answer.js";
 import { reservationOfferQuestion, reservationInterestReply } from "./ai.reservation-consent.js";
 import { guestComposition, categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION, CHILD_NIGHTLY_SUPPLEMENT } from '../rooms/guestComposition.js';
 import { collectRoomPreferences, roomPreferenceLabel } from "../rooms/roomPreferences.js";
@@ -836,6 +837,44 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
 
 export function handleGlobalReservationTurn(input) {
   let understood = input.understanding;
+  const prior = input.context?.whatsapp_mvp;
+  // Interpret an age answer in the step that asked for ages. Possible values
+  // stay separate from confirmed ages until the guest accepts or corrects them.
+  if (prior?.awaiting === "ages" && prior.children > 0) {
+    const pending = prior.pending_child_ages;
+    const answer = normalize(input.message).replace(/[¿?¡!.,]/g,"").trim();
+    const yes = /^(?:si|si correcto|si asi es|correcto|exacto|asi es|confirmo)$/.test(answer);
+    const no = /^(?:no|no es correcto|incorrecto)$/.test(answer);
+    const parsed = childAgeAnswer(input.message);
+    if (pending && (yes || no || parsed)) {
+      const draft = {...prior};
+      delete draft.pending_child_ages;
+      input = {...input,context:{...input.context,whatsapp_mvp:draft}};
+      if (yes) {
+        understood = {intent:"details",fields:{child_ages:pending}};
+      } else if (no) {
+        return {handled:true,context:input.context,mode:"global_reservation_clarification",
+          reply:"¿Qué edad tiene cada niño? 😊"};
+      }
+    }
+    if (parsed) {
+      const known = Array.isArray(prior.child_ages) ? prior.child_ages : [];
+      if (known.length > 0 && known.length < prior.children && parsed.ages.length <= prior.children-known.length) {
+        parsed.ages = [...known,...parsed.ages];
+      }
+      if (parsed.ages.length !== prior.children) {
+        return {handled:true,context:input.context,mode:"global_reservation_clarification",
+          reply:"¿Me confirmas la edad de cada uno de los "+prior.children+" niños? 😊"};
+      }
+      if (parsed.uncertain) {
+        return {handled:true,context:{...input.context,whatsapp_mvp:{...input.context.whatsapp_mvp,pending_child_ages:parsed.ages}},
+          mode:"global_reservation_clarification",
+          reply:"¿Me confirmas que las edades son "+parsed.ages.join(" y ")+" años? 😊"};
+      }
+      understood = {intent:"details",fields:{child_ages:parsed.ages}};
+    }
+    if (understood !== input.understanding) input = {...input,understanding:understood};
+  }
   if (understood?.intent === "information") return { handled: false, context: input.context || {} };
   const originalContext = input.context || {};
   const context = understood?.intent === "new_request" ? {} : reservationContextForMessage(input.message, originalContext);

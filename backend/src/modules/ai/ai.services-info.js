@@ -1,3 +1,4 @@
+import { childAgeAnswer } from "./ai.child-age-answer.js";
 // Selection and presentation share one intent contract; an unmatched specific
 // question NEVER falls back to the catalogue. Commercial text stays in sources.
 import { normalizeFaqInquiry } from "./ai.faq-questions.js";
@@ -75,7 +76,7 @@ export function resolveServiceMessage(message, history = []) {
 export function classifyServiceInquiry(message, services = []) {
   const text=normalized(message);
   const empty={kind:'none', slugs:[], unknown:false, detailed:false, all:false};
-  if (!text || EXTERNAL.test(text)) return empty;
+  if (!text || EXTERNAL.test(text) || childAgeAnswer(message)) return empty;
   if (/\b(?:prefiero|quisiera|quiero|me gustaria|puede ser|podria ser)\b.{0,30}\b(?:terraza|balcon|vista|ventana)\b/.test(text) && !/terraza comun|usar la terraza/.test(text)) return empty;
   const asks=/[?¿]/.test(message)||/\b(?:que|cuales|cual|incluye|incluyen|tienen|tiene|ofrecen|cuanto|cuesta|costo|hay|hablame|cuentame|explicame|aceptan|permiten|proporcionan|do you|is there|what|which|is|are|services|servicios)\b/.test(text);
   const commonTerrace=/\b(?:terraza comun|usar la terraza|subir a la terraza)\b/.test(text);
