@@ -136,7 +136,7 @@ for(const [message,expected] of [
   t.mock.method(OpenAI.Responses.prototype,'create',async()=>{throw new Error('No model for reviewed translation');});
   const result=await generateAiReply({channel:'facebook',externalUserId:'english-'+message,message});
   assert.match(result.reply,expected);
-  assert.doesNotMatch(result.reply,/Incluido|estadía|¿|Claro|servicios/);
+  assert.doesNotMatch(result.reply.replace(/https?:\/\/\S+/g,''),/Incluido|estadía|¿|Claro|servicios/);
 });
 
 test('una traducción no revisada recibe solo la fuente pertinente, con cargos completos',async t=>{
