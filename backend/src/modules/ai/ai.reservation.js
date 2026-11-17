@@ -88,7 +88,7 @@ function startsIndependentReservation(message, context = {}) {
 }
 
 export function reservationContextForMessage(message, context = {}) {
-  // La aceptación solo puede usar la oferta vigente y debe ser explícita\n  // («sí quiero»). «quiero reservar» no acepta la habitación anterior:\n  // comienza una solicitud nueva para que el huésped indique nuevamente sus datos.\n  if(context.whatsapp_mvp?.state === "quoted" && acceptsQuote(message))return context;
+  // «quiero reservar» es una solicitud nueva, no la aceptación de una oferta anterior.\n  const standaloneReservation = /^(?:(?:quiero|quisiera|deseo|necesito)\\s+reservar)(?:\\s+por favor)?[.! ]*$/i.test(normalize(message));\n  if(context.whatsapp_mvp?.state === "quoted" && acceptsQuote(message) && !standaloneReservation)return context;
   return isExplicitNewReservation(message) || startsIndependentReservation(message, context) ? {} : (context || {});
 }
 
