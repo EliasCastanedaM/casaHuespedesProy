@@ -120,12 +120,14 @@ test("cada canal recoge datos, espera al equipo y continúa con los mismos pagos
     const dates = await send("Del 20/11/2026 al 22/11/2026");
     assert.match(dates.reply, /personas/i);
     const done = await send("2 adultos, sin niños y sin mascotas");
-    assert.equal(done.mode, "human_review_required");
+    assert.equal(done.mode, "reservation_offer");
     assert.equal(done.reply, commonHandoffReply ?? done.reply);
     commonHandoffReply = done.reply;
     assert.doesNotMatch(done.reply, /Pagar ahora|checkout|culqi/i);
     assert.deepEqual(done.reply.match(/https:\/\/\S+/g), ["https://www.casahuespedespimentel.com/habitaciones"]);
 
+    const interest=await send("Sí quiero");
+    assert.equal(interest.mode,"reservation_interest_confirmed");
     db.setHandoff(false);
     await assert.rejects(confirmGlobalReservation({
       channel, externalUserId, categorySlug: "matrimonial", totalAmount: 240,

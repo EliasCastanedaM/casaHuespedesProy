@@ -128,8 +128,8 @@ test("los tres canales cotizan, procesan, permiten precio menor y pasan al equip
     const cheaper=await send("¿Hay algo más barato?");
     assert.equal(cheaper.mode,"occupancy_quote");
     assert.match(cheaper.reply,/S\/ 120\.00[\s\S]*más económica/);
-    const accepted=await send("Sí");
-    assert.equal(accepted.mode,"human_review_required");
+    const accepted=await send("Sí quiero");
+    assert.equal(accepted.mode,"reservation_interest_confirmed");
     state=contexts.get(channel+":"+externalUserId).whatsapp_mvp;
     assert.equal(state.pricing_quote.total_amount,240);
     assert.equal(state.state,"handoff");
@@ -159,7 +159,7 @@ test("tarifas modificadas entre cotizar y aceptar obligan a mostrar la nueva cot
   await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas"});
   const state=contexts.get("facebook:changed-price").whatsapp_mvp;
   state.pricing_quote.total_amount=1;
-  const result=await generateAiReply({...input,message:"Sí"});
+  const result=await generateAiReply({...input,message:"Sí quiero"});
   assert.equal(result.mode,"occupancy_quote");
   assert.match(result.reply,/240\.00/);
 });
@@ -286,7 +286,7 @@ test("falta de vista propone una alternativa explícita, espera aceptación y co
     let state=contexts.get(channel+":"+input.externalUserId).whatsapp_mvp;
     assert.equal(state.state,"quoted");
     assert.equal(state.room_preferences.view,"sea");
-    const accepted=await generateAiReply({...input,message:"Sí"});
+    const accepted=await generateAiReply({...input,message:"Sí quiero"});
     assert.equal(accepted.mode,"human_review_required");
     state=contexts.get(channel+":"+input.externalUserId).whatsapp_mvp;
     assert.equal(state.room_preferences.view,"interior");
@@ -321,7 +321,7 @@ test("si se ocupa la vista entre cotizar y aceptar, se ofrece la alternativa sin
   const input={channel:"instagram",externalUserId:"view-race"};
   await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños ni mascotas con vista al mar"});
   rooms.find(r=>r.id===505).availability_status="blocked";
-  const changed=await generateAiReply({...input,message:"Sí"});
+  const changed=await generateAiReply({...input,message:"Sí quiero"});
   assert.equal(changed.mode,"occupancy_quote");
   assert.match(changed.reply,/no figura disponible.*vista interior/);
   assert.equal(contexts.get("instagram:view-race").whatsapp_mvp.state,"quoted");
@@ -330,7 +330,7 @@ test("si se ocupa la vista entre cotizar y aceptar, se ofrece la alternativa sin
 test("inventario bloqueado no genera una cotización ni asegura disponibilidad",async(t)=>{
   mockDatabase(t,{rooms:[]});
   const result=await generateAiReply({channel:"facebook",externalUserId:"no-rooms",message:"Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños ni mascotas con vista al mar"});
-  assert.equal(result.mode,"human_review_required");
+  assert.equal(result.mode,"reservation_offer");
   assert.match(result.reply,/no figura una categoría compatible/);
   assert.doesNotMatch(result.reply,/S\/|505/);
 });
@@ -341,7 +341,7 @@ test("validación humana comprueba vista, disponibilidad y ventana en la unidad 
   const contexts=mockDatabase(t,{rooms});
   const input={channel:"facebook",externalUserId:"window-staff"};
   await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para dos adultos sin niños ni mascotas con vista al mar y cerca de la ventana"});
-  await generateAiReply({...input,message:"Sí"});
+  await generateAiReply({...input,message:"Sí quiero"});
   const approval={...input,categorySlug:"matrimonial-ejecutiva",totalAmount:280};
   await assert.rejects(confirmGlobalReservation(approval),e=>e.statusCode===409);
   await assert.rejects(confirmGlobalReservation({...approval,windowPositionConfirmed:true}),e=>e.statusCode===400);
@@ -364,7 +364,7 @@ test("si la unidad aprobada se ocupa antes de registrar, propone alternativa sin
   const contexts=mockDatabase(t,{rooms});
   const input={channel:"instagram",externalUserId:"registration-race"};
   await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños ni mascotas con vista al mar"});
-  await generateAiReply({...input,message:"Sí"});
+  await generateAiReply({...input,message:"Sí quiero"});
   const state=contexts.get("instagram:registration-race").whatsapp_mvp;
   Object.assign(state,{state:"awaiting_payment_choice",customer_name:"Ana Prueba",customer_email:"test@example.com",customer_phone:"51999999999",staff_confirmation:{confirmed:true,category_slug:"matrimonial-ejecutiva",total_amount:280,room_assignment:{room_id:505}}});
   rooms.find(r=>r.id===505).availability_status="blocked";
@@ -388,7 +388,7 @@ test("comparar vistas no cambia una preferencia ya elegida",()=>{
 test("una caída del inventario no se confunde con falta de disponibilidad",async(t)=>{
   mockDatabase(t,{failInventory:true});
   const result=await generateAiReply({channel:"facebook",externalUserId:"inventory-error",message:"Quiero reservar del 20/11/2026 al 22/11/2026 para dos adultos sin niños ni mascotas con vista al mar"});
-  assert.equal(result.mode,"human_review_required");
+  assert.equal(result.mode,"reservation_offer");
   assert.doesNotMatch(result.reply,/no figura|no hay|agotad|S\//);
 });
 
@@ -396,7 +396,7 @@ test("una nueva preferencia en atención humana actualiza el resumen y la asigna
   const contexts=mockDatabase(t,{rooms:viewRooms});
   const input={channel:"facebook",externalUserId:"paused-view"};
   await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para dos adultos sin niños ni mascotas con vista al mar y cerca de la ventana"});
-  await generateAiReply({...input,message:"Sí"});
+  await generateAiReply({...input,message:"Sí quiero"});
   assert.equal(await updateGlobalReservationContextForHandoff({...input,message:"Prefiero vista interior"}),true);
   const state=contexts.get("facebook:paused-view").whatsapp_mvp;
   assert.equal(state.state,"handoff");

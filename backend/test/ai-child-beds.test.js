@@ -132,8 +132,8 @@ for(const channel of ['whatsapp','instagram','facebook'])test(channel+': cotiza 
   const executive=await send('2');
   assert.match(executive.reply,/Matrimonial Ejecutiva/);
   assert.match(executive.reply,/420\.00/);
-  const accepted=await send('Sí');
-  assert.equal(accepted.mode,'human_review_required');
+  const accepted=await send('Sí quiero');
+  assert.equal(accepted.mode,'reservation_interest_confirmed');
   const context=contexts.get(channel+':family-example');
   assert.equal(context.whatsapp_mvp.total_guests,3);
   assert.equal(context.whatsapp_mvp.category_slug,'matrimonial-ejecutiva');
@@ -180,6 +180,8 @@ test('las opciones muestran habitación y precio; el cálculo de camas queda int
     '',
     '¿Quieres saber cómo son nuestras habitaciones? Ingresa a este enlace:',
     'https://www.casahuespedespimentel.com/habitaciones',
+    '',
+    '¿Quieres reservar esta habitación? Para confirmar, responde «sí quiero».',
   ].join('\n'));
 });
 
@@ -233,7 +235,7 @@ for(const channel of ['whatsapp','instagram','facebook'])test(channel+': flujo 2
   assert.equal(details.mode,'category_details');
   assert.equal(details.reply,'Puedes ver fotos y detalles de las habitaciones aquí:\nhttps://www.casahuespedespimentel.com/habitaciones');
   assert.deepEqual(contexts.get(channel+':two-beds'),before);
-  await generateAiReply({...input,message:'Sí'});
+  await generateAiReply({...input,message:'Sí quiero'});
   await confirmGlobalReservation({...input,categorySlug:'doble',totalAmount:480,childBedAvailabilityConfirmed:true});
   const state=contexts.get(channel+':two-beds').whatsapp_mvp;
   assert.equal(state.total_guests,4);

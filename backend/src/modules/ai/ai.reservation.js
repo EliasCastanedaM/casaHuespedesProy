@@ -954,7 +954,7 @@ function handleReservationTurn({
     updated.language = language;
     const changed = changedBookingFields(state, updated);
     const cheaper = isCheaperRequest(message);
-    if (changed.length || cheaper) {
+    if (changed.length || cheaper || optionNumber) {
       delete updated.staff_confirmation;
       delete updated.reservation_offer;
       delete updated.guest_reservation_consent;

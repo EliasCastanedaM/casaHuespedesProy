@@ -107,7 +107,7 @@ for (const channel of ["whatsapp", "instagram", "facebook"]) test(channel + ": p
   assert.equal(processing, 0);
   const complete = await send("no");
   assert.equal(db.context().whatsapp_mvp.pets, 0);
-  assert.equal(complete.mode, "human_review_required");
+  assert.equal(complete.mode, "reservation_offer");
 });
 
 test("aclarar las fechas de una petición nueva no resucita la reserva vieja", async t => {
