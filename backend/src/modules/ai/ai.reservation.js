@@ -74,8 +74,13 @@ function isExplicitNewReservation(message) {
 // A fresh booking request starts with no old occupants, independently of how
 // its dates are phrased. This boundary runs before model interpretation.
 function startsIndependentReservation(message, context = {}) {
+  const normalizedMessage = normalize(message);
+  const standaloneReservation = /^(?:(?:quiero|quisiera|deseo|necesito)\s+reservar)(?:\s+por favor)?[.! ]*$/i.test(normalizedMessage);
+  // «quiero reservar» inicia una solicitud nueva; una afirmación explícita
+  // como «sí quiero reservar» conserva únicamente la oferta vigente.
   if (!context?.whatsapp_mvp || !reservationIntent(normalizedMessage)) return false;
-\n  const normalizedMessage = normalize(message);\n  const standaloneReservation = /^(?:(?:quiero|quisiera|deseo|necesito)\\s+reservar)(?:\\s+por favor)?[.! ]*$/i.test(normalizedMessage);\n  // «quiero reservar» inicia una solicitud nueva; una afirmación explícita\n  // como «sí quiero reservar» conserva únicamente la oferta vigente.\n  if (!standaloneReservation && acceptsQuote(message)) return false;  if (isExplicitNewReservation(message)) return true;
+  if (!standaloneReservation && acceptsQuote(message)) return false;
+  if (isExplicitNewReservation(message)) return true;
   const text = normalize(message);
   if (/\b(?:continuar|seguir|retomar|modificar|cambiar|corregir|editar|actualizar|agregar|añadir|ahora somos|continue|resume|modify|change|edit|update|add)\b/.test(text)) return false;
   if (/\b(?:no quiero|no deseo|no necesito|do not want|don't want|nao quero)\b/.test(text)) return false;
