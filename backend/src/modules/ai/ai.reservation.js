@@ -91,6 +91,15 @@ function startsIndependentReservation(message, context = {}) {
     || /^(?:(?:una|a|une)\s+)?(?:reservar|reserva|book|booking|reserver|reservation)\s+\S/.test(text);
 }
 
+export function hasCurrentReservationOffer(history = []) {
+  const entries = Array.isArray(history) ? history : [];
+  const last = [...entries].reverse().find((entry) =>
+    entry?.author === "assistant" || entry?.role === "assistant"
+  );
+  const text = normalize(last?.content || last?.text || "");
+  return /quieres (?:reservar|continuar con la reserva)|would you like to reserve|quer reservar|souhaitez[- ]vous reserver/.test(text);
+}
+
 export function reservationContextForMessage(message, context = {}, options = {}) {
   const offerIsCurrent = Boolean(options.offerIsCurrent);
   if (context.whatsapp_mvp?.state === "quoted" && acceptsQuote(message) && offerIsCurrent) {
