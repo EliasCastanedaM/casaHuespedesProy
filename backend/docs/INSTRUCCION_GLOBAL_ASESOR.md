@@ -79,6 +79,20 @@ nunca se convierten en teléfono. Se mantienen aprobación humana, capacidad fí
 niños, mascotas, preferencias, invalidación de aprobación ante cambios y verificación
 de pagos. Ningún mensaje del modelo registra reservas por sí mismo.
 
+## Consultas de pago y lenguaje de reserva
+
+Preguntar «¿Puedo pagar en el establecimiento?» recibe únicamente «Sí, puedes
+pagar en el establecimiento», cuando los medios vigentes estén verificados.
+La consulta no elige un medio de pago para una reserva ni modifica el borrador,
+incluso si hay una solicitud en curso. Si la fuente no está disponible, se
+reconoce que no se puede confirmar el dato.
+
+No se afirma que el huésped esté registrado ni que tenga una habitación separada,
+una reserva creada o confirmada por haber consultado precios, políticas o pagos.
+Los estados internos permanecen en el sistema. Solo se comunica una confirmación
+cuando el proceso real haya terminado, exista aprobación del equipo y la acción
+autorizada del backend haya devuelto una reserva confirmada.
+
 ## Presentación y entrega
 
 Los saludos reciben la bienvenida aprobada y las redes, gestionadas por Meta.

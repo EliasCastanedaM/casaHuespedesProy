@@ -1,8 +1,16 @@
 const clean=value=>String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 const MANUAL=/\b(?:yape|yapee|plin|bcp|cci|transferencia|transferi|transferido|bank transfer)\b/;
+const PROPERTY=/\b(?:en (?:el )?(?:establecimiento|hotel|hospedaje)|al llegar|a la llegada|pay (?:at (?:the )?(?:property|hotel)|on arrival))\b/;
+function isPropertyPaymentQuestion(message) {
+  const text=clean(message);
+  return PROPERTY.test(text) && /\b(?:pagar|pago|pagamos|pay)\b/.test(text) &&
+    (/[?¿]/.test(message) || /\b(?:puedo|podemos|se puede|es posible|aceptan|can i|can we)\b/.test(text));
+}
+
 
 export function paymentInformationType(message) {
   const text=clean(message);
+  if(isPropertyPaymentQuestion(message))return "payment_information";
   const topic=/\b(?:(?:formas?|metodos?|medios?|opciones?) de pago|payment methods?|formas de pagamento|moyens de paiement|cuenta bancaria|cuenta de ahorros|bank account|bank transfer|numero de cuenta|yape|yapee|plin|bcp|cci|visa|mastercard|tarjetas?|cards?|efectivo|cash|transferencia)\b/.test(text);
   const general=/\b(?:como (?:puedo |podemos |se )?pagar|con que (?:puedo |se )?pagar|aceptan pagos|how (?:can i|to) pay)\b/.test(text);
   if(!topic&&!general)return null;
@@ -26,6 +34,10 @@ export function formatHotelPaymentInfoReply(info,message) {
   if(!safePaymentInfo(info))return "No puedo confirmar los datos de pago en este momento. Nuestro equipo puede compartirte los medios vigentes antes de realizar el pago.";
   const text=clean(message);
   if (/\b(?:titular|a nombre de|a quien pertenece)\b/.test(text)) return "Nuestro equipo debe confirmar el nombre del titular de la cuenta antes de que realices una transferencia.";
+  // A payment question reports an available method, never a booking state.
+  if(isPropertyPaymentQuestion(message))return /\b(?:efectivo|cash)\b/.test(text)
+    ? "Sí, puedes pagar en efectivo en el establecimiento."
+    : "Sí, puedes pagar en el establecimiento.";
   const bank=/\b(?:bcp|cci|cuenta|transferencia|bank account|bank transfer)\b/.test(text);
   const yape=/\byape\b/.test(text),plin=/\bplin\b/.test(text);
   const cards=/\b(?:tarjeta|tarjetas|visa|mastercard|cards?)\b/.test(text);
