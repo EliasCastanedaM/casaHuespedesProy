@@ -24,7 +24,7 @@ const groups=[
   [/\blimpieza\b(?! en seco)/,['limpieza-diaria']],
   [/\b(?:parrilla|barbacoa)\b/,['barbacoa']],
   [/\baeropuerto\b/,['traslado-aeropuerto']],
-  [/\b(?:restaurante|cafeteria|snack.?bar|comida|bebida|fruta|botella|agua|galletas|bombones|menu para ninos)\b/,['comida-bebida']],
+  [/\b(?:restaurantes?|cafeterias?|snack.?bar|comidas?|bebidas?|almuerzos?|almorzar|cenas?|cenar|fruta|botella|agua|galletas|bombones|menu para ninos)\b/,['comida-bebida']],
   [/\b(?:dieta|dietetic[oa]s?|alergias|menu especial)\b/,['menus-dieteticos']],
   [/\b(?:seguridad|extintores?|camaras?)\b/,['seguridad']],
   [/\b(?:factura|recepcion|registro de entrada|registro de salida)\b/,['recepcion']],
@@ -169,7 +169,7 @@ export function hotelServicesPageReply(language = 'es', services = []) {
   return summary + '\n\n' + text + '\n' + SERVICES_PAGE_URL;
 }
 
-export function formatHotelServicesReply(services,message,{language='es'}={}) {
+export function formatHotelServicesReply(services,message,{language='es',concise=false}={}) {
   const {intent,services:chosen}=selectHotelServices(services,message);
   if (intent.kind === 'general') return hotelServicesPageReply(language,services);
   const unknown=intent.unknown || intent.slugs.some(id=>!chosen.some(s=>s.slug===id));
@@ -192,9 +192,12 @@ export function formatHotelServicesReply(services,message,{language='es'}={}) {
     ? "I don't have confirmed information about " + aspect.en + ' for that service.'
     : 'No tengo información confirmada sobre '+aspect.es+' de ese servicio.';
   if(language==='en' && chosen.some(s=>!ENGLISH.has(s.description)))return null;
-  const lines=chosen.map(s=>language==='en'?ENGLISH.get(s.description):detail(s));
+  const lines=chosen.map(s=>language==='en'?ENGLISH.get(s.description):
+    concise && s.slug==='comida-bebida' && s.description === 'Cafetería, restaurante y snack-bar; opciones de fruta, botella de agua, bombones o galletas y menú para niños. El equipo confirma horarios, disponibilidad y el precio de cada consumo.'
+      ? 'Contamos con cafetería, restaurante y snack-bar. El equipo confirma horarios y precios.' : detail(s));
   if(unknown)lines.unshift(uncertain);
-  if(chosen.some(s=>s.requires_coordination||s.price_type==='on_request'))lines.push(language==='en'
+  if(chosen.some(s=>(s.requires_coordination||s.price_type==='on_request') &&
+    !(s.slug==='comida-bebida' && /equipo confirma|equipo confirmará/i.test(s.description || ''))))lines.push(language==='en'
     ?'Our team will confirm the fee and availability before you book the service.'
     :'El equipo confirmará la tarifa y disponibilidad antes de contratar el servicio.');
   return lines.join(chosen.length===1?' ':'\n');

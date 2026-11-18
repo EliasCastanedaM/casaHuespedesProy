@@ -202,3 +202,30 @@ ni redes sociales. Las consultas informativas no modifican la reserva.
 
 Responder brevemente: «Actualmente no contamos con ese servicio en nuestra lista de servicios. 😊 Para conocer todos nuestros servicios, ingresa aquí: https://www.casahuespedespimentel.com/servicios».
 No derivar automáticamente al dueño ni añadir su teléfono. Esto aplica al servicio que no aparece en el catálogo vigente; una incidencia al consultar el catálogo no permite afirmar ausencia. Se conserva la alternativa verificada de ventilador para preguntas específicas sobre aire acondicionado.
+
+### Varias peticiones y recuperación de pendientes (17/11/2026)
+
+Antes de las respuestas de un solo tema, `ai.requests.js` interpreta el conjunto
+de peticiones. La IA selecciona fragmentos literales con un esquema cerrado;
+el catálogo y los validadores existentes conservan la autoridad sobre hechos y
+reservas. Una separación literal acotada permite responder las consultas conocidas
+si la interpretación no está disponible. Las FAQ simples conservan su ruta directa.
+
+Cada punto solicitado recibe su respuesta breve. Las comparaciones usan las
+categorías actuales, capacidades y camas; no eligen habitaciones ni confirman
+disponibilidad. Una categoría inexistente se aclara sin inventarla. Las preguntas
+de comparación ya no se sustituyen únicamente por el enlace de habitaciones.
+
+Los fragmentos afirmativos de una solicitud pasan al motor de reserva existente.
+Comparar alternativas no acepta una oferta. Se conservan las fechas y cantidades
+explícitas, sin asumir adultos, ausencia de niños o mascotas, ni fecha de salida.
+Si falta solo entrada o salida se pregunta por esa fecha concreta.
+
+La recuperación de «lo demás que te pedí» se limita al intercambio reciente
+(máximo 24 horas al cargar historial) y no cruza saludos ni solicitudes nuevas.
+Las incidencias al consultar una fuente conservan las preguntas pendientes; se
+responden los otros puntos y se reconoce lo que necesita revisión. Nunca se envían
+errores técnicos, estados internos ni confirmaciones inventadas al huésped.
+
+`test/ai-multiple-requests.test.js` reproduce el caso de cuatro personas para el
+12/12/2026, su reclamo posterior, la separación de estancias y las tres plataformas.

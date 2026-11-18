@@ -610,6 +610,8 @@ const labels = {
 
 function missingQuestion(data, l) {
   const dictionary = labels[l] || labels.es;
+  if (!data.dates_need_confirmation && data.check_in && !data.check_out) return ({es:'¿Qué fecha de salida necesitas? 😊',en:'What check-out date do you need? 😊',pt:'Qual é a data de saída? 😊',fr:'Quelle est votre date de départ ? 😊'})[l] || '¿Qué fecha de salida necesitas? 😊';
+  if (!data.dates_need_confirmation && !data.check_in && data.check_out) return ({es:'¿Qué fecha de ingreso necesitas? 😊',en:'What check-in date do you need? 😊',pt:'Qual é a data de entrada? 😊',fr:'Quelle est votre date d’arrivée ? 😊'})[l] || '¿Qué fecha de ingreso necesitas? 😊';
   if (data.dates_need_confirmation || !data.check_in || !data.check_out) return dictionary.dates;
   if (data.adults == null) return dictionary.guests;
   if (data.children == null) return dictionary.children;

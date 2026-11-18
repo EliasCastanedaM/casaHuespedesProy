@@ -1,4 +1,5 @@
 import { isConversationPresenceCheck, PRESENCE_REPLY } from "./ai.human-assistance.js";
+import { answerGuestRequests, REQUEST_PLAN_SCHEMA, REQUEST_PLAN_PROMPT, formatRoomComparison } from './ai.requests.js';
 import { normalizeFaqInquiry, isDirectFaqQuestion } from "./ai.faq-questions.js";
 import { reservationOfferQuestion, reservationInterestReply } from "./ai.reservation-consent.js";
 import { categoryBedPlan, minimumRequiredBedPlaces, CHILD_POLICY_VERSION } from '../rooms/guestComposition.js';
@@ -743,10 +744,12 @@ async function executeTool(call, message) {
   }
 }
 
-async function loadStoredHistory(channel, externalUserId, currentMessage) {
+async function loadStoredHistory(channel, externalUserId, currentMessage, { recentOnly = false } = {}) {
   try {
     const result = await pool.query(
-      "SELECT author, content FROM meta_messages WHERE channel = $1 AND external_user_id = $2 AND content <> '' AND author <> 'system' ORDER BY created_at DESC, id DESC LIMIT 20;",
+      "SELECT author, content FROM meta_messages WHERE channel = $1 AND external_user_id = $2 AND content <> '' AND author <> 'system'" +
+        (recentOnly ? " AND created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'" : '') +
+        " ORDER BY created_at DESC, id DESC LIMIT 20;",
       [channel, externalUserId]
     );
     const history = result.rows.reverse();
@@ -825,7 +828,7 @@ async function generateAiReplyInternal({
   message,
   history = [],
   now = new Date(),
-}, { onProcessing } = {}) {
+}, { onProcessing, skipRequestPlanning = false, deferBookingActions = false, interpretedBookingRequest = false, continuingCompositeRequest = false } = {}) {
   // El asesor virtual opera 24/7. isAiServiceTime se conserva como punto
   // único de decisión para mantener compatibilidad con la arquitectura actual.
   if (!isAiServiceTime(now)) {
@@ -847,6 +850,67 @@ async function generateAiReplyInternal({
       reply: SPECIFIC_INQUIRY_REPLY, responseId: null,
       deterministic: true, mode: "specific_inquiry",
     };
+  }
+
+  // Understand every request before any single-topic fast path can return.
+  // The planner only selects literal questions; approved sources still answer
+  // them, and the original reservation engine alone validates guest updates.
+  if (!skipRequestPlanning) {
+    const multiple = await answerGuestRequests({ message, history, now }, {
+      loadHistory: () => loadStoredHistory(channel, externalUserId, message, { recentOnly: true }),
+      loadPending: async () => {
+        const pending = (await loadBookingContext(channel, externalUserId)).pending_guest_requests;
+        return pending?.requests?.length && Date.parse(pending.created_at) >= now.getTime()-86400000 ? pending : null;
+      },
+      clearPending: async () => {
+        const context = await loadBookingContext(channel, externalUserId);
+        if (context.pending_guest_requests) {
+          delete context.pending_guest_requests;
+          await saveBookingContext(channel, externalUserId, context);
+        }
+      },
+      interpret: async input => {
+        if (!env.openai.apiKey) return null;
+        const result = await trackedResponse(getClient(), {
+          model: env.openai.model, instructions: REQUEST_PLAN_PROMPT,
+          input: JSON.stringify(input), store: false, max_output_tokens: 1600,
+          text: { format: { type: 'json_schema', name: 'hotel_guest_requests', strict: true, schema: REQUEST_PLAN_SCHEMA } },
+        }, { channel, externalUserId, operation: 'assistant_response' }, { timeout: 10000, maxRetries: 0 });
+        return result.output_text;
+      },
+      answer: async (topic, question, language) => {
+        if (topic === 'rooms') {
+          const categories = await getPublicRoomCategoriesService();
+          return formatRoomComparison(categories, question, language) ||
+            (isRoomDetailsFollowup(question) || /fotos?|photos?|videos?|enlace|link/i.test(question)
+              ? formatRoomDetailsReply(categories, question, language)
+              : language === 'en' ? 'Which room categories would you like to compare?' : '¿Qué categorías de habitación deseas comparar?');
+        }
+        if (topic === 'services') return formatHotelServicesReply(await getPublicHotelServicesService(), question, { language, concise: true });
+        if (topic === 'location') return formatHotelLocationReply({ compact: true });
+        if (topic === 'policy') return formatPolicyInformationReply(question, { rules: await getHotelGuestPolicyRulesService() });
+        if (topic === 'payment') return formatHotelPaymentInfoReply(await getHotelPaymentInfoService(), question);
+        if (topic === 'tourism') return formatTourismReply(question);
+        return null;
+      },
+      booking: async (question, comparing, source) => {
+        if (source.recovery && source.source === 'previous') {
+          const state = (await loadBookingContext(channel, externalUserId)).whatsapp_mvp;
+          // A later correction wins over an earlier unanswered message.
+          if (state && [state.check_in,state.total_guests,state.adults].some(v=>v!=null)) return null;
+        }
+        return generateAiReplyInternal({ channel, externalUserId, message: question, now },
+          { skipRequestPlanning: true, deferBookingActions: comparing, interpretedBookingRequest: true,
+            continuingCompositeRequest: source.recovery && source.source === 'current' });
+      },
+      remember: async pending => {
+        const context = await loadBookingContext(channel, externalUserId);
+        await saveBookingContext(channel, externalUserId, { ...context,
+          pending_guest_requests: { created_at: now.toISOString(), requests: pending } });
+      },
+    });
+    if (multiple?.outside) return { reply: OUT_OF_HOTEL_SCOPE_REPLY, responseId: null, deterministic: true, mode: 'outside_hotel_scope' };
+    if (multiple) return multiple;
   }
 
   // Room details use the official page, without changing the booking or loading
@@ -959,7 +1023,7 @@ async function generateAiReplyInternal({
   if (!locationInquiry && !policyType && !paymentInfoType && !serviceInquiry) {
     const current = await loadBookingContext(channel, externalUserId);
     let categories = [];
-    if (current?.whatsapp_mvp || isReservationIntent(message) || isRoomRecommendationInquiry(message) || pricingIntent) {
+    if (current?.whatsapp_mvp || interpretedBookingRequest || isReservationIntent(message) || isRoomRecommendationInquiry(message) || pricingIntent) {
       try {
         categories = await getReservationRoomCategoriesService();
       } catch (error) {
@@ -968,7 +1032,7 @@ async function generateAiReplyInternal({
     }
     let understanding = null;
     const interpretationState = reservationContextForMessage(message, current).whatsapp_mvp;
-    if (env.openai.apiKey && shouldUnderstandBooking(message, interpretationState, isReservationIntent(message) || pricingIntent)) {
+    if (env.openai.apiKey && shouldUnderstandBooking(message, interpretationState, interpretedBookingRequest || isReservationIntent(message) || pricingIntent)) {
       try {
         const interpreted = await trackedResponse(getClient(), {
           model: env.openai.model,
@@ -978,6 +1042,7 @@ async function generateAiReplyInternal({
           max_output_tokens: 1800, store: false,
         }, { channel, externalUserId, operation: "assistant_response" }, { timeout: 10000, maxRetries: 0 });
         understanding = validateBookingUnderstanding(interpreted.output_text, message, interpretationState);
+        if (continuingCompositeRequest && understanding?.intent === 'new_request') understanding = { ...understanding, intent: 'details' };
         if (!understanding) {
           try {
             const rejected = JSON.parse(interpreted.output_text);
@@ -1015,6 +1080,15 @@ async function generateAiReplyInternal({
       });
     }
     if (progress.action) {
+      // Exploring alternatives does not select a room or accept an offer.
+      // Retain explicit stay details and ask for a choice after comparison.
+      if (deferBookingActions) {
+        const draft = { ...progress.context.whatsapp_mvp, state: 'collecting' };
+        delete draft.reservation_offer;
+        delete draft.guest_reservation_consent;
+        await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: draft });
+        return { reply: '¿Cuál de estas opciones prefieres? 😊', responseId: null, deterministic: true, mode: 'room_comparison_choice' };
+      }
       const actionResult = await executeGlobalReservationAction({
         progress,
         channel,

@@ -41,7 +41,8 @@ export function isLocationMenuSelection(message, history = []) {
     text.includes("politicas y preguntas frecuentes");
 }
 
-export function formatHotelLocationReply() {
+export function formatHotelLocationReply(options = {}) {
+  if (options?.compact) return '📍 Estamos en Calle Quiñonez 233, Pimentel, a una cuadra del muelle.\nhttps://maps.app.goo.gl/PfXxizCYj1YqeY9x7';
   return [
     "📍 Casa Huéspedes: Calle Quiñonez 233, Pimentel, Chiclayo, Perú.",
     "A una cuadra del Muelle de Pimentel, en la paralela al primer malecón.",
