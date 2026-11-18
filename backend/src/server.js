@@ -11,6 +11,7 @@ import { validateProductionConfig } from "./config/validateConfig.js";
 import { recoverPendingMessages } from "./modules/meta/meta.controller.js";
 import { deliverPendingBookingAlerts } from "./services/booking-alerts.service.js";
 import { processMetaTemplateReview } from "./services/booking-template-review.service.js";
+import { processNextQaRun } from './modules/ai/ai.qa-worker.js';
 
 // Render asigna automáticamente el puerto mediante process.env.PORT.
 // En local usará env.port o 4000.
@@ -75,6 +76,7 @@ const server = app.listen(PORT, async () => {
     await recoverMetaMessages();
     await recoverBookingAlerts();
     await recoverTemplateReview();
+    void processNextQaRun();
   } else {
     console.error("No se pudo verificar la conexión a la base de datos.");
   }
@@ -86,6 +88,7 @@ const recoveryTimer = setInterval(() => {
   void recoverMetaMessages();
   void recoverBookingAlerts();
   void recoverTemplateReview();
+  void processNextQaRun();
 }, META_RECOVERY_INTERVAL_MS);
 recoveryTimer.unref();
 

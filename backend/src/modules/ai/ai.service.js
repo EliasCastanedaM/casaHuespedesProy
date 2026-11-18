@@ -1,4 +1,5 @@
 import { isConversationPresenceCheck, PRESENCE_REPLY } from "./ai.human-assistance.js";
+import { currentQa, prepareQaCall, finishQaCall, blockQaAction } from './ai.qa-context.js';
 import { answerGuestRequests, REQUEST_PLAN_SCHEMA, REQUEST_PLAN_PROMPT, formatRoomComparison } from './ai.requests.js';
 import { normalizeFaqInquiry, isDirectFaqQuestion } from "./ai.faq-questions.js";
 import { reservationOfferQuestion, reservationInterestReply } from "./ai.reservation-consent.js";
@@ -124,6 +125,7 @@ function getClient() {
 
 async function getPreviousResponseId(channel, externalUserId) {
   const key = conversationKey(channel, externalUserId);
+  if (currentQa()) return currentQa().responses.get(key) || null;
 
   try {
     const result = await pool.query(
@@ -150,6 +152,7 @@ async function getPreviousResponseId(channel, externalUserId) {
 
 async function savePreviousResponseId(channel, externalUserId, responseId) {
   const key = conversationKey(channel, externalUserId);
+  if (currentQa()) { currentQa().responses.set(key, responseId); return; }
   memoryResponses.set(key, responseId);
 
   try {
@@ -176,6 +179,7 @@ async function savePreviousResponseId(channel, externalUserId, responseId) {
 
 async function loadBookingContext(channel, externalUserId) {
   const key = conversationKey(channel, externalUserId);
+  if (currentQa()) return structuredClone(currentQa().contexts.get(key) || {});
 
   try {
     const result = await pool.query(
@@ -240,6 +244,7 @@ async function loadBookingContext(channel, externalUserId) {
 
 async function saveBookingContext(channel, externalUserId, context) {
   const key = conversationKey(channel, externalUserId);
+  if (currentQa()) { currentQa().contexts.set(key, structuredClone(context || {})); return; }
   const ttlMs = BOOKED_CONTEXT_TTL_MS;
   const expiresAt = Object.keys(context || {}).length > 0
     ? Date.now() + ttlMs
@@ -387,6 +392,11 @@ function globalBookingFailureReply(language) {
 }
 
 async function executeGlobalReservationAction({ progress, channel, externalUserId, categories = [], onProcessing }) {
+  if (currentQa() && !['calculate_quote','accept_quote','request_staff_review'].includes(progress.action)) {
+    blockQaAction(progress.action);
+    return { reply: 'Operación transaccional bloqueada en la prueba privada. 😊', responseId: null,
+      deterministic: true, mode: 'qa_transaction_blocked' };
+  }
   const state = progress.context?.whatsapp_mvp || {};
   if(progress.action==="request_staff_review") {
     const next={...state,state:"handoff",guest_reservation_consent:{confirmed:true,source:"explicit_offer_reply"}};
@@ -716,6 +726,10 @@ function publicCategory(category) {
 }
 
 async function executeTool(call, message) {
+  if (currentQa() && !['listar_habitaciones','listar_servicios'].includes(call.name)) {
+    blockQaAction('tool:' + call.name);
+    return JSON.stringify({ success: false, error: 'Acción no permitida en la prueba privada.' });
+  }
   try {
     JSON.parse(call.arguments || "{}");
 
@@ -745,6 +759,7 @@ async function executeTool(call, message) {
 }
 
 async function loadStoredHistory(channel, externalUserId, currentMessage, { recentOnly = false } = {}) {
+  if (currentQa()) return structuredClone(currentQa().histories.get(conversationKey(channel, externalUserId)) || []);
   try {
     const result = await pool.query(
       "SELECT author, content FROM meta_messages WHERE channel = $1 AND external_user_id = $2 AND content <> '' AND author <> 'system'" +
@@ -766,8 +781,16 @@ async function loadStoredHistory(channel, externalUserId, currentMessage, { rece
 }
 
 async function trackedResponse(openai, request, meta, options) {
-  const response = await openai.responses.create(request, options);
-  await recordOpenAiUsage(response, meta);
+  const safeRequest = prepareQaCall(request);
+  let response;
+  try {
+    response = await openai.responses.create(safeRequest, options);
+    finishQaCall(response);
+  } catch (error) {
+    finishQaCall(null, error);
+    throw error;
+  }
+  if (!currentQa()) await recordOpenAiUsage(response, meta);
   if (['incomplete', 'failed', 'cancelled'].includes(response.status)) {
     const error = new Error('No se pudo completar la respuesta del asesor.');
     error.code = 'AI_INCOMPLETE_RESPONSE';

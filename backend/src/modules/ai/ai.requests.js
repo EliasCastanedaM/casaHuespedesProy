@@ -38,6 +38,7 @@ export function shouldPlanRequests(message) {
   if (!message || message.length > 2400 || OUTSIDE.test(clean(message))) return false;
   if (isDirectFaqQuestion(message)) return false;
   return isRequestRecovery(message) || isRoomComparison(message) || new Set(topics(message)).size > 1 ||
+    new Set(clauses(message).flatMap(topics)).size > 1 ||
     (message.match(/\?/g) || []).length > 1;
 }
 
