@@ -961,7 +961,7 @@ export function handleGlobalReservationTurn(input) {
           ? `Confirmez-vous ${nights} nuit(s), du ${date(p.check_in)} au ${date(p.check_out)} ?`
           : `¿Te quedarías ${nights} ${nights === 1 ? "noche" : "noches"}, con entrada el ${date(p.check_in)} y salida el ${date(p.check_out)}?`;
     return { handled: true, context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: draft },
-      mode: "global_reservation_clarification", reply: appendRoomInvitation(understood?.clarification ? clarification + " " + reply : reply, language) };
+      mode: "global_reservation_clarification", reply: understood?.clarification ? clarification + " " + reply : reply };
   } else if (pending) {
     const draft = { ...previous };
     delete draft.pending_proposal;
@@ -992,14 +992,11 @@ export function handleGlobalReservationTurn(input) {
       nextContext = { ...context, state: "whatsapp_mvp", whatsapp_mvp: draft };
     }
     return { handled: true, context: nextContext, mode: "global_reservation_clarification",
-      reply: changedBookingFields(previous, nextContext.whatsapp_mvp || {}).length ? appendRoomInvitation(clarification, language) : clarification };
+      reply: clarification };
   }
-  const result = handleReservationTurn(input);
-  const next = result.context?.whatsapp_mvp || {};
-  if (result.reply && changedBookingFields(originalContext.whatsapp_mvp || {}, next).length > 0) {
-    return { ...result, reply: appendRoomInvitation(result.reply, next.language) };
-  }
-  return result;
+  // Keep collecting questions short and conversational. Room links belong in
+  // the actual offer/quote, not after every date, age or pet clarification.
+  return handleReservationTurn(input);
 }
 
 // Solo una selección numerada o un nombre elegido explícitamente identifica
