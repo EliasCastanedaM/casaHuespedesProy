@@ -235,6 +235,8 @@ for(const channel of ['whatsapp','instagram','facebook'])test(channel+': flujo 2
   assert.equal(details.mode,'category_details');
   assert.equal(details.reply,'Puedes ver fotos y detalles de las habitaciones aquí:\nhttps://www.casahuespedespimentel.com/habitaciones');
   assert.deepEqual(contexts.get(channel+':two-beds'),before);
+  const chosen=await generateAiReply({...input,message:'Opción 1'});
+  assert.match(chosen.reply,/reservar esta habitación/i);
   await generateAiReply({...input,message:'Sí quiero'});
   await confirmGlobalReservation({...input,categorySlug:'doble',totalAmount:480,childBedAvailabilityConfirmed:true});
   const state=contexts.get(channel+':two-beds').whatsapp_mvp;
