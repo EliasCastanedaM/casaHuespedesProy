@@ -45,15 +45,18 @@ for(const [channel,acceptance] of [['whatsapp','SÍ QUIERO'],['instagram','si qu
   const send=message=>generateAiReply({channel,externalUserId,message,now});
   const quote=await send('Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas');
   assert.equal(quote.mode,'occupancy_quote');
-  assert.match(quote.reply,/¿Quieres reservar esta habitación\?/);
-  assert.match(quote.reply,/sí quiero/);
+  assert.match(quote.reply,/Cuál de estas categorías prefieres/);
+  assert.doesNotMatch(quote.reply,/Para confirmar, responde «sí quiero»/);
   assert.equal(contexts.get(channel+':'+externalUserId).whatsapp_mvp.state,'quoted');
-  for(const message of ['sí','ok','perfecto','me gusta']) {
+  for(const message of ['sí','ok','perfecto','me gusta',acceptance]) {
     const result=await send(message);
-    assert.equal(result.mode,'reservation_offer');
+    assert.equal(result.mode,'room_category_choice');
     assert.equal(contexts.get(channel+':'+externalUserId).whatsapp_mvp.guest_reservation_consent,undefined);
     assert.equal(contexts.get(channel+':'+externalUserId).whatsapp_mvp.state,'quoted');
   }
+  const chosen=await send('Opción 1');
+  assert.equal(chosen.mode,'occupancy_quote');
+  assert.match(chosen.reply,/Quieres reservar esta habitación/);
   const result=await send(acceptance);
   assert.equal(result.mode,'reservation_interest_confirmed');
   assert.equal(result.reply,reservationInterestReply('es'));
@@ -71,7 +74,7 @@ for(const [channel,acceptance] of [['whatsapp','SÍ QUIERO'],['instagram','si qu
   const revised=await send('Ahora somos tres adultos sin niños ni mascotas');
   assert.equal(revised.mode,'occupancy_quote');
   assert.match(revised.reply,/Triple/);
-  assert.match(revised.reply,/Quieres reservar/);
+  assert.match(revised.reply,/Cuál de estas categorías prefieres|Quieres reservar/);
   assert.equal(contexts.get(channel+':'+externalUserId).whatsapp_mvp.guest_reservation_consent,undefined);
 });
 test('una oferta antigua sin pregunta vigente no autoriza revisión por contexto',()=>{
