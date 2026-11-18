@@ -157,7 +157,11 @@ test("tarifas modificadas entre cotizar y aceptar obligan a mostrar la nueva cot
   const contexts=mockDatabase(t);
   const input={channel:"facebook",externalUserId:"changed-price"};
   await generateAiReply({...input,message:"Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas"});
+  // Una cotización con alternativas necesita categoría elegida antes de aceptar.
+  const chosen=await generateAiReply({...input,message:"Opción 1"});
+  assert.equal(chosen.mode,"occupancy_quote");
   const state=contexts.get("facebook:changed-price").whatsapp_mvp;
+  assert.equal(state.category_selection_pending,false);
   state.pricing_quote.total_amount=1;
   const result=await generateAiReply({...input,message:"Sí quiero"});
   assert.equal(result.mode,"occupancy_quote");
