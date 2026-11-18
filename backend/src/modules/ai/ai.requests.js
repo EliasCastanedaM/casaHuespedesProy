@@ -191,9 +191,13 @@ export function formatRoomComparison(categories, message, language = 'es') {
   const lines = selected.slice(0, 4).map(c => {
     const beds = bedInventory(c), details = [];
     if(beds.known) {
-      if(beds.double)details.push(beds.double+(english?' double bed(s)':' cama(s) de 2 plazas'));
-      if(beds.oneHalf)details.push(beds.oneHalf+(english?' one-and-a-half-size bed(s)':' cama(s) de 1½ plazas'));
-      if(beds.single>beds.oneHalf)details.push((beds.single-beds.oneHalf)+(english?' single bed(s)':' cama(s) de 1 plaza'));
+      const label = n => english ? (n === 1 ? ' bed' : ' beds') : (n === 1 ? ' cama' : ' camas');
+      if(beds.double)details.push(beds.double + (english ? ' double' + label(beds.double) : label(beds.double) + ' de 2 plazas'));
+      if(beds.oneHalf)details.push(beds.oneHalf + (english ? ' one-and-a-half-size' + label(beds.oneHalf) : label(beds.oneHalf) + ' de 1½ plazas'));
+      if(beds.single>beds.oneHalf) {
+        const singles = beds.single-beds.oneHalf;
+        details.push(singles + (english ? ' single' + label(singles) : label(singles) + ' de 1 plaza'));
+      }
     }
     return c.name + ': ' + (english ? 'capacity for ' : 'capacidad para ') + Number(c.capacity) +
       (english ? ' guests' : ' personas') + (details.length ? '; '+details.join(', ') : '') + '.';
