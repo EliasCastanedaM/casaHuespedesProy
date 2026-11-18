@@ -81,10 +81,18 @@ export function shouldUnderstandBooking(message, state, bookingIntent = false) {
   if (!text || text.length > 2400) return false;
   if(state?.state==="quoted" && acceptsReservationOffer(message))return false;
   if (state && !["collecting", "quoted", "handoff", "browsing"].includes(state.state)) return false;
-  if (!state && !bookingIntent) return false;
+  if (!state && !bookingIntent && !isStayPlanningInquiry(message)) return false;
   // These answers already have an unambiguous meaning in the current step.
   if (/^(?:\d{1,2}|si|no|nope|ok|vale|gracias|yes|non|nao|ningun[oa]?|ninguno|ninguna)[.! ]*$/.test(text)) return false;
   return true;
+}
+
+// This is a candidate for interpretation, not permission to start a booking.
+// The model must still distinguish affirmative planning from information,
+// hypothetical questions and uncertainty under the same strict contract.
+export function isStayPlanningInquiry(message) {
+  const text = normalize(message);
+  return /\b(?:busco|buscamos|necesito|necesitamos|quisiera|queremos|me gustaria|looking for|i need|we need|would like)\b.{0,45}\b(?:alojamiento|hospedaje|habitaciones?|estadia|accommodation|rooms?|a place to stay)\b/.test(text);
 }
 
 export function bookingUnderstandingInput(message, state = {}, now = new Date()) {

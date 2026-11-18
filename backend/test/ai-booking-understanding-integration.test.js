@@ -6,7 +6,7 @@ import { pool } from "../src/config/db.js";
 import { generateAiReply } from "../src/modules/ai/ai.service.js";
 
 function setup(t, state, interpret) {
-  let context = { whatsapp_mvp: structuredClone(state) };
+  let context = Object.keys(state).length ? { whatsapp_mvp: structuredClone(state) } : {};
   const requests = [];
   const previousKey = env.openai.apiKey;
   env.openai.apiKey = "mock-only-no-network";
@@ -180,4 +180,30 @@ for (const channel of ["whatsapp", "instagram", "facebook"]) test(channel + ": r
   assert.equal(db.context().whatsapp_mvp.adults,2);
   assert.equal(db.context().whatsapp_mvp.check_out,"2026-12-07");
   assert.doesNotMatch(done.reply,/qué fechas|cuántas personas/i);
+});
+
+for (const channel of ['whatsapp','instagram','facebook']) test(channel+': buscar alojamiento conserva familia sin exigir la palabra reservar',async t=>{
+  const message='Busco alojamiento del 10 al 12 de diciembre de 2026 para mí, mi pareja y nuestros dos peques.';
+  const db=setup(t,{},()=>({intent:'details',language:'es',updates:[
+    {field:'check_in',value:'2026-12-10',evidence:message},
+    {field:'check_out',value:'2026-12-12',evidence:message},
+    {field:'adults',value:2,evidence:message},
+    {field:'children',value:2,evidence:message},
+  ],clarification:null}));
+  const result=await generateAiReply({channel,externalUserId:'natural-start-'+channel,message});
+  assert.match(result.reply,/edad/);
+  assert.doesNotMatch(result.reply,/Quieres reservar|Cuántas personas|Qué fechas/);
+  assert.equal(db.context().whatsapp_mvp.state,'collecting');
+  assert.equal(db.context().whatsapp_mvp.adults,2);
+  assert.equal(db.context().whatsapp_mvp.children,2);
+  assert.equal(db.context().whatsapp_mvp.check_out,'2026-12-12');
+  assert.equal(db.context().whatsapp_mvp.pets,undefined);
+  assert.equal(db.requests.length,1);
+});
+
+for (const intent of ['information','hypothetical']) test('una frase candidata '+intent+' no inicia una solicitud por sí sola',async t=>{
+  const state={state:'quoted',adults:2,children:0,pets:0,check_in:'2026-12-10',check_out:'2026-12-12'};
+  const db=setup(t,state,()=>({intent,updates:[],clarification:null}));
+  await generateAiReply({channel:'instagram',externalUserId:'candidate-'+intent,message:'Busco alojamiento; ¿y si viajara con mis hijos?'});
+  assert.deepEqual(db.context().whatsapp_mvp,state);
 });

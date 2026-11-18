@@ -989,7 +989,9 @@ function handleReservationTurn({
   const state = context.whatsapp_mvp || null;
   const language = understanding?.language || detectLanguage(message, state?.language || previousLanguage);
   const dictionary = labels[language] || labels.es;
-  const intent = reservationIntent(text) || isRoomRecommendationInquiry(message) || pricingIntent || understanding?.intent === "new_request";
+  const interpretedPlanning = ["details", "correction"].includes(understanding?.intent) &&
+    ["check_in", "check_out", "adults", "children", "total_guests", "category_slug", "room_quantity"].some(key => understanding.fields?.[key] !== undefined);
+  const intent = reservationIntent(text) || isRoomRecommendationInquiry(message) || pricingIntent || understanding?.intent === "new_request" || interpretedPlanning;
   if (isAssistantMenuRequest(message)) {
     return { handled: true, reply: dictionary.menu, mode: "global_reservation_menu", context };
   }

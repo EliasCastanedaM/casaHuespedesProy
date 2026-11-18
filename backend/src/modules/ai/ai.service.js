@@ -56,7 +56,7 @@ import { isReservationIntent } from "./ai.booking-flow.js";
 import { getReservationRoomCategoriesService, withAvailableReservationRooms } from "../rooms/roomOccupancyRates.service.js";
 import { selectOccupancyQuote, formatOccupancyQuote, processingQuoteReply, isPriceVariationInquiry, priceVariationReply } from "./ai.occupancy-pricing.js";
 import { appendRoomInvitation } from "./ai.room-invitation.js";
-import { BOOKING_UNDERSTANDING_PROMPT, BOOKING_UNDERSTANDING_SCHEMA, bookingUnderstandingInput, shouldUnderstandBooking, validateBookingUnderstanding } from "./ai.booking-understanding.js";
+import { BOOKING_UNDERSTANDING_PROMPT, BOOKING_UNDERSTANDING_SCHEMA, bookingUnderstandingInput, shouldUnderstandBooking, validateBookingUnderstanding, isStayPlanningInquiry } from "./ai.booking-understanding.js";
 
 import { hasRoomPreferences, normalizeRoomPreferences, roomPreferenceMatch, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 
@@ -1070,7 +1070,7 @@ async function generateAiReplyInternal({
   if (!locationInquiry && !policyType && !paymentInfoType && !serviceInquiry) {
     const current = await loadBookingContext(channel, externalUserId);
     let categories = [];
-    if (current?.whatsapp_mvp || interpretedBookingRequest || isReservationIntent(message) || isRoomRecommendationInquiry(message) || pricingIntent) {
+    if (current?.whatsapp_mvp || interpretedBookingRequest || isReservationIntent(message) || isStayPlanningInquiry(message) || isRoomRecommendationInquiry(message) || pricingIntent) {
       try {
         categories = await getReservationRoomCategoriesService();
       } catch (error) {
