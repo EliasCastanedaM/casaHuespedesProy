@@ -1080,7 +1080,7 @@ function handleReservationTurn({
       return {handled:true,context:{...context,whatsapp_mvp:next},reply:"Claro 😊. Puedes seguir consultándome lo que necesites.",mode:"reservation_offer_declined"};
     }
     if (state.category_selection_pending && (acceptsQuote(message) ||
-        /^(?:si|si por favor|ok|dale|perfecto|confirmo)[.! ]*$/.test(text))) {
+        /^(?:si|si por favor|ok|okay|dale|perfecto|de acuerdo|me gusta|esa|gracias|confirmo)[.! ]*$/.test(text))) {
       return { handled: true, context, mode: "room_category_choice",
         reply: "¿Cuál de las categorías presentadas prefieres? Indícame su nombre o número de opción. 😊" };
     }
