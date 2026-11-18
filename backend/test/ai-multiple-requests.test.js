@@ -150,6 +150,14 @@ test('los pendientes de una fuente caída se recuperan y se limpian al responder
   assert.equal(cleared,true);
 });
 
+test('el resumen general de servicios conserva su imagen al responder también otras consultas',async t=>{
+  database(t);
+  const result=await generateAiReply({channel:'instagram',externalUserId:'multi-services-image',message:'¿Qué servicios ofrecen? ¿Cómo llegar?',now:NOW});
+  assert.match(result.reply,/servicios/);
+  assert.match(result.reply,/Calle Quiñonez 233/);
+  assert.equal(result.image_url,'https://www.casahuespedespimentel.com/img/galeria/galeria-3.jpg');
+});
+
 test('recuperación nunca cruza un saludo ni usa historia para una petición nueva',()=>{
   const history=[{author:'client',content:INITIAL},{author:'assistant',content:'algo'},{author:'client',content:'Hola'}];
   assert.equal(previousRequestSource('¿Y lo demás que te pedí?',history),'');

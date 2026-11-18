@@ -139,15 +139,18 @@ export async function answerGuestRequests({ message, history = [], now = new Dat
   if (!requests.length) return null;
   const language = /\b(?:compare|difference|rooms|booking|what|where|how)\b/.test(clean(message)) ? 'en' : 'es';
   const parts = [], pending = [];
+  let imageUrl;
   const grouped = new Map();
   for (const r of requests.filter(r => r.topic !== 'booking')) {
     grouped.set(r.topic, [...(grouped.get(r.topic) || []), r.evidence]);
   }
   for (const [topic, spans] of grouped) {
     try {
-      const reply = await deps.answer(topic, spans.join('\n'), language);
+      const answer = await deps.answer(topic, spans.join('\n'), language);
+      const reply = typeof answer === 'string' ? answer : answer?.reply;
       if (!reply) throw new Error('No grounded answer');
       parts.push(reply);
+      if (answer?.image_url && !imageUrl) imageUrl = answer.image_url;
     } catch { pending.push({ topic, evidence: spans.join('\n').slice(0, 2400) }); }
   }
   // Only literal, affirmative booking spans reach the existing validated flow.
@@ -168,7 +171,7 @@ export async function answerGuestRequests({ message, history = [], now = new Dat
   } else if (stored && deps.clearPending) await deps.clearPending();
   if (!parts.length) return null;
   return { reply: parts.join('\n\n') + (/[\u{1F300}-\u{1FAFF}]/u.test(parts.join('')) ? '' : ' 😊'),
-    responseId: null, deterministic: true, mode: 'hotel_multiple_requests' };
+    ...(imageUrl ? { image_url: imageUrl } : {}), responseId: null, deterministic: true, mode: 'hotel_multiple_requests' };
 }
 
 // Descriptions/capacities come from the live public catalogue. No tariffs,

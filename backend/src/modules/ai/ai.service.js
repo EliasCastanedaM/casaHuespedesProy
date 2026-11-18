@@ -886,7 +886,10 @@ async function generateAiReplyInternal({
               ? formatRoomDetailsReply(categories, question, language)
               : language === 'en' ? 'Which room categories would you like to compare?' : '¿Qué categorías de habitación deseas comparar?');
         }
-        if (topic === 'services') return formatHotelServicesReply(await getPublicHotelServicesService(), question, { language, concise: true });
+        if (topic === 'services') {
+          const reply = formatHotelServicesReply(await getPublicHotelServicesService(), question, { language, concise: true });
+          return classifyServiceInquiry(question).kind === 'general' ? { reply, image_url: SERVICES_IMAGE_URL } : reply;
+        }
         if (topic === 'location') return formatHotelLocationReply({ compact: true });
         if (topic === 'policy') return formatPolicyInformationReply(question, { rules: await getHotelGuestPolicyRulesService() });
         if (topic === 'payment') return formatHotelPaymentInfoReply(await getHotelPaymentInfoService(), question);
