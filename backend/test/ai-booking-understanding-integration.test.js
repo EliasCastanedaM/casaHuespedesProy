@@ -149,3 +149,35 @@ for (const channel of ["whatsapp", "instagram", "facebook"]) test(channel + ": p
   assert.equal(db.context().whatsapp_mvp.children, undefined);
   assert.equal(db.context().whatsapp_mvp.pets, undefined);
 });
+
+for (const channel of ["whatsapp", "instagram", "facebook"]) test(channel + ": repara evidencia no contigua sin perder familia ni fechas", async t => {
+  const message = "Viajamos mi esposa, mis dos hijos y yo. Quiero reservar del 5 al 7 de diciembre de 2026.";
+  let attempt = 0;
+  const db = setup(t, {}, input => {
+    if (input.mensaje_actual === message) {
+      attempt++;
+      return { intent: "details", language: "es", updates: [
+        {field:"adults",value:2,evidence:attempt===1 ? "mi esposa y yo" : "mi esposa, mis dos hijos y yo"},
+        {field:"children",value:2,evidence:"mis dos hijos"},
+        {field:"check_in",value:"2026-12-05",evidence:"5 al 7 de diciembre de 2026"},
+        {field:"check_out",value:"2026-12-07",evidence:"5 al 7 de diciembre de 2026"},
+      ], clarification:null };
+    }
+    return { intent:"details",language:"es",updates:[{field:"pets",value:0,evidence:input.mensaje_actual}],clarification:null };
+  });
+  const send = message => generateAiReply({channel,externalUserId:"repair-family-"+channel,message,now:new Date("2026-11-18T01:00:00Z")});
+  const initial = await send(message);
+  assert.equal(db.requests.length,2,"solo un reintento de interpretación");
+  assert.match(initial.reply,/edad/i);
+  assert.doesNotMatch(initial.reply,/qué fechas|qué datos deseas cambiar|cuántas personas/i);
+  const state = db.context().whatsapp_mvp;
+  assert.equal(state.adults,2); assert.equal(state.children,2);
+  assert.equal(state.check_in,"2026-12-05"); assert.equal(state.check_out,"2026-12-07");
+  assert.equal(state.pets,undefined);
+  await send("Uno tiene 4 años y el otro 15.");
+  assert.deepEqual(db.context().whatsapp_mvp.child_ages,[4,15]);
+  const done = await send("No llevamos mascotas.");
+  assert.equal(db.context().whatsapp_mvp.adults,2);
+  assert.equal(db.context().whatsapp_mvp.check_out,"2026-12-07");
+  assert.doesNotMatch(done.reply,/qué fechas|cuántas personas/i);
+});

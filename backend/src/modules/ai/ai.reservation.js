@@ -483,7 +483,7 @@ function containsStructuredBookingAnswer(message, state = {}, now = new Date()) 
 function changedBookingFields(previous, next) {
   const keys = [
     "check_in", "check_out", "adults", "children", "child_ages",
-    "total_guests", "young_children_share_bed", "pets", "category_slug", "preferences", "room_preferences", "bed_preference", "max_nightly_budget", "preferred_payment_method",
+    "total_guests", "young_children_share_bed", "pets", "category_slug", "room_quantity", "preferences", "room_preferences", "bed_preference", "max_nightly_budget", "preferred_payment_method",
   ];
   return keys.filter((key) =>
     next[key] !== undefined &&
@@ -662,6 +662,7 @@ export function formatGlobalHandoffSummary(data = {}) {
     "Huéspedes totales: " + v(data.total_guests),
     "Mascotas: " + v(data.pets) + " · cargo de referencia: " + petCharge,
     "Categoría solicitada: " + v(data.category_slug),
+    ...(data.room_quantity != null ? ["Cantidad de habitaciones solicitadas: " + v(data.room_quantity)] : []),
     "Categoría sugerida: " + recommendation,
     "Capacidad máxima de una habitación: " + v(data.max_single_room_capacity),
     "Preferencias: " + v(data.preferences),
@@ -1032,7 +1033,7 @@ function handleReservationTurn({
     };
     if (acceptsQuote(message) || /^(?:si|si por favor|ok|okay|dale|perfecto|de acuerdo|me gusta|esa|gracias|confirmo)[.! ]*$/.test(text)) {
       return {handled:true,context:{...context,whatsapp_mvp:{...state,reservation_offer:{version:1,requires_quote:Boolean(state.pricing_quote)}}},
-        reply:reservationOfferQuestion(language,Number(state.total_guests)>Number(state.max_single_room_capacity || 5)),
+        reply:reservationOfferQuestion(language,Number(state.room_quantity)>1 || Number(state.total_guests)>Number(state.max_single_room_capacity || 5)),
         mode:"reservation_offer"};
     }
     if (pricingIntent || intent) return { handled: true, action: "calculate_quote", context, mode: "occupancy_quote" };
@@ -1257,6 +1258,11 @@ function handleReservationTurn({
       : "pets";
     return { handled: true, context: nextContext, reply: question, mode: "global_reservation_collecting" };
   }
+
+  if (Number(data.room_quantity) > 1) return {
+    handled: true, action: "calculate_quote", explicitCategory: true,
+    context: nextContext, mode: "occupancy_quote",
+  };
 
   if (hasOccupancyRates(categories) && Number(data.total_guests) < 8 &&
       minimumRequiredBedPlaces(data) <= Number(data.max_single_room_capacity)) {

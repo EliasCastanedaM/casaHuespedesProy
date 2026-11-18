@@ -132,9 +132,15 @@ const COAST = /\b(?:playa|playas|beach|beaches|muelle|malecon|caballitos|atardec
 const CITY = /\b(?:chiclayo|catedral|mercado modelo|musas|parque principal)\b/;
 const GENERAL = /\b(?:que visitar|que hacer|atractivos|turistic|lugares para|donde pasear|excursiones|places to visit|sightseeing|tourist|visiter|passeios|paseos)\b/;
 
+export function isOwnDiningInquiry(message) {
+  const text = normalize(message);
+  if (/\b(?:cerca|cercanos?|alrededor|fuera|nearby|where to eat|donde comer|recomiend\w*|recomendacion\w*)\b/.test(text)) return false;
+  return /\b(?:preparan|sirven|venden|cocinan|ofrecen|tienen|hay|do you (?:serve|prepare|offer))\b.{0,65}\b(?:comidas?|almuerzos?|almorzar|cenas?|cenar|desayunos?|desayunar|restaurante|cafeteria|lunch|dinner|food)\b/.test(text) || OWN_SERVICE.test(text);
+}
+
 export function isTourismInquiry(message) {
   const text = normalize(message);
-  if (!text || text.length > 600 || OUTSIDE_DOMAIN.test(text) || BOOKING_TURN.test(text) || OWN_SERVICE.test(text)) return false;
+  if (!text || text.length > 600 || OUTSIDE_DOMAIN.test(text) || BOOKING_TURN.test(text) || isOwnDiningInquiry(message)) return false;
   // Las preguntas sobre servicios DENTRO del hospedaje pertenecen al
   // catálogo del hotel, no a negocios de terceros.
   if (/^(?:[¿? ]*)?(?:el hotel |el hospedaje )?(?:tiene|tienen|ofrece|ofrecen|incluye|hay)\s+(?:un\s+)?(?:restaurante|cafeteria)\??$/.test(text)) return false;

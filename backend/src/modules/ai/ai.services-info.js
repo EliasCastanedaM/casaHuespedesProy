@@ -80,7 +80,7 @@ export function classifyServiceInquiry(message, services = []) {
   const empty={kind:'none', slugs:[], unknown:false, detailed:false, all:false};
   if (!text || EXTERNAL.test(text) || childAgeAnswer(message) || isConversationPresenceCheck(message)) return empty;
   if (/\b(?:prefiero|quisiera|quiero|me gustaria|puede ser|podria ser)\b.{0,30}\b(?:terraza|balcon|vista|ventana)\b/.test(text) && !/terraza comun|usar la terraza/.test(text)) return empty;
-  const asks=/[?¿]/.test(message)||/\b(?:que|cuales|cual|incluye|incluyen|tienen|tiene|ofrecen|cuanto|cuesta|costo|hay|hablame|cuentame|explicame|aceptan|permiten|proporcionan|do you|is there|what|which|is|are|services|servicios|saber|consultar|traen)\b/.test(text);
+  const asks=/[?¿]/.test(message)||/\b(?:que|cuales|cual|incluye|incluyen|tienen|tiene|ofrecen|preparan|sirven|venden|cocinan|cuanto|cuesta|costo|hay|hablame|cuentame|explicame|aceptan|permiten|proporcionan|do you|is there|what|which|is|are|services|servicios|saber|consultar|traen)\b/.test(text);
   const commonTerrace=/\b(?:terraza comun|usar la terraza|subir a la terraza)\b/.test(text);
   if (!asks && !commonTerrace && !/^(?:y |and |pero y )/.test(text)) return empty;
   if (BOOKING_WORDS.test(text) && (!asks || /\b(?:quiero|quisiera|deseo) (?:hacer una reserva|reservar)\b|\b(?:want to book|book a room)\b/.test(text))) return empty;

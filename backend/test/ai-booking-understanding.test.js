@@ -69,3 +69,12 @@ test("una corrección interpretada no depende de que las reglas reconozcan su re
   assert.equal(result.context.whatsapp_mvp.check_out, "2026-11-29");
   assert.match(result.reply, /mascotas/);
 });
+
+test('cantidad de habitaciones tiene límites y no hereda una selección de otra categoría',()=>{
+  const message='Prefiero dos habitaciones dobles';
+  const output=value=>({intent:'details',updates:[{field:'category_slug',value:'doble',evidence:message},{field:'room_quantity',value,evidence:message}],clarification:null});
+  for(const invalid of [0,14,'2',true])assert.equal(validateBookingUnderstanding(output(invalid),message),null);
+  assert.equal(validateBookingUnderstanding(output(2),message).fields.room_quantity,2);
+  assert.equal(applyBookingUnderstanding({category_slug:'doble',room_quantity:2},{category_slug:'familiar'}).room_quantity,undefined);
+  assert.equal(applyBookingUnderstanding({category_slug:'doble',room_quantity:2},{check_out:'2026-12-15'}).room_quantity,2);
+});

@@ -23,7 +23,7 @@ export function validateQaPayload(payload) {
 }
 
 function publicState(state = {}) {
-  return Object.fromEntries(['state','awaiting','check_in','check_out','adults','children','child_ages','total_guests','pets','category_slug']
+  return Object.fromEntries(['state','awaiting','check_in','check_out','adults','children','child_ages','total_guests','pets','category_slug','room_quantity']
     .filter(k=>state[k] !== undefined).map(k=>[k,state[k]]));
 }
 

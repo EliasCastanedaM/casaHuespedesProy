@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { pool } from '../src/config/db.js';
 import { generateAiReply } from '../src/modules/ai/ai.service.js';
-import { handleGlobalReservationTurn } from '../src/modules/ai/ai.reservation.js';
+import OpenAI from 'openai';
+import { env } from '../src/config/env.js';
+import { handleGlobalReservationTurn, formatGlobalHandoffSummary } from '../src/modules/ai/ai.reservation.js';
 import { acceptsReservationOffer, reservationInterestReply } from '../src/modules/ai/ai.reservation-consent.js';
 import { processMetaMessage } from '../src/modules/meta/meta.service.js';
 const categories = [
@@ -87,4 +89,39 @@ test('varias habitaciones también esperan aceptación explícita',()=>{
   assert.match(first.reply,/varias habitaciones/);
   const next=handleGlobalReservationTurn({message:'Sí quiero',context:first.context,categories,now});
   assert.equal(next.action,'request_staff_review');
+});
+
+for(const channel of ['whatsapp','instagram','facebook'])test(channel+': dos dobles conservan cantidad y esperan consentimiento sin cotizar una sola',async t=>{
+  const contexts=mockDatabase(t),externalUserId='two-double-'+channel;
+  const send=message=>generateAiReply({channel,externalUserId,message,now});
+  await send('Quiero reservar del 12/12/2026 al 14/12/2026 para cuatro adultos sin niños ni mascotas');
+  const previousKey=env.openai.apiKey;env.openai.apiKey='mock-no-network';
+  t.after(()=>{env.openai.apiKey=previousKey;});
+  t.mock.method(OpenAI.Responses.prototype,'create',async request=>{
+    assert.equal(request.text.format.name,'hotel_booking_understanding');
+    const input=JSON.parse(request.input),single=input.mensaje_actual.includes('una familiar');
+    return {output_text:JSON.stringify({intent:'correction',language:'es',proposal:null,clarification:null,clarification_field:null,updates:[
+      {field:'category_slug',value:single?'familiar':'doble',evidence:input.mensaje_actual},
+      {field:'room_quantity',value:single?1:2,evidence:input.mensaje_actual},
+    ]})};
+  });
+  const result=await send('Prefiero dos habitaciones dobles.');
+  assert.match(result.reply,/2 habitaciones.*Doble/);
+  assert.match(result.reply,/disponibilidad y el importe/);
+  assert.match(result.reply,/reserva de estas habitaciones/);
+  assert.doesNotMatch(result.reply,/S\/|Familiar|reserva confirmada|registrad/);
+  const state=contexts.get(channel+':'+externalUserId).whatsapp_mvp;
+  assert.equal(state.room_quantity,2);assert.equal(state.category_slug,'doble');
+  assert.equal(state.state,'quoted');assert.equal(state.pricing_quote,undefined);
+  assert.equal(state.guest_reservation_consent,undefined);
+  assert.match(formatGlobalHandoffSummary(state),/Cantidad de habitaciones solicitadas: 2/);
+  assert.match((await send('ok')).reply,/estas habitaciones/);
+  const accepted=await send('SÍ QUIERO');
+  assert.equal(accepted.mode,'reservation_interest_confirmed');
+  assert.equal(contexts.get(channel+':'+externalUserId).whatsapp_mvp.room_quantity,2);
+  assert.equal(contexts.get(channel+':'+externalUserId).whatsapp_mvp.booking,undefined);
+  const revised=await send('Mejor prefiero una familiar.');
+  assert.equal(revised.mode,'occupancy_quote');
+  const updated=contexts.get(channel+':'+externalUserId).whatsapp_mvp;
+  assert.equal(updated.room_quantity,1);assert.equal(updated.guest_reservation_consent,undefined);
 });

@@ -1,7 +1,7 @@
 import { acceptsReservationOffer } from "./ai.reservation-consent.js";
 // The model interprets guest language only. It cannot set prices, availability,
 // staff approvals, payment status, identifiers or customer identity.
-const fieldNames = ["adults", "children", "child_ages", "total_guests", "pets", "check_in", "check_out", "category_slug", "view", "near_window", "young_children_share_bed", "bed_preference"];
+const fieldNames = ["adults", "children", "child_ages", "total_guests", "pets", "check_in", "check_out", "category_slug", "room_quantity", "view", "near_window", "young_children_share_bed", "bed_preference"];
 const intents = ["details", "correction", "new_request", "continue", "hypothetical", "information", "unclear"];
 const categories = ["matrimonial", "matrimonial-ejecutiva", "doble", "triple", "familiar", "familiar-2"];
 const normalize = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -48,6 +48,7 @@ language indica el idioma del mensaje (es, en, pt, fr). Acompaña los cambios en
 
 DATOS
 Devuelve únicamente los campos nuevos o corregidos, con una cita literal breve del mensaje en evidence para cada campo. Nunca repitas datos del contexto como si se hubieran proporcionado ahora. Los campos no mencionados se omiten.
+Cada evidence debe ser UN fragmento CONTIGUO del mensaje, sin resumirlo ni unir palabras separadas. Si los datos están intercalados, cita la oración completa. Por ejemplo, en «mi esposa, mis dos hijos y yo», usa ese fragmento completo como evidencia de adults=2 y children=2; no inventes la cita «mi esposa y yo».
 Cuenta personas, no palabras. Mi esposa y yo / yo con mi pareja son dos adultos. Si viajan dos adultos y niños, children contiene TODOS los menores de 18 con sus edades reales, incluso de 9 a 17: el motor decide su tarifa. Nunca conviertas sus edades en adultos para cobrar.
 No deduzcas ausencia de niños o mascotas por silencio. Solo 0 si lo niega expresamente o afirma inequívocamente que no hay más viajeros en esa categoría. Mi bebé, mi peque o mi hijita indican un menor, pero no una edad concreta. Casi cinco / el bebé / uno pequeño requieren aclarar edad cumplida.
 Si solicitud_actual.pending_child_ages existe, son edades tentativas que el asesor acaba de pedir confirmar. Interpreta una afirmación equivalente (por ejemplo «eso mismo») como continue sin updates; si el huésped corrige, extrae solo las edades que dice ahora; si no es claro, pide aclaración. No confundas esta confirmación de edades con aceptación de una reserva.
@@ -57,6 +58,7 @@ Para sumar o restar viajeros usa el contexto actual solo si es inequívoco quié
 Fechas: resuelve fechas con fecha_hoy_peru (America/Lima) y la solicitud ACTUAL. Otra reserva sin fechas no hereda fechas anteriores. Distingue días, noches, entrada y salida. Si son inequívocas, devuelve fechas confirmadas en updates. Si hay dos interpretaciones razonables, ofrece una sola en proposal con entrada/salida ISO y evidencia literal; NO pongas esas fechas también en updates. Para una petición que menciona alojarse mañana y el día siguiente, propone esas dos noches con salida al tercer día. El sistema preguntará brevemente si es correcto y guardará la propuesta sin confirmarla. Nunca inventes una fecha si faltan datos para una propuesta razonable; entonces pregunta únicamente el dato pendiente en clarification. proposal=null en los demás casos.
 Una propuesta pendiente no equivale a fechas confirmadas: no la copies a updates salvo aceptación expresa del huésped. Las consultas hipotéticas o informativas nunca incluyen proposal ni updates.
 category_slug: solo matrimonial (Matrimonial Estándar), matrimonial-ejecutiva, doble, triple, familiar (Familiar 1), familiar-2. No traduzcas ni combines las familiares.
+room_quantity: cantidad de habitaciones de la categoría elegida afirmativamente (1 a 13), nunca cantidad de camas ni de huéspedes. «Prefiero dos habitaciones dobles» elige category_slug=doble y room_quantity=2. Comparar dos dobles con una familiar NO elige ninguna. Si elige una sola, informa 1; no heredes la cantidad de una opción anterior. Si pide distintas categorías juntas, pregunta cómo desea distribuirlas antes de elegir una categoría única.
 view: sea, street, interior. near_window es booleano. bed_preference: separate o matrimonial. young_children_share_bed es booleano y solo se informa si el huésped expresa compartir o necesitar cama propia; el motor valida su viabilidad.
 No incluyas datos personales, números de habitación, tarifas, descuentos, aprobaciones, pagos ni campos fuera del esquema.
 
@@ -123,6 +125,8 @@ export function validateBookingUnderstanding(raw, message, state = {}) {
     if (!fieldNames.includes(field) || Object.hasOwn(fields, field) || typeof evidence !== "string" || !normalize(evidence) || !normalize(message).includes(normalize(evidence))) return null;
     if (["adults", "children", "total_guests", "pets"].includes(field)) {
       if (!Number.isInteger(value) || value < (["adults", "total_guests"].includes(field) ? 1 : 0) || value > 30) return null;
+    } else if (field === "room_quantity") {
+      if (!Number.isInteger(value) || value < 1 || value > 13) return null;
     } else if (field === "child_ages") {
       if (!Array.isArray(value) || value.length > 30 || value.some(age => !Number.isInteger(age) || age < 0 || age > 17)) return null;
     } else if (["check_in", "check_out"].includes(field)) {
@@ -162,6 +166,7 @@ export function validateBookingUnderstanding(raw, message, state = {}) {
 
 export function applyBookingUnderstanding(previous, fields) {
   const next = { ...previous };
+  if (fields.category_slug && fields.category_slug !== previous.category_slug && fields.room_quantity == null) delete next.room_quantity;
   for (const [key, value] of Object.entries(fields)) {
     if (!["view", "near_window"].includes(key)) next[key] = Array.isArray(value) ? [...value] : value;
   }

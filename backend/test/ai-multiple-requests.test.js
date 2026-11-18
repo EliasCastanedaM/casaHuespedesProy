@@ -31,6 +31,7 @@ function database(t, { context={}, history=[] }={}) {
     if(sql.includes('FROM room_categories rc'))return {rows:categories};
     if(sql.includes('FROM public.room_category_occupancy_rates'))return {rows:[]};
     if(sql.includes('FROM public.services'))return {rows:services};
+    if(sql.includes('FROM hotel_policy_rules') || sql.includes('FROM public.hotel_policy_rules'))return {rows:[{code:'mascotas',review_status:'verified',config:{allowed_with_prior_approval:true,amount_pen:20,charge_frequency:'pet_per_night'}}]};
     throw Error('Unexpected query: '+sql.slice(0,90));
   });
   return contexts;
@@ -187,4 +188,32 @@ test('comida usa una respuesta breve sin duplicar avisos; la comparación utiliz
   assert.match(comparison,/Doble actual/);
   assert.doesNotMatch(comparison,/Familiar 1/);
   assert.deepEqual(fallbackRequests(INITIAL).map(x=>x.topic),['booking','rooms','services','location']);
+});
+
+test('comida del hotel y mascotas no añaden restaurantes aunque el plan los sugiera',async()=>{
+  const message='¿Preparan algo para almorzar? ¿Aceptan mascotas?';
+  assert.deepEqual([...new Set(fallbackRequests(message).map(r=>r.topic))],['services','policy']);
+  const topics=[];
+  const result=await answerGuestRequests({message,now:NOW},{
+    interpret:async()=>JSON.stringify({in_scope:true,requests:[
+      {topic:'services',source:'current',evidence:'¿Preparan algo para almorzar?'},
+      {topic:'tourism',source:'current',evidence:'¿Preparan algo para almorzar?'},
+      {topic:'policy',source:'current',evidence:'¿Aceptan mascotas?'},
+    ]}),
+    answer:async topic=>{topics.push(topic);return topic==='services'?'Contamos con cafetería y restaurante.':'Aceptamos mascotas con autorización previa.';},
+    booking:async()=>{throw Error('No booking requested');},
+  });
+  assert.deepEqual(topics,['services','policy']);
+  assert.doesNotMatch(result.reply,/Tintorera|Maps|cercanos/);
+  const mixed=fallbackRequests('¿Preparan algo para almorzar? ¿Qué restaurantes recomiendan cerca?');
+  assert.ok(mixed.some(r=>r.topic==='services'));
+  assert.ok(mixed.some(r=>r.topic==='tourism'),'conserva recomendaciones externas solicitadas');
+});
+
+test('sin plan del proveedor, la consulta de almuerzo conserva el servicio y no recomienda fuera',async t=>{
+  database(t);
+  const result=await generateAiReply({channel:'instagram',externalUserId:'own-lunch-pets',message:'¿Preparan algo para almorzar? ¿Aceptan mascotas?',now:NOW});
+  assert.match(result.reply,/cafetería, restaurante y snack-bar/);
+  assert.match(result.reply,/autorización previa/);
+  assert.doesNotMatch(result.reply,/Tintorera|Maps|no contamos con ese servicio|cercanos/);
 });

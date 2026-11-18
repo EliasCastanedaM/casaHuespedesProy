@@ -405,6 +405,25 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     return {reply:reservationInterestReply(state.language),responseId:null,deterministic:true,mode:"reservation_interest_confirmed"};
   }
   if (["calculate_quote", "accept_quote"].includes(progress.action)) {
+    if (Number(state.room_quantity) > 1) {
+      const category = categories.find(c => c.slug === state.category_slug);
+      const next = { ...state, state: "quoted" };
+      delete next.pricing_quote; delete next.quote_options;
+      delete next.recommended_category; delete next.guest_reservation_consent;
+      delete next.staff_confirmation; delete next.awaiting;
+      const enoughCapacity = category && Number(category.capacity) * state.room_quantity >= Number(state.total_guests);
+      if (!enoughCapacity) {
+        next.state = "collecting"; next.awaiting = "preferences";
+        delete next.reservation_offer;
+      } else next.reservation_offer = { version: 1, requires_quote: false, room_quantity: state.room_quantity, category_slug: state.category_slug };
+      await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: next });
+      const english = state.language === "en";
+      const description = `${state.room_quantity} ${english ? "rooms in the category" : "habitaciones de la categoría"} ${category?.name || state.category_slug}`;
+      const reply = !enoughCapacity
+        ? (english ? `That room selection does not cover your group. How would you like to distribute the guests? 😊` : `Esa cantidad de habitaciones no cubre la capacidad de tu grupo. ¿Cómo te gustaría distribuir a los huéspedes? 😊`)
+        : (english ? `You prefer ${description}. Our team will confirm availability and the total for that option. 😊` : `Prefieres ${description}. Nuestro equipo confirmará la disponibilidad y el importe de esa opción. 😊`) + "\n\n" + reservationOfferQuestion(state.language, true);
+      return { reply, responseId: null, deterministic: true, mode: enoughCapacity ? "reservation_offer" : "global_reservation_clarification" };
+    }
     if (onProcessing) await onProcessing(processingQuoteReply(state.language));
     const accepting = progress.action === "accept_quote";
     const effective = accepting && state.pricing_quote?.room_preferences
@@ -457,6 +476,8 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     };
   }
   if (progress.action === "create_booking") {
+    if (Number(state.room_quantity) > 1) return { reply: reservationInterestReply(state.language), responseId: null,
+      deterministic: true, mode: "human_review_required" };
     if ((Number(state.children)>0 || isTariffProposalActive()) && state.staff_confirmation?.child_policy_version!==CHILD_POLICY_VERSION) {
       const revised={...state,state:'handoff'};
       delete revised.staff_confirmation;
@@ -1068,6 +1089,19 @@ async function generateAiReplyInternal({
           max_output_tokens: 1800, store: false,
         }, { channel, externalUserId, operation: "assistant_response" }, { timeout: 10000, maxRetries: 0 });
         understanding = validateBookingUnderstanding(interpreted.output_text, message, interpretationState);
+        // A rejected citation must not erase an otherwise clear family/date
+        // statement. Retry once under the same schema and validators; only
+        // validated output can change the request, never the rejected JSON.
+        if (!understanding) {
+          const repaired = await trackedResponse(getClient(), {
+            model: env.openai.model,
+            instructions: BOOKING_UNDERSTANDING_PROMPT + "\nREVISIÓN: La extracción anterior no pasó la validación. Relee el mensaje original. Usa evidencias literales CONTIGUAS (la oración completa si hay datos intercalados), tipos y fechas ISO válidos. Conserva los datos claros y pregunta solo el dato ambiguo o faltante. No combines palabras separadas para construir citas.",
+            input: bookingUnderstandingInput(message, interpretationState, now),
+            text: { format: { type: "json_schema", name: "hotel_booking_understanding", strict: true, schema: BOOKING_UNDERSTANDING_SCHEMA } },
+            max_output_tokens: 1800, store: false,
+          }, { channel, externalUserId, operation: "assistant_response" }, { timeout: 10000, maxRetries: 0 });
+          understanding = validateBookingUnderstanding(repaired.output_text, message, interpretationState);
+        }
         if (continuingCompositeRequest && understanding?.intent === 'new_request') understanding = { ...understanding, intent: 'details' };
         if (!understanding) {
           try {
