@@ -93,7 +93,10 @@ function startsIndependentReservation(message, context = {}) {
 }
 
 export function reservationContextForMessage(message, context = {}) {
-  // «quiero reservar» es una solicitud nueva, no la aceptación de una oferta anterior.\n  const standaloneReservation = /^(?:(?:quiero|quisiera|deseo|necesito)\\s+reservar)(?:\\s+por favor)?[.! ]*$/i.test(normalize(message));\n  if(context.whatsapp_mvp?.state === "quoted" && acceptsQuote(message) && !standaloneReservation)return context;
+  // "Quiero reservar" inicia una nueva solicitud. Solo "sí quiero" puede
+  // aceptar una oferta vigente sin importar huéspedes de estancias anteriores.
+  const standaloneReservation = /^(?:(?:quiero|quisiera|deseo|necesito)\s+reservar)(?:\s+por favor)?[.! ]*$/i.test(normalize(message));
+  if (context.whatsapp_mvp?.state === "quoted" && acceptsQuote(message) && !standaloneReservation) return context;
   return isExplicitNewReservation(message) || startsIndependentReservation(message, context) ? {} : (context || {});
 }
 
@@ -263,6 +266,17 @@ function extractDateTokens(message, now = new Date(), afterDate = null) {
   return parsed.slice(0, 2).map((item) => item.value);
 }
 
+// Una fecha explícita de ingreso es un dato estructurado incluso cuando el
+// modelo pregunta si ese día es la entrada. No inferir desde fechas aisladas,
+// salidas ni hipótesis; nunca introducir fechas anteriores a hoy en Lima.
+function explicitArrivalDate(message, now = new Date()) {
+  const text = normalize(message);
+  if (/\b(?:y si|que pasaria si|supongamos|hipotetic)\b/.test(text)) return null;
+  if (!/\b(?:reservar|reserva|alojamiento|hospedaje|estadia)\b.{0,55}\b(?:para(?: el)? dia|para el|desde(?: el)?|a partir del|entrada el|ingreso el)\s+(?:\d{1,2}[/-]\d{1,2}(?:[/-]\d{4})?|\d{4}-\d{2}-\d{2})\b/.test(text)) return null;
+  const dates = extractDateTokens(message, now);
+  return dates.length === 1 && dates[0] >= limaToday(now).iso ? dates[0] : null;
+}
+
 function normalizeStoredDate(value, now = new Date(), afterDate = null) {
   const raw = String(value || "").trim();
   if (!raw || /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
@@ -338,7 +352,10 @@ function mentionsNoCategory(text, words) {
 function collect(message, previous = {}, now = new Date(), understanding = null) {
   if (understanding) {
     const next = applyBookingUnderstanding(previous, understanding.fields);
-    if (understanding.fields.check_in || understanding.fields.check_out) delete next.dates_need_confirmation;
+    const explicit = !["information", "hypothetical"].includes(understanding.intent)
+      ? explicitArrivalDate(message, now) : null;
+    if (explicit && !next.check_in && (!next.check_out || explicit < next.check_out)) next.check_in = explicit;
+    if (next.check_in && (understanding.fields.check_in || explicit) || understanding.fields.check_out) delete next.dates_need_confirmation;
     if (next.room_preferences) next.preferences = roomPreferenceLabel(next.room_preferences);
     return next;
   }
@@ -951,6 +968,18 @@ export function handleGlobalReservationTurn(input) {
     input = { ...input, context: { ...context, whatsapp_mvp: draft } };
   }
 
+  // Recupera el día de entrada si el intérprete lo marcó como ambiguo
+  // pese a una formulación inequívoca de reserva.
+  if (understood?.intent === "unclear" && !understood.proposal && !previous.check_in &&
+      !understood.fields?.check_in && (!understood.clarification_field || understood.clarification_field === "dates")) {
+    const checkIn = explicitArrivalDate(input.message, input.now);
+    if (checkIn && (!previous.check_out || checkIn < previous.check_out)) {
+      understood = { ...understood, intent: "details", fields: { ...(understood.fields || {}), check_in: checkIn },
+        clarification: null, clarification_field: null };
+      input = { ...input, understanding: understood };
+    }
+  }
+
   if (understood?.intent === "unclear") {
     let nextContext = context;
     if (Object.keys(understood.fields || {}).length || understood.clarification_field || (!previous.state && reservationIntent(normalize(input.message)))) {
@@ -971,6 +1000,24 @@ export function handleGlobalReservationTurn(input) {
     return { ...result, reply: appendRoomInvitation(result.reply, next.language) };
   }
   return result;
+}
+
+// Solo una selección numerada o un nombre elegido explícitamente identifica
+// una alternativa de la cotización; una comparación no es una selección.
+function chosenQuotedOption(message, options = []) {
+  if (!Array.isArray(options) || !options.length) return null;
+  const text = normalize(message).replace(/[¿?¡!.,]/g, " ").replace(/\s+/g, " ").trim();
+  const numbered = text.match(/^(?:opcion\s*)?([1-3])$/) ||
+    text.match(/^(?:prefiero|elijo|escojo|quiero|me quedo con)\s+(?:la\s+)?(?:opcion\s+)?([1-3])$/);
+  if (numbered) return options[Number(numbered[1]) - 1] || null;
+  const ordinal = text.match(/^(?:prefiero|elijo|escojo|quiero|me quedo con)\s+(?:la\s+)?(primera|segunda|tercera)$/);
+  if (ordinal) return options[["primera", "segunda", "tercera"].indexOf(ordinal[1])] || null;
+  const affirmative = /^(?:prefiero|elijo|escojo|me quedo con|quiero(?: reservar)?|me interesa)\b/.test(text);
+  const matches = options.filter(option => {
+    const name = normalize(option.category_name || "");
+    return name && (text === name || affirmative && text.includes(name));
+  });
+  return matches.length === 1 ? matches[0] : null;
 }
 
 function handleReservationTurn({
@@ -999,11 +1046,14 @@ function handleReservationTurn({
   if (state?.state === "quoted") {
     const updated = collect(message, state, now, understanding);
     const optionNumber=String(message).trim().match(/^(?:opci[oó]n\s*)?([1-3])[.! ]*$/i)?.[1];
-    if(optionNumber && state.quote_options?.[Number(optionNumber)-1])updated.category_slug=state.quote_options[Number(optionNumber)-1].category_slug;
+    const choice = chosenQuotedOption(message, state.quote_options);
+    if (choice) updated.category_slug = choice.category_slug;
     updated.language = language;
     const changed = changedBookingFields(state, updated);
     const cheaper = isCheaperRequest(message);
-    if (changed.length || cheaper || optionNumber) {
+    const selectedNow = Boolean(state.category_selection_pending && choice);
+    if (changed.length || cheaper || optionNumber || selectedNow) {
+      if (selectedNow) updated.category_selection_pending = false;
       delete updated.staff_confirmation;
       delete updated.reservation_offer;
       delete updated.guest_reservation_consent;
@@ -1021,13 +1071,18 @@ function handleReservationTurn({
         return { handled: true, context: { ...context, whatsapp_mvp: updated }, reply: question, mode: "global_reservation_collecting" };
       }
       return { handled: true, action: "calculate_quote", cheaper,
-        explicitCategory: changed.includes("category_slug"),
+        explicitCategory: Boolean(choice) || changed.includes("category_slug"),
         context: { ...context, whatsapp_mvp: updated }, mode: "occupancy_quote" };
     }
     if (/^(?:no(?: gracias)?|no quiero(?: reservar)?|solo (?:estoy )?consultando|not now|no thanks)[.! ]*$/.test(text)) {
       const next={...state,state:"browsing"};
       delete next.reservation_offer; delete next.guest_reservation_consent;
       return {handled:true,context:{...context,whatsapp_mvp:next},reply:"Claro 😊. Puedes seguir consultándome lo que necesites.",mode:"reservation_offer_declined"};
+    }
+    if (state.category_selection_pending && (acceptsQuote(message) ||
+        /^(?:si|si por favor|ok|okay|dale|perfecto|de acuerdo|me gusta|esa|gracias|confirmo)[.! ]*$/.test(text))) {
+      return { handled: true, context, mode: "room_category_choice",
+        reply: "¿Cuál de las categorías presentadas prefieres? Indícame su nombre o número de opción. 😊" };
     }
     if (acceptsQuote(message) && state.reservation_offer?.version===1) return {
       handled:true,action:state.reservation_offer.requires_quote ? "accept_quote" : "request_staff_review",

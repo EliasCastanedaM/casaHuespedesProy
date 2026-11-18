@@ -4,6 +4,8 @@ import OpenAI from 'openai';
 import { pool } from '../src/config/db.js';
 import { env } from '../src/config/env.js';
 import { generateAiReply } from '../src/modules/ai/ai.service.js';
+import { handleGlobalReservationTurn, reservationContextForMessage } from '../src/modules/ai/ai.reservation.js';
+import { formatOccupancyQuote } from '../src/modules/ai/ai.occupancy-pricing.js';
 import { answerGuestRequests, fallbackRequests, validateRequestPlan, previousRequestSource, formatRoomComparison } from '../src/modules/ai/ai.requests.js';
 import { formatHotelServicesReply } from '../src/modules/ai/ai.services-info.js';
 import { BOOKING_UNDERSTANDING_PROMPT } from '../src/modules/ai/ai.booking-understanding.js';
@@ -216,4 +218,78 @@ test('sin plan del proveedor, la consulta de almuerzo conserva el servicio y no 
   assert.match(result.reply,/cafetería, restaurante y snack-bar/);
   assert.match(result.reply,/autorización previa/);
   assert.doesNotMatch(result.reply,/Tintorera|Maps|no contamos con ese servicio|cercanos/);
+});
+
+
+test('regresión: fecha de ingreso explícita persiste aunque la IA la marque como ambigua', async t => {
+  const contexts = database(t);
+  const key = env.openai.apiKey; env.openai.apiKey = 'test-no-network';
+  t.after(() => { env.openai.apiKey = key; });
+  const message = 'Quisiera que me ayudes en reservar para el día 12/12/2026 para 4 personas. Dime la diferencia entre una habitación cuádruple y dos dobles, para evaluarlo. Indícame si hay servicio de comidas y también ayúdame a saber cómo llegar.';
+  t.mock.method(OpenAI.Responses.prototype, 'create', async request => {
+    if (request.instructions === REQUEST_PLAN_PROMPT) {
+      return { output_text: JSON.stringify({ in_scope: true, requests: fallbackRequests(message) }) };
+    }
+    if (request.instructions.startsWith(BOOKING_UNDERSTANDING_PROMPT)) {
+      return { output_text: JSON.stringify({ intent: 'unclear', language: 'es', proposal: null, updates: [
+        { field: 'total_guests', value: 4, evidence: '4 personas' },
+      ], clarification: '¿El 12/12/2026 sería la fecha de entrada?', clarification_field: 'dates' }) };
+    }
+    throw Error('Unexpected model call');
+  });
+  const reply = await generateAiReply({ channel: 'instagram', externalUserId: 'regression-combined-checkin', message, now: NOW });
+  assert.equal(reply.mode, 'hotel_multiple_requests');
+  assert.match(reply.reply, /fecha de salida/i);
+  const saved = contexts.get('regression-combined-checkin').whatsapp_mvp;
+  assert.equal(saved.check_in, '2026-12-12');
+  assert.equal(saved.check_out, undefined);
+  assert.equal(saved.total_guests, 4);
+  assert.equal(saved.category_slug, undefined);
+  assert.equal(saved.guest_reservation_consent, undefined);
+});
+
+test('cotización con alternativas exige elegir una categoría antes de aceptar', () => {
+  const state = { state: 'quoted', language: 'es', check_in: '2026-12-10', check_out: '2026-12-12',
+    adults: 2, children: 2, child_ages: [3,7], total_guests: 4, pets: 0, category_slug: 'doble',
+    category_selection_pending: true, quote_options: [
+      { category_slug: 'doble', category_name: 'Doble - 2 Camas' },
+      { category_slug: 'triple', category_name: 'Triple - 3 Camas' },
+      { category_slug: 'familiar', category_name: 'Familiar 1' },
+    ], pricing_quote: { category_slug: 'doble', total_amount: 320 } };
+  const categories = [
+    { slug: 'doble', name: 'Doble - 2 Camas', capacity: 2 },
+    { slug: 'triple', name: 'Triple - 3 Camas', capacity: 3 },
+    { slug: 'familiar', name: 'Familiar 1', capacity: 5 },
+  ];
+  const input = { context: { whatsapp_mvp: state }, channel: 'facebook', now: NOW, categories };
+  const premature = handleGlobalReservationTurn({ ...input, message: 'SÍ QUIERO' });
+  assert.equal(premature.mode, 'room_category_choice');
+  assert.equal(premature.action, undefined);
+  assert.equal(premature.context.whatsapp_mvp.category_selection_pending, true);
+  const named = handleGlobalReservationTurn({ ...input, message: 'Prefiero Familiar 1' });
+  assert.equal(named.action, 'calculate_quote');
+  assert.equal(named.explicitCategory, true);
+  assert.equal(named.context.whatsapp_mvp.category_slug, 'familiar');
+  assert.equal(named.context.whatsapp_mvp.category_selection_pending, false);
+  const numbered = handleGlobalReservationTurn({ ...input, message: 'Opción 1' });
+  assert.equal(numbered.action, 'calculate_quote');
+  assert.equal(numbered.explicitCategory, true);
+  assert.equal(numbered.context.whatsapp_mvp.category_slug, 'doble');
+  assert.equal(numbered.context.whatsapp_mvp.category_selection_pending, false);
+  const comparing = handleGlobalReservationTurn({ ...input, message: '¿Qué diferencias hay entre Doble - 2 Camas y Familiar 1?' });
+  assert.notEqual(comparing.action, 'request_staff_review');
+  const formatted = formatOccupancyQuote(
+    { category_name: 'Doble - 2 Camas', total_nightly_amount: 160, total_amount: 320, nights: 2 },
+    'es', { requireChoice: true, alternatives: [
+      { category_name: 'Familiar 1', total_nightly_amount: 210, total_amount: 420, nights: 2 },
+    ] });
+  assert.match(formatted, /Cuál de estas categorías prefieres/);
+  assert.doesNotMatch(formatted, /responde «sí quiero»/i);
+});
+
+test('una nueva reserva no reutiliza datos ni aceptación de la anterior', () => {
+  const state = { whatsapp_mvp: { state: 'quoted', check_in: '2026-12-10', adults: 2, children: 0,
+    pets: 0, category_slug: 'doble', guest_reservation_consent: { confirmed: true } } };
+  assert.deepEqual(reservationContextForMessage('Quiero reservar', state), {});
+  assert.deepEqual(reservationContextForMessage('SÍ QUIERO', state), state);
 });

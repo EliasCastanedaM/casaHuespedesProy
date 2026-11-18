@@ -407,7 +407,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
   if (["calculate_quote", "accept_quote"].includes(progress.action)) {
     if (Number(state.room_quantity) > 1) {
       const category = categories.find(c => c.slug === state.category_slug);
-      const next = { ...state, state: "quoted" };
+      const next = { ...state, state: "quoted", category_selection_pending: false };
       delete next.pricing_quote; delete next.quote_options;
       delete next.recommended_category; delete next.guest_reservation_consent;
       delete next.staff_confirmation; delete next.awaiting;
@@ -442,7 +442,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     });
     const quote = selection.quote;
     if (!quote) {
-      const next={...state,state:"quoted",reservation_offer:{version:1,requires_quote:false}};
+      const next={...state,state:"quoted",reservation_offer:{version:1,requires_quote:false},category_selection_pending:false};
       delete next.pricing_quote;delete next.guest_reservation_consent;
       await saveBookingContext(channel,externalUserId,{...progress.context,whatsapp_mvp:next});
       const reason=selection.reason==="no_availability" && inventoryVerified
@@ -458,20 +458,25 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     ]);
     const unchanged = previous && !quote.preference_fallback && signature(previous) === signature(quote);
     const accepted = progress.action === "accept_quote" && state.reservation_offer?.version===1 && unchanged;
+    // Multiple displayed prices are alternatives, not an implicit selection.
+    const needsCategoryChoice = !accepted && !progress.explicitCategory &&
+      !quote.preference_fallback && !quote.window_verification_required &&
+      selection.reason !== "no_lower_price" && (selection.alternatives || []).length > 0;
     const next = {
       ...(accepted ? effective : state), state: accepted ? "handoff" : "quoted", pricing_quote: quote,
       ...(accepted && previous?.preference_fallback ? { requested_room_preferences: state.room_preferences } : {}),
       category_slug: quote.category_slug,
       quote_options: [quote,...(selection.alternatives || [])],
+      category_selection_pending: needsCategoryChoice,
       recommended_category: { slug: quote.category_slug, name: quote.category_name, capacity: quote.capacity },
-      reservation_offer: accepted ? undefined : {version:1,requires_quote:true,category_slug:quote.category_slug},
+      reservation_offer: accepted || needsCategoryChoice ? undefined : {version:1,requires_quote:true,category_slug:quote.category_slug},
       guest_reservation_consent: accepted ? {confirmed:true,source:"explicit_offer_reply"} : undefined,
     };
     delete next.awaiting;
     await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: next });
     return {
       reply: accepted ? reservationInterestReply(state.language)
-        : formatOccupancyQuote(quote,state.language,{noLowerPrice:selection.reason==="no_lower_price",alternatives:selection.alternatives}),
+        : formatOccupancyQuote(quote,state.language,{noLowerPrice:selection.reason==="no_lower_price",alternatives:selection.alternatives,requireChoice:needsCategoryChoice}),
       responseId:null,deterministic:true,mode:accepted ? "reservation_interest_confirmed" : "occupancy_quote",
     };
   }
