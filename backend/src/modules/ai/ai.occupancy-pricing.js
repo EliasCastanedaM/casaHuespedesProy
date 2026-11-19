@@ -185,14 +185,14 @@ export function selectOccupancyQuote(categories, state, { cheaper = false, expli
   return { quote, alternatives: explicitCategory ? [] : quotes.slice(1,3), reason: null };
 }
 
-export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = false, alternatives = [], requireChoice = false } = {}) {
+export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = false, alternatives = [], requireChoice = false, includeRoomInvitation = true } = {}) {
   const labels = {
     es: { night: 'por noche', total: 'Total', nights: 'noche(s)', noLower: 'No hay una opción compatible más económica.' },
     en: { night: 'per night', total: 'Total', nights: 'night(s)', noLower: 'There is no lower-priced suitable option.' },
     pt: { night: 'por noite', total: 'Total', nights: 'noite(s)', noLower: 'Não há opção compatível mais econômica.' },
     fr: { night: 'par nuit', total: 'Total', nights: 'nuit(s)', noLower: "Il n’y a pas d’option adaptée moins chère." },
   }[language];
-  if (!labels) return formatOccupancyQuote(quote, 'es', { noLowerPrice, alternatives, requireChoice });
+  if (!labels) return formatOccupancyQuote(quote, 'es', { noLowerPrice, alternatives, requireChoice, includeRoomInvitation });
   const view = (quote.actual_view ? roomPreferenceLabel({view:quote.actual_view},language) : "") +
     (quote.sea_second_row ? ({es:" desde segunda fila",en:" from the second row",pt:" da segunda fileira",fr:" depuis la deuxième rangée"})[language] || "" : "");
   const requested=roomPreferenceLabel(quote.requested_room_preferences,language);
@@ -216,6 +216,7 @@ export function formatOccupancyQuote(quote, language = "es", { noLowerPrice = fa
     pt: "Qual categoria prefere? Indique o nome ou número da opção.",
     fr: "Quelle catégorie préférez-vous ? Indiquez son nom ou son numéro.",
   })[language];
-  return appendRoomInvitation(prefix + rows.join('\n'), language) + '\n\n' +
+  const summary=prefix + rows.join('\n');
+  return (includeRoomInvitation ? appendRoomInvitation(summary, language) : summary) + '\n\n' +
     (requireChoice ? choiceQuestion : reservationOfferQuestion(language));
 }

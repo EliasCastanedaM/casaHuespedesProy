@@ -58,12 +58,11 @@ export function globalAssistantWelcome() {
   ].join("\n");
 }
 
-// Segundo mensaje fijo de presentación, enviado por el backend después
-// del menú de bienvenida, también cuando un huésped vuelve a saludar.
+// Información compartida solo cuando el huésped solicita fotos o redes.
 // Son enlaces oficiales publicados en el sitio web del hospedaje.
 export function globalAssistantSocialLinks() {
   return [
-    "📸 ¿Te gustaría conocer mejor nuestras habitaciones e instalaciones?",
+    "📸 Fotos y redes de Casa Huéspedes Pimentel",
     "",
     "Puedes ver fotografías, videos y más información sobre Casa Huéspedes Pimentel en nuestra página web y redes sociales:",
     "",

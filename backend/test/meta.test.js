@@ -141,6 +141,7 @@ function createInstagramDeliveryDb(initialOutgoing = null) {
         return { rows: [] };
       }
       outgoing.delivery_part_count = params[1];
+      outgoing.delivery_parts ??= params[2] ? JSON.parse(params[2]) : undefined;
       return { rows: [clone()] };
     }
 
@@ -895,6 +896,36 @@ test("si falla una parte de Instagram conserva el outgoing completo y no repite 
   }
 });
 
+test('Instagram conserva el texto aceptado y reintenta solo el botón después de un reinicio',async()=>{
+  const url='https://www.casahuespedespimentel.com/habitaciones';
+  const reply='Te recomiendo esta habitación. 😊\n'+url;
+  const db=createInstagramDeliveryDb(),calls=[];
+  const incoming=message({channel:'instagram',externalUserId:'ig-links-recovery',messageId:'ig-links-in'});
+  let failButton=true,aiCalls=0;
+  const sendReply=async (_message,part)=>{
+    assert.deepEqual(db.current().delivery_parts,['Te recomiendo esta habitación. 😊',url],'El plan se guarda antes del primer envío');
+    calls.push(part);
+    if(part===url&&failButton)throw new Error('falló botón');
+    return {message_id:part===url?'ig-button':'ig-body'};
+  };
+  await assert.rejects(processMetaMessage(incoming,successfulDependencies({
+    db,claim:async()=>({id:901}),generateReply:async()=>{aiCalls++;return {reply};},
+    createOutgoing:(...args)=>db.createOutgoing(...args),sendReply,recordOutgoing:undefined,
+  })),/falló botón/);
+  assert.equal(db.current().delivery_next_part_index,1);
+  assert.equal(calls.filter(x=>x!==url).length,1);
+  failButton=false;
+  const recovered=await processMetaMessage(incoming,successfulDependencies({
+    db,claim:async()=>({id:901}),findOutgoing:async()=>db.current(),
+    generateReply:async()=>{throw new Error('No repetir el modelo');},sendReply,recordOutgoing:undefined,
+  }));
+  assert.equal(recovered.status,'replied_recovered');
+  assert.equal(aiCalls,1);
+  assert.equal(calls.filter(x=>x!==url).length,1);
+  assert.deepEqual(db.current().delivery_part_message_ids,['ig-body','ig-button']);
+  assert.equal(db.current().status,'sent');
+});
+
 test("Instagram reanuda durablemente desde la parte fallida después de un reinicio", async () => {
   const reply = `${"A".repeat(1000)}${"B".repeat(1000)}${"C".repeat(998)}😊`;
   const db = createInstagramDeliveryDb();
@@ -1468,7 +1499,7 @@ test("una consulta de tarifas en primer mensaje pasa por el filtro antes del cat
 });
 
 
-test("WhatsApp MVP saluda con menú y enlaces en mensajes separados", async () => {
+test("WhatsApp saluda con menú sin promoción ni enlaces no solicitados", async () => {
   const replies = [];
   await processMetaMessage(
     message({ channel: "whatsapp", externalUserId: "nuevo-whatsapp", text: "Hola" }),
@@ -1483,12 +1514,12 @@ test("WhatsApp MVP saluda con menú y enlaces en mensajes separados", async () =
       },
     })
   );
-  assert.equal(replies.length, 2);
+  assert.equal(replies.length, 1);
   assert.match(replies[0], /bienvenido|bienvenida/i);
   assert.match(replies[0], /idioma que prefieras/i);
   assert.match(replies[0], /información del hospedaje|hacer una reserva/i);
   assert.doesNotMatch(replies[0], /S\/\s*\d+|tarifas vigentes/i);
-  assert.equal(replies[1], globalAssistantSocialLinks());
+  assert.doesNotMatch(replies[0], /casahuespedespimentel.com/);
 });
 
 test("WhatsApp MVP deriva a humano la solicitud de reserva sin crearla", async () => {
@@ -1599,10 +1630,7 @@ for (const channel of ["whatsapp", "instagram", "facebook"]) {
       assert.equal(result.status, "replied");
     }
     assert.deepEqual(sent, [
-      expected, globalAssistantSocialLinks(),
-      expected, globalAssistantSocialLinks(),
-      expected, globalAssistantSocialLinks(),
-      expected, globalAssistantSocialLinks(),
+      expected, expected, expected, expected,
     ]);
   });
 }

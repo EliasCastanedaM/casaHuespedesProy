@@ -5,6 +5,7 @@ import { collectRoomPreferences, roomPreferenceLabel } from "../rooms/roomPrefer
 import { randomUUID } from "node:crypto";
 import { appendRoomInvitation } from "./ai.room-invitation.js";
 import { applyBookingUnderstanding } from "./ai.booking-understanding.js";
+import { chosenQuotedOption } from "./ai.quote-choice.js";
 import { hasOccupancyRates, acceptsQuote, isCheaperRequest } from "./ai.occupancy-pricing.js";
 
 // Flujo global progresivo de atención y reservas. La disponibilidad y el importe requieren aprobación humana;
@@ -350,6 +351,8 @@ function mentionsNoCategory(text, words) {
 }
 
 function collect(message, previous = {}, now = new Date(), understanding = null) {
+  // Quotes saved before the invitation flag was introduced already showed it.
+  if (previous.room_invitation_sent == null && previous.pricing_quote) previous={...previous,room_invitation_sent:true};
   if (understanding) {
     const next = applyBookingUnderstanding(previous, understanding.fields);
     const explicit = !["information", "hypothetical"].includes(understanding.intent)
@@ -851,7 +854,7 @@ export function prepareGlobalReservation({ context = {}, category, totalAmount, 
   };
   return {
     context: { ...context, state: "whatsapp_mvp", whatsapp_mvp: next },
-    reply: appendRoomInvitation(postApprovalReply(language, categoryName, amount), language),
+    reply: postApprovalReply(language, categoryName, amount),
   };
 }
 
@@ -863,10 +866,10 @@ export function handleGlobalReservationTurn(input) {
   if (prior?.awaiting === "ages" && prior.children > 0) {
     const pending = prior.pending_child_ages;
     const answer = normalize(input.message).replace(/[¿?¡!.,]/g,"").trim();
-    const yes = /^(?:si|si correcto|si asi es|correcto|exacto|asi es|confirmo)$/.test(answer) ||
+    const yes = /^(?:si|si te confirmo|si confirmo|si correcto|si asi es|correcto|exacto|asi es|confirmo)$/.test(answer) ||
       (understood?.intent === "continue" && !understood.clarification && !Object.keys(understood.fields || {}).length);
     const no = /^(?:no|no es correcto|incorrecto)$/.test(answer);
-    const parsed = childAgeAnswer(input.message);
+    const parsed = childAgeAnswer(input.message, prior.children);
     if (pending && (yes || no || parsed)) {
       const draft = {...prior};
       delete draft.pending_child_ages;
@@ -997,24 +1000,6 @@ export function handleGlobalReservationTurn(input) {
   // Keep collecting questions short and conversational. Room links belong in
   // the actual offer/quote, not after every date, age or pet clarification.
   return handleReservationTurn(input);
-}
-
-// Solo una selección numerada o un nombre elegido explícitamente identifica
-// una alternativa de la cotización; una comparación no es una selección.
-function chosenQuotedOption(message, options = []) {
-  if (!Array.isArray(options) || !options.length) return null;
-  const text = normalize(message).replace(/[¿?¡!.,]/g, " ").replace(/\s+/g, " ").trim();
-  const numbered = text.match(/^(?:opcion\s*)?([1-3])$/) ||
-    text.match(/^(?:prefiero|elijo|escojo|quiero|me quedo con)\s+(?:la\s+)?(?:opcion\s+)?([1-3])$/);
-  if (numbered) return options[Number(numbered[1]) - 1] || null;
-  const ordinal = text.match(/^(?:prefiero|elijo|escojo|quiero|me quedo con)\s+(?:la\s+)?(primera|segunda|tercera)$/);
-  if (ordinal) return options[["primera", "segunda", "tercera"].indexOf(ordinal[1])] || null;
-  const affirmative = /^(?:prefiero|elijo|escojo|me quedo con|quiero(?: reservar)?|me interesa)\b/.test(text);
-  const matches = options.filter(option => {
-    const name = normalize(option.category_name || "");
-    return name && (text === name || affirmative && text.includes(name));
-  });
-  return matches.length === 1 ? matches[0] : null;
 }
 
 function handleReservationTurn({
@@ -1338,7 +1323,9 @@ function handleReservationTurn({
     pt:multiple ? "Para seu grupo, recomendamos vários quartos." : categoryName ? "Recomendamos "+categoryName+"." : "Nossa equipe pode orientar sobre um quarto adequado para seu grupo.",
     fr:multiple ? "Pour votre groupe, nous recommandons plusieurs chambres." : categoryName ? "Nous recommandons "+categoryName+"." : "Notre équipe peut vous aider à choisir une chambre adaptée à votre groupe.",
   })[language];
+  const recommendationReply=data.room_invitation_sent ? recommendation : appendRoomInvitation(recommendation,language);
+  data.room_invitation_sent=true;
   return {handled:true,context:nextContext,
-    reply:appendRoomInvitation(recommendation,language)+"\n\n"+reservationOfferQuestion(language,multiple),
+    reply:recommendationReply+"\n\n"+reservationOfferQuestion(language,multiple),
     mode:"reservation_offer"};
 }

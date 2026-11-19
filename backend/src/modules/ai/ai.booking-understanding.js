@@ -1,4 +1,5 @@
 import { acceptsReservationOffer } from "./ai.reservation-consent.js";
+import { chosenQuotedOption } from "./ai.quote-choice.js";
 // The model interprets guest language only. It cannot set prices, availability,
 // staff approvals, payment status, identifiers or customer identity.
 const fieldNames = ["adults", "children", "child_ages", "total_guests", "pets", "check_in", "check_out", "category_slug", "room_quantity", "view", "near_window", "young_children_share_bed", "bed_preference"];
@@ -49,6 +50,7 @@ language indica el idioma del mensaje (es, en, pt, fr). Acompaña los cambios en
 DATOS
 Devuelve únicamente los campos nuevos o corregidos, con una cita literal breve del mensaje en evidence para cada campo. Nunca repitas datos del contexto como si se hubieran proporcionado ahora. Los campos no mencionados se omiten.
 Cada evidence debe ser UN fragmento CONTIGUO del mensaje, sin resumirlo ni unir palabras separadas. Si los datos están intercalados, cita la oración completa. Por ejemplo, en «mi esposa, mis dos hijos y yo», usa ese fragmento completo como evidencia de adults=2 y children=2; no inventes la cita «mi esposa y yo».
+solicitud_actual.quote_options contiene únicamente las opciones que ya se mostraron, en ese orden. Una elección inequívoca puede seleccionar su category_slug; una comparación o una pregunta no selecciona habitación ni acepta reservar.
 Cuenta personas, no palabras. Mi esposa y yo / yo con mi pareja son dos adultos. Si viajan dos adultos y niños, children contiene TODOS los menores de 18 con sus edades reales, incluso de 9 a 17: el motor decide su tarifa. Nunca conviertas sus edades en adultos para cobrar.
 No deduzcas ausencia de niños o mascotas por silencio. Solo 0 si lo niega expresamente o afirma inequívocamente que no hay más viajeros en esa categoría. Mi bebé, mi peque o mi hijita indican un menor, pero no una edad concreta. Casi cinco / el bebé / uno pequeño requieren aclarar edad cumplida.
 Si solicitud_actual.pending_child_ages existe, son edades tentativas que el asesor acaba de pedir confirmar. Interpreta una afirmación equivalente (por ejemplo «eso mismo») como continue sin updates; si el huésped corrige, extrae solo las edades que dice ahora; si no es claro, pide aclaración. No confundas esta confirmación de edades con aceptación de una reserva.
@@ -80,6 +82,7 @@ export function shouldUnderstandBooking(message, state, bookingIntent = false) {
   const text = normalize(message);
   if (!text || text.length > 2400) return false;
   if(state?.state==="quoted" && acceptsReservationOffer(message))return false;
+  if(state?.state==="quoted" && chosenQuotedOption(message, state.quote_options))return false;
   if (state && !["collecting", "quoted", "handoff", "browsing"].includes(state.state)) return false;
   if (!state && !bookingIntent && !isStayPlanningInquiry(message)) return false;
   // These answers already have an unambiguous meaning in the current step.
@@ -98,6 +101,9 @@ export function isStayPlanningInquiry(message) {
 export function bookingUnderstandingInput(message, state = {}, now = new Date()) {
   const selected = { state: state.state, awaiting: state.awaiting, language: state.language, dates_need_confirmation: state.dates_need_confirmation };
   if (Array.isArray(state.pending_child_ages)) selected.pending_child_ages = [...state.pending_child_ages];
+  if (Array.isArray(state.quote_options)) selected.quote_options = state.quote_options.slice(0,3).map((option,index)=>({
+    option:index+1, category_slug:option.category_slug, category_name:option.category_name,
+  }));
   if (state.pending_proposal) selected.pending_proposal = {
     check_in: state.pending_proposal.check_in, check_out: state.pending_proposal.check_out,
   };

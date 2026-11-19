@@ -52,6 +52,14 @@ test("el modelo recibe solo datos necesarios de esta solicitud, sin PII ni histo
   assert.equal(JSON.parse(bookingUnderstandingInput("Quiero reservar del 25 al 28 de noviembre", fresh.whatsapp_mvp)).solicitud_actual.adults, undefined);
 });
 
+test('la interpretación recibe las opciones mostradas con su orden, sin precios ni inventario',()=>{
+  const input=JSON.parse(bookingUnderstandingInput('prefiero la que mencionaste primero',{
+    state:'quoted',quote_options:[{category_slug:'doble',category_name:'Doble - 2 Camas',total_amount:999,room_id:123}],
+  }));
+  assert.deepEqual(input.solicitud_actual.quote_options,[{option:1,category_slug:'doble',category_name:'Doble - 2 Camas'}]);
+  assert.doesNotMatch(JSON.stringify(input),/total_amount|room_id|999/);
+});
+
 test("conserva barreras de nombres, pagos y respuestas inequívocas", () => {
   assert.equal(shouldUnderstandBooking("Ana Pérez", { state: "awaiting_customer_name" }), false);
   assert.equal(shouldUnderstandBooking("Ya pagué", { state: "booked" }), false);

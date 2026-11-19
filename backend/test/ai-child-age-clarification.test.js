@@ -8,6 +8,28 @@ const context=()=>({state:'whatsapp_mvp',whatsapp_mvp:{
   check_in:'2026-11-18',check_out:'2026-11-19',adults:5,children:2,total_guests:7
 }});
 const turn=(message,ctx=context())=>handleGlobalReservationTurn({message,context:ctx,now:new Date('2026-11-17T12:00:00Z')});
+for(const message of ['Los 6 tienen 12 años','Los seis tienen doce años','Los 6 niños tienen 12 años','Todos tienen 12 años'])test('edad compartida sin confundir cantidad con edad: '+message,()=>{
+  const ctx=context();Object.assign(ctx.whatsapp_mvp,{adults:4,children:6,total_guests:10});
+  const result=turn(message,ctx);
+  assert.deepEqual(result.context.whatsapp_mvp.child_ages,Array(6).fill(12));
+  assert.equal(result.context.whatsapp_mvp.adults,4);
+  assert.equal(result.context.whatsapp_mvp.children,6);
+  assert.match(result.reply,/mascotas/);
+});
+test('una cantidad de niños contradictoria no se completa por suposición',()=>{
+  assert.equal(childAgeAnswer('Los 5 tienen 12 años',6),null);
+  assert.equal(childAgeAnswer('Todos tienen 12 años'),null);
+});
+for(const answer of ['Sí','Sí te confirmo'])test('identificadores contradictorios piden confirmar las edades y aceptan '+answer,()=>{
+  const first=turn('El primero 2 años y el tercero 4');
+  assert.equal(first.context.whatsapp_mvp.child_ages,undefined);
+  assert.deepEqual(first.context.whatsapp_mvp.pending_child_ages,[2,4]);
+  assert.match(first.reply,/confirmas/);
+  const confirmed=turn(answer,first.context);
+  assert.deepEqual(confirmed.context.whatsapp_mvp.child_ages,[2,4]);
+  assert.match(confirmed.reply,/mascotas/);
+  assert.equal(confirmed.context.whatsapp_mvp.guest_reservation_consent,undefined);
+});
 for(const [message,ages] of [
   ['tienen 9 años uno y 15 el otro',[9,15]],
   ['uno tiene 4 y el otro 15',[4,15]],

@@ -6,7 +6,7 @@ import { generateAiReply } from '../src/modules/ai/ai.service.js';
 import { processMetaMessage } from '../src/modules/meta/meta.service.js';
 import { isConversationPresenceCheck, isHumanAssistanceRequest, PRESENCE_REPLY } from '../src/modules/ai/ai.human-assistance.js';
 import { classifyServiceInquiry } from '../src/modules/ai/ai.services-info.js';
-const examples=['hay alguien?','¿Hay alguien ahí?','Hola, hay alguien','¿Alguien me atiende?','¿Siguen ahí?','me pueden atender?'];
+const examples=['hay alguien?','¿Hay alguien ahí?','Hola, hay alguien','¿Alguien me atiende?','¿Siguen ahí?','me pueden atender?','Hey'];
 for(const message of examples)test('presencia no equivale a servicio: '+message,()=>{
   assert.equal(isConversationPresenceCheck(message),true);
   assert.equal(classifyServiceInquiry(message).kind,'none');

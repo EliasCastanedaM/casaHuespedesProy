@@ -21,73 +21,24 @@ test("el mensaje informativo usa los cuatro enlaces oficiales sin precios ni pro
   assert.doesNotMatch(text, /descuent|S\/\s*\d|reserva ya/i);
 });
 
-test("reintento de webhook: envía solo el segundo mensaje faltante sin duplicar bienvenida", async () => {
-  const outbox = [];
-  let nextId = 101;
-  let attemptSocial = 0;
-  let completed = 0;
-  const attempts = [];
-
-  const deps = {
-    claim: async () => ({ id: 42 }),
-    release: async () => {},
-    complete: async () => { completed += 1; },
-    getHandoff: async () => false,
-    setHandoff: async () => {},
-    loadHistory: async () => [],
-    findOutgoing: async (parentId) =>
-      outbox.find(row => row.in_reply_to_message_id === parentId) || null,
-    createOutgoing: async (_message, text, author, parentId) => {
-      const prev = outbox.find(row => row.in_reply_to_message_id === parentId && row.author === author);
-      if (prev) return prev;
-      const saved = {
-        id: nextId++, author, in_reply_to_message_id: parentId,
-        content: text, status: "pending", meta_message_id: null,
-      };
-      outbox.push(saved);
-      return saved;
-    },
-    sendReply: async (_message, text) => {
-      attempts.push(text);
-      if (text.startsWith("📸") && attemptSocial++ === 0) {
-        throw Object.assign(new Error("Fallo transitorio de Meta"), { nonRetryable: true });
-      }
-      return { messages: [{ id: "wamid.test." + attempts.length }] };
-    },
-    recordOutgoing: async (_message, _text, _author, result, err, _db, outgoing) => {
-      outgoing.status = err ? "failed" : "sent";
-      if (result) outgoing.meta_message_id = result.messages[0].id;
-      return outgoing;
-    },
-    sleep: async () => {},
-    isFirstMetaIncomingMessage: async () => true,
-    generateReply: async () => { throw new Error("Los saludos no invocan OpenAI"); },
+test("reintento de bienvenida no duplica el menú ni añade promoción", async () => {
+  const outbox=[],sent=[];
+  const deps={claim:async()=>({id:42}),complete:async()=>{},release:async()=>{},
+    getHandoff:async()=>false,loadHistory:async()=>[],
+    findOutgoing:async parent=>outbox.find(row=>row.in_reply_to_message_id===parent)||null,
+    createOutgoing:async(_m,content,author,parent)=>{const row={id:101,content,author,in_reply_to_message_id:parent,status:'pending'};outbox.push(row);return row;},
+    sendReply:async(_m,content)=>{sent.push(content);return {messages:[{id:'accepted'}]};},
+    recordOutgoing:async(_m,_r,_a,result,_e,_db,outgoing)=>{outgoing.status='sent';outgoing.meta_message_id=result.messages[0].id;return outgoing;},
+    sleep:async()=>{},generateReply:async()=>{throw Error('No model needed for greeting');},
   };
-
-  await assert.rejects(
-    processMetaMessage(message("Hola"), deps),
-    /Fallo transitorio de Meta/
-  );
-  assert.equal(outbox.length, 2);
-  assert.equal(outbox[0].content, globalAssistantWelcome());
-  assert.equal(outbox[1].content, globalAssistantSocialLinks());
-  assert.equal(outbox[1].in_reply_to_message_id, outbox[0].id);
-  assert.equal(outbox[0].status, "sent");
-  assert.equal(outbox[1].status, "failed");
-
-  const recovered = await processMetaMessage(message("Hola"), deps);
-  assert.equal(recovered.status, "outgoing_already_accepted_by_meta");
-  assert.equal(completed, 1);
-  assert.equal(outbox[1].status, "sent");
-  assert.equal(attempts.filter(t => t === globalAssistantWelcome()).length, 1);
-
-  await processMetaMessage(message("Hola"), deps);
-  assert.equal(outbox.length, 2);
-  assert.equal(attempts.filter(t => t === globalAssistantWelcome()).length, 1);
-  assert.equal(attempts.filter(t => t === globalAssistantSocialLinks()).length, 2);
+  await processMetaMessage(message('Hola'),deps);
+  await processMetaMessage(message('Hola'),deps);
+  assert.equal(outbox.length,1);
+  assert.deepEqual(sent,[globalAssistantWelcome()]);
+  assert.doesNotMatch(sent.join(''),/casahuespedespimentel.com|conocer mejor/);
 });
 
-test("el menú y las redes se repiten al saludar otro día, pero no en una pregunta normal", async () => {
+test("el menú puede repetirse al saludar sin enviar enlaces no solicitados", async () => {
   for (const channel of ["whatsapp", "facebook", "instagram"]) {
     const sent = [];
     const inputs = ["Hola", "¿Qué habitaciones tienen?", "Buenas noches"];
@@ -114,12 +65,10 @@ test("el menú y las redes se repiten al saludar otro día, pero no en una pregu
       });
     }
 
-    assert.equal(sent.length, 5);
+    assert.equal(sent.length, 3);
     assert.equal(sent[0], globalAssistantWelcome());
-    assert.equal(sent[1], globalAssistantSocialLinks());
-    assert.equal(sent[2], "Tenemos varias categorías de habitaciones. 😊");
-    assert.equal(sent[3], globalAssistantWelcome());
-    assert.equal(sent[4], globalAssistantSocialLinks());
+    assert.equal(sent[1], "Tenemos varias categorías de habitaciones. 😊");
+    assert.equal(sent[2], globalAssistantWelcome());
   }
 });
 

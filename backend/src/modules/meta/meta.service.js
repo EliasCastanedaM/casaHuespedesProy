@@ -7,7 +7,7 @@ import {
   generateAiReply,
   updateGlobalReservationContextForHandoff,
 } from "../ai/ai.service.js";
-import { globalAssistantWelcome, globalAssistantSocialLinks } from "../ai/ai.guest-rules.js";
+import { globalAssistantWelcome } from "../ai/ai.guest-rules.js";
 import { isOpeningGreetingOnly } from "../ai/ai.pricing.js";
 import {
   HUMAN_ASSISTANCE_OFFER, HUMAN_ASSISTANCE_REPLY, SPECIFIC_INQUIRY_REPLY,
@@ -17,6 +17,7 @@ import {
   sendInstagramMessageParts,
   sendInstagramMetaReply,
   splitInstagramMessage,
+  instagramDeliveryParts,
 } from "./instagram.transport.js";
 
 const META_CHANNELS = new Set(["whatsapp", "instagram", "facebook"]);
@@ -836,7 +837,7 @@ async function createOutgoingMessage(
        RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
                  direction, author, message_type, content, status, error_detail,
                  processing_attempts, delivery_part_count, delivery_next_part_index,
-                 delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
+                 delivery_part_message_ids, delivery_parts, meta_timestamp, created_at, updated_at;`,
       [message.channel, message.externalUserId, author, reply, inReplyToMessageId, reply === SERVICES_IMAGE_URL ? 'image' : 'text']
     );
     return saved.rows[0];
@@ -1114,7 +1115,7 @@ async function recordOutgoingMessage(
      RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
                direction, author, message_type, content, status, error_detail,
                processing_attempts, delivery_part_count, delivery_next_part_index,
-               delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
+               delivery_part_message_ids, delivery_parts, meta_timestamp, created_at, updated_at;`,
     [
       savedOutgoing.id,
       metaMessageId,
@@ -1128,7 +1129,7 @@ async function recordOutgoingMessage(
 async function sendWithRetry(message, reply, send, sleep) {
   const delays = [0, 500, 2_000];
   const parts = message.channel === "instagram"
-    ? splitInstagramMessage(reply)
+    ? instagramDeliveryParts(reply)
     : [reply];
   let lastResult;
 
@@ -1166,7 +1167,7 @@ async function loadOutgoingForDelivery(id, db) {
     `SELECT id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
             direction, author, message_type, content, status, error_detail,
             processing_attempts, delivery_part_count, delivery_next_part_index,
-            delivery_part_message_ids, meta_timestamp, created_at, updated_at
+            delivery_part_message_ids, delivery_parts, meta_timestamp, created_at, updated_at
      FROM meta_messages
      WHERE id = $1
      LIMIT 1;`,
@@ -1175,10 +1176,11 @@ async function loadOutgoingForDelivery(id, db) {
   return result.rows[0] || null;
 }
 
-async function initializeInstagramDelivery(outgoingId, partCount, db) {
+async function initializeInstagramDelivery(outgoingId, parts, db) {
   const result = await db.query(
     `UPDATE meta_messages
      SET delivery_part_count = COALESCE(delivery_part_count, $2),
+         delivery_parts = COALESCE(delivery_parts, $3::jsonb),
          updated_at = CASE
            WHEN delivery_part_count IS NULL THEN CURRENT_TIMESTAMP
            ELSE updated_at
@@ -1190,8 +1192,8 @@ async function initializeInstagramDelivery(outgoingId, partCount, db) {
      RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
                direction, author, message_type, content, status, error_detail,
                processing_attempts, delivery_part_count, delivery_next_part_index,
-               delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
-    [outgoingId, partCount]
+               delivery_part_message_ids, delivery_parts, meta_timestamp, created_at, updated_at;`,
+    [outgoingId, parts.length, JSON.stringify(parts)]
   );
 
   if (!result.rows[0]) {
@@ -1224,7 +1226,7 @@ async function recordInstagramPartAccepted(
      RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
                direction, author, message_type, content, status, error_detail,
                processing_attempts, delivery_part_count, delivery_next_part_index,
-               delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
+               delivery_part_message_ids, delivery_parts, meta_timestamp, created_at, updated_at;`,
     [outgoingId, partCount, partIndex, partIndex + 1, messageId]
   );
 
@@ -1250,7 +1252,7 @@ async function finalizeInstagramDelivery(outgoingId, db) {
      RETURNING id, channel, external_user_id, meta_message_id, in_reply_to_message_id,
                direction, author, message_type, content, status, error_detail,
                processing_attempts, delivery_part_count, delivery_next_part_index,
-               delivery_part_message_ids, meta_timestamp, created_at, updated_at;`,
+               delivery_part_message_ids, delivery_parts, meta_timestamp, created_at, updated_at;`,
     [outgoingId]
   );
 
@@ -1310,8 +1312,12 @@ async function deliverInstagramPersistedOutgoing(
     if (!current) throw new Error("No se encontró el outgoing de Instagram.");
     if (["sent", "delivered", "read"].includes(current.status)) return current;
 
-    const parts = splitInstagramMessage(current.content);
-    current = await initializeInstagramDelivery(current.id, parts.length, lock.client);
+    // Existing in-flight messages keep their legacy split; new messages store
+    // an immutable plan that includes separate native button parts.
+    const parts = Array.isArray(current.delivery_parts) ? current.delivery_parts
+      : current.delivery_part_count != null ? splitInstagramMessage(current.content)
+      : instagramDeliveryParts(current.content);
+    current = await initializeInstagramDelivery(current.id, parts, lock.client);
 
     const nextPartIndex = Number(current.delivery_next_part_index);
     if (
@@ -1424,38 +1430,6 @@ async function deliverServicesImageFollowUp(message,primaryOutgoing,dependencies
   if(saved?.meta_message_id || ["sent","delivered","read"].includes(saved?.status))return saved;
   const outgoing=saved || await dependencies.createOutgoing(message,SERVICES_IMAGE_URL,"assistant",linkedId);
   return deliverPersistedOutgoing(message,outgoing,dependencies,"assistant");
-}
-
-async function deliverWelcomeSocialFollowUp(message, primaryOutgoing, dependencies) {
-  const linkedId = primaryOutgoing?.id ?? null;
-  const saved = linkedId
-    ? await dependencies.findOutgoing(linkedId)
-    : null;
-
-  // Meta ya lo aceptó: jamás repetir por un reintento del webhook.
-  if (saved?.meta_message_id || ["sent", "delivered", "read"].includes(saved?.status)) {
-    return saved;
-  }
-
-  const outgoing = saved || await dependencies.createOutgoing(
-    message,
-    globalAssistantSocialLinks(),
-    "assistant",
-    linkedId
-  );
-  return deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
-}
-
-// En recuperación no volvemos a consultar OpenAI. Se comprueba si la
-// bienvenida estaba en el primer outgoing o en el aviso de procesamiento
-// inicial. Un saludo simple siempre cuenta como nueva presentación.
-async function hasWelcomeForRecoveredTurn(message, incomingId, outgoing, dependencies) {
-  if (isOpeningGreetingOnly(message.text)) return true;
-  const welcome = globalAssistantWelcome();
-  if (outgoing?.content?.includes(welcome)) return true;
-  if (!incomingId) return false;
-  const processing = await dependencies.findProcessing(incomingId);
-  return Boolean(processing?.content?.includes(welcome));
 }
 
 export async function sendManualMetaMessage(
@@ -1640,13 +1614,7 @@ export async function processMetaMessage(message, overrides = {}) {
           );
         }
 
-        // Si se interrumpió el proceso entre los dos mensajes, enviar solo
-        // el segundo que falte, sin repetir el primero en WhatsApp.
-        if (await hasWelcomeForRecoveredTurn(
-          message, incomingId, existingOutgoing, dependencies
-        )) {
-          await deliverWelcomeSocialFollowUp(message, existingOutgoing, dependencies);
-        }
+        // Recover a requested services image without repeating accepted text.
         if(shouldSendServicesImage(message,existingOutgoing)) {
           await deliverServicesImageFollowUp(message,existingOutgoing,dependencies);
         }
@@ -1719,7 +1687,7 @@ export async function processMetaMessage(message, overrides = {}) {
     );
     const greetingOnly = isOpeningGreetingOnly(message.text);
     // A concrete first question gets its answer directly. The approved menu
-    // and social follow-up belong to greetings, not every new guest turn.
+    // belongs to greetings; photos and social links require a request.
     const firstMessage = greetingOnly;
 
     const welcome = firstMessage ? globalAssistantWelcome(message.text) : "";
@@ -1727,7 +1695,6 @@ export async function processMetaMessage(message, overrides = {}) {
     let reply;
     let handoffActivatedByThisTurn = false;
     let welcomeSentWithProcessing = false;
-    let sendSocialFollowUp = greetingOnly;
     if (greetingOnly) {
       reply = welcome;
     } else {
@@ -1762,10 +1729,6 @@ export async function processMetaMessage(message, overrides = {}) {
         reply = result.reply;
       } else {
         reply = firstMessage && !welcomeSentWithProcessing ? welcome + "\n\n" + result.reply : result.reply;
-        // Si el saludo global fue enviado con el aviso de procesamiento,
-        // el mensaje social va después de la respuesta final.
-        sendSocialFollowUp = firstMessage &&
-          Boolean(welcome || welcomeSentWithProcessing);
       }
     }
 
@@ -1786,9 +1749,6 @@ export async function processMetaMessage(message, overrides = {}) {
     await deliverPersistedOutgoing(message, outgoing, dependencies, "assistant");
     if(shouldSendServicesImage(message,outgoing)) {
       await deliverServicesImageFollowUp(message,outgoing,dependencies);
-    }
-    if (sendSocialFollowUp) {
-      await deliverWelcomeSocialFollowUp(message, outgoing, dependencies);
     }
     await dependencies.complete(message);
 

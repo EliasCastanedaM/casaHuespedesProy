@@ -55,7 +55,6 @@ import { isReservationIntent } from "./ai.booking-flow.js";
 
 import { getReservationRoomCategoriesService, withAvailableReservationRooms } from "../rooms/roomOccupancyRates.service.js";
 import { selectOccupancyQuote, formatOccupancyQuote, processingQuoteReply, isPriceVariationInquiry, priceVariationReply } from "./ai.occupancy-pricing.js";
-import { appendRoomInvitation } from "./ai.room-invitation.js";
 import { BOOKING_UNDERSTANDING_PROMPT, BOOKING_UNDERSTANDING_SCHEMA, bookingUnderstandingInput, shouldUnderstandBooking, validateBookingUnderstanding, isStayPlanningInquiry } from "./ai.booking-understanding.js";
 
 import { hasRoomPreferences, normalizeRoomPreferences, roomPreferenceMatch, roomPreferenceLabel } from "../rooms/roomPreferences.js";
@@ -468,6 +467,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
       category_slug: quote.category_slug,
       quote_options: [quote,...(selection.alternatives || [])],
       category_selection_pending: needsCategoryChoice,
+      room_invitation_sent: state.room_invitation_sent || !accepted,
       recommended_category: { slug: quote.category_slug, name: quote.category_name, capacity: quote.capacity },
       reservation_offer: accepted || needsCategoryChoice ? undefined : {version:1,requires_quote:true,category_slug:quote.category_slug},
       guest_reservation_consent: accepted ? {confirmed:true,source:"explicit_offer_reply"} : undefined,
@@ -476,7 +476,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
     await saveBookingContext(channel, externalUserId, { ...progress.context, whatsapp_mvp: next });
     return {
       reply: accepted ? reservationInterestReply(state.language)
-        : formatOccupancyQuote(quote,state.language,{noLowerPrice:selection.reason==="no_lower_price",alternatives:selection.alternatives,requireChoice:needsCategoryChoice}),
+        : formatOccupancyQuote(quote,state.language,{noLowerPrice:selection.reason==="no_lower_price",alternatives:selection.alternatives,requireChoice:needsCategoryChoice,includeRoomInvitation:!state.room_invitation_sent}),
       responseId:null,deterministic:true,mode:accepted ? "reservation_interest_confirmed" : "occupancy_quote",
     };
   }
@@ -541,7 +541,7 @@ async function executeGlobalReservationAction({ progress, channel, externalUserI
       const nextContext = { state: "whatsapp_mvp", whatsapp_mvp: nextState };
       await saveBookingContext(channel, externalUserId, nextContext);
       return {
-        reply: appendRoomInvitation(globalBookingCreatedReply(nextState, result, progress.paymentMethod), nextState.language),
+        reply: globalBookingCreatedReply(nextState, result, progress.paymentMethod),
         responseId: null,
         deterministic: true,
         mode: "global_reservation_booking_created",

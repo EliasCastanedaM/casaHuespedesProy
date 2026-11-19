@@ -4,6 +4,50 @@ import { env } from "../../config/env.js";
 
 export const INSTAGRAM_MESSAGE_LIMIT = 1000;
 
+function messageUrls(text) {
+  return [...new Set((String(text).match(/https?:\/\/[^\s<>]+/g) || []).map(value=>{
+    let url=value.replace(/[.,;!?]+$/, '');
+    for (const [open,close] of [['(',')'],['[',']']]) {
+      while (url.endsWith(close) && url.split(close).length>url.split(open).length) url=url.slice(0,-1);
+    }
+    return url.replace(/[.,;!?]+$/, '');
+  }))]
+    .filter(value=>{try { const u=new URL(value); return ['http:','https:'].includes(u.protocol) && !u.username && !u.password; } catch {return false;} });
+}
+
+function linkTitle(value) {
+  const url=new URL(value), host=url.hostname.replace(/^www\./,'');
+  if (host==='casahuespedespimentel.com') return url.pathname.startsWith('/habitaciones') ? 'Ver habitaciones' : url.pathname.startsWith('/servicios') ? 'Ver servicios' : 'Abrir página web';
+  if (host==='maps.app.goo.gl' || host==='maps.google.com' || host==='google.com' && url.pathname.startsWith('/maps')) return 'Abrir Google Maps';
+  if (host==='instagram.com') return 'Ver Instagram';
+  if (host==='facebook.com') return 'Ver Facebook';
+  if (host==='tiktok.com') return 'Ver TikTok';
+  return 'Abrir enlace';
+}
+
+// URL-only delivery parts become actual web_url buttons, not text previews.
+export function instagramLinkMessage(part) {
+  const urls=messageUrls(part);
+  if (!urls.length || urls.length>3 || String(part).replace(/https?:\/\/[^\s<>]+/g,'').trim()) return null;
+  return {attachment:{type:'template',payload:{template_type:'button',
+    text:urls.length===1 ? 'Abre este enlace para ver la información. 😊' : 'Elige el enlace que deseas abrir. 😊',
+    buttons:urls.map(url=>({type:'web_url',url,title:linkTitle(url)}))}}};
+}
+
+// Each text/button part is persisted and acknowledged independently, so a
+// failed button never resends text already accepted by Instagram.
+export function instagramDeliveryParts(text) {
+  if (text===SERVICES_IMAGE_URL) return [text];
+  const urls=messageUrls(text);
+  if (!urls.length) return splitInstagramMessage(text);
+  let body=String(text).replace(/\[([^\]]+)\]\((https?:\/\/[^\s<>]+)\)/g,'$1: $2');
+  for (const url of [...urls].sort((a,b)=>b.length-a.length)) body=body.split(url).join('');
+  body=body.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  const parts=body ? splitInstagramMessage(body) : [];
+  for(let i=0;i<urls.length;i+=3) parts.push(urls.slice(i,i+3).join('\n'));
+  return parts;
+}
+
 function cleanText(value) {
   return typeof value === "string" || typeof value === "number"
     ? String(value).trim()
@@ -72,7 +116,7 @@ async function instagramPost(externalUserId, reply) {
         recipient: { id: externalUserId },
         message: reply === SERVICES_IMAGE_URL
           ? {attachment:{type:"image",payload:{url:SERVICES_IMAGE_URL}}}
-          : {text:reply},
+          : instagramLinkMessage(reply) || {text:reply},
       }),
       signal: AbortSignal.timeout(15_000),
     }

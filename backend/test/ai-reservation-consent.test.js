@@ -36,6 +36,32 @@ function mockDatabase(t, options = {}) {
 }
 
 const now=new Date('2026-11-17T12:00:00Z');
+test('la primera elige una opción mostrada sin repetir la invitación ni interpretar consentimiento',async t=>{
+  const contexts=mockDatabase(t),externalUserId='room-invitation-once';
+  const send=message=>generateAiReply({channel:'instagram',externalUserId,message,now});
+  const first=await send('Quiero reservar del 20/11/2026 al 22/11/2026 para 2 adultos sin niños y sin mascotas');
+  assert.match(first.reply,/https:\/\/www\.casahuespedespimentel\.com\/habitaciones/);
+  const firstOption=contexts.get('instagram:'+externalUserId).whatsapp_mvp.quote_options[0];
+  const previousKey=env.openai.apiKey;env.openai.apiKey='mock-no-network';
+  t.after(()=>{env.openai.apiKey=previousKey;});
+  t.mock.method(OpenAI.Responses.prototype,'create',async()=>{throw new Error('Una opción inequívoca ya mostrada no requiere interpretación');});
+  const chosen=await send('La primera');
+  assert.equal(chosen.mode,'occupancy_quote');
+  assert.doesNotMatch(chosen.reply,/https:|Quieres saber cómo son nuestras habitaciones/i);
+  const state=contexts.get('instagram:'+externalUserId).whatsapp_mvp;
+  assert.equal(state.category_slug,firstOption.category_slug);
+  assert.equal(state.guest_reservation_consent,undefined);
+  assert.match(chosen.reply,/Quieres reservar esta habitación/);
+  delete state.room_invitation_sent; // A conversation quoted before this release.
+  contexts.set('instagram:'+externalUserId,{state:'whatsapp_mvp',whatsapp_mvp:state});
+  const legacy=await send('Opción 1');
+  assert.doesNotMatch(legacy.reply,/https:/);
+  const repeat=await send('Sí');
+  assert.doesNotMatch(repeat.reply,/https:/);
+  env.openai.apiKey='';
+  const fresh=await send('Quiero reservar del 15/12/2026 al 17/12/2026 para 3 adultos sin niños y sin mascotas');
+  assert.match(fresh.reply,/https:\/\/www\.casahuespedespimentel\.com\/habitaciones/);
+});
 test('aceptación exige intención explícita y tolera mayúsculas, tildes y puntuación',()=>{
   for(const value of ['si quiero','SÍ QUIERO','Sí, quiero reservar.','  SI   QUIERO  ','Sí deseo reservar','Sí, reservemos','yes, I want to book'])assert.equal(acceptsReservationOffer(value),true,value);
   for(const value of ['sí','ok','perfecto','dale','me gusta','gracias','no quiero reservar','si quiero saber los precios','¿puedo reservar?'])assert.equal(acceptsReservationOffer(value),false,value);
