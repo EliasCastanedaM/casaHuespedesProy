@@ -37,3 +37,21 @@ no valida la entrega de mensajes, imágenes o enlaces a través de cada red soci
 La definición de esquema está en `backend/database/private-ai-qa.sql` y se aplica
 como migración del proyecto. Nunca se debe añadir este esquema al Data API ni
 conceder permisos a clientes web. No hay endpoint público que active QA.
+
+## Autorización excepcional de una sola tanda
+
+El límite habitual sigue siendo cuatro tandas iniciadas por veinticuatro horas.
+Solo después de una autorización explícita del usuario, un administrador SQL
+puede añadir una autorización para el UUID exacto de una tanda en
+`advisor_qa.run_authorizations`. La migración adicional está en
+`backend/database/private-ai-qa-oneoff-authorization.sql`.
+
+La autorización vence en un máximo de una hora y solo permite superar el límite
+diario con hasta veinticuatro llamadas y un umbral de cuarenta y cinco mil tokens.
+El contrato habitual sigue limitando la tanda a veinte mensajes y seis escenarios.
+El servidor consume la autorización atómicamente al iniciar esa tanda. Se conserva
+`consumed_at` como evidencia; reiniciar o reencolar la tanda no reutiliza el permiso.
+Las demás tandas siguen sujetas al límite diario y todas las reglas de aislamiento.
+No existe una opción HTTP, herramienta del asesor ni aprobación por texto del
+huésped que pueda crear estas autorizaciones. Nunca se modifican fechas de tandas
+anteriores para liberar cupo.

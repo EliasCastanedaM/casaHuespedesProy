@@ -7,6 +7,30 @@ const CHANNELS = new Set(['web','instagram','whatsapp','facebook']);
 let busy = false;
 let warned = false;
 
+// A SQL administrator may authorize one bounded run after explicit approval.
+// Claim and consumption are one statement; retries cannot reuse the grant.
+export const QA_CLAIM_SQL = `
+  WITH candidate AS (
+    SELECT id FROM advisor_qa.runs r
+    WHERE status='queued' AND expected_commit=$1 AND expires_at>now()
+      AND (
+        (SELECT count(*) FROM advisor_qa.runs WHERE started_at>now()-interval '24 hours') < 4
+        OR (r.max_calls<=24 AND r.max_tokens<=45000 AND EXISTS (
+          SELECT 1 FROM advisor_qa.run_authorizations a
+          WHERE a.run_id=r.id AND a.consumed_at IS NULL AND a.expires_at>now()
+        ))
+      )
+    ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED
+  ), claimed AS (
+    UPDATE advisor_qa.runs r SET status='running',started_at=now()
+    FROM candidate c WHERE r.id=c.id RETURNING r.*
+  ), consume_authorization AS (
+    UPDATE advisor_qa.run_authorizations a SET consumed_at=now()
+    FROM claimed r WHERE a.run_id=r.id AND a.consumed_at IS NULL AND a.expires_at>now()
+    RETURNING a.run_id
+  )
+  SELECT * FROM claimed;`;
+
 export function validateQaPayload(payload) {
   if (!Array.isArray(payload?.scenarios) || !payload.scenarios.length || payload.scenarios.length > 6) throw Error('QA_INVALID_SCENARIOS');
   let turns = 0;
@@ -77,15 +101,7 @@ export async function processNextQaRun(db = pool, { commit = process.env.RENDER_
   busy = true;
   let run;
   try {
-    const claimed = await db.query(`
-      WITH candidate AS (
-        SELECT id FROM advisor_qa.runs
-        WHERE status='queued' AND expected_commit=$1 AND expires_at>now()
-          AND (SELECT count(*) FROM advisor_qa.runs WHERE started_at>now()-interval '24 hours') < 4
-        ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED
-      )
-      UPDATE advisor_qa.runs r SET status='running',started_at=now()
-      FROM candidate c WHERE r.id=c.id RETURNING r.*;`, [commit]);
+    const claimed = await db.query(QA_CLAIM_SQL, [commit]);
     run = claimed.rows[0];
     if (!run) return false;
     const result = await execute(run, {
