@@ -65,7 +65,7 @@ Antes de dar por demostrada la calidad semántica, revisar los errores del model
 
 La revisión local dispone del código y sus dependencias, pero no de una clave de OpenAI para llamadas reales. Por tanto se verifican el contrato y la integración, y se entrega el evaluador real; no se declara un porcentaje de precisión semántica ni que se haya realizado fine-tuning.
 
-La interpretación agrega una llamada al modelo en mensajes de reserva que lo requieren y un tiempo máximo de diez segundos sin reintentos automáticos. Su uso se contabiliza con la telemetría existente como `assistant_response`, compatible con la restricción actual de la base de datos.
+La interpretación agrega una llamada al modelo en mensajes de reserva que lo requieren, con diez segundos por intento y sin reintentos automáticos del SDK. Si una extracción no pasa la validación, la orquestación puede solicitar una reparación adicional bajo el mismo contrato; ambas invocaciones se contabilizan. Su uso se contabiliza con la telemetría existente como `assistant_response`, compatible con la restricción actual de la base de datos.
 
 ## Referencias consultadas
 

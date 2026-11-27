@@ -36,15 +36,15 @@ test("no aplica reglas pendientes incluso si contienen una posible frecuencia o 
   assert.match(formatPolicyInformationReply("¿Mi hija de 9 años paga como adulto?", { rules }), /No tengo confirmado/);
 });
 
-test("las reglas de mascotas se actualizan y los detalles infantiles se mantienen internos", () => {
+test("un cargo de mascotas incompatible con el calculador no se publica", () => {
   const rules = {
     mascotas: { review_status: "verified", config: {amount_pen: 25, vat_included: true, charge_frequency: "pet_per_night"} },
     ninos_9_mas: { review_status: "verified", config: {adult_rate_confirmed: true} },
     ninos_5_8: { review_status: "verified", config: {percent_of_min_max_differential: 50} },
   };
   const pets = formatPolicyInformationReply("¿Cuánto cobras por mascotas?", { rules });
-  assert.match(pets, /S\/ 25/);
-  assert.match(pets, /por mascota y por noche/);
+  assert.match(pets, /No tengo confirmado/);
+  assert.doesNotMatch(pets, /S\//);
   assert.match(formatPolicyInformationReply("¿Mi hijo de 9 años paga adulto?", { rules }), /tarifa de adulto/);
   assert.match(formatPolicyInformationReply("¿Qué condiciones aplican a los niños de 6 años?", { rules }), /No tengo confirmado/);
 });

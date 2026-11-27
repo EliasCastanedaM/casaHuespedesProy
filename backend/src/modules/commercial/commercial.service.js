@@ -1,5 +1,6 @@
 import { pool } from "../../config/db.js";
 import { getTariffProposalOverview } from './tariffProposal.service.js';
+import { matchesOperationalCharge } from './operationalPolicy.js';
 
 // Solo campos comerciales explícitamente admitidos. Las reglas de
 // automatización/seguridad quedan inmutables desde esta interfaz.
@@ -130,7 +131,7 @@ export async function getCommercialOverview(db = pool) {
     categories: categories.rows,
     tariff_proposal: getTariffProposalOverview(),
     editable_rule_fields: EDITABLE_RULES,
-    note: "La aprobación de temporadas y tarifas NO modifica aún los precios de reservas, Booking ni Airbnb.",
+    note: "La aprobación de temporadas y tarifas NO modifica aún los precios de reservas, Booking ni Airbnb. Los cargos que no coinciden con el cálculo vigente requieren integrar el motor antes de aprobarse.",
   };
 }
 
@@ -213,6 +214,9 @@ export async function decideRule(id,decision,user,db=pool) {
       // Una regla todavía ambigua no queda marcada como confirmada.
       if (item.rule_code==="mascotas" && !newConfig.charge_frequency)
         throw badRequest("Confirma primero si la mascota se cobra por noche o por estadía.");
+      if (!matchesOperationalCharge(item.rule_code, newConfig)) {
+        throw badRequest('El importe o la forma de cobro propuestos no coinciden con los que utiliza la reserva. Solicita su actualización conjunta antes de aprobar.', 409);
+      }
       if (item.rule_code==="ninos_9_mas" && newConfig.adult_rate_confirmed!==true)
         throw badRequest("Confirma la tarifa desde 9 años antes de aprobar esta regla.");
       await client.query(

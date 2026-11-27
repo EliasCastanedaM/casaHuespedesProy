@@ -222,23 +222,29 @@ const MONTH_NUMBERS = Object.freeze({
 });
 const MONTH_PATTERN = Object.keys(MONTH_NUMBERS).sort((a, b) => b.length - a.length).join("|");
 
-function extractDateTokens(message, now = new Date(), afterDate = null) {
+function parseDateTokens(message, now = new Date(), afterDate = null) {
   // Recibe tanto dd/mm/aaaa como "20 de noviembre de 2026" (ES/EN/PT/FR).
   // Los rangos "del 20 al 22 de noviembre" comparten mes y año.
   const input = normalize(message);
   const parsed = [];
   const occupied = [];
+  let invalid = false;
   const rangePattern = new RegExp(
     "\\b(?:del?\\s+|desde\\s+el?\\s+)?(\\d{1,2})\\s+(?:al?|hasta(?:\\s+el)?|to|au|ate)\\s+(\\d{1,2})\\s+(?:de\\s+|of\\s+|du\\s+|d['’]\\s*)?(" +
     MONTH_PATTERN + ")(?:\\s+(?:de\\s+)?(\\d{4}))?\\b", "g"
   );
   for (const match of input.matchAll(rangePattern)) {
+    // A rejected range stays one rejected range. Never parse its departure
+    // again as a standalone arrival after discarding an invalid first date.
+    occupied.push([match.index, match.index + match[0].length]);
     const month = MONTH_NUMBERS[match[3]];
     const year = match[4] || "";
     const first = parseDateToken(match[1] + "/" + month + (year ? "/" + year : ""), now);
     const second = parseDateToken(match[2] + "/" + month + (year ? "/" + year : ""), now);
-    if (!first?.value || !second?.value || second.value <= first.value) continue;
-    occupied.push([match.index, match.index + match[0].length]);
+    if (!first?.value || !second?.value || second.value <= first.value) {
+      invalid = true;
+      continue;
+    }
     parsed.push({ ...first, index: match.index });
     parsed.push({ ...second, index: match.index + 1 });
   }
@@ -256,6 +262,7 @@ function extractDateTokens(message, now = new Date(), afterDate = null) {
       if (occupied.some(([from, to]) => match.index >= from && match.index < to)) continue;
       const date = convert(match);
       if (date?.value) parsed.push({ ...date, index: match.index });
+      else invalid = true;
     }
   }
   parsed.sort((a, b) => a.index - b.index);
@@ -264,7 +271,24 @@ function extractDateTokens(message, now = new Date(), afterDate = null) {
   } else if (parsed.length === 1 && afterDate && parsed[0].value <= afterDate && !parsed[0].explicitYear) {
     parsed[0].value = addIsoYear(parsed[0].value) || parsed[0].value;
   }
-  return parsed.slice(0, 2).map((item) => item.value);
+  if (parsed.length >= 2 && parsed[1].value <= parsed[0].value) invalid = true;
+  return { dates: invalid ? [] : parsed.slice(0, 2).map((item) => item.value), invalid };
+}
+
+function extractDateTokens(message, now = new Date(), afterDate = null) {
+  return parseDateTokens(message, now, afterDate).dates;
+}
+
+function dateClarification(context, draft, language, reason) {
+  const next = { ...draft, language, state: 'collecting', awaiting: 'dates', dates_need_confirmation: true };
+  for (const key of ['pending_proposal', 'pricing_quote', 'quote_options', 'staff_confirmation', 'reservation_offer', 'guest_reservation_consent']) delete next[key];
+  const messages = {
+    es: reason === 'past' ? 'La fecha de ingreso ya pasó. ¿Qué fechas de entrada y salida deseas? 😊' : 'No puedo confirmar ese rango de fechas. ¿Me indicas las fechas completas de entrada y salida, incluido el año? 😊',
+    en: reason === 'past' ? 'The check-in date has already passed. What check-in and check-out dates would you like? 😊' : 'Please confirm the complete check-in and check-out dates, including the year. 😊',
+    pt: 'Confirme as datas completas de entrada e saída, incluindo o ano. 😊',
+    fr: 'Veuillez confirmer les dates complètes d’arrivée et de départ, avec l’année. 😊',
+  };
+  return { handled: true, context: { ...context, whatsapp_mvp: next }, mode: 'global_reservation_collecting', reply: messages[language] || messages.es };
 }
 
 // Una fecha explícita de ingreso es un dato estructurado incluso cuando el
@@ -914,6 +938,16 @@ export function handleGlobalReservationTurn(input) {
         : "¿Quieres cambiar la solicitud actual o solo consultar otra opción?") };
   }
 
+  // Validate the literal range even when a model proposes plausible dates.
+  // Informational/hypothetical messages have already returned without mutation.
+  if ((previous.state || reservationIntent(normalize(input.message)) || understood?.fields?.check_in || understood?.fields?.check_out) &&
+      parseDateTokens(input.message, input.now, previous.check_in).invalid) {
+    const fields = { ...(understood?.fields || {}) };
+    delete fields.check_in; delete fields.check_out;
+    const draft = collect(input.message, previous, input.now, { intent: 'details', fields });
+    return dateClarification(context, draft, language, 'invalid');
+  }
+
   const pending = previous.pending_proposal;
   const answer = normalize(input.message).replace(/[.!¡¿?,]/g, "").trim();
   const acceptsProposal = /^(?:si|si por favor|si correcto|correcto|exacto|asi es|yes|yes please|yes thats right|that's right|correct|ok|vale|confirmo|confirmed|confirm)$/.test(answer);
@@ -999,7 +1033,19 @@ export function handleGlobalReservationTurn(input) {
   }
   // Keep collecting questions short and conversational. Room links belong in
   // the actual offer/quote, not after every date, age or pet clarification.
-  return handleReservationTurn(input);
+  const result = handleReservationTurn(input);
+  const draft = result.context?.whatsapp_mvp;
+  // Existing recorded bookings remain queryable. New offers and actions must
+  // never proceed with a past arrival or an invalid/overlong stay.
+  if (result.handled && draft && !draft.booking?.id && !/^(?:booking_created|booked)/.test(draft.state || '')) {
+    const today = limaToday(input.now).iso;
+    const nights = (Date.parse(draft.check_out) - Date.parse(draft.check_in)) / 86400000;
+    if (draft.check_in && draft.check_in < today) return dateClarification(result.context, draft, language, 'past');
+    if (draft.check_in && draft.check_out && (!Number.isInteger(nights) || nights < 1 || nights > 60)) {
+      return dateClarification(result.context, draft, language, 'invalid');
+    }
+  }
+  return result;
 }
 
 function handleReservationTurn({
