@@ -1,4 +1,4 @@
-name: Backend Dependency Security Audit
+name: Dependency Security Audit
 
 on:
   push:
@@ -20,9 +20,13 @@ jobs:
   npm-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
     defaults:
       run:
-        working-directory: backend
+        working-directory: ${{ matrix.component }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,7 +35,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: ${{ matrix.component }}/package-lock.json
       - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit
       - name: Audit all production and development dependencies
@@ -70,7 +74,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-npm-audit
-          path: backend/dependency-audit.json
+          name: ${{ matrix.component }}-npm-audit
+          path: ${{ matrix.component }}/dependency-audit.json
           retention-days: 7
           if-no-files-found: ignore

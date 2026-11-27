@@ -1,147 +1,112 @@
 # Backend Casa Huéspedes Pimentel
 
-API de reservas y asesor GPT para Casa Huéspedes Pimentel. Conserva el flujo
-actual del sitio, añade una consulta única de disponibilidad y deja preparados
-WhatsApp, Facebook Messenger e Instagram mediante webhooks de Meta.
+API de reservas, panel administrativo y asesor IA compartido por WhatsApp,
+Instagram, Facebook y la integración interna de chat. Esta guía describe el
+código actual; los informes fechados documentan revisiones históricas.
 
-## Qué incluye
+## Desarrollo y verificación
 
-- Reservas, habitaciones, clientes, pagos reportados, galería y consultas.
-- Panel administrativo protegido con JWT.
-- Disponibilidad por rango completo de fechas, capacidad y bloqueos.
-- Bloqueo de concurrencia para evitar dos reservas simultáneas de una habitación.
-- Asesor GPT con herramientas que consultan PostgreSQL; no inventa cupos ni precios.
-- Memoria de conversación mediante la Responses API de OpenAI.
-- Webhook con validación de firma e idempotencia para canales de Meta.
-- CORS por lista permitida, cabeceras de seguridad y límites de solicitudes.
-- Migración SQL aditiva: no borra reservas ni habitaciones existentes.
+Usar Node 22 (la versión probada en CI). Instalar con el lockfile:
 
-## Estructura
-
-```text
-database/
-  migrations/        Cambios idempotentes para Supabase
-  schema.sql          Esquema inicial para una base nueva
-src/
-  config/             Entorno, PostgreSQL y servicios externos
-  middlewares/        Autenticación, seguridad, límites y errores
-  modules/            Auth, habitaciones, reservas, disponibilidad, IA y Meta
-  services/           Correos
-test/                 Pruebas automáticas
-```
-
-## Requisitos
-
-- Node.js 20 o superior.
-- PostgreSQL/Supabase.
-- Una clave de OpenAI para activar el asesor.
-- Credenciales de Meta únicamente para los canales que se conectarán.
-
-## Desarrollo local
-
-```bash
-npm ci
+```sh
+npm ci --ignore-scripts
 cp .env.example .env
 npm run dev
 ```
 
-Completa por lo menos `DATABASE_URL` y un `JWT_SECRET` de 32 caracteres o más.
-Nunca subas `.env` a Git ni pegues secretos en el frontend.
+`npm run dev` usa `node --watch`, sin nodemon. Configurar las variables privadas
+solo en el entorno correspondiente. No copiar credenciales al frontend ni a Git.
+`npm start` inicia el servidor y sus tareas periódicas: no usarlo para pruebas
+locales contra una base de producción.
 
-## Base de datos
-
-Para tu Supabase existente ejecuta solamente:
-
-```text
-database/migrations/2026-09-01-production-ready.sql
-```
-
-La migración añade columnas, índices, bloqueos y tablas del asesor. Es
-idempotente y no contiene `DROP`, `TRUNCATE` ni `DELETE` de datos de negocio.
-Haz una copia de seguridad antes de cualquier cambio de producción.
-
-Para una base vacía: ejecuta primero `database/schema.sql`, luego la migración.
-`database/seed.sql` contiene datos demostrativos y no debe ejecutarse sobre tu
-base real salvo que conscientemente quieras agregarlos.
-
-## Endpoints principales
-
-| Método | Ruta | Acceso | Uso |
-|---|---|---|---|
-| GET | `/api/health` | Público | Estado del proceso y configuración de IA |
-| POST | `/api/auth/login` | Público limitado | Inicio de sesión administrativo |
-| GET | `/api/bookings` | JWT admin/staff | Estado de todas las reservas |
-| POST | `/api/bookings/check-availability` | Público | Compatibilidad con la web actual |
-| POST | `/api/availability/search` | Público | Búsqueda estructurada de habitaciones |
-| POST | `/api/bookings` | Público limitado | Solicitud de reserva |
-| POST | `/api/ai/chat` | `x-ai-token` si se configura | Asesor para web o proveedor externo |
-| GET/POST | `/api/meta/webhook` | Verificación/firma Meta | WhatsApp, Facebook e Instagram |
-
-Las operaciones de escritura de habitaciones, galería, bloqueos, consultas y
-configuración requieren `Authorization: Bearer <JWT>`.
-
-## Probar disponibilidad
-
-```bash
-curl -X POST http://localhost:4000/api/availability/search \
-  -H "Content-Type: application/json" \
-  -d '{"check_in":"2026-09-10","check_out":"2026-09-13","guests_count":2}'
-```
-
-La salida se considera el día de liberación: una reserva que sale el 13 no
-bloquea otra que ingresa el 13.
-
-## Probar el asesor
-
-```bash
-curl -X POST http://localhost:4000/api/ai/chat \
-  -H "Content-Type: application/json" \
-  -H "x-ai-token: TU_AI_INTERNAL_TOKEN" \
-  -d '{"channel":"web","session_id":"prueba-1","message":"¿Hay habitación del 10 al 13 de septiembre para 2 personas?"}'
-```
-
-El asesor solo consulta. No crea reservas, no confirma pagos y no pide tarjetas.
-La reserva continúa por el formulario actual de la web.
-
-## Canales
-
-- **WhatsApp:** WhatsApp Cloud API envía eventos a `/api/meta/webhook`.
-- **Facebook:** Messenger Platform usa el mismo webhook.
-- **Instagram:** Instagram Messaging usa el mismo webhook y el token de página.
-- **TikTok:** este paquete acepta `channel: "tiktok"` en `/api/ai/chat`, pero la
-  conexión directa requiere acceso a una API o proveedor aprobado por TikTok.
-  El proveedor debe reenviar el texto a ese endpoint y publicar la respuesta.
-
-Para Meta configura `META_VERIFY_TOKEN`, `META_APP_SECRET`,
-`META_GRAPH_API_VERSION` y las variables del canal. Consulta `META_SETUP.md` para
-los pasos completos. En producción el backend
-rechaza webhooks sin firma válida.
-
-## Pruebas
-
-```bash
+```sh
 npm test
-npm audit --omit=dev
+npm audit
 ```
 
-Consulta [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) para publicar en Render y
-conectar los canales sin interrumpir la web actual.
+`npm test` ejecuta `test/*.test.js`; excluye fixtures y helpers del conteo.
+Las suites basadas en datos de noviembre fijan su reloj mediante
+`test/helpers/booking-fixture-clock.js`. Las regresiones de fronteras temporales
+usan fechas explícitas y cubren cambio de día en Lima, rangos inválidos y años.
+Las pruebas con proveedores/base simulados no miden precisión semántica.
 
-## Referencias de OpenAI
+## Arquitectura del asesor
 
-- [Function calling](https://developers.openai.com/api/docs/guides/function-calling)
-- [Estado de conversación](https://developers.openai.com/api/docs/guides/conversation-state)
+- `ai.prompt.js`: contrato conversacional común. Los clasificadores e intérpretes
+  auxiliares tienen contratos especializados en sus propios módulos.
+- `ai.service.js`: enrutamiento, FAQ, solicitudes múltiples, interpretación,
+  fuentes oficiales y herramientas de lectura.
+- `ai.reservation.js`: borrador, consentimiento explícito, revisión y acciones.
+- `ai.occupancy-pricing.js`: cálculo por ocupación, camas y preferencias.
+- `booking.service.js`: revalidación, idempotencia y registro transaccional.
+- `meta.service.js`: atención humana, outbox, entregas parciales y recuperación.
 
-## Horario del asesor IA
+El asesor atiende **24/7**: `isAiServiceTime()` devuelve `true`. Las variables
+históricas `AI_SERVICE_START/END` no limitan actualmente el horario. Un operador
+puede tomar el chat y pausar las respuestas automáticas.
 
-El asesor virtual está limitado por defecto al horario nocturno de Casa Huéspedes Pimentel:
+Las preguntas informativas no crean reservas ni eligen medios de pago. La oferta
+requiere aceptación explícita; después el equipo verifica disponibilidad y aprueba.
+Solo el flujo autorizado del backend puede registrar una reserva o un aviso de
+pago. Reportar un pago manual no verifica el movimiento.
 
-- `AI_SERVICE_TIMEZONE=America/Lima`
-- `AI_SERVICE_START=23:00`
-- `AI_SERVICE_END=08:00`
+## Memoria
 
-El rango es inclusivo al inicio y exclusivo al final: a las 23:00 se activa la IA y a las 08:00 pasa a atención humana. Fuera del horario IA, `/api/ai/chat` y los mensajes de texto de WhatsApp/Facebook/Instagram reciben una derivación al equipo humano y no se ejecutan ni el flujo de reservas ni una llamada a OpenAI.
+El estado de reserva se conserva en `ai_conversations`, separado del historial,
+con TTL de 24 horas. El historial pertinente se recupera de `meta_messages`.
+La generación abierta utiliza hasta ocho mensajes y 3.200 caracteres históricos.
+No se reutiliza `previous_response_id` entre turnos; sí dentro de una continuación
+de herramientas. Hay respaldo temporal en memoria si falla PostgreSQL, que no
+sustituye la persistencia ni constituye aprendizaje automático.
 
-Las reglas confirmadas incluidas en el prompt indican además que las mascotas requieren petición previa, su aceptación no puede ser confirmada automáticamente por la IA, el cargo es de S/ 20 si son aprobadas y no se permite ruido excesivo.
+## Reglas comerciales y propuestas
 
-Al iniciar una conversación nueva en Instagram o Facebook Messenger, el asesor saluda y muestra las categorías activas con sus tarifas actuales consultadas en la base de datos. La presentación inicial se envía una sola vez, no se repite en mensajes posteriores y no confirma disponibilidad sin fechas.
+Esta estabilización conserva los precios, suplementos y reglas de cobro
+existentes. El asesor consulta los precios por ocupación de la base de datos;
+no se modifican sus registros ni se añaden restricciones comerciales nuevas.
+El cliente no ha reportado incidencias de precios. Cualquier revisión comercial
+se tratará por separado, únicamente si se solicita.
+
+El tarifario del PDF del 15/11/2026 continúa **pendiente de confirmación** en
+`src/config/tariffProposal.js`. Su fórmula, mínimos, correspondencias y temporadas
+no se activan desde el chat ni por una aprobación comercial genérica.
+Consultar `docs/TARIFARIO_PENDIENTE_ACTIVACION.md` antes de proponer su activación.
+
+## Acceso y canales
+
+| Ruta | Acceso | Uso |
+| --- | --- | --- |
+| GET `/api/health` | Público | Salud del proceso y SHA informado |
+| POST `/api/auth/login` | Público limitado | Sesión administrativa |
+| POST `/api/ai/chat` | Token interno obligatorio | Integración servidor a servidor |
+| GET/POST `/api/meta/webhook` | Verificación/firma Meta | WhatsApp, Instagram y Facebook |
+| `/api/admin/commercial/*` | Sesión; aprobación solo admin | Reglas y propuestas comerciales |
+
+`/api/ai/chat` deniega acceso cuando `AI_INTERNAL_TOKEN` no está configurado o no
+coincide con `x-ai-token`. Nunca poner ese token en un navegador público.
+Las sesiones del panel son revocables y el rol vigente se consulta en el servidor.
+El transporte directo de TikTok no está implementado; aceptar su etiqueta en el
+endpoint interno no demuestra una integración de mensajería con TikTok.
+
+## Base de datos y publicación
+
+`database/schema.sql` describe el esquema inicial. El historial posterior reside
+en `database/migrations/`; los scripts de seguridad, propuestas y QA tienen sus
+propias instrucciones. No basta con aplicar únicamente la migración inicial.
+Revisar migraciones aplicadas, dependencias y recuperación en el entorno destino;
+no ejecutar seeds, propuestas o SQL en producción como parte de las pruebas.
+
+Los cambios se revisan en una rama y PR. No fusionar ni desplegar hasta contar con
+la autorización correspondiente. La verificación de salud por SHA es una prueba
+de despliegue, no una evaluación de calidad conversacional ni de entrega Meta.
+
+## Evaluación real y QA privado
+
+Ver `docs/INTERPRETACION_IA_CASA_HUESPEDES.md` para el evaluador semántico y
+`docs/PRUEBAS_PRIVADAS_ASESOR.md` para el worker aislado. Necesitan el modelo y
+credenciales gestionados en el servidor, con presupuesto autorizado; no deben
+usarse datos privados de huéspedes sin revisión. QA bloquea las transacciones y
+el transporte, pero lee fuentes del hotel: no es un snapshot de inventario.
+
+La estabilización, sus pruebas y limitaciones se describen en
+`docs/ESTABILIZACION_LINEA_BASE_2026-11-27.md`.

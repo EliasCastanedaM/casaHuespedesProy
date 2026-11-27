@@ -229,3 +229,12 @@ errores técnicos, estados internos ni confirmaciones inventadas al huésped.
 
 `test/ai-multiple-requests.test.js` reproduce el caso de cuatro personas para el
 12/12/2026, su reclamo posterior, la separación de estancias y las tres plataformas.
+
+
+## Vigencia y estabilización del 27/11/2026
+
+El estado ejecutable vigente, las correcciones de fechas y los límites de QA
+se documentan en [ESTABILIZACION_LINEA_BASE_2026-11-27.md](ESTABILIZACION_LINEA_BASE_2026-11-27.md).
+Los ejemplos e informes fechados anteriores son históricos. El tarifario PDF
+permanece pendiente; no debe copiarse como tarifa activa al prompt. Por indicación
+del propietario, esta estabilización conserva precios y reglas de cobro existentes.

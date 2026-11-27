@@ -53,22 +53,45 @@ function publicState(state = {}) {
 
 export async function executeQaRun(run, { generate = generateAiReply, progress = async()=>{}, shouldStop = async()=>false } = {}) {
   const scenarios = validateQaPayload(run.payload);
-  const context = createQaContext({ maxCalls: run.max_calls, maxTokens: run.max_tokens });
+  const deadline = Math.min(Date.parse(run.expires_at), Date.now() + 900000);
+  if (!Number.isFinite(deadline)) throw Object.assign(new Error('Invalid expiry'), { code: 'QA_INVALID_EXPIRY' });
+  const controller = new AbortController();
+  const stop = code => controller.abort(Object.assign(new Error(code), { code }));
+  const context = createQaContext({ maxCalls: run.max_calls, maxTokens: run.max_tokens, deadline, signal: controller.signal });
   const transcript = [];
   let stopped = false;
-  await withQaContext(context, async()=>{
+  const expiryTimer = setTimeout(() => stop('QA_EXPIRED'), Math.max(0, deadline - Date.now()));
+  let checking = false;
+  const cancelTimer = setInterval(async () => {
+    if (checking || controller.signal.aborted) return;
+    checking = true;
+    try { if (await shouldStop()) stop('QA_CANCELLED'); }
+    catch { stop('QA_STATUS_UNAVAILABLE'); }
+    finally { checking = false; }
+  }, 1000);
+  try { await withQaContext(context, async()=>{
     for (const [index, scenario] of scenarios.entries()) {
       const externalUserId = 'private-qa-'+run.id+'-'+index;
       const key = scenario.channel+':'+externalUserId;
       context.histories.set(key, []);
       for (const message of scenario.messages) {
-        if (context.budgetHit || Date.now() > Date.parse(run.expires_at) || await shouldStop()) { stopped = true; break; }
+        if (context.budgetHit || controller.signal.aborted || Date.now() >= deadline || await shouldStop()) { stopped = true; break; }
         const start = performance.now(), beforeCalls = context.calls.length;
         const beforeInput = context.inputTokens, beforeOutput = context.outputTokens;
         let result, code;
         try {
-          result = await generate({ channel: scenario.channel, externalUserId, message,
-            history: structuredClone(context.histories.get(key)) });
+          let onAbort;
+          try {
+            result = await Promise.race([
+              generate({ channel: scenario.channel, externalUserId, message,
+                history: structuredClone(context.histories.get(key)) }),
+              new Promise((_, reject) => {
+                onAbort = () => reject(controller.signal.reason);
+                controller.signal.addEventListener('abort', onAbort, { once: true });
+                if (controller.signal.aborted) onAbort();
+              }),
+            ]);
+          } finally { if (onAbort) controller.signal.removeEventListener('abort', onAbort); }
         } catch (error) {
           code = /^[a-zA-Z0-9_]{1,60}$/.test(String(error.code)) ? String(error.code) : 'QA_TURN_FAILED';
         }
@@ -89,7 +112,7 @@ export async function executeQaRun(run, { generate = generateAiReply, progress =
       }
       if (stopped) break;
     }
-  });
+  }); } finally { clearTimeout(expiryTimer); clearInterval(cancelTimer); }
   return { transcript, usage: qaUsage(context), stopped, isolation: 'memory_only_conversations_readonly_hotel_sources',
     expected_commit: run.expected_commit, finished_at: new Date().toISOString() };
 }

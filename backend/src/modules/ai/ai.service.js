@@ -1,5 +1,5 @@
 import { isConversationPresenceCheck, PRESENCE_REPLY } from "./ai.human-assistance.js";
-import { currentQa, prepareQaCall, finishQaCall, blockQaAction } from './ai.qa-context.js';
+import { currentQa, prepareQaCall, finishQaCall, blockQaAction, qaRequestOptions } from './ai.qa-context.js';
 import { answerGuestRequests, REQUEST_PLAN_SCHEMA, REQUEST_PLAN_PROMPT, formatRoomComparison } from './ai.requests.js';
 import { normalizeFaqInquiry, isDirectFaqQuestion } from "./ai.faq-questions.js";
 import { reservationOfferQuestion, reservationInterestReply } from "./ai.reservation-consent.js";
@@ -810,7 +810,7 @@ async function trackedResponse(openai, request, meta, options) {
   const safeRequest = prepareQaCall(request);
   let response;
   try {
-    response = await openai.responses.create(safeRequest, options);
+    response = await openai.responses.create(safeRequest, qaRequestOptions(options));
     finishQaCall(response);
   } catch (error) {
     finishQaCall(null, error);

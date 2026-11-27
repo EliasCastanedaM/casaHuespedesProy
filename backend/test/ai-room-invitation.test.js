@@ -1,3 +1,4 @@
+import './helpers/booking-fixture-clock.js';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { appendRoomInvitation, ROOMS_PAGE_URL } from "../src/modules/ai/ai.room-invitation.js";

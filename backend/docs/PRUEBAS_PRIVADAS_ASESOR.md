@@ -24,9 +24,20 @@ La tanda expira a los quince minutos y puede detenerse cambiando su estado a
 `cancelled`. Solo se inician hasta cuatro tandas por ventana de veinticuatro horas.
 
 Se permite un máximo de veinticuatro intentos de modelo por tanda, configurable
-a la baja. `max_tokens` es un umbral comprobado antes de la siguiente llamada:
-una llamada individual puede rebasarlo. La salida por llamada se limita a dos
-mil tokens, respetando los límites menores que ya tenga el asesor.
+a la baja. En QA se fuerza `maxRetries: 0`: cada invocación equivale a un único
+intento HTTP del SDK. Cada llamada tiene un plazo máximo de diez segundos y una
+señal de cancelación que combina el plazo de la llamada y el de la tanda. La
+tanda termina a su vencimiento o a los quince minutos, lo que ocurra primero.
+Su cancelación se consulta también durante un turno, aproximadamente cada segundo.
+
+Antes de invocar se reserva un presupuesto conservador basado en bytes UTF-8,
+un margen y la salida máxima. Se incluye el contexto previo de herramientas;
+una continuación desconocida se bloquea. La salida por llamada se limita a dos
+mil tokens o al presupuesto restante. Los intentos fallidos o sin métricas
+conservan una reserva como uso incierto. Estos controles reducen el riesgo de
+exceso; la estimación no es un tokenizador del proveedor ni garantiza su factura.
+Los tokens reales y los inciertos se muestran separados. Cancelar una solicitud
+no garantiza que el proveedor no haya consumido ya recursos.
 
 `result` contiene la transcripción y el uso real informado por el proveedor:
 tokens de entrada, salida, entrada en caché, intentos y respuestas completadas.

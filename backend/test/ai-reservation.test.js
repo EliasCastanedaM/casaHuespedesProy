@@ -1,3 +1,4 @@
+import './helpers/booking-fixture-clock.js';
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -6,7 +7,7 @@ import {
   prepareGlobalReservation,
 } from "../src/modules/ai/ai.reservation.js";
 
-function turn(message, context = {}, now = new Date(), extra = {}) {
+function turn(message, context = {}, now = new Date('2026-11-15T12:00:00Z'), extra = {}) {
   return handleGlobalReservationTurn({ message, context, now, channel: "whatsapp", ...extra });
 }
 
