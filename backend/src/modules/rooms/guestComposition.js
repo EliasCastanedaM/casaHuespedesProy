@@ -1,12 +1,11 @@
 import { isTariffProposalActive } from '../commercial/tariffProposal.service.js';
 import { TARIFF_PROPOSAL } from '../../config/tariffProposal.js';
-import { OPERATIONAL_POLICY } from '../commercial/operationalPolicy.js';
 
 // Shared by quoting, administrative approval and transactional booking. Guest
 // headcount is never reduced; this models existing sleeping places separately.
 export const CHILD_POLICY_VERSION = isTariffProposalActive()
   ? TARIFF_PROPOSAL.version : 'children-2026-11-14-shared-parent-beds';
-export const CHILD_NIGHTLY_SUPPLEMENT = OPERATIONAL_POLICY.childAmount;
+export const CHILD_NIGHTLY_SUPPLEMENT = isTariffProposalActive() ? TARIFF_PROPOSAL.child_amount : 20;
 
 export function guestComposition(state = {}) {
   const adults = Number(state.adults);

@@ -1,7 +1,6 @@
 import { acceptsReservationOffer, reservationOfferQuestion } from "./ai.reservation-consent.js";
 import { CHILD_POLICY_VERSION, CHILD_NIGHTLY_SUPPLEMENT, guestComposition, categoryBedPlan } from '../rooms/guestComposition.js';
 import { appendRoomInvitation } from './ai.room-invitation.js';
-import { OPERATIONAL_POLICY } from '../commercial/operationalPolicy.js';
 import { isTariffProposalActive, getConfirmedTariff, hasConfirmedTariffForCategory } from '../commercial/tariffProposal.service.js';
 import { normalizeRoomPreferences, collectRoomPreferences, hasRoomPreferences, roomPreferenceMatch, roomFeatures, roomPreferenceLabel } from "../rooms/roomPreferences.js";
 
@@ -63,7 +62,7 @@ export function quoteForCategory(category, state) {
   if (isTariffProposalActive()) {
     const proposed = getConfirmedTariff(category,{...state,adults,children,child_ages:ages});
     if (!proposed) return null; // Never fall back to the previous price after activation.
-    const petNightly = pets * OPERATIONAL_POLICY.petAmount;
+    const petNightly = pets * 20;
     return {
       category_slug: category.slug, category_name: category.name, capacity: Number(category.capacity),
       guests, priced_adults: party.pricedAdults, discounted_children: party.supplemented,
@@ -92,7 +91,7 @@ export function quoteForCategory(category, state) {
   if (!Number.isSafeInteger(adultRate) || adultRate <= 0) return null;
   const childSupplement = cents(CHILD_NIGHTLY_SUPPLEMENT) * discountedChildren;
   const lodging = adultRate + childSupplement;
-  const petNightly = pets * cents(OPERATIONAL_POLICY.petAmount);
+  const petNightly = pets * 2000;
   return {
     category_slug: category.slug, category_name: category.name, capacity: Number(category.capacity),
     guests, priced_adults: pricedAdults, discounted_children: discountedChildren,

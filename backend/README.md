@@ -61,13 +61,11 @@ sustituye la persistencia ni constituye aprendizaje automático.
 
 ## Reglas comerciales y propuestas
 
-La política implementada de cargos está en
-`src/modules/commercial/operationalPolicy.js`. El código usa S/ 20 por niño de
-5–8 años y por mascota/noche mientras siga vigente la versión anterior.
-Los datos publicados requieren fuente verificada y coincidencia con el cálculo.
-Si una regla tiene otro importe o frecuencia, el asesor no publica ese cargo y
-la aprobación del panel se bloquea hasta actualizar conjuntamente el cálculo.
-Se pueden presentar propuestas para revisión; no equivalen a activación.
+Esta estabilización conserva los precios, suplementos y reglas de cobro
+existentes. El asesor consulta los precios por ocupación de la base de datos;
+no se modifican sus registros ni se añaden restricciones comerciales nuevas.
+El cliente no ha reportado incidencias de precios. Cualquier revisión comercial
+se tratará por separado, únicamente si se solicita.
 
 El tarifario del PDF del 15/11/2026 continúa **pendiente de confirmación** en
 `src/config/tariffProposal.js`. Su fórmula, mínimos, correspondencias y temporadas

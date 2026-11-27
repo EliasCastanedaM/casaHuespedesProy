@@ -122,15 +122,15 @@ test("aprobación de mascotas bloquea regla aún ambigua y revierte transacción
   assert.equal(db.queries.some(s=>s.includes("UPDATE public.hotel_policy_rules")),false);
 });
 
-test("aprobación compatible con el calculador actualiza regla y registra revisor",async()=>{
+test("aprobación válida actualiza regla dentro de transacción y registra revisor",async()=>{
   const db=txPool(async(sql,params)=>{
     if(sql.includes("FROM public.hotel_rule_proposals"))return {rows:[{
       id:3,rule_code:"mascotas",status:"pending",previous_updated_at:ruleDate,
-      proposed_config:{...mockRule.config,charge_frequency:"pet_per_night"},
+      proposed_config:{...mockRule.config,charge_frequency:"per_stay"},
     }]};
     if(sql.includes("FROM public.hotel_policy_rules"))return {rows:[mockRule]};
     if(sql.includes("UPDATE public.hotel_policy_rules")){
-      assert.equal(JSON.parse(params[0]).charge_frequency,"pet_per_night");
+      assert.equal(JSON.parse(params[0]).charge_frequency,"per_stay");
       return {rows:[]};
     }
     if(sql.includes("UPDATE public.hotel_rule_proposals"))return {rows:[{id:3,status:"approved"}]};

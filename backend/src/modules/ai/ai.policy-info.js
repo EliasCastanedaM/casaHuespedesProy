@@ -1,7 +1,6 @@
 import { isTariffProposalActive } from '../commercial/tariffProposal.service.js';
 import { TARIFF_PROPOSAL } from '../../config/tariffProposal.js';
 import { policyQuestionFocus } from './ai.policy-focus.js';
-import { matchesOperationalCharge } from '../commercial/operationalPolicy.js';
 
 // Consultas informativas sobre políticas del hospedaje: no modifican reservas.
 // Una petición real de reserva con menores o mascotas sigue requiriendo revisión humana.
@@ -55,7 +54,6 @@ function childReply(age, get) {
   }
   if(age<=8) {
     const config=activeProposal ? {amount_pen:TARIFF_PROPOSAL.child_amount,charge_frequency:'child_per_night'} : verified(get('ninos_5_8'));
-    if (!matchesOperationalCharge('ninos_5_8', config)) return unavailable;
     const amount=config?.amount_pen;
     if(typeof amount!=='number' || !Number.isFinite(amount) || amount<=0 || config.charge_frequency!=='child_per_night')return unavailable;
     return activeProposal
@@ -97,7 +95,7 @@ function childrenReply(message,get) {
     if(focus.freeThreshold)return isTariffProposalActive() || free?.no_charge_when_using_existing_beds===true
       ? 'Hasta los 4 años no hay cargo adicional si utiliza las camas existentes.' : unavailable;
     const paid=verified(get('ninos_5_8'));
-    return isTariffProposalActive() || (free?.no_charge_when_using_existing_beds===true && matchesOperationalCharge('ninos_5_8',paid))
+    return isTariffProposalActive() || (free?.no_charge_when_using_existing_beds===true && paid?.charge_frequency==='child_per_night' && Number(paid.amount_pen)>0)
       ? 'Desde los 5 años se aplica el cobro por alojamiento.' : unavailable;
   }
   if(focus.general) {
@@ -129,7 +127,6 @@ export function formatPolicyInformationReply(message, { rules } = {}) {
       ? 'Nuestro equipo debe confirmar el importe y la admisión de la mascota.'
       : 'La admisión de mascotas debe confirmarla el hospedaje.';
     if(!focus.price && !focus.general)return 'Sí, con autorización previa del hospedaje.';
-    if (!matchesOperationalCharge('mascotas', config)) return unavailable;
     const amount=config.amount_pen;
     const frequency={pet_per_night:'por mascota y por noche',per_stay:'por estadía'}[config.charge_frequency];
     if(typeof amount!=='number' || !Number.isFinite(amount) || amount<=0 || !frequency)return unavailable;
