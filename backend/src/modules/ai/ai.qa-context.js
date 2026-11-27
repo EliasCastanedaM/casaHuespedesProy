@@ -70,10 +70,17 @@ export function finishQaCall(response, error) {
   qa.inputTokens += call.input_tokens;
   qa.outputTokens += call.output_tokens;
   qa.cachedInputTokens += call.cached_input_tokens;
-  if (!Number.isSafeInteger(response.usage?.input_tokens) || !Number.isSafeInteger(response.usage?.output_tokens)) {
+  const knownUsage = Number.isSafeInteger(response.usage?.input_tokens) && response.usage.input_tokens >= 0 &&
+    Number.isSafeInteger(response.usage?.output_tokens) && response.usage.output_tokens >= 0;
+  if (!knownUsage) {
     qa.uncertainTokens += call.reserved_tokens;
   }
-  if (response.id) qa.responseBounds.set(response.id, call.context_bound + call.output_tokens);
+  // Responses usage includes the input history of the completed chain. Use that
+  // measured context for its next continuation instead of recursively carrying
+  // the much larger UTF-8 reservation. Current input/output are still reserved
+  // conservatively, and missing usage retains the full uncertain reservation.
+  if (response.id) qa.responseBounds.set(response.id,
+    (knownUsage ? call.input_tokens : call.context_bound) + call.output_tokens);
   if (qa.inputTokens + qa.outputTokens + qa.uncertainTokens >= qa.maxTokens) qa.budgetHit = true;
 }
 

@@ -108,6 +108,31 @@ test("los tres canales envían la misma instrucción y herramientas en generaci�
   }
 });
 
+test('la generación abierta y su continuación reciben el idioma inglés en los tres canales', async t => {
+  fakeDatabase(t);
+  const previousKey = env.openai.apiKey;
+  env.openai.apiKey = 'test-key-no-network';
+  t.after(() => {env.openai.apiKey = previousKey;});
+  const requests = [];
+  t.mock.method(OpenAI.Responses.prototype, 'create', async request => {
+    if (request.instructions === HOTEL_SCOPE_CLASSIFIER_PROMPT) return {output:[],output_text:'HOTEL'};
+    requests.push(request);
+    if (requests.length % 2 === 1) return {id:'english-tool-' + requests.length,
+      output:[{type:'function_call',name:'listar_habitaciones',arguments:'{}',call_id:'catalog'}]};
+    return {id:'english-reply-' + requests.length,output:[],output_text:'You can ask us about rooms and services.'};
+  });
+  for (const channel of channels) {
+    const result = await generateAiReply({channel, externalUserId:'english-generation',
+      message:'What can you tell me about the hotel?'});
+    assert.match(result.reply, /^You can/);
+  }
+  assert.equal(requests.length, 6);
+  for (const request of requests) {
+    assert.equal(request.instructions, buildHotelAssistantPrompt({language:'en'}));
+    assert.match(request.instructions, /Answer this turn in English/);
+  }
+});
+
 test("cada canal recoge datos, espera al equipo y continúa con los mismos pagos", async (t) => {
   const db = fakeDatabase(t);
   const externalUserId = "51987654321";

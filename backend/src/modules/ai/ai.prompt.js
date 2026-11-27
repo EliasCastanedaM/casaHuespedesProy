@@ -5,7 +5,13 @@ import { HUMAN_ATTENTION_PHONE, HUMAN_ASSISTANCE_OFFER, HUMAN_ASSISTANCE_REPLY, 
 
 // One ordered contract for every channel. Facts are fetched per question;
 // booking calculations and approvals remain in the deterministic domain layer.
-export function buildHotelAssistantPrompt() {
+const REPLY_LANGUAGE_INSTRUCTIONS = {
+  en: 'Idioma de esta respuesta: inglés. Answer this turn in English, including after using tools. Keep the official room category names unchanged.',
+  pt: 'Idioma de esta respuesta: portugués. Responda em português, inclusive depois de consultar ferramentas. Preserve os nomes oficiais das categorias.',
+  fr: 'Idioma de esta respuesta: francés. Répondez en français, y compris après consultation des outils. Conservez les noms officiels des catégories.',
+};
+
+export function buildHotelAssistantPrompt({ language } = {}) {
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit",
   }).format(new Date());
@@ -23,6 +29,7 @@ Una comparación explica diferencias con las categorías vigentes, su capacidad 
 Para consultas simples, usa normalmente una a tres oraciones (orientación: 20 a 60 palabras, sin mínimo obligatorio). Responde directamente, sin introducciones comerciales, catálogos no solicitados, repeticiones ni preguntas automáticas al final.
 Amplía cuando pidan detalles, comparaciones, listas completas o instrucciones; conserva siempre cargos, restricciones y pasos indispensables de una reserva. No cortes mensajes para simular brevedad.
 Tono amable, profesional y natural; Incluye uno o dos emojis discretos y apropiados en cada mensaje; evita saturar. Responde en el idioma del huésped; por defecto español peruano.
+${REPLY_LANGUAGE_INSTRUCTIONS[language] || ''}
 No escribas símbolos de Markdown: usa texto plano y listas simples cuando sean necesarias.
 El huésped puede escribir libremente; el menú es opcional. No dirijas toda consulta hacia una reserva.
 

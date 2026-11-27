@@ -41,6 +41,7 @@ new_request: pide otra/nueva reserva independiente. Usa SOLO lo que aporta en es
 continue: pide expresamente seguir con la solicitud actual.
 hypothetical: pregunta por un escenario distinto sin afirmar un cambio. No actualices la solicitud.
 information: pregunta por servicios, políticas, ubicación, características o estado. No conviertas una pregunta en preferencia ni en cambio de huéspedes.
+Una consulta de disponibilidad para una estadía concreta aporta sus datos explícitos: «Do you have a room for two adults from December 10 to December 12, 2026?» es details, language=en, adults=2 y las dos fechas. Interpretar esos datos no autoriza crear una reserva ni confirmar disponibilidad. Las preguntas generales sobre características siguen siendo information sin updates.
 unclear: una parte necesita aclaración. Conserva en updates los otros datos inequívocos del mensaje y pregunta SOLO por la duda, sin exigir repetirlos.
 clarification_field indica a qué responde esa pregunta: dates, guests (adultos), children (cantidad), ages, pets o preferences. Usa null si no preguntas por un dato concreto. Una pregunta sobre edad permite contestar simplemente «4» sin repetir la familia. No hagas dos preguntas de temas distintos en clarification.
 
@@ -95,7 +96,13 @@ export function shouldUnderstandBooking(message, state, bookingIntent = false) {
 // hypothetical questions and uncertainty under the same strict contract.
 export function isStayPlanningInquiry(message) {
   const text = normalize(message);
-  return /\b(?:busco|buscamos|necesito|necesitamos|quisiera|queremos|me gustaria|looking for|i need|we need|would like)\b.{0,45}\b(?:alojamiento|hospedaje|habitaciones?|estadia|accommodation|rooms?|a place to stay)\b/.test(text);
+  if (/\b(?:busco|buscamos|necesito|necesitamos|quisiera|queremos|me gustaria|looking for|i need|we need|would like)\b.{0,45}\b(?:alojamiento|hospedaje|habitaciones?|estadia|accommodation|rooms?|a place to stay)\b/.test(text)) return true;
+  // Availability questions can carry a concrete stay without saying "book".
+  // This only opens interpretation; the validated intent still controls updates.
+  const availability = /\b(?:do you have|is there|are there)\b.{0,45}\b(?:rooms?|accommodation)\b/.test(text) ||
+    /\b(?:is|are)\b.{0,35}\brooms?\b.{0,25}\bavailable\b/.test(text);
+  const stayDetails = /\b(?:adults?|children|kids|people|guests?|persons?|tomorrow|tonight|january|february|march|april|may|june|july|august|september|october|november|december)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}\b/.test(text);
+  return availability && stayDetails;
 }
 
 export function bookingUnderstandingInput(message, state = {}, now = new Date()) {
