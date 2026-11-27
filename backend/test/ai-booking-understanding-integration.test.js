@@ -28,6 +28,32 @@ function setup(t, state, interpret) {
 }
 
 const active = { state: "collecting", awaiting: "guests", check_in: "2026-11-25", check_out: "2026-11-28", language: "es" };
+for (const channel of ['whatsapp', 'instagram', 'facebook']) test(channel + ': consulta en inglés guarda fechas y mantiene la estadía al cambiar adultos', async t => {
+  const message = 'Do you have a room for two adults from December 10 to December 12, 2026?';
+  const correction = 'Actually, we are three adults, on the same dates.';
+  const db = setup(t, {}, input => ({ intent: input.mensaje_actual === message ? 'details' : 'correction',
+    language: 'en', clarification: null, updates: (input.mensaje_actual === message
+      ? [['adults', 2], ['check_in', '2026-12-10'], ['check_out', '2026-12-12']]
+      : [['adults', 3]]).map(([field, value]) => ({ field, value, evidence: input.mensaje_actual })),
+  }));
+  const send = message => generateAiReply({channel, externalUserId: 'english-stay-' + channel, message});
+  const first = await send(message);
+  assert.equal(first.mode, 'global_reservation_collecting');
+  assert.match(first.reply, /children/);
+  assert.doesNotMatch(first.reply, /Viajan|fechas|disponible/);
+  assert.equal(db.context().whatsapp_mvp.language, 'en');
+  assert.equal(db.context().whatsapp_mvp.check_in, '2026-12-10');
+  assert.equal(db.context().whatsapp_mvp.check_out, '2026-12-12');
+  assert.equal(db.context().whatsapp_mvp.children, undefined);
+  assert.equal(db.context().whatsapp_mvp.staff_confirmation, undefined);
+  const second = await send(correction);
+  assert.match(second.reply, /children/);
+  assert.equal(db.context().whatsapp_mvp.adults, 3);
+  assert.equal(db.context().whatsapp_mvp.check_in, '2026-12-10');
+  assert.equal(db.context().whatsapp_mvp.check_out, '2026-12-12');
+  assert.equal(db.requests.length, 2);
+});
+
 for (const channel of ["whatsapp", "instagram", "facebook"]) test(channel + ": usa interpretación real del flujo antes de las reglas de reserva", async t => {
   const message = "Voy con mi señora y mis dos peques de tres y siete";
   const db = setup(t, { ...active, customer_email: "private@example.com" }, () => ({

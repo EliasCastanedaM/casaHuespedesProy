@@ -58,6 +58,38 @@ test('continuación remota desconocida y contexto demasiado grande quedan bloque
   }
 });
 
+test('continuaciones usan el contexto medido sin acumular reservas UTF-8 anteriores', async () => {
+  const qa = createQaContext({maxTokens:45000});
+  const instructions = 'a'.repeat(15000);
+  await withQaContext(qa, () => {
+    prepareQaCall({model:'synthetic', instructions, input:'x'.repeat(1000)});
+    finishQaCall({id:'first',status:'completed',usage:{input_tokens:3539,output_tokens:107}});
+    const next = prepareQaCall({model:'synthetic',instructions,previous_response_id:'first',
+      input:[{type:'function_call_output',call_id:'catalog',output:'y'.repeat(3000)}]});
+    assert.equal(next.max_output_tokens, 2000);
+    assert.equal(qa.responseBounds.get('first'), 3646);
+    assert.ok(qa.reservedTokens + qa.inputTokens + qa.outputTokens <= qa.maxTokens);
+    finishQaCall({id:'second',status:'completed',usage:{input_tokens:4500,output_tokens:100}});
+    assert.equal(qa.responseBounds.get('second'), 4600);
+    assert.equal(qaUsage(qa).total_tokens, 8246);
+    assert.equal(qa.budgetHit, false);
+  });
+});
+
+test('consumo ausente o inválido conserva reserva completa y nunca autoriza contexto desconocido', async () => {
+  for (const usage of [undefined, {input_tokens:-1,output_tokens:10}, {input_tokens:100,output_tokens:-1}]) {
+    const qa = createQaContext({maxTokens:7000});
+    await withQaContext(qa, () => {
+      prepareQaCall({model:'synthetic',input:'Hi'});
+      const reserved = qa.reservedTokens;
+      finishQaCall({id:'unknown-usage',status:'completed',usage});
+      assert.equal(qa.uncertainTokens, reserved);
+      assert.throws(() => prepareQaCall({model:'synthetic',previous_response_id:'unknown-usage'}),
+        {code:'QA_BUDGET_REACHED'});
+    });
+  }
+});
+
 test('la señal de cancelación llega a la solicitud del proveedor',async()=>{
   const controller=new AbortController(),qa=createQaContext({signal:controller.signal});
   await withQaContext(qa,()=>{

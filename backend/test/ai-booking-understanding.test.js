@@ -70,6 +70,23 @@ test("conserva barreras de nombres, pagos y respuestas inequívocas", () => {
   assert.equal(next.child_ages, undefined);
 });
 
+test('consultas inglesas de estadía pasan al intérprete sin convertir características en reservas', () => {
+  for (const message of [
+    'Do you have a room for two adults from December 10 to December 12, 2026?',
+    'Are there rooms for 3 guests tomorrow?',
+    'Is a room available for two adults?',
+    'Is there accommodation from 2026-12-10 to 2026-12-12?',
+  ]) assert.equal(shouldUnderstandBooking(message), true, message);
+  for (const message of ['Do you have room service?', 'Do you have rooms with a desk?'])
+    assert.equal(shouldUnderstandBooking(message), false, message);
+  const message = 'Do you have a room for two adults from December 10 to December 12, 2026?';
+  const state = {state:'browsing', adults:1};
+  const understanding = {intent:'information', language:'en', fields:{}};
+  const result = handleGlobalReservationTurn({message, context:{whatsapp_mvp:state}, understanding});
+  assert.deepEqual(result.context.whatsapp_mvp, state);
+  assert.equal(result.action, undefined);
+});
+
 test("una corrección interpretada no depende de que las reglas reconozcan su redacción", () => {
   const message = "¿Puedes mover nuestra salida un día después, por favor?";
   const state = { state: "collecting", check_in: "2026-11-25", check_out: "2026-11-28", adults: 2, children: 0, child_ages: [] };

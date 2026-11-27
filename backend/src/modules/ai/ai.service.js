@@ -835,7 +835,7 @@ async function createFirstResponse(
   const sourceHistory = history.length ? history : recoveryHistory;
   const request = {
     model: env.openai.model,
-    instructions: buildHotelAssistantPrompt(),
+    instructions: buildHotelAssistantPrompt({ language: serviceLanguage }),
     // previous_response_id ya contiene la conversación remota. No añadir
     // otra vez el historial de Meta a la misma solicitud.
     input: responseInput(reusePrevious ? [] : sourceHistory, message, historyOptions),
@@ -1322,7 +1322,7 @@ async function generateAiReplyInternal({
 
     response = await trackedResponse(openai, {
       model: env.openai.model,
-      instructions: buildHotelAssistantPrompt(),
+      instructions: buildHotelAssistantPrompt({ language: serviceLanguage }),
       previous_response_id: response.id,
       input: toolOutputs,
       tools,
